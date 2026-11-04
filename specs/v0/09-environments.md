@@ -27,7 +27,7 @@ careeros/
 ```
 
 - **ENV-01** Package manager **pnpm** workspaces; no build orchestrator (Turborepo/Nx) in v0 — `pnpm -r` is enough at this size.
-- **ENV-02** TypeScript `strict` everywhere, shared base `tsconfig`. Lint/format with **Biome** (one fast tool instead of ESLint + Prettier), except Next.js-specific rules if Biome lacks them (decided in issue #1).
+- **ENV-02** TypeScript `strict` everywhere, shared base `tsconfig`. Lint/format with **Biome** only (one fast tool instead of ESLint + Prettier), using its `react`, `next` and `test` rule domains; **no ESLint** (decided in #1: Biome 2.6 covers the Next.js rules we need). Markdown is not formatted by Biome.
 - **ENV-03** Versions: Node LTS (pinned in `.nvmrc` / `engines`), latest stable Next.js, React, supabase-js at Gate 3 start, recorded in the README.
 
 ## 2. Environments

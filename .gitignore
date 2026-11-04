@@ -28,3 +28,11 @@ supabase/.temp/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# extension signing keys & release artifacts
+*.pem
+*.crx
+*.zip
+
+# deploy tooling
+.vercel/

@@ -1,9 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["chrome"],
-    "jsx": "react-jsx"
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["chrome"]
   },
-  "include": ["src"]
+  "include": ["src", "vitest.config.ts"]
 }
