@@ -1,0 +1,13 @@
+{
+  "name": "@careeros/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain rules, schemas and constants shared by the extension and the dashboard (consumed as TypeScript source).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

@@ -30,4 +30,31 @@ Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md).
 
 ## Setup
 
-Will be documented when implementation starts.
+Requirements: **Node.js ≥ 22.12** (see `.nvmrc`) and **pnpm 12** (`corepack enable` picks the version pinned in `package.json`). Docker Desktop is needed for backend work (from issue #3).
+
+```bash
+pnpm install
+pnpm check        # lint + typecheck + unit tests
+pnpm build        # builds every workspace that has a build step
+pnpm --filter @careeros/web dev   # dashboard on http://localhost:3000
+```
+
+### Repository layout
+
+```
+apps/extension   Chrome MV3 extension
+apps/web         Next.js dashboard
+packages/shared  rules, schemas and constants used by both apps
+specs/ docs/     specifications, ADRs, roadmap, backlog
+```
+
+### Toolchain versions
+
+| Tool | Version | Note |
+|---|---|---|
+| Node.js | 22 LTS | |
+| pnpm | 12.16.1 | `minimumReleaseAge` supply-chain policy left at its default; dependencies are pinned exactly |
+| TypeScript | 6.0.3 | 7.x (native compiler) skipped for now: Next.js and editor tooling rely on the 6.x JS API |
+| Next.js / React | 16.4.4 / 19.3.1 | |
+| Vitest | 5.1.0 | |
+| Biome | 2.6.4 | single lint + format tool (React, Next.js and test rule domains) |
