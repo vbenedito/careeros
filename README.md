@@ -41,6 +41,22 @@ pnpm build        # builds every workspace that has a build step
 pnpm --filter @careeros/web dev   # dashboard on http://localhost:3000
 ```
 
+### Local backend (Supabase in Docker)
+
+Requires **Docker Desktop running**. The Supabase CLI is a dev dependency, so no global install is needed.
+
+```bash
+pnpm db:start     # start Postgres, Auth, PostgREST, Studio, Mailpit in Docker
+pnpm db:status    # print the local API URL, keys and Studio URL
+pnpm db:reset     # re-apply supabase/migrations + supabase/seed.sql
+pnpm db:test      # run pgTAP tests in supabase/tests/database
+pnpm db:stop      # stop the containers (data volumes are kept)
+```
+
+Then copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the values from `pnpm db:status`. Local services: API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`, Mailpit (captured e-mails) `http://127.0.0.1:54324`.
+
+The first `db:start` pulls several Docker images (a few GB) and can take a few minutes. Realtime, Storage, Edge Functions and Analytics are disabled in `supabase/config.toml` because v0 doesn't use them.
+
 ### Repository layout
 
 ```
@@ -60,3 +76,4 @@ specs/ docs/     specifications, ADRs, roadmap, backlog
 | Next.js / React | 16.4.4 / 19.3.1 | |
 | Vitest | 5.1.0 | |
 | Biome | 2.6.4 | single lint + format tool (React, Next.js and test rule domains) |
+| Supabase CLI | 3.0.0 | dev dependency; local stack runs in Docker (ADR-0008) |

@@ -1,6 +1,6 @@
 # CI for CareerOS (ENV-08, ENV-09).
 # `checks`: lint, typecheck, unit tests and builds on every PR and push to main.
-# The `backend` job (Supabase in Docker, pgTAP, E2E) is added in issue #3.
+# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008). E2E is added in #29.
 
 name: CI
 
@@ -56,3 +56,39 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  backend:
+    name: Database (Supabase in Docker)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - name: Set up Node.js (from .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Same stack as local development (ADR-0008); Studio is not needed in CI.
+      - name: Start Supabase
+        run: pnpm exec supabase start -x studio,postgres-meta
+
+      - name: Reset database (migrations + seed)
+        run: pnpm db:reset
+
+      - name: Database tests (pgTAP)
+        run: pnpm db:test
+
+      - name: Stop Supabase
+        if: always()
+        run: pnpm db:stop --no-backup
