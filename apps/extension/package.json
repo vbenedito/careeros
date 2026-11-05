@@ -1,14 +1,18 @@
 {
   "name": "@careeros/extension",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "CareerOS Chrome extension (Manifest V3). Build pipeline arrives in issue #4.",
+  "description": "CareerOS Chrome extension (Manifest V3).",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "build": "NODE_ENV=development vite build --mode development",
+    "build:prod": "NODE_ENV=production vite build --mode production",
+    "release": "pnpm build:prod && node scripts/zip.ts production",
+    "typecheck": "tsc -p tsconfig.worker.json && tsc -p tsconfig.popup.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
-    "@types/chrome": "0.3.7"
+    "@types/chrome": "0.3.7",
+    "vite": "8.3.5"
   },
   "dependencies": {
     "@careeros/shared": "workspace:*"

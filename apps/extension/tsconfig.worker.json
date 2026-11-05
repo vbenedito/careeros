@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["chrome"]
+  },
+  "include": ["src/background", "src/engine", "src/lib", "src/vite-env.d.ts"]
+}

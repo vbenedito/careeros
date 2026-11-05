@@ -1,8 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "lib": ["ES2023", "WebWorker"],
-    "types": ["chrome"]
-  },
-  "include": ["src", "vitest.config.ts"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.worker.json" },
+    { "path": "./tsconfig.popup.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
 }
