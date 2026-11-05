@@ -48,7 +48,19 @@ const admin = createClient(API_URL, SECRET_KEY, {
 const sql = (query) =>
   execFileSync(
     "docker",
-    ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", query],
+    [
+      "exec",
+      "-i",
+      DB_CONTAINER,
+      "psql",
+      "-U",
+      "postgres",
+      "-At",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      query,
+    ],
     { encoding: "utf8" },
   ).trim();
 
@@ -102,7 +114,10 @@ async function main() {
   // 2. Extension handoff: new token, exchanged by an independent client.
   const t2 = await mintToken(email);
   const mailsAfter = await mailCount();
-  record("generateLinkSendsNoEmail", mailsBefore === mailsAfter ? "ok" : `${mailsBefore} -> ${mailsAfter}`);
+  record(
+    "generateLinkSendsNoEmail",
+    mailsBefore === mailsAfter ? "ok" : `${mailsBefore} -> ${mailsAfter}`,
+  );
   const extension = newClient();
   const e = await extension.auth.verifyOtp({ token_hash: t2.tokenHash, type: "magiclink" });
   record("extensionSession", e.error ? e.error.message : "ok");
@@ -110,7 +125,10 @@ async function main() {
 
   const dSid = decodeJwt(d.data.session.access_token).session_id;
   const eSid = decodeJwt(e.data.session.access_token).session_id;
-  record("independentSessions", dSid && eSid && dSid !== eSid ? "ok" : `same or missing: ${dSid} ${eSid}`);
+  record(
+    "independentSessions",
+    dSid && eSid && dSid !== eSid ? "ok" : `same or missing: ${dSid} ${eSid}`,
+  );
   record("sameUser", e.data.user.id === userId ? "ok" : "different user!");
   record("tokenLength", t2.tokenHash.length);
 
@@ -120,7 +138,10 @@ async function main() {
 
   // 4. type "email" also accepted? (supabase-js docs only show type "email" with token_hash)
   const t3 = await mintToken(email);
-  const viaEmailType = await newClient().auth.verifyOtp({ token_hash: t3.tokenHash, type: "email" });
+  const viaEmailType = await newClient().auth.verifyOtp({
+    token_hash: t3.tokenHash,
+    type: "email",
+  });
   record("typeEmailWorks", viaEmailType.error ? viaEmailType.error.message : "ok");
 
   // 5. Independent refresh: rotate each session twice, then both must still work.
@@ -134,20 +155,27 @@ async function main() {
   }
   const ud = await dashboard.auth.getUser();
   const ue = await extension.auth.getUser();
-  report.checks.independentRefresh ??= !ud.error && !ue.error ? "ok" : `${ud.error?.message} ${ue.error?.message}`;
+  report.checks.independentRefresh ??=
+    !ud.error && !ue.error ? "ok" : `${ud.error?.message} ${ue.error?.message}`;
 
   // 6. Expiry: an unused token older than OTP_EXPIRY_S must fail.
   if (OTP_EXPIRY_S > 0) {
     const t4 = await mintToken(email);
     await new Promise((r) => setTimeout(r, (OTP_EXPIRY_S + 3) * 1000));
     const late = await newClient().auth.verifyOtp({ token_hash: t4.tokenHash, type: "magiclink" });
-    record(`expiresAfter${OTP_EXPIRY_S}s`, late.error ? `ok (${late.error.message})` : "STILL VALID");
+    record(
+      `expiresAfter${OTP_EXPIRY_S}s`,
+      late.error ? `ok (${late.error.message})` : "STILL VALID",
+    );
   }
 
   // 7. Extension local sign-out must not affect the dashboard (AUTH-04/AUTH-12).
   await extension.auth.signOut({ scope: "local" });
   const afterExtSignOut = await dashboard.auth.refreshSession();
-  record("extensionSignOutKeepsDashboard", afterExtSignOut.error ? afterExtSignOut.error.message : "ok");
+  record(
+    "extensionSignOutKeepsDashboard",
+    afterExtSignOut.error ? afterExtSignOut.error.message : "ok",
+  );
 
   // 8. "Sign out of all devices" from the dashboard revokes other sessions (AUTH-12a).
   const ext2 = newClient();
@@ -155,7 +183,10 @@ async function main() {
   await ext2.auth.verifyOtp({ token_hash: t5.tokenHash, type: "magiclink" });
   await dashboard.auth.signOut({ scope: "global" });
   const ext2Refresh = await ext2.auth.refreshSession();
-  record("globalSignOutRevokesExtension", ext2Refresh.error ? `ok (${ext2Refresh.error.message})` : "STILL VALID");
+  record(
+    "globalSignOutRevokesExtension",
+    ext2Refresh.error ? `ok (${ext2Refresh.error.message})` : "STILL VALID",
+  );
 
   // 9. Is public email/password sign-up open? (AUTH-01 allows only Google/GitHub)
   const attacker = newClient();
@@ -169,7 +200,10 @@ async function main() {
   const before = await mailCount();
   const otp = await attacker.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
   const after = await mailCount();
-  record("publicMagicLinkForExistingUser", otp.error ? `blocked (${otp.error.message})` : `sent (${before} -> ${after})`);
+  record(
+    "publicMagicLinkForExistingUser",
+    otp.error ? `blocked (${otp.error.message})` : `sent (${before} -> ${after})`,
+  );
 }
 
 try {
@@ -177,5 +211,5 @@ try {
 } catch (err) {
   report.fatal = String(err?.stack ?? err);
 }
-console.log(JSON.stringify(report, null, 2));
+process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (report.fatal) process.exit(1);
