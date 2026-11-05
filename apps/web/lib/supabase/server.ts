@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { publicEnv } from "@/lib/env";
+import { sessionCookieOptions } from "@/lib/supabase/cookies";
 
 /**
  * Supabase client for Server Components and Route Handlers (AUTH-02). Create one per request.
@@ -11,6 +12,7 @@ export async function createClient() {
   const { supabaseUrl, supabasePublishableKey } = publicEnv();
 
   return createServerClient(supabaseUrl, supabasePublishableKey, {
+    cookieOptions: sessionCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -9,6 +9,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isApiPath, isPublicPath } from "@/lib/auth/routes";
 import { publicEnv, siteUrl } from "@/lib/env";
 import { buildCsp, createNonce } from "@/lib/security/headers";
+import { sessionCookieOptions } from "@/lib/supabase/cookies";
 
 export async function proxy(request: NextRequest) {
   const { supabaseUrl, supabasePublishableKey } = publicEnv();
@@ -32,6 +33,7 @@ export async function proxy(request: NextRequest) {
   let cacheHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(supabaseUrl, supabasePublishableKey, {
+    cookieOptions: sessionCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -59,7 +61,9 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
-    result = NextResponse.redirect(url);
+    // 303 turns a POST into a GET; 307 would re-send the POST to /sign-in.
+    const safeMethod = request.method === "GET" || request.method === "HEAD";
+    result = NextResponse.redirect(url, safeMethod ? 307 : 303);
   } else if (signedIn && pathname === "/sign-in") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
@@ -77,14 +81,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    // Everything except static assets; prefetches skip the proxy.
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  // Everything except static build assets. Prefetch requests are NOT excluded: a client could
+  // otherwise send a prefetch header to skip authentication and the CSP (review of #44).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

@@ -12,6 +12,12 @@ export interface CspOptions {
   upgradeInsecureRequests: boolean;
 }
 
+/** OAuth providers the sign-in redirect chain ends at (AUTH-01). */
+export const OAUTH_PROVIDER_ORIGINS = [
+  "https://accounts.google.com",
+  "https://github.com",
+] as const;
+
 export function buildCsp({
   nonce,
   isDev,
@@ -29,8 +35,9 @@ export function buildCsp({
     `connect-src 'self' ${supabaseOrigin}`,
     "object-src 'none'",
     "base-uri 'self'",
-    // Sign-in posts to our own route, which redirects to the OAuth provider.
-    "form-action 'self'",
+    // Browsers apply form-action to every redirect after a form POST: the sign-in form posts
+    // to /auth/sign-in, which redirects to Supabase /authorize, which redirects to the provider.
+    `form-action 'self' ${supabaseOrigin} ${OAUTH_PROVIDER_ORIGINS.join(" ")}`,
     "frame-ancestors 'none'",
   ];
   if (upgradeInsecureRequests) directives.push("upgrade-insecure-requests");

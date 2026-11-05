@@ -46,6 +46,11 @@ describe("safeNextPath", () => {
     "javascript:alert(1)",
     "/sign-in",
     "/auth/callback?code=x",
+    "/.//evil.example",
+    "/%2e//evil.example",
+    "/./../..//evil.example",
+    "/\t/evil.example",
+    "/\n/evil.example",
   ])("AUTH-03 rejects %j and falls back to /", (raw) => {
     expect(safeNextPath(raw)).toBe("/");
   });

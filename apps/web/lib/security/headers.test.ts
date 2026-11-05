@@ -37,6 +37,15 @@ describe("buildCsp", () => {
   });
 });
 
+describe("form-action", () => {
+  it("AUTH-01 allows the OAuth redirect chain: self -> Supabase -> Google/GitHub, nothing else", () => {
+    const csp = buildCsp({ nonce: "x", isDev: false, supabaseUrl, upgradeInsecureRequests: true });
+    expect(csp).toContain(
+      "form-action 'self' https://abc.supabase.co https://accounts.google.com https://github.com;",
+    );
+  });
+});
+
 describe("createNonce", () => {
   it("is random base64 of 16 bytes", () => {
     const a = createNonce();

@@ -19,12 +19,18 @@ export function isApiPath(pathname: string): boolean {
  */
 export function safeNextPath(raw: string | null | undefined): string {
   if (!raw?.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return "/";
+  // Control characters (tab, newline) are stripped by URL parsers and can hide a second slash.
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control-character check
+  if (/[\u0000-\u001f\u007f]/.test(raw)) return "/";
   try {
     // Resolve against a dummy origin: anything that escapes it is rejected.
     const url = new URL(raw, "http://careeros.invalid");
     if (url.origin !== "http://careeros.invalid") return "/";
     if (isPublicPath(url.pathname) && url.pathname !== "/privacy") return "/";
-    return `${url.pathname}${url.search}${url.hash}`;
+    const result = `${url.pathname}${url.search}${url.hash}`;
+    // Normalization can turn "/.//evil.com" into "//evil.com" (protocol-relative): re-check.
+    if (result.startsWith("//") || result.includes("\\")) return "/";
+    return result;
   } catch {
     return "/";
   }

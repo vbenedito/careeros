@@ -145,6 +145,43 @@ describe("dashboard auth (integration)", () => {
     );
   });
 
+  it("AUTH-02 auth cookies set by the server are HttpOnly and SameSite=Lax", async () => {
+    const res = await fetch(`${DASHBOARD_URL}/auth/sign-in`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { origin: DASHBOARD_URL, "content-type": "application/x-www-form-urlencoded" },
+      body: "provider=github",
+    });
+    const authCookies = res.headers.getSetCookie().filter((c) => c.startsWith("sb-"));
+    expect(authCookies.length).toBeGreaterThan(0);
+    for (const c of authCookies) {
+      expect(c).toMatch(/;\s*HttpOnly/i);
+      expect(c).toMatch(/;\s*SameSite=lax/i);
+    }
+  });
+
+  it("AUTH-03 a prefetch header cannot skip authentication (review of #44)", async () => {
+    const api = await fetch(`${DASHBOARD_URL}/api/extension/link`, {
+      redirect: "manual",
+      headers: { "next-router-prefetch": "1" },
+    });
+    expect(api.status).toBe(401);
+    const page = await fetch(`${DASHBOARD_URL}/settings`, {
+      redirect: "manual",
+      headers: { purpose: "prefetch" },
+    });
+    expect(page.status).toBe(307);
+    expect(location(page)).toBe(`${DASHBOARD_URL}/sign-in?next=%2Fsettings`);
+  });
+
+  it("AUTH-03 a signed-out POST to a protected route is redirected with 303 (not re-posted)", async () => {
+    const res = await fetch(`${DASHBOARD_URL}/auth/sign-out`, {
+      method: "POST",
+      redirect: "manual",
+    });
+    expect(res.status).toBe(303);
+  });
+
   it("SEC-08 state-changing routes reject foreign origins", async () => {
     for (const path of ["/auth/sign-in", "/auth/sign-out"]) {
       const res = await fetch(`${DASHBOARD_URL}${path}`, {
