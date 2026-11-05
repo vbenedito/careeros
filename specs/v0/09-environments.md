@@ -45,7 +45,7 @@ careeros/
 
 ## 3. CI (GitHub Actions)
 
-- **ENV-08** Workflow `ci.yml` on pull requests and `main`:
+- **ENV-08** Workflow `.github/workflows/ci.yml` on pull requests and pushes to `main` (Node from `.nvmrc`, pnpm from `packageManager`):
   1. `checks`: install (cached pnpm store) → Biome → `tsc --noEmit` → Vitest → build extension and dashboard.
   2. `backend`: `supabase start` (Docker on the runner) → `supabase db reset` → `supabase test db` → integration tests → Playwright E2E. Artifacts: Playwright report on failure.
 - **ENV-09** Actions pinned to commit SHAs; minimal `permissions`.

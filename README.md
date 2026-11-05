@@ -1,5 +1,7 @@
 # CareerOS
 
+[![CI](https://github.com/vbenedito/careeros/actions/workflows/ci.yml/badge.svg)](https://github.com/vbenedito/careeros/actions/workflows/ci.yml)
+
 Track and understand your technical-interview study time — automatically and privately.
 
 > **Status: v0 in implementation (Gate 3).** Specs and backlog are approved; features below are planned, not yet implemented.
