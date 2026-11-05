@@ -92,9 +92,7 @@ describe("dashboard auth (integration)", () => {
   it("AUTH-03 signed out: pages redirect to /sign-in with next, API answers 401", async () => {
     const page = await get("/settings?tab=sites");
     expect(page.status).toBe(307);
-    expect(page.headers.get("location")).toBe(
-      `${DASHBOARD_URL}/sign-in?next=%2Fsettings%3Ftab%3Dsites`,
-    );
+    expect(location(page)).toBe(`${DASHBOARD_URL}/sign-in?next=%2Fsettings%3Ftab%3Dsites`);
 
     const api = await get("/api/extension/link");
     expect(api.status).toBe(401);
