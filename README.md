@@ -30,7 +30,7 @@ Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md).
 
 ## Setup
 
-Requirements: **Node.js ≥ 22.12** (see `.nvmrc`) and **pnpm 12** (`corepack enable` picks the version pinned in `package.json`). Docker Desktop is needed for backend work (from issue #3).
+Requirements: **Node.js 26 LTS** (see `.nvmrc`; `nvm use`) and **pnpm 12** (`corepack enable` picks the version pinned in `package.json`). Docker Desktop is needed for backend work (from issue #3).
 
 ```bash
 pnpm install
@@ -52,7 +52,7 @@ specs/ docs/     specifications, ADRs, roadmap, backlog
 
 | Tool | Version | Note |
 |---|---|---|
-| Node.js | 22 LTS | |
+| Node.js | 26 LTS | Active LTS since Oct 2026; Vercel default runtime for new projects |
 | pnpm | 12.16.1 | `minimumReleaseAge` supply-chain policy left at its default; dependencies are pinned exactly |
 | TypeScript | 6.0.3 | 7.x (native compiler) skipped for now: Next.js and editor tooling rely on the 6.x JS API |
 | Next.js / React | 16.4.4 / 19.3.1 | |
