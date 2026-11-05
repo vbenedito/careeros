@@ -13,8 +13,14 @@ import { DATA } from "./constants";
  */
 const LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 
-/** Hostname with at least two labels and an alphabetic-ish last label (rejects IPv4). */
-export const DOMAIN_PATTERN = new RegExp(`^(?:${LABEL}\\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$`);
+/**
+ * Hostname with at least two labels whose last label is alphabetic or punycode (rejects IPv4).
+ * On its own it still allows `www.`; `isValidDomain` and the DB domain type also require no
+ * leading `www.` and at most 253 characters.
+ */
+export const DOMAIN_PATTERN = new RegExp(
+  `^(?:${LABEL}\\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{0,58}[a-z0-9])$`,
+);
 
 /** Lowercases, trims, removes one trailing dot and one leading `www.`. Does not validate. */
 export function normalizeHostname(hostname: string): string {
@@ -80,6 +86,8 @@ export type ParseDomainResult = { ok: true; domain: string } | { ok: false; erro
 export function parseDomainInput(input: string): ParseDomainResult {
   const raw = input.trim();
   if (raw.length === 0) return { ok: false, error: "Enter a site, e.g. leetcode.com" };
+  // A bare "user@host" or "mailto:" is not a website address.
+  if (raw.includes("@")) return { ok: false, error: "That doesn't look like a website address" };
   const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)
     ? hostnameFromUrl(raw)
     : hostnameFromUrl(`https://${raw}`);

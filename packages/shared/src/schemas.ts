@@ -15,7 +15,11 @@ export const UtcSecondsSchema = z.iso.datetime({ precision: 0 });
 
 const MAX_ACCEPTED_S = TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S;
 
-/** TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions`. */
+/**
+ * TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions`.
+ * MIN_INTERVAL_S is not enforced here: the engine discards short intervals before they are
+ * stored (TRK-10), and the server only requires a positive duration (DATA-02).
+ */
 export const IntervalSchema = z
   .object({
     id: z.uuid({ version: "v4" }),

@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
+import { DATA, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
 
 const specsDir = resolve(import.meta.dirname, "../../../specs/v0");
 
@@ -35,6 +35,20 @@ describe("constants match the specs", () => {
     expect(spec.get("SYNC_BATCH_MAX")).toEqual([SYNC.SYNC_BATCH_MAX]);
     expect(spec.get("BACKOFF_MIN")).toEqual([...SYNC.BACKOFF_MIN]);
     expect(spec.get("LOCAL_QUEUE_MAX_AGE_D")).toEqual([SYNC.LOCAL_QUEUE_MAX_AGE_D]);
+  });
+
+  it("01-tracking.md §2 has no constant missing from code", () => {
+    expect([...specConstants("01-tracking.md").keys()].sort()).toEqual(
+      Object.keys(TRACKING).sort(),
+    );
+  });
+
+  it("04-data-model.md limits", () => {
+    const spec = readFileSync(resolve(specsDir, "04-data-model.md"), "utf8");
+    expect(spec).toContain(`at most **${DATA.MAX_TRACKED_DOMAINS}** tracked domains`);
+    const maxAccepted = TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S;
+    expect(spec).toContain(`interval '${maxAccepted} seconds'`);
+    expect(spec).toContain(`length ≤ ${DATA.MAX_DOMAIN_LENGTH}`);
   });
 
   it("AUTH-07a protocol version starts at 1", () => {

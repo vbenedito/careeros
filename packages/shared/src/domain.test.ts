@@ -59,6 +59,7 @@ describe("isValidDomain", () => {
     "under_score.com",
     `${"a".repeat(64)}.com`,
     `${"a.".repeat(127)}com`,
+    "a.xn--abc-",
   ])("rejects %j", (d) => {
     expect(isValidDomain(d)).toBe(false);
   });
@@ -146,12 +147,18 @@ describe("parseDomainInput", () => {
     expect(parseDomainInput("docs.python.org/3/")).toEqual({ ok: true, domain: "docs.python.org" });
   });
 
-  it.each(["", "   ", "localhost", "chrome://extensions", "not a site", "192.168.0.1"])(
-    "rejects %j with a message",
-    (input) => {
-      const result = parseDomainInput(input);
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error.length).toBeGreaterThan(0);
-    },
-  );
+  it.each([
+    "",
+    "   ",
+    "localhost",
+    "chrome://extensions",
+    "not a site",
+    "192.168.0.1",
+    "me@leetcode.com",
+    "mailto:x@leetcode.com",
+  ])("rejects %j with a message", (input) => {
+    const result = parseDomainInput(input);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.length).toBeGreaterThan(0);
+  });
 });
