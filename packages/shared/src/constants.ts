@@ -1,0 +1,34 @@
+/**
+ * Constants mirrored from the approved specs. The spec tables are the source of truth;
+ * change a value here only together with its spec (specs/README.md conventions).
+ */
+
+/** specs/v0/01-tracking.md §2 */
+export const TRACKING = {
+  IDLE_THRESHOLD_S: 60,
+  MEDIA_IDLE_CEILING_S: 900,
+  HEARTBEAT_PERIOD_MIN: 1,
+  MAX_INTERVAL_S: 1800,
+  MIN_INTERVAL_S: 5,
+} as const;
+
+/** specs/v0/03-sync.md §2 */
+export const SYNC = {
+  SYNC_PERIOD_MIN: 5,
+  SYNC_BATCH_MAX: 200,
+  BACKOFF_MIN: [1, 2, 4, 8, 16, 30],
+  LOCAL_QUEUE_MAX_AGE_D: 30,
+} as const;
+
+/** specs/v0/04-data-model.md */
+export const DATA = {
+  /** DATA-01 */
+  MAX_TRACKED_DOMAINS: 50,
+  /** DATA-02: server accepts up to MAX_INTERVAL_S + this tolerance. */
+  INTERVAL_TOLERANCE_S: 30,
+  /** Hostname length limit (DNS), used by the `domain` CHECK. */
+  MAX_DOMAIN_LENGTH: 253,
+} as const;
+
+/** AUTH-07a: version of the dashboard ↔ extension message protocol. */
+export const PROTOCOL_VERSION = 1;
