@@ -53,7 +53,7 @@ pnpm db:test      # run pgTAP tests in supabase/tests/database
 pnpm db:stop      # stop the containers (data volumes are kept)
 ```
 
-Then copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the values from `pnpm db:status`. To try real Google/GitHub sign-in locally, see [`docs/guides/oauth-setup.md`](docs/guides/oauth-setup.md); automated tests don't need it. Local services: API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`, Mailpit (captured e-mails) `http://127.0.0.1:54324`.
+Then copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the values from `pnpm db:status`. Local services: API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`, Mailpit (captured e-mails) `http://127.0.0.1:54324`.
 
 The first `db:start` pulls several Docker images (a few GB) and can take a few minutes. Realtime, Storage, Edge Functions and Analytics are disabled in `supabase/config.toml` because v0 doesn't use them.
 

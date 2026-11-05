@@ -330,7 +330,7 @@ max_frequency = "5s"
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack_oidc`, `spotify`, `workos`, `zoom`.
 # CareerOS sign-in providers (AUTH-01). Off by default so `supabase start` works without
-# credentials; to try real OAuth locally follow docs/guides/oauth-setup.md. Secrets only via
+# credentials; enable them locally with your own OAuth app credentials. Secrets only via
 # environment variables in supabase/.env (git-ignored), never in this file.
 [auth.external.github]
 enabled = false
