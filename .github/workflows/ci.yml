@@ -51,8 +51,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests
-        run: pnpm test
+      - name: Unit tests (with coverage thresholds, TEST §3)
+        run: pnpm test:coverage
 
       - name: Build
         run: pnpm build

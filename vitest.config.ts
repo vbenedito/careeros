@@ -6,8 +6,13 @@ export default defineConfig({
     projects: ["packages/*/vitest.config.ts", "apps/*/vitest.config.ts"],
     coverage: {
       provider: "v8",
-      include: ["packages/*/src/**", "apps/*/src/**", "apps/web/{app,components,lib}/**"],
+      // apps/web joins coverage with its test setup (#22).
+      include: ["packages/*/src/**", "apps/extension/src/**"],
       exclude: ["**/*.test.*", "**/*.d.ts"],
+      // TEST §3: shared rules (and later the tracking engine) must stay at >= 90 %.
+      thresholds: {
+        "packages/shared/src/**": { lines: 90, branches: 90, functions: 90, statements: 90 },
+      },
     },
   },
 });
