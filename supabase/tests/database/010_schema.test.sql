@@ -2,7 +2,7 @@
 -- Runs as the test superuser inside a transaction that is rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(45);
 
 -- Fixture users (auth.users rows; ids are fixed for readability).
 insert into auth.users (id, email)
@@ -49,6 +49,17 @@ select throws_ok($$ select 'https://leetcode.com/x'::public.hostname $$, '23514'
 select throws_ok(
   $$ select (repeat('a.', 127) || 'com')::public.hostname $$, '23514', null, 'rejects > 253 chars'
 );
+select lives_ok(
+  $$ select (repeat('a', 63) || '.com')::public.hostname $$, 'accepts a 63-character label'
+);
+select throws_ok(
+  $$ select (repeat('a', 64) || '.com')::public.hostname $$, '23514', null, 'rejects a 64-character label'
+);
+select lives_ok(
+  $$ select (repeat('a.', 125) || 'com')::public.hostname $$, 'accepts exactly 253 characters'
+);
+select throws_ok($$ select 'under_score.com'::public.hostname $$, '23514', null, 'rejects underscores');
+select lives_ok($$ select 'example.xn--p1ai'::public.hostname $$, 'accepts a punycode TLD');
 
 -- ---------------------------------------------------------------------------------------------
 -- study_sessions constraints (DATA-02) and generated duration
@@ -122,6 +133,26 @@ select lives_ok(
   $$ insert into public.tracked_domains (user_id, domain)
      values ('00000000-0000-4000-8000-0000000000b2', 'site1.test') $$,
   'the limit and uniqueness are per user'
+);
+
+-- ---------------------------------------------------------------------------------------------
+-- Deny by default until #6: clients have no table privileges at all
+-- ---------------------------------------------------------------------------------------------
+select ok(
+  not has_table_privilege('anon', 'public.study_sessions', 'select, insert, update, delete, truncate'),
+  'anon has no privileges on study_sessions'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.study_sessions', 'select, insert, update, delete, truncate'),
+  'authenticated has no privileges on study_sessions (yet)'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.tracked_domains', 'select, insert, update, delete, truncate'),
+  'authenticated has no privileges on tracked_domains (yet)'
+);
+select ok(
+  not has_schema_privilege('authenticated', 'private', 'usage'),
+  'the private schema is not usable by clients'
 );
 
 -- ---------------------------------------------------------------------------------------------

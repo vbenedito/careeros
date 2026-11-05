@@ -3,8 +3,8 @@
 
 -- ---------------------------------------------------------------------------------------------
 -- Domain type: a normalized hostname (TRK-03), mirroring isValidDomain() in
--- packages/shared/src/domain.ts: same regex as DOMAIN_PATTERN, plus no leading www. and
--- at most 253 characters. A test in packages/shared keeps the two in sync.
+-- packages/shared/src/domain.ts (#9): same regex as DOMAIN_PATTERN, plus no leading www.
+-- and at most 253 characters. Keep both in sync.
 -- ---------------------------------------------------------------------------------------------
 create domain public.hostname as text
   check (
@@ -36,9 +36,11 @@ comment on table public.tracked_domains is 'Study sites chosen by each user (SYN
 
 -- DATA-01: at most 50 tracked domains per user. The advisory lock serializes concurrent
 -- inserts for the same user so two parallel requests cannot both pass the count.
+-- SECURITY DEFINER so the count sees all of the user's rows regardless of RLS policies.
 create function private.enforce_tracked_domain_limit()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
@@ -50,6 +52,8 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function private.enforce_tracked_domain_limit() from public, anon, authenticated;
 
 create trigger tracked_domains_limit
   before insert on public.tracked_domains
@@ -87,3 +91,8 @@ alter table public.tracked_domains enable row level security;
 alter table public.tracked_domains force row level security;
 alter table public.study_sessions enable row level security;
 alter table public.study_sessions force row level security;
+
+-- Supabase grants anon/authenticated broad default privileges in public (including TRUNCATE,
+-- which RLS does not cover). Start from nothing; #6 grants exactly what DATA-04/05 allow.
+revoke all on table public.tracked_domains, public.study_sessions from anon, authenticated;
+revoke all on schema private from public, anon, authenticated;
