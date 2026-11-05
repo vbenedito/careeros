@@ -78,14 +78,49 @@ begin
 end;
 $$;
 
+-- Formats a timestamp the way the extension sends it (TRK-10): UTC, whole seconds, 'Z'.
+create or replace function tests.iso(ts timestamptz)
+returns text
+language sql
+stable
+as $$
+  select to_char(date_trunc('second', ts) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"');
+$$;
+
+-- Builds one interval element as the extension uploads it. `starts_ago` is relative to now().
+create or replace function tests.session(
+  id uuid,
+  domain text,
+  starts_ago interval,
+  duration interval,
+  device_id uuid default '00000000-0000-4000-8000-00000000d0d0'
+)
+returns jsonb
+language sql
+stable
+as $$
+  select jsonb_build_object(
+    'id', id,
+    'device_id', device_id,
+    'domain', domain,
+    'started_at', tests.iso(now() - starts_ago),
+    'ended_at', tests.iso(now() - starts_ago + duration)
+  );
+$$;
+
 -- Clients may call the helpers only after switching role inside a test; they never see data.
 grant usage on schema tests to anon, authenticated;
 grant execute on all functions in schema tests to anon, authenticated;
 
-select plan(4);
+select plan(6);
 select has_function('tests', 'user_id', array['text'], 'tests.user_id exists');
 select has_function('tests', 'create_user', array['text'], 'tests.create_user exists');
 select has_function('tests', 'authenticate_as', array['uuid'], 'tests.authenticate_as exists');
 select is(tests.user_id('alice'), tests.user_id('alice'), 'user ids are deterministic');
+select is(tests.iso('2026-11-05 06:30:15.9-03'), '2026-11-05T09:30:15Z', 'tests.iso formats UTC whole seconds');
+select is(
+  tests.session('11111111-1111-4111-8111-111111111111', 'leetcode.com', interval '0', interval '10 minutes') ->> 'domain',
+  'leetcode.com', 'tests.session builds an upload element'
+);
 select * from finish();
 commit;

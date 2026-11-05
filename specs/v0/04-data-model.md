@@ -49,10 +49,10 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 ### `ingest_study_sessions(sessions jsonb) → uuid[]`
 
-- **DATA-06** Rejects (error) when the caller is anonymous or the array has > 200 elements.
+- **DATA-06** Rejects (error) when the caller is anonymous (`PT401` → HTTP 401) or the payload is not an array or has > 200 elements (`22023` → HTTP 400).
 - **DATA-07** Per element, accepts only if: valid UUIDs, valid domain, DATA-02 holds, `started_at >= now() - interval '30 days'`, `ended_at <= now() + interval '5 minutes'`. Invalid elements are skipped, not fatal.
-- **DATA-08** Skips invalid elements, inserts the rest with `user_id = auth.uid()` and `ON CONFLICT (id) DO NOTHING`, and returns ids from the batch that exist with `user_id = auth.uid()` (SYNC-04). An id that collides with another user's row is therefore not returned and ends in quarantine.
-- **DATA-09** Abuse guard (call-level, one indexed count per call): raises `ABUSE_LIMIT` when the caller already inserted > 10,000 rows in the last hour. Normal use is ≤ ~150/h; a 30-day offline backlog is ≤ ~3,000 rows, so legitimate catch-up never trips it.
+- **DATA-08** Skips invalid elements, inserts the rest with `user_id = auth.uid()` and `ON CONFLICT (id) DO NOTHING`, and returns the ids of the **valid** elements that exist with `user_id = auth.uid()` (SYNC-04); an invalid element is never confirmed, even if its id was stored earlier. An id that collides with another user's row is therefore not returned and ends in quarantine.
+- **DATA-09** Abuse guard (call-level, one indexed count per call): raises `ABUSE_LIMIT` (`PT429` → HTTP 429) when the caller already inserted > 10,000 rows in the last hour. Normal use is ≤ ~150/h; a 30-day offline backlog is ≤ ~3,000 rows, so legitimate catch-up never trips it.
 
 ### `get_daily_totals(p_from date, p_to date, p_tz text) → table(day date, seconds bigint)`
 
