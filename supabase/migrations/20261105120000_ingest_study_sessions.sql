@@ -75,7 +75,8 @@ declare
   confirmed uuid[];
 begin
   -- DATA-06
-  if caller is null then
+  -- Anonymous sign-ins are disabled (AUTH-01); refuse them anyway if ever enabled.
+  if caller is null or coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) then
     raise exception 'NOT_AUTHENTICATED' using errcode = 'PT401';
   end if;
   if sessions is null or jsonb_typeof(sessions) <> 'array' then
@@ -85,7 +86,9 @@ begin
     raise exception 'INVALID_BATCH' using errcode = '22023', detail = 'at most 200 sessions per call';
   end if;
 
-  -- DATA-09 (one indexed count per call)
+  -- DATA-09 (one indexed count per call). The per-user lock serializes concurrent calls of the
+  -- same user, so parallel requests cannot all pass the count and overshoot the limit.
+  perform pg_advisory_xact_lock(hashtextextended('ingest_study_sessions:' || caller::text, 0));
   if (
     select count(*) from public.study_sessions
     where user_id = caller and created_at > now() - interval '1 hour'
@@ -123,4 +126,5 @@ revoke all on function public.ingest_study_sessions(jsonb) from public, anon;
 grant execute on function public.ingest_study_sessions(jsonb) to authenticated;
 
 comment on function public.ingest_study_sessions(jsonb) is
-  'Idempotent batch upload of closed study intervals for auth.uid(); returns confirmed ids (SYNC-04).';
+  'Idempotent batch upload of closed study intervals for auth.uid(); returns the set of confirmed '
+  'ids (SYNC-04). The order is not significant: clients must match ids, not positions.';

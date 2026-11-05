@@ -1,6 +1,6 @@
 -- ingest_study_sessions tests for #7 (DATA-06..09, SYNC-04/05, ADR-0004).
 begin;
-select plan(30);
+select plan(33);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
@@ -31,6 +31,14 @@ select tests.authenticate_as_anon();
 select throws_ok($$ select public.ingest_study_sessions('[]') $$, '42501', null,
   'anon is refused by privileges');
 select tests.clear_authentication();
+reset role;
+
+-- a Supabase anonymous sign-in (feature disabled, refused anyway)
+select set_config('request.jwt.claims',
+  json_build_object('sub', tests.user_id('alice'), 'role', 'authenticated', 'is_anonymous', true)::text, true);
+set local role authenticated;
+select throws_ok($$ select public.ingest_study_sessions('[]') $$, 'PT401', 'NOT_AUTHENTICATED',
+  'an anonymous sign-in cannot upload');
 reset role;
 
 -- authenticated role but no user in the JWT (defense in depth)
@@ -87,6 +95,20 @@ select is(
 );
 select is((select count(*)::int from public.study_sessions), 3,
   'ADR-0004 the retry inserted nothing (exactly-once)');
+select bag_eq(
+  $$ select unnest(public.ingest_study_sessions(jsonb_build_array(
+       tests.session('a1000000-0000-4000-8000-000000000003', 'docs.python.org', interval '10 minutes', interval '5 minutes'),
+       tests.session('a1000000-0000-4000-8000-000000000001', 'leetcode.com', interval '2 hours', interval '30 minutes')))) $$,
+  $$ values ('a1000000-0000-4000-8000-000000000001'::uuid), ('a1000000-0000-4000-8000-000000000003'::uuid) $$,
+  'the result is a set of ids, independent of input order'
+);
+select is(
+  public.ingest_study_sessions(jsonb_build_array(
+    tests.session('a1000000-0000-4000-8000-000000000001', 'leetcode.com', interval '2 hours', interval '0')
+  )),
+  '{}'::uuid[],
+  'DATA-08 an invalid element is not confirmed even if its id is already stored'
+);
 select is(
   public.ingest_study_sessions(jsonb_build_array(
     tests.session('a1000000-0000-4000-8000-000000000004', 'leetcode.com', interval '3 hours', interval '1 minute'),
