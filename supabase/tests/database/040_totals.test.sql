@@ -1,10 +1,11 @@
 -- Totals RPC tests for #8 (DATA-10, DATA-11, DASH-07).
 begin;
-select plan(24);
+select plan(31);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
 select tests.create_user('carol');   -- no data
+select tests.create_user('dave');    -- DST and tie-order fixtures
 
 -- Fixture week: Mon 2026-11-02 .. Sun 2026-11-08 (UTC instants)
 insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
@@ -24,6 +25,13 @@ values
   -- Sunday 23:50 local in Sao Paulo = Monday 02:50Z of the NEXT week: inside the week only in Sao Paulo
   (gen_random_uuid(), tests.user_id('alice'), gen_random_uuid(), 'neetcode.io',
    '2026-11-09 02:50:00+00', '2026-11-09 02:55:00+00'),
+  -- dave, Havana: clocks fall back at 01:00 -> 00:00 on Sun 2026-11-01, so local midnight
+  -- happens twice. 04:30Z is the FIRST 00:30 local (UTC-4) of Nov 1.
+  (gen_random_uuid(), tests.user_id('dave'), gen_random_uuid(), 'leetcode.com',
+   '2026-11-01 04:30:00+00', '2026-11-01 04:40:00+00'),
+  -- dave: 05:30Z on Sun 2026-11-01 is 01:30 EDT in New York and 00:30 (second pass) in Havana
+  (gen_random_uuid(), tests.user_id('dave'), gen_random_uuid(), 'neetcode.io',
+   '2026-11-01 05:30:00+00', '2026-11-01 05:40:00+00'),
   -- bob: must never appear in alice's totals
   (gen_random_uuid(), tests.user_id('bob'), gen_random_uuid(), 'leetcode.com',
    '2026-11-02 10:00:00+00', '2026-11-02 10:30:00+00');
@@ -127,6 +135,55 @@ select results_eq(
 );
 select tests.clear_authentication();
 reset role;
+
+-- =============================================================================================
+-- DST, repeated midnights, session TimeZone and tie order (review of #42)
+-- =============================================================================================
+select tests.authenticate_as(tests.user_id('dave'));
+select results_eq(
+  $$ select day, seconds from public.get_daily_totals('2026-11-01', '2026-11-01', 'America/Havana') $$,
+  $$ values ('2026-11-01'::date, 1200::bigint) $$,
+  'a repeated local midnight (Havana fall-back) does not drop the first local hour'
+);
+select results_eq(
+  $$ select domain, seconds from public.get_domain_totals('2026-11-01', '2026-11-01', 'America/Havana') $$,
+  $$ values ('leetcode.com'::text, 600::bigint), ('neetcode.io', 600) $$,
+  'daily and domain totals agree on that day'
+);
+select results_eq(
+  $$ select day, seconds from public.get_daily_totals('2026-10-31', '2026-11-02', 'America/New_York') $$,
+  $$ values ('2026-10-31'::date, 0::bigint), ('2026-11-01', 1200), ('2026-11-02', 0) $$,
+  'a 25-hour DST day (New York fall-back) counts correctly'
+);
+select is(
+  (select array_agg(domain) from public.get_domain_totals('2026-10-31', '2026-11-02', 'America/New_York')),
+  array['leetcode.com', 'neetcode.io'],
+  'equal totals are ordered by domain name'
+);
+set local timezone = 'America/Havana';
+select is(
+  (select count(*)::int from public.get_daily_totals('2026-03-01', '2026-03-31', 'UTC')), 31,
+  'zero-fill is independent of the session TimeZone (31 days in March)'
+);
+reset timezone;
+select tests.clear_authentication();
+reset role;
+
+select tests.authenticate_as(tests.user_id('alice'));
+select is(
+  (select sum(seconds) from public.get_daily_totals('2026-11-02', '2026-11-08', 'America/Sao_Paulo')),
+  (select sum(seconds) from public.get_domain_totals('2026-11-02', '2026-11-08', 'America/Sao_Paulo')),
+  'the daily and domain totals of a period always sum to the same value'
+);
+select tests.clear_authentication();
+reset role;
+
+select ok(
+  (select bool_and('search_path=""' = any(proconfig)) from pg_proc
+   where oid in ('public.get_daily_totals(date, date, text)'::regprocedure,
+                 'public.get_domain_totals(date, date, text)'::regprocedure)),
+  'both functions pin an empty search_path'
+);
 
 select tests.authenticate_as(tests.user_id('carol'));
 select is(

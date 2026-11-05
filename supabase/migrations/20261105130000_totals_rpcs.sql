@@ -33,9 +33,11 @@ begin
   if p_tz is null or not exists (select 1 from pg_catalog.pg_timezone_names where name = p_tz) then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
-  -- [local midnight of p_from, local midnight after p_to) as instants
-  lower_at := p_from::timestamp at time zone p_tz;
-  upper_at := (p_to + 1)::timestamp at time zone p_tz;
+  -- Coarse instant range for the (user_id, started_at) index, widened by a day on each side so
+  -- DST and repeated/missing local midnights can never cut off an interval. The exact rule is
+  -- the local-date filter below, identical in both functions, so they always agree.
+  lower_at := (p_from - 1)::timestamp at time zone 'UTC';
+  upper_at := (p_to + 2)::timestamp at time zone 'UTC';
 
   return query
   with totals as (
@@ -44,11 +46,13 @@ begin
     where s.user_id = (select auth.uid())          -- also enforced by RLS; lets the index work
       and s.started_at >= lower_at
       and s.started_at < upper_at
+      and (s.started_at at time zone p_tz)::date between p_from and p_to
     group by 1
   )
-  select d::date, coalesce(t.seconds, 0)::bigint
-  from generate_series(p_from, p_to, interval '1 day') as d
-  left join totals t on t.day = d::date
+  -- Integer series of dates: independent of the session TimeZone and of DST.
+  select (p_from + i)::date, coalesce(t.seconds, 0)::bigint
+  from generate_series(0, p_to - p_from) as i
+  left join totals t on t.day = p_from + i
   order by 1;
 end;
 $$;
@@ -77,9 +81,11 @@ begin
   if p_tz is null or not exists (select 1 from pg_catalog.pg_timezone_names where name = p_tz) then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
-  -- [local midnight of p_from, local midnight after p_to) as instants
-  lower_at := p_from::timestamp at time zone p_tz;
-  upper_at := (p_to + 1)::timestamp at time zone p_tz;
+  -- Coarse instant range for the (user_id, started_at) index, widened by a day on each side so
+  -- DST and repeated/missing local midnights can never cut off an interval. The exact rule is
+  -- the local-date filter below, identical in both functions, so they always agree.
+  lower_at := (p_from - 1)::timestamp at time zone 'UTC';
+  upper_at := (p_to + 2)::timestamp at time zone 'UTC';
 
   return query
   select s.domain::text, sum(s.duration_s)::bigint as seconds
@@ -87,6 +93,7 @@ begin
   where s.user_id = (select auth.uid())
     and s.started_at >= lower_at
     and s.started_at < upper_at
+    and (s.started_at at time zone p_tz)::date between p_from and p_to
   group by s.domain
   order by 2 desc, 1;
 end;
