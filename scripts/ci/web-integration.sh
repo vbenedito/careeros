@@ -16,5 +16,5 @@ server=$!
 trap 'kill $server 2>/dev/null || true' EXIT
 for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/sign-in && break; sleep 1; done
 
-BASE_URL=$SITE_URL API_URL=$API_URL PUBLISHABLE_KEY=$PUBLISHABLE_KEY SECRET_KEY=$SECRET_KEY \
+DASHBOARD_URL=$SITE_URL API_URL=$API_URL PUBLISHABLE_KEY=$PUBLISHABLE_KEY SECRET_KEY=$SECRET_KEY \
   DB_CONTAINER=supabase_db_careeros pnpm --filter @careeros/web test:integration

@@ -1,4 +1,5 @@
 /**
+// Note: not BASE_URL — Vitest sets process.env.BASE_URL itself.
  * Dashboard auth against the real local Supabase stack (AUTH-01..04, SEC-08/09).
  * OAuth providers cannot run in CI, so the user is created like a GitHub OAuth user and the
  * session is obtained with an admin single-use token (the mechanism validated in spike 0003).
@@ -14,7 +15,7 @@ const env = (name: string) => {
   if (!value) throw new Error(`missing env ${name}`);
   return value;
 };
-const BASE_URL = env("BASE_URL");
+const DASHBOARD_URL = env("DASHBOARD_URL");
 const API_URL = env("API_URL");
 const PUBLISHABLE_KEY = env("PUBLISHABLE_KEY");
 const SECRET_KEY = env("SECRET_KEY");
@@ -72,7 +73,7 @@ async function sessionCookies(email: string) {
 }
 
 const get = (path: string, cookie?: string) =>
-  fetch(`${BASE_URL}${path}`, { redirect: "manual", headers: cookie ? { cookie } : {} });
+  fetch(`${DASHBOARD_URL}${path}`, { redirect: "manual", headers: cookie ? { cookie } : {} });
 
 describe("dashboard auth (integration)", () => {
   const email = `int-${Date.now()}@example.test`;
@@ -87,7 +88,9 @@ describe("dashboard auth (integration)", () => {
   it("AUTH-03 signed out: pages redirect to /sign-in with next, API answers 401", async () => {
     const page = await get("/settings?tab=sites");
     expect(page.status).toBe(307);
-    expect(page.headers.get("location")).toBe(`${BASE_URL}/sign-in?next=%2Fsettings%3Ftab%3Dsites`);
+    expect(page.headers.get("location")).toBe(
+      `${DASHBOARD_URL}/sign-in?next=%2Fsettings%3Ftab%3Dsites`,
+    );
 
     const api = await get("/api/extension/link");
     expect(api.status).toBe(401);
@@ -103,7 +106,7 @@ describe("dashboard auth (integration)", () => {
   it("AUTH-03 signed in: /sign-in redirects home and API routes are no longer 401", async () => {
     const signIn = await get("/sign-in", cookie);
     expect(signIn.status).toBe(307);
-    expect(signIn.headers.get("location")).toBe(`${BASE_URL}/`);
+    expect(signIn.headers.get("location")).toBe(`${DASHBOARD_URL}/`);
     expect((await get("/api/does-not-exist", cookie)).status).toBe(404);
   });
 
@@ -122,10 +125,10 @@ describe("dashboard auth (integration)", () => {
   });
 
   it("AUTH-01 sign-in starts PKCE OAuth with the provider and a safe next path", async () => {
-    const res = await fetch(`${BASE_URL}/auth/sign-in`, {
+    const res = await fetch(`${DASHBOARD_URL}/auth/sign-in`, {
       method: "POST",
       redirect: "manual",
-      headers: { origin: BASE_URL, "content-type": "application/x-www-form-urlencoded" },
+      headers: { origin: DASHBOARD_URL, "content-type": "application/x-www-form-urlencoded" },
       body: "provider=github&next=https://evil.example",
     });
     expect(res.status).toBe(303);
@@ -135,12 +138,14 @@ describe("dashboard auth (integration)", () => {
     expect(location.searchParams.get("provider")).toBe("github");
     expect(location.searchParams.get("code_challenge")).toBeTruthy();
     expect(location.searchParams.get("scopes")).toBe("user:email");
-    expect(location.searchParams.get("redirect_to")).toBe(`${BASE_URL}/auth/callback?next=%2F`);
+    expect(location.searchParams.get("redirect_to")).toBe(
+      `${DASHBOARD_URL}/auth/callback?next=%2F`,
+    );
   });
 
   it("SEC-08 state-changing routes reject foreign origins", async () => {
     for (const path of ["/auth/sign-in", "/auth/sign-out"]) {
-      const res = await fetch(`${BASE_URL}${path}`, {
+      const res = await fetch(`${DASHBOARD_URL}${path}`, {
         method: "POST",
         redirect: "manual",
         headers: { cookie, origin: "https://evil.example" },
@@ -150,13 +155,13 @@ describe("dashboard auth (integration)", () => {
   });
 
   it("AUTH-04 sign-out clears the cookies and revokes the dashboard session", async () => {
-    const res = await fetch(`${BASE_URL}/auth/sign-out`, {
+    const res = await fetch(`${DASHBOARD_URL}/auth/sign-out`, {
       method: "POST",
       redirect: "manual",
-      headers: { cookie, origin: BASE_URL },
+      headers: { cookie, origin: DASHBOARD_URL },
     });
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(`${BASE_URL}/sign-in`);
+    expect(res.headers.get("location")).toBe(`${DASHBOARD_URL}/sign-in`);
     const cleared = res.headers.getSetCookie().filter((c) => c.includes("auth-token"));
     expect(cleared.length).toBeGreaterThan(0);
     for (const c of cleared) expect(c).toMatch(/Max-Age=0|Expires=Thu, 01 Jan 1970/i);
