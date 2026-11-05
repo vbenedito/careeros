@@ -57,6 +57,24 @@ Then copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the value
 
 The first `db:start` pulls several Docker images (a few GB) and can take a few minutes. Realtime, Storage, Edge Functions and Analytics are disabled in `supabase/config.toml` because v0 doesn't use them.
 
+### Chrome extension (unpacked)
+
+```bash
+pnpm --filter @careeros/extension build        # dev build  → apps/extension/dist/development
+VITE_DASHBOARD_ORIGIN=https://<dashboard> pnpm --filter @careeros/extension release   # prod zip
+```
+
+Load it in Chrome: `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `apps/extension/dist/development`. After rebuilding, click the reload icon on the extension card.
+
+The extension ID is pinned by a public key in the manifest, so it is the same on every machine:
+
+| Build | Name | Extension ID |
+|---|---|---|
+| development | CareerOS (dev) | `jfklbpedlpkginmdfckogdgaggmdmkbk` |
+| production | CareerOS | `negamegjachlkaemamlfhaecippkncbl` |
+
+Both can be installed side by side. Permissions are exactly `alarms`, `idle`, `storage`, `tabs` (SEC-03, enforced by a test).
+
 ### Repository layout
 
 ```
@@ -77,3 +95,4 @@ specs/ docs/     specifications, ADRs, roadmap, backlog
 | Vitest | 5.1.0 | |
 | Biome | 2.6.4 | single lint + format tool (React, Next.js and test rule domains) |
 | Supabase CLI | 3.0.0 | dev dependency; local stack runs in Docker (ADR-0008) |
+| Vite | 8.3.5 | extension build (MV3 service worker + popup) |
