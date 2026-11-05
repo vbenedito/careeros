@@ -156,8 +156,9 @@ max_indexes = 5
 # Vector Buckets is available to Supabase Pro plan.
 # [storage.vector.buckets.documents-openai]
 
-# CareerOS: auth settings follow specs/v0/02-auth.md. OAuth providers and the
-# extension-handoff settings (email provider, OTP expiry) are configured in #10/#11.
+# CareerOS: auth settings follow specs/v0/02-auth.md. Accounts come only from Google/GitHub
+# (AUTH-01). The email provider is disabled (no email sign-up or login); the extension handoff
+# still works through admin-generated single-use tokens (spike 0003, ADR-0003). OAuth providers: #11.
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
@@ -225,7 +226,7 @@ web3 = 30
 [auth.email]
 # Allow/disallow the email provider. When false, users can't sign up or sign in with email.
 # To block new signups only, set enable_signup = false under [auth] instead.
-enabled = true
+enabled = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -238,7 +239,7 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+otp_expiry = 300
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
