@@ -136,19 +136,19 @@ select lives_ok(
 );
 
 -- ---------------------------------------------------------------------------------------------
--- Deny by default until #6: clients have no table privileges at all
+-- Client privileges never include writes to intervals or TRUNCATE (full grant checks: 020_rls)
 -- ---------------------------------------------------------------------------------------------
 select ok(
   not has_table_privilege('anon', 'public.study_sessions', 'select, insert, update, delete, truncate'),
   'anon has no privileges on study_sessions'
 );
 select ok(
-  not has_table_privilege('authenticated', 'public.study_sessions', 'select, insert, update, delete, truncate'),
-  'authenticated has no privileges on study_sessions (yet)'
+  not has_table_privilege('authenticated', 'public.study_sessions', 'insert, update, delete, truncate'),
+  'authenticated cannot write study_sessions directly'
 );
 select ok(
-  not has_table_privilege('authenticated', 'public.tracked_domains', 'select, insert, update, delete, truncate'),
-  'authenticated has no privileges on tracked_domains (yet)'
+  not has_table_privilege('authenticated', 'public.tracked_domains', 'update, truncate'),
+  'authenticated cannot update or truncate tracked_domains'
 );
 select ok(
   not has_schema_privilege('authenticated', 'private', 'usage'),
