@@ -72,6 +72,10 @@ async function sessionCookies(email: string) {
   };
 }
 
+/** Location headers may be relative (valid HTTP): resolve them before comparing. */
+const location = (res: Response) =>
+  new URL(res.headers.get("location") ?? "", DASHBOARD_URL).toString();
+
 const get = (path: string, cookie?: string) =>
   fetch(`${DASHBOARD_URL}${path}`, { redirect: "manual", headers: cookie ? { cookie } : {} });
 
@@ -106,7 +110,7 @@ describe("dashboard auth (integration)", () => {
   it("AUTH-03 signed in: /sign-in redirects home and API routes are no longer 401", async () => {
     const signIn = await get("/sign-in", cookie);
     expect(signIn.status).toBe(307);
-    expect(signIn.headers.get("location")).toBe(`${DASHBOARD_URL}/`);
+    expect(location(signIn)).toBe(`${DASHBOARD_URL}/`);
     expect((await get("/api/does-not-exist", cookie)).status).toBe(404);
   });
 
@@ -161,7 +165,7 @@ describe("dashboard auth (integration)", () => {
       headers: { cookie, origin: DASHBOARD_URL },
     });
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(`${DASHBOARD_URL}/sign-in`);
+    expect(location(res)).toBe(`${DASHBOARD_URL}/sign-in`);
     const cleared = res.headers.getSetCookie().filter((c) => c.includes("auth-token"));
     expect(cleared.length).toBeGreaterThan(0);
     for (const c of cleared) expect(c).toMatch(/Max-Age=0|Expires=Thu, 01 Jan 1970/i);
