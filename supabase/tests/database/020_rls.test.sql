@@ -1,6 +1,6 @@
 -- RLS and grant tests for #6 (DATA-04, DATA-05, SEC-07), run as real client roles.
 begin;
-select plan(29);
+select plan(38);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
@@ -61,6 +61,16 @@ select throws_ok(
   $$ insert into public.tracked_domains (user_id, domain) values (tests.user_id('bob'), 'evil.com') $$,
   '42501', null,
   'DATA-04 alice cannot add a domain for bob'
+);
+select throws_ok(
+  $$ insert into public.tracked_domains (id, domain) values (gen_random_uuid(), 'custom-id.com') $$,
+  '42501', null,
+  'clients cannot choose id (INSERT is granted on domain only)'
+);
+select throws_ok(
+  $$ insert into public.tracked_domains (domain, created_at) values ('backdated.com', '2000-01-01') $$,
+  '42501', null,
+  'clients cannot choose created_at'
 );
 
 select lives_ok(
@@ -165,13 +175,45 @@ reset role;
 -- Grants are exactly the spec (SEC-07)
 -- =============================================================================================
 select table_privs_are('public', 'tracked_domains', 'authenticated',
-  array['SELECT', 'INSERT', 'DELETE'], 'authenticated: SELECT/INSERT/DELETE on tracked_domains');
+  array['SELECT', 'DELETE'], 'authenticated: SELECT/DELETE on tracked_domains (INSERT is per column)');
+select column_privs_are('public', 'tracked_domains', 'domain', 'authenticated',
+  array['SELECT', 'INSERT'], 'authenticated: INSERT only on tracked_domains.domain');
+select column_privs_are('public', 'tracked_domains', 'user_id', 'authenticated',
+  array['SELECT'], 'authenticated: cannot insert tracked_domains.user_id');
 select table_privs_are('public', 'study_sessions', 'authenticated',
   array['SELECT'], 'authenticated: SELECT only on study_sessions');
 select table_privs_are('public', 'tracked_domains', 'anon', array[]::text[],
   'anon: nothing on tracked_domains');
 select table_privs_are('public', 'study_sessions', 'anon', array[]::text[],
   'anon: nothing on study_sessions');
+
+-- =============================================================================================
+-- Exact policy set, functions and default privileges
+-- =============================================================================================
+select policies_are('public', 'tracked_domains',
+  array['tracked_domains_select_own', 'tracked_domains_insert_own', 'tracked_domains_delete_own'],
+  'tracked_domains has exactly the DATA-04 policies');
+select policies_are('public', 'study_sessions', array['study_sessions_select_own'],
+  'study_sessions has exactly the DATA-05 policy');
+select ok(
+  not has_function_privilege('authenticated', 'private.enforce_tracked_domain_limit()', 'execute')
+  and not has_function_privilege('anon', 'private.enforce_tracked_domain_limit()', 'execute'),
+  'clients cannot call the private trigger function'
+);
+-- The limit trigger is SECURITY DEFINER owned by postgres and counts under FORCE RLS; that is
+-- only complete because postgres bypasses RLS. Fail loudly if that ever changes.
+select ok(
+  (select r.rolbypassrls from pg_proc p join pg_roles r on r.oid = p.proowner
+   where p.oid = 'private.enforce_tracked_domain_limit()'::regprocedure),
+  'the limit trigger owner bypasses RLS, so its count sees every row of the user'
+);
+-- A function created by a future migration is not callable by clients until granted.
+create function public.tmp_new_rpc() returns int language sql as $$ select 1 $$;
+select ok(
+  not has_function_privilege('anon', 'public.tmp_new_rpc()', 'execute')
+  and not has_function_privilege('authenticated', 'public.tmp_new_rpc()', 'execute'),
+  'new functions in public are not executable by anon/authenticated by default'
+);
 
 select * from finish();
 rollback;

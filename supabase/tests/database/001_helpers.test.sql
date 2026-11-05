@@ -4,6 +4,7 @@
 -- transaction. This file is the exception: it COMMITS a `tests` schema so later files can use
 -- the helpers. It only ever runs against the local / CI database (`supabase test db`); it is
 -- not a migration and never reaches production. The schema is not exposed by PostgREST.
+-- Never run `supabase test db --linked` against the production project.
 --
 -- Usage in a test file:
 --   select tests.create_user('alice');                 -- ids are deterministic: tests.user_id('alice')

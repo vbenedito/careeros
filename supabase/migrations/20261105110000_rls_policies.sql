@@ -8,7 +8,10 @@
 -- tracked_domains (DATA-04): users read, add and remove their own study sites. No UPDATE:
 -- changing a domain is remove + add, which keeps the 50-domain trigger the only write rule.
 -- ---------------------------------------------------------------------------------------------
-grant select, insert, delete on table public.tracked_domains to authenticated;
+-- INSERT is column-scoped: clients set only `domain`; id, user_id and created_at come from
+-- their defaults (user_id = auth.uid()).
+grant select, delete on table public.tracked_domains to authenticated;
+grant insert (domain) on table public.tracked_domains to authenticated;
 
 create policy tracked_domains_select_own on public.tracked_domains
   for select to authenticated
@@ -43,4 +46,9 @@ alter default privileges for role postgres in schema public
 alter default privileges for role postgres in schema public
   revoke all on sequences from anon, authenticated;
 alter default privileges for role postgres in schema public
-  revoke execute on functions from public, anon, authenticated;
+  revoke execute on functions from anon, authenticated;
+-- EXECUTE for PUBLIC is a global default, so it must be revoked globally (a per-schema
+-- revoke cannot remove it). Every RPC therefore needs an explicit GRANT EXECUTE. This also
+-- applies to extensions a future migration creates as postgres: grant what clients need.
+alter default privileges for role postgres
+  revoke execute on functions from public;
