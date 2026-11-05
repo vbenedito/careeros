@@ -11,5 +11,6 @@
 | v5 | AI-generated insights & recommendations | Server-side LLM calls, cost controls, explicit consent, prompt-injection boundaries. |
 | Distribution | Chrome Web Store listing | Optional host permissions, store privacy disclosures, review process. |
 | UX | Custom date range; onboarding presets for common study sites | Deferred from v0 (DASH §7). |
+| Auth UX | "One login": connect the extension automatically on dashboard sign-in, and sign it out together with the dashboard in the same browser | Discussed 2026-11-05; v0 keeps separate sign-ins (AUTH-04). Fits the current design: sessions stay separate, only the `CONNECT`/`DISCONNECT` messages are triggered automatically. |
 
 Also deferred: goals, streaks/gamification, paid plans, mobile apps, Notion integration.

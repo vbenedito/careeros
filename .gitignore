@@ -41,3 +41,4 @@ supabase/.temp/
 spikes/**/node_modules/
 spikes/**/package*.json
 spike-*.json
+web-integration-server.log
