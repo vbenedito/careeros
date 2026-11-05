@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { type BuildMode, buildManifest, parseDashboardOrigin } from "./manifest.config";
+import {
+  assertNoSecrets,
+  type BuildMode,
+  buildManifest,
+  parseDashboardOrigin,
+} from "./manifest.config";
 
 const DEV_DEFAULTS = { VITE_DASHBOARD_ORIGIN: "http://localhost:3000" };
 
@@ -36,6 +41,7 @@ export default defineConfig(({ mode }) => {
     ...(buildMode === "development" ? DEV_DEFAULTS : {}),
     ...loadEnv(mode, import.meta.dirname, "VITE_"),
   };
+  assertNoSecrets(env);
   const dashboardOrigin = parseDashboardOrigin(env.VITE_DASHBOARD_ORIGIN, buildMode);
 
   return {

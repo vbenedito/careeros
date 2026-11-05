@@ -5,8 +5,8 @@
   "type": "module",
   "description": "CareerOS Chrome extension (Manifest V3).",
   "scripts": {
-    "build": "vite build --mode development",
-    "build:prod": "vite build --mode production",
+    "build": "NODE_ENV=development vite build --mode development",
+    "build:prod": "NODE_ENV=production vite build --mode production",
     "release": "pnpm build:prod && node scripts/zip.ts production",
     "typecheck": "tsc -p tsconfig.worker.json && tsc -p tsconfig.popup.json && tsc -p tsconfig.node.json"
   },

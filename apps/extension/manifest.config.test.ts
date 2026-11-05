@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  assertNoSecrets,
   type BuildMode,
   buildManifest,
   EXTENSION_PAGES_CSP,
@@ -83,5 +84,15 @@ describe("parseDashboardOrigin", () => {
     expect(parseDashboardOrigin("https://app.example.com", "production")).toBe(
       "https://app.example.com",
     );
+  });
+});
+
+describe("assertNoSecrets", () => {
+  it("SEC-07 refuses to bundle a Supabase secret key", () => {
+    expect(() => assertNoSecrets({ VITE_SUPABASE_KEY: "sb_secret_abc" })).toThrow(/SEC-07/);
+    expect(() => assertNoSecrets({ VITE_SERVICE_ROLE_KEY: "x" })).toThrow(/SEC-07/);
+    expect(() =>
+      assertNoSecrets({ VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc" }),
+    ).not.toThrow();
   });
 });

@@ -55,6 +55,19 @@ export function parseDashboardOrigin(raw: string | undefined, mode: BuildMode): 
   return url.origin;
 }
 
+/**
+ * VITE_* values are bundled into the extension and therefore public. Refuse obvious secrets
+ * (Supabase secret / service-role keys) so they can never ship by mistake (SEC-07).
+ */
+export function assertNoSecrets(env: Record<string, string | undefined>): void {
+  for (const [name, value] of Object.entries(env)) {
+    if (!value) continue;
+    if (value.startsWith("sb_secret_") || /service_role/i.test(name)) {
+      throw new Error(`${name} looks like a server secret and must not be bundled (SEC-07)`);
+    }
+  }
+}
+
 export function buildManifest(mode: BuildMode, config: ExtensionBuildConfig) {
   const name = mode === "production" ? "CareerOS" : "CareerOS (dev)";
   return {

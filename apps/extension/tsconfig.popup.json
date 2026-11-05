@@ -4,5 +4,5 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["chrome"]
   },
-  "include": ["src/popup", "src/lib"]
+  "include": ["src/popup", "src/lib", "src/vite-env.d.ts"]
 }
