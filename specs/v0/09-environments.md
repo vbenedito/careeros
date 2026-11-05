@@ -38,7 +38,7 @@ careeros/
 | **Production** | Supabase Cloud project (free tier) | Vercel (free tier) | prod build, unpacked, distributed as a zip from GitHub Releases |
 
 - **ENV-04** No staging in v0.
-- **ENV-05** Configuration via env files (`.env.local`, never committed; `.env.example` committed). The extension's build-time config (dashboard origin, Supabase URL + anon key, extension `key`) is injected by Vite per mode. Dev and prod builds use **different** manifest keys (different IDs, installable side by side; each dashboard env knows its own ID).
+- **ENV-05** Configuration via env files (`.env.local`, never committed; `.env.example` committed). The extension's build-time config (dashboard origin, Supabase URL + publishable key, extension `key`) is injected by Vite per mode. Dev and prod builds use **different** manifest keys (different IDs, installable side by side; each dashboard env knows its own ID).
 - **ENV-05a** Releases: semantic version in `manifest.json`; each release is a GitHub Release with the prod zip and install/update instructions (load unpacked → replace folder → reload). Updates are manual in v0; AUTH-07a surfaces outdated builds.
 - **ENV-06** Local OAuth: the local stack is used with seeded users (admin API) for development and tests; optionally a GitHub OAuth app for `localhost` can be configured, documented but not required.
 - **ENV-07** The dashboard is **not** containerized in v0 (Vercel builds it natively); Docker is used for the backend stack, database tests and CI parity (ADR-0008).

@@ -26,7 +26,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 
 ## 3. Dashboard & backend
 
-- **SEC-07** RLS enabled and forced on every table; covered by pgTAP tests (DATA §5). Supabase `anon` key is public by design; the **service-role key** is server-only (Vercel env), never shipped to the browser or the extension.
+- **SEC-07** RLS enabled and forced on every table; covered by pgTAP tests (DATA §5). The Supabase **publishable key** (`sb_publishable_…`, formerly "anon") is public by design; the **secret key** (`sb_secret_…`, formerly "service_role", env `SUPABASE_SECRET_KEY`) is server-only (Vercel env), never shipped to the browser or the extension, and never prefixed `NEXT_PUBLIC_`.
 - **SEC-08** Server routes that mutate (`/api/extension/link`, account deletion) require an authenticated session and a matching `Origin` header (CSRF defense on top of `SameSite=Lax` cookies).
 - **SEC-09** Security headers: CSP with per-request **nonces** set in middleware (self + Supabase; nonce also passed to `next-themes`' inline script — no `unsafe-inline` for scripts), `X-Frame-Options: DENY` / `frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin`, HSTS in production.
 - **SEC-10** All inputs validated with shared Zod schemas at the boundary and again by database constraints.
