@@ -1,6 +1,6 @@
 # ADR-0003 — Dashboard-initiated extension session via single-use token
 
-Status: Proposed — **requires spike (issue #10)** · Date: 2026-11-04
+Status: **Accepted** (spike #10, 2026-11-05) · Date: 2026-11-04
 
 ## Context
 Product decision: users log in on the dashboard and the session is "handed" to the extension. Supabase rotates refresh tokens; reusing one outside a short reuse window (10 s default) marks the whole session as compromised and revokes it. Therefore the extension must not share the dashboard's session — it needs its own, created from the dashboard's authenticated context.
@@ -22,3 +22,7 @@ Spike exit criteria: token hash from `generateLink` yields a session through `ve
 − Remote revocation of an extension in another browser is only possible via "Sign out of all devices" (no per-device session registry in v0).
 − Requires service-role usage in a dashboard route (server-only secret, narrowly scoped route).
 − Relies on admin link generation behaving as documented; covered by the spike and an integration test.
+
+## Spike result (2026-11-05)
+
+Validated in [spike 0003](../spikes/0003-auth-handoff.md) on the real Supabase Auth server: the token yields an independent session, is single-use, expires per `otp_expiry`, sends no e-mail, and both sessions refresh and sign out independently. Running it with the **email provider disabled** keeps the handoff working and closes email sign-up and email login, so AUTH-01 holds without an auth hook. Option B is not needed.
