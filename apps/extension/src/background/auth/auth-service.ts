@@ -49,6 +49,12 @@ export interface LocalData {
   pendingCount(): Promise<number>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
   clear(): Promise<void>;
+  /**
+   * Stops tracking and waits until the open interval is closed into the outbox, so the final
+   * flush includes it (AUTH-12). `resumeTracking` undoes it when the disconnect is refused.
+   */
+  stopTracking(): Promise<void>;
+  resumeTracking(): Promise<void>;
 }
 
 export type ConnectResult =
@@ -161,8 +167,12 @@ export function createAuthService(deps: {
     /** AUTH-12: final sync, then sign out and clear local data. */
     disconnect(options: { discardUnsynced?: boolean } = {}) {
       return exclusive(async (): Promise<DisconnectResult> => {
+        await localData.stopTracking();
         const remaining = await localData.flush();
-        if (remaining > 0 && !options.discardUnsynced) return { ok: false, code: "UNSYNCED_DATA" };
+        if (remaining > 0 && !options.discardUnsynced) {
+          await localData.resumeTracking();
+          return { ok: false, code: "UNSYNCED_DATA" };
+        }
         await backend.signOutLocal();
         await localData.clear();
         await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
