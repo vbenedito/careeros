@@ -89,8 +89,19 @@ jobs:
       - name: Database tests (pgTAP)
         run: pnpm db:test
 
+      # The runner image already has Chromium's system libraries, so no apt step (--with-deps
+      # pulled packages from a slow mirror: ~9 min). Only full Chromium is needed (tests use
+      # channel "chromium"), and it is cached per Playwright version.
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('apps/extension/package.json') }}
+
       - name: Install Chromium for Playwright
-        run: pnpm --filter @careeros/extension exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @careeros/extension exec playwright install --no-shell chromium
 
       # One dashboard server for both suites: dashboard HTTP tests, then real-Chromium
       # extension tests (including the /connect end-to-end flow).
