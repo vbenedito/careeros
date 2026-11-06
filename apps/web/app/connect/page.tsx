@@ -15,7 +15,7 @@ export default async function ConnectPage() {
         The CareerOS extension gets its own sign-in for <strong>{user.email}</strong>. Signing out
         here does not disconnect it.
       </p>
-      <ConnectExtension extensionId={extensionId()} />
+      <ConnectExtension extensionId={extensionId()} userEmail={user.email ?? null} />
       <p>
         <a href="/">Back to the dashboard</a>
       </p>

@@ -2,28 +2,30 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { sendToExtension } from "@/lib/extension/messenger";
-import {
-  type ConnectOutcome,
-  type ExtensionState,
-  interpretConnect,
-  interpretStatus,
-} from "@/lib/extension/protocol";
+import { type ConnectOutcome, interpretConnect, interpretStatus } from "@/lib/extension/protocol";
 
 type View =
   | { kind: "checking" }
-  | ExtensionState
+  | ReturnType<typeof interpretStatus>
   | { kind: "connecting" }
   | Exclude<ConnectOutcome, { kind: "connected" }>
   | { kind: "rate-limited" };
 
 /** Connect flow (AUTH §3): PING → POST /api/extension/link → CONNECT. */
-export function ConnectExtension({ extensionId }: { extensionId: string }) {
+export function ConnectExtension({
+  extensionId,
+  userEmail,
+}: {
+  extensionId: string;
+  /** The dashboard's signed-in email: a different account in the extension is not success. */
+  userEmail: string | null;
+}) {
   const [view, setView] = useState<View>({ kind: "checking" });
 
   const check = useCallback(async () => {
     setView({ kind: "checking" });
-    setView(interpretStatus(await sendToExtension(extensionId, { type: "PING" })));
-  }, [extensionId]);
+    setView(interpretStatus(await sendToExtension(extensionId, { type: "PING" }), userEmail));
+  }, [extensionId, userEmail]);
 
   useEffect(() => {
     void check();
@@ -105,6 +107,7 @@ function Message({ view }: { view: View }) {
           . You can close this page.
         </p>
       );
+    case "other-account":
     case "already-connected":
       return (
         <p role="alert">

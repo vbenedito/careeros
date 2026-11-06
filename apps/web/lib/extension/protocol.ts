@@ -17,8 +17,14 @@ export type ExtensionState =
   | { kind: "not-connected"; extensionVersion: string }
   | { kind: "connected"; extensionVersion: string; email: string | null };
 
-/** Turns a PING/STATUS reply (or no reply at all) into what the page shows. */
-export function interpretStatus(reply: unknown): ExtensionState {
+/**
+ * Turns a PING/STATUS reply (or no reply at all) into what the page shows. When the extension
+ * is connected to a different account than the dashboard's, the page must not report success.
+ */
+export function interpretStatus(
+  reply: unknown,
+  dashboardEmail: string | null = null,
+): ExtensionState | { kind: "other-account"; email: string | null } {
   if (reply === undefined || reply === null) return { kind: "not-installed" };
   const error = ExtensionErrorSchema.safeParse(reply);
   if (error.success) {
@@ -31,13 +37,14 @@ export function interpretStatus(reply: unknown): ExtensionState {
   if (!DASHBOARD_PROTOCOL_VERSIONS.includes(status.data.protocolVersion)) {
     return { kind: "outdated", extensionVersion: status.data.extensionVersion };
   }
-  return status.data.connected
-    ? {
-        kind: "connected",
-        extensionVersion: status.data.extensionVersion,
-        email: status.data.email ?? null,
-      }
-    : { kind: "not-connected", extensionVersion: status.data.extensionVersion };
+  if (!status.data.connected) {
+    return { kind: "not-connected", extensionVersion: status.data.extensionVersion };
+  }
+  const email = status.data.email ?? null;
+  if (dashboardEmail && email?.toLowerCase() !== dashboardEmail.toLowerCase()) {
+    return { kind: "other-account", email };
+  }
+  return { kind: "connected", extensionVersion: status.data.extensionVersion, email };
 }
 
 export type ConnectOutcome =

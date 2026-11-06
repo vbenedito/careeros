@@ -30,6 +30,15 @@ describe("interpretStatus (AUTH-07a)", () => {
     });
   });
 
+  it("does not report success when the extension holds a different account", () => {
+    const reply = status({ connected: true, email: "Bob@example.com" });
+    expect(interpretStatus(reply, "alice@example.com")).toEqual({
+      kind: "other-account",
+      email: "Bob@example.com",
+    });
+    expect(interpretStatus(reply, "bob@example.com")).toMatchObject({ kind: "connected" });
+  });
+
   it("asks for an update when the protocol is not supported", () => {
     expect(interpretStatus(status({ protocolVersion: 99 }))).toEqual({
       kind: "outdated",
