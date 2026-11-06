@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fakeStorage } from "../../test/fakes";
 import { DROPPED_COUNT_KEY, OUTBOX_KEY, QUARANTINE_KEY, SYNCED_TODAY_KEY } from "./keys";
 import { createOutbox } from "./outbox";
+import { createSerialQueue } from "./queue";
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0); // local day = UTC day in this test
@@ -92,5 +93,28 @@ describe("local store (SYNC-01, 05, 07, 08)", () => {
     });
     await outbox.clear();
     expect(area.data.size).toBe(0);
+  });
+
+  it("SYNC-01 with the real serialized queue, engine appends and settle interleave without loss", async () => {
+    const area = fakeStorage();
+    const enqueue = createSerialQueue();
+    const outbox = createOutbox({
+      area,
+      exclusive: enqueue,
+      now: () => NOW,
+      startOfLocalDay: (t) => t - (t % DAY),
+    });
+    const first = interval(NOW - 3600_000);
+    const append = (i: Interval) =>
+      enqueue(async () => {
+        const current = ((await area.get(OUTBOX_KEY))[OUTBOX_KEY] as Interval[] | undefined) ?? [];
+        await area.set({ [OUTBOX_KEY]: [...current, i] });
+      });
+    await append(first);
+    const batch = await outbox.batch();
+    const second = interval(NOW - 60_000);
+    await Promise.all([append(second), outbox.settle(batch, [first.id])]);
+    expect(area.data.get(OUTBOX_KEY)).toEqual([second]);
+    expect(await outbox.today()).toEqual([first, second]);
   });
 });

@@ -3,6 +3,9 @@
  * outbox → (server confirms) → synced today | quarantine. Every read-modify-write runs inside
  * the tracker's queue (`exclusive`), because the engine appends to the outbox from the same
  * queue — so no update is ever lost.
+ *
+ * Never call these from inside `tracker.exclusive` / `dispatch`: the queue is not re-entrant
+ * and the call would wait for its own slot forever.
  */
 import { type Interval, SYNC } from "@careeros/shared";
 import type { KeyValueArea } from "../auth/storage";
