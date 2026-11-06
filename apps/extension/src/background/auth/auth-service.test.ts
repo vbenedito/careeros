@@ -70,6 +70,17 @@ describe("connect", () => {
   });
 });
 
+describe("connect failures", () => {
+  it("revokes the verified session when it cannot be adopted", async () => {
+    const { auth, fb } = setup();
+    fb.backend.adoptSession = async () => {
+      throw new Error("storage full");
+    };
+    await expect(auth.connect("token-alice")).rejects.toThrow("storage full");
+    expect(fb.calls).toEqual(["verify", "discard"]);
+  });
+});
+
 describe("accessToken", () => {
   it("returns null when not connected", async () => {
     expect(await setup().auth.accessToken()).toBeNull();

@@ -20,6 +20,7 @@ Spike exit criteria: token hash from `generateLink` yields a session through `ve
 + The token is single-use, short-lived, never e-mailed or put in a URL, and only deliverable to our extension ID from our origin.
 − The token transits dashboard page JavaScript for seconds; an XSS on the dashboard could redeem it. Mitigated by nonce-based CSP and no third-party scripts; same risk class as XSS against cookie-authenticated APIs.
 − Remote revocation of an extension in another browser is only possible via "Sign out of all devices" (no per-device session registry in v0).
+− Script injected into the dashboard origin could DISCONNECT the extension (when nothing is pending) and CONNECT it to another account, redirecting future study hostnames. Dashboard XSS is already the worst case (it can read the user's data directly); the nonce CSP (SEC-09) is the defense. Accepted for v0 (review of #45).
 − Requires service-role usage in a dashboard route (server-only secret, narrowly scoped route).
 − Relies on admin link generation behaving as documented; covered by the spike and an integration test.
 

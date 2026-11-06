@@ -88,6 +88,11 @@ export function parseSupabaseConfig(
     }
   }
   if (supabaseUrl) new URL(supabaseUrl); // throws on an invalid URL
+  // Only the publishable key may be bundled; this also rejects legacy JWT keys, where a
+  // service_role key would look like any other (SEC-07).
+  if (supabasePublishableKey && !supabasePublishableKey.startsWith("sb_publishable_")) {
+    throw new Error("VITE_SUPABASE_PUBLISHABLE_KEY must be a publishable key (sb_publishable_…)");
+  }
   return { supabaseUrl, supabasePublishableKey };
 }
 

@@ -108,6 +108,17 @@ describe("parseSupabaseConfig", () => {
     });
   });
 
+  it("SEC-07 only publishable keys can be bundled (rejects secret and legacy JWT keys)", () => {
+    for (const key of ["sb_secret_x", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.x"]) {
+      expect(() =>
+        parseSupabaseConfig(
+          { VITE_SUPABASE_URL: "http://127.0.0.1:54321", VITE_SUPABASE_PUBLISHABLE_KEY: key },
+          "development",
+        ),
+      ).toThrow(/publishable key/);
+    }
+  });
+
   it("production builds require an https URL and a publishable key", () => {
     expect(() => parseSupabaseConfig({}, "production")).toThrow(/https/);
     expect(() =>

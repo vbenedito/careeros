@@ -84,14 +84,16 @@ export function createAuthService(deps: {
   }
 
   return {
-    async status(): Promise<AuthStatus> {
-      const session = await backend.currentSession();
-      const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
-      return {
-        connected: session !== null,
-        email: session?.email ?? null,
-        needsReconnect: session === null && flag,
-      };
+    status() {
+      return exclusive(async (): Promise<AuthStatus> => {
+        const session = await backend.currentSession();
+        const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
+        return {
+          connected: session !== null,
+          email: session?.email ?? null,
+          needsReconnect: session === null && flag,
+        };
+      });
     },
 
     /** AUTH-07b, AUTH-11: CONNECT from the dashboard with a single-use token hash. */
@@ -122,7 +124,12 @@ export function createAuthService(deps: {
           await localData.clear();
         }
 
-        await backend.adoptSession(incoming);
+        try {
+          await backend.adoptSession(incoming);
+        } catch (error) {
+          await backend.discardSession(incoming); // never leave an orphan session behind
+          throw error;
+        }
         await storage.set({ [DATA_OWNER_KEY]: incoming.userId });
         await storage.remove(NEEDS_RECONNECT_KEY);
         return { ok: true, email: incoming.email };

@@ -45,7 +45,7 @@ function update(file: string, values: Record<string, string>) {
   for (const [key, value] of Object.entries(values)) {
     const line = `${key}=${value}`;
     const pattern = new RegExp(`^${key}=.*$`, "m");
-    text = pattern.test(text) ? text.replace(pattern, line) : `${text.trimEnd()}\n${line}\n`;
+    text = pattern.test(text) ? text.replace(pattern, () => line) : `${text.trimEnd()}\n${line}\n`;
   }
   writeFileSync(path, text);
   console.warn(`updated ${file}`);
