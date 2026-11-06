@@ -44,7 +44,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 - **TRK-12** Engine state (`open interval`, `lastHeartbeatAt`, `lastInputAt` estimate) is persisted to `chrome.storage.local` on every transition and heartbeat; no state is kept only in memory.
 - **TRK-13** A heartbeat alarm every `HEARTBEAT_PERIOD_MIN` re-evaluates eligibility (tabs, window focus, `idle.queryState`, `audible`) and updates `lastHeartbeatAt` (every processed event also updates it: it is the last moment the engine is known to have been running).
 - **TRK-14** **Gap rule, applied to every event** (not only worker start): if an open interval exists and `now − lastHeartbeatAt > 2 × HEARTBEAT_PERIOD_MIN` (browser crash, OS sleep, worker suspended), the interval is closed at `lastHeartbeatAt` before the event is processed; eligibility is then re-evaluated from scratch (stored tab and idle observations are discarded and queried again).
-- **TRK-15** System clock moving backwards (`now < lastHeartbeatAt`) closes the open interval at `lastHeartbeatAt` and starts fresh; no new interval starts before that moment, so intervals never overlap (TRK-11).
+- **TRK-15** System clock moving backwards (`now < lastHeartbeatAt`) closes the open interval at `lastHeartbeatAt` and starts fresh; no new interval starts before that moment, so intervals never overlap (TRK-11). Steps back of ≤ 2 s are treated as clock noise (no time passed). A jump back of more than `MAX_INTERVAL_S` means the old clock was wrong: tracking is not blocked, and a possible overlap with those wrongly dated intervals is accepted (§5).
 - **TRK-17** Engine events are processed **strictly one at a time** through a serialized queue in the adapter (each read-modify-write of persisted state completes before the next event starts), so near-simultaneous Chrome events (`onActivated` + `onFocusChanged`) cannot lose updates or create overlaps.
 - **TRK-18** Window focus loss is confirmed after a 500 ms debounce, so transient `WINDOW_ID_NONE` reports while switching between Chrome windows do not split intervals.
 - **TRK-19** `chrome.idle.setDetectionInterval(IDLE_THRESHOLD_S)` is called on every worker start (the setting is not guaranteed to persist). A worker start keeps the stored state and open interval (Chrome wakes the worker for every event) but re-queries the tab and idle state; a mismatch closes the interval when the fresh observation arrives.
@@ -67,4 +67,6 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 ## 5. Known limitations (accepted for v0)
 
 - Two Chrome profiles/devices used at the same moment can produce overlapping time across devices; it is counted twice. Rare for the target user; documented.
+- A short OS sleep or browser restart (≤ 2 × `HEARTBEAT_PERIOD_MIN`) is not detected as a gap and is counted as study time (at most ~2 min).
+- After the system clock is corrected backwards by more than 30 min, new intervals may overlap intervals recorded with the wrong (future) clock.
 - The idle signal is OS-wide input; reading on a tracked page without touching input for > 60 s pauses tracking (unless audible).

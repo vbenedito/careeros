@@ -80,6 +80,16 @@ export function localMidnightAfter(t: number): number {
 /** Heartbeat silence after which the engine assumes it was not running (TRK-14). */
 export const GAP_S = 2 * TRACKING.HEARTBEAT_PERIOD_MIN * 60;
 
+/** TRK-15: backward steps up to this size are clock noise (NTP/VM): treated as no time passing. */
+export const CLOCK_JITTER_S = 2;
+
+/**
+ * TRK-15: the longest a backward jump may block new intervals. Larger jumps mean the old clock
+ * was wrong (e.g. set in the future); waiting for it could block tracking for months, so the
+ * possible overlap with those wrongly dated intervals is accepted instead.
+ */
+export const CLOCK_BACK_MAX_BLOCK_S = TRACKING.MAX_INTERVAL_S;
+
 const iso = (t: number) => `${new Date(t * 1000).toISOString().slice(0, 19)}Z`;
 
 /** TRK-10: a closed interval, or nothing when it is shorter than MIN_INTERVAL_S. */
@@ -101,7 +111,10 @@ function emit(open: OpenInterval, endedAt: number, env: EngineEnv): EngineEffect
 
 /** TRK-09/09a: the next computed boundary of an open interval (max length or local midnight). */
 function boundaryOf(open: OpenInterval, env: EngineEnv): number {
-  return Math.min(open.startedAt + TRACKING.MAX_INTERVAL_S, env.nextLocalMidnight(open.startedAt));
+  const max = open.startedAt + TRACKING.MAX_INTERVAL_S;
+  const midnight = env.nextLocalMidnight(open.startedAt);
+  // Guard against a bad calendar function: it must move forward, or it is ignored.
+  return Number.isFinite(midnight) && midnight > open.startedAt ? Math.min(max, midnight) : max;
 }
 
 /**
@@ -128,17 +141,27 @@ function closeAt(open: OpenInterval, t: number, env: EngineEnv, effects: EngineE
   effects.push(...emit(rollTo(open, end, env, effects), end, env));
 }
 
-/** Processes one event. Pure; the adapter persists `state` and executes `effects` (TRK-12/17). */
+/**
+ * Processes one event. Pure. The adapter must persist the new `state` **and** the emitted
+ * intervals in one storage write (TRK-12/17): replaying a step from an older state would give
+ * rolled-over pieces new ids and double-count them.
+ */
 export function step(
   before: EngineState,
   event: EngineEvent,
   nowMs: number,
   env: EngineEnv,
 ): { state: EngineState; effects: EngineEffect[] } {
-  const now = Math.floor(nowMs / 1000); // TRK-10: whole seconds
+  if (!Number.isFinite(nowMs)) return { state: before, effects: [] };
+  const checkpoint = before.lastHeartbeatAt ?? null;
+  let now = Math.floor(nowMs / 1000); // TRK-10: whole seconds
+  // TRK-15: tiny backward steps are noise — never split an interval or drop a media hold for them.
+  if (checkpoint !== null && now < checkpoint && checkpoint - now <= CLOCK_JITTER_S)
+    now = checkpoint;
   const effects: EngineEffect[] = [];
-  let { signals, open, lastInputAt, notBefore } = before;
-  const checkpoint = before.lastHeartbeatAt;
+  let { signals, open } = before;
+  let lastInputAt = before.lastInputAt ?? null;
+  let notBefore = before.notBefore ?? null;
 
   // TRK-15 clock moved backwards / TRK-14 gap (crash, OS sleep, browser closed): close at the
   // last known-running moment and start from scratch — Engine A discards stale observations and
@@ -149,7 +172,14 @@ export function step(
     closeAt(open, checkpoint, env, effects);
     open = null;
   }
-  if (clockBack) notBefore = checkpoint;
+  if (clockBack && checkpoint !== null) {
+    // Never lower an existing block: repeated jumps must not reopen recorded time (TRK-11).
+    // A jump beyond the cap drops the block entirely (the old clock was wrong).
+    notBefore =
+      checkpoint - now <= CLOCK_BACK_MAX_BLOCK_S
+        ? Math.max(notBefore ?? checkpoint, checkpoint)
+        : null;
+  }
   if (clockBack || gap) {
     const r = reduceSignals(signals, { type: "RESYNC" });
     signals = r.signals;
