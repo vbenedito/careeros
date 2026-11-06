@@ -13,6 +13,9 @@ export default async function HomePage() {
       <p>
         Signed in as <strong data-testid="user-email">{user.email}</strong>
       </p>
+      <p>
+        <a href="/connect">Connect the extension</a>
+      </p>
       <form method="post" action="/auth/sign-out">
         <button type="submit">Sign out</button>
       </form>

@@ -1,11 +1,10 @@
 /**
  * The extension's side of the connection, in real Chromium against local Supabase
- * (AUTH-06/07/07a/07b/09/10/12, SEC-03/05). A static page served on the dashboard origin
- * stands in for the dashboard (#13 builds the real connect page).
+ * (AUTH-06/07/07a/07b/09/10/12, SEC-03/05). Messages are sent from a page of the running
+ * dashboard (DASHBOARD_URL); connect-page.int.test.ts drives the real /connect UI.
  */
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { type BrowserContext, chromium, type Page, type Worker } from "playwright";
@@ -23,7 +22,7 @@ const SECRET_KEY = env("SECRET_KEY");
 const DB_CONTAINER = env("DB_CONTAINER");
 const EXTENSION_DIR = resolve(import.meta.dirname, "../../dist/development");
 const EXTENSION_ID = MANIFEST_KEYS.development.id;
-const DASHBOARD_PORT = 3000;
+const DASHBOARD_URL = env("DASHBOARD_URL");
 
 const sql = (query: string) =>
   execFileSync(
@@ -76,19 +75,12 @@ const send = (page: Page, message: unknown) =>
   );
 
 describe("extension connection (real Chromium)", () => {
-  let server: Server;
   let context: BrowserContext;
   let worker: Worker;
   let dashboard: Page;
   const email = `ext-${Date.now()}@example.test`;
 
   beforeAll(async () => {
-    server = createServer((_req, res) => {
-      res.writeHead(200, { "content-type": "text/html" });
-      res.end("<!doctype html><title>dashboard stand-in</title>");
-    });
-    await new Promise<void>((r) => server.listen(DASHBOARD_PORT, "127.0.0.1", r));
-
     context = await chromium.launchPersistentContext("", {
       channel: "chromium",
       headless: true,
@@ -96,13 +88,12 @@ describe("extension connection (real Chromium)", () => {
     });
     worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
     dashboard = await context.newPage();
-    await dashboard.goto(`http://localhost:${DASHBOARD_PORT}/`);
+    await dashboard.goto(`${DASHBOARD_URL}/sign-in`);
     createOAuthUser(email);
   });
 
   afterAll(async () => {
     await context?.close();
-    await new Promise((r) => server?.close(r));
   });
 
   it("AUTH-06 the extension has the pinned development ID", () => {
@@ -120,7 +111,10 @@ describe("extension connection (real Chromium)", () => {
 
   it("AUTH-06 SEC-05 a page on another origin cannot even reach the extension", async () => {
     const other = await context.newPage();
-    await other.goto(`http://127.0.0.1:${DASHBOARD_PORT}/`); // same server, different origin
+    // Same server, different origin (127.0.0.1 instead of localhost).
+    const otherOrigin = new URL(DASHBOARD_URL);
+    otherOrigin.hostname = "127.0.0.1";
+    await other.goto(`${otherOrigin.origin}/sign-in`);
     expect(await send(other, { type: "PING", protocolVersion: 1 })).toBe("NO_RUNTIME");
     await other.close();
   });

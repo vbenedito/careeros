@@ -1,76 +1,15 @@
 /**
-// Note: not BASE_URL — Vitest sets process.env.BASE_URL itself.
  * Dashboard auth against the real local Supabase stack (AUTH-01..04, SEC-08/09).
- * OAuth providers cannot run in CI, so the user is created like a GitHub OAuth user and the
- * session is obtained with an admin single-use token (the mechanism validated in spike 0003).
+ * Users and sessions come from ./helpers (OAuth providers cannot run in CI).
  */
-import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
+import { createOAuthUser, dashboardSession, env } from "./helpers";
 
-const env = (name: string) => {
-  const value = process.env[name];
-  if (!value) throw new Error(`missing env ${name}`);
-  return value;
-};
+// Note: not BASE_URL — Vitest sets process.env.BASE_URL itself.
 const DASHBOARD_URL = env("DASHBOARD_URL");
 const API_URL = env("API_URL");
 const PUBLISHABLE_KEY = env("PUBLISHABLE_KEY");
-const SECRET_KEY = env("SECRET_KEY");
-const DB_CONTAINER = env("DB_CONTAINER");
-
-const sql = (query: string) =>
-  execFileSync(
-    "docker",
-    ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-At", "-c", query],
-    {
-      encoding: "utf8",
-    },
-  );
-
-function createOAuthUser(email: string): string {
-  const id = randomUUID();
-  sql(`insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at,
-         raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token,
-         recovery_token, email_change_token_new, email_change, email_change_token_current,
-         phone_change, phone_change_token, reauthentication_token)
-       values ('00000000-0000-0000-0000-000000000000', '${id}', 'authenticated', 'authenticated',
-         '${email}', now(), '{"provider":"github","providers":["github"]}', '{}', now(), now(),
-         '', '', '', '', '', '', '', '');
-       insert into auth.identities (id, user_id, provider_id, provider, identity_data, created_at,
-         updated_at, last_sign_in_at)
-       values (gen_random_uuid(), '${id}', '${id}', 'github', '{"sub":"${id}","email":"${email}"}',
-         now(), now(), now());`);
-  return id;
-}
-
-/** Signs in with the same cookie format the dashboard uses and returns a Cookie header. */
-async function sessionCookies(email: string) {
-  const admin = createClient(API_URL, SECRET_KEY, { auth: { persistSession: false } });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
-  if (error) throw error;
-
-  const jar = new Map<string, string>();
-  const client = createServerClient(API_URL, PUBLISHABLE_KEY, {
-    cookies: {
-      getAll: () => [...jar].map(([name, value]) => ({ name, value })),
-      setAll: (cookies) => {
-        for (const { name, value } of cookies) jar.set(name, value);
-      },
-    },
-  });
-  const verified = await client.auth.verifyOtp({
-    token_hash: data.properties.hashed_token,
-    type: "magiclink",
-  });
-  if (verified.error || !verified.data.session) throw verified.error ?? new Error("no session");
-  return {
-    header: [...jar].map(([name, value]) => `${name}=${value}`).join("; "),
-    refreshToken: verified.data.session.refresh_token,
-  };
-}
 
 /** Location headers may be relative (valid HTTP): resolve them before comparing. */
 const location = (res: Response) =>
@@ -86,7 +25,7 @@ describe("dashboard auth (integration)", () => {
 
   beforeAll(async () => {
     createOAuthUser(email);
-    ({ header: cookie, refreshToken } = await sessionCookies(email));
+    ({ header: cookie, refreshToken } = await dashboardSession(email));
   });
 
   it("AUTH-03 signed out: pages redirect to /sign-in with next, API answers 401", async () => {

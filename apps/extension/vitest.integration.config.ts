@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-// Real Chromium + built extension + local Supabase (see scripts/ci/extension-integration.sh).
+// Real Chromium + built extension + local Supabase (see scripts/ci/integration.sh).
 // Not part of `pnpm test`.
 export default defineConfig({
   test: {

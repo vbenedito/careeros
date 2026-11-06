@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 // Integration tests need a running local Supabase stack and a running dashboard
-// (see scripts/ci/web-integration.sh). They are not part of `pnpm test`.
+// (see scripts/ci/integration.sh). They are not part of `pnpm test`.
 export default defineConfig({
   test: {
     name: "web-integration",

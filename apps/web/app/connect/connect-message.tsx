@@ -1,0 +1,65 @@
+import type { ConnectOutcome, interpretStatus } from "@/lib/extension/protocol";
+
+/** Every state the /connect page can be in. */
+export type ConnectView =
+  | { kind: "checking" }
+  | ReturnType<typeof interpretStatus>
+  | { kind: "connecting" }
+  | Exclude<ConnectOutcome, { kind: "connected" }>
+  | { kind: "rate-limited" };
+
+/** What the /connect page says in each state of the flow. */
+export function ConnectMessage({ view }: { view: ConnectView }) {
+  switch (view.kind) {
+    case "checking":
+      return <p>Looking for the extension…</p>;
+    case "not-installed":
+      return (
+        <div>
+          <p>The CareerOS extension isn't installed in this browser (or it's turned off).</p>
+          <ol>
+            <li>Download and unzip the latest extension build.</li>
+            <li>
+              Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong>.
+            </li>
+            <li>
+              Click <strong>Load unpacked</strong> and choose the unzipped folder.
+            </li>
+            <li>Come back here and click “Check again”.</li>
+          </ol>
+        </div>
+      );
+    case "outdated":
+      return <p>Please update the extension: this version can't talk to the dashboard.</p>;
+    case "not-connected":
+      return <p>The extension is installed but not connected to your account.</p>;
+    case "connecting":
+      return <p>Connecting…</p>;
+    case "connected":
+      return (
+        <p>
+          Connected as <strong data-testid="connected-email">{view.email ?? "your account"}</strong>
+          . You can close this page.
+        </p>
+      );
+    case "other-account":
+    case "already-connected":
+      return (
+        <p role="alert">
+          The extension is connected to a different account. Disconnect it from the extension popup
+          first, then try again.
+        </p>
+      );
+    case "unsynced-data":
+      return (
+        <p role="alert">
+          The extension still holds study time from another account that hasn't been uploaded. Open
+          the extension popup to resolve it, then try again.
+        </p>
+      );
+    case "rate-limited":
+      return <p role="alert">Too many attempts. Wait a minute and try again.</p>;
+    case "failed":
+      return <p role="alert">We couldn't connect the extension. Please try again.</p>;
+  }
+}
