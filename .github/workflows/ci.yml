@@ -92,6 +92,12 @@ jobs:
       - name: Dashboard integration tests (auth against local Supabase)
         run: scripts/ci/web-integration.sh
 
+      - name: Install Chromium for Playwright
+        run: pnpm --filter @careeros/extension exec playwright install --with-deps chromium
+
+      - name: Extension integration tests (real Chromium against local Supabase)
+        run: scripts/ci/extension-integration.sh
+
       - name: Dashboard server log (on failure)
         if: failure()
         run: cat web-integration-server.log || true

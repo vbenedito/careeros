@@ -20,7 +20,8 @@
     "db:stop": "supabase stop",
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
-    "db:test": "supabase test db"
+    "db:test": "supabase test db",
+    "setup:env": "node scripts/setup-env.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

@@ -6,9 +6,13 @@ import {
   type BuildMode,
   buildManifest,
   parseDashboardOrigin,
+  parseSupabaseConfig,
 } from "./manifest.config";
 
-const DEV_DEFAULTS = { VITE_DASHBOARD_ORIGIN: "http://localhost:3000" };
+const DEV_DEFAULTS = {
+  VITE_DASHBOARD_ORIGIN: "http://localhost:3000",
+  VITE_SUPABASE_URL: "http://127.0.0.1:54321",
+};
 
 function toBuildMode(mode: string): BuildMode {
   if (mode !== "development" && mode !== "production") {
@@ -43,8 +47,13 @@ export default defineConfig(({ mode }) => {
   };
   assertNoSecrets(env);
   const dashboardOrigin = parseDashboardOrigin(env.VITE_DASHBOARD_ORIGIN, buildMode);
+  const supabase = parseSupabaseConfig(env, buildMode);
 
   return {
+    // Build-time configuration for the service worker (ENV-05). All values are public.
+    define: {
+      __CAREEROS_CONFIG__: JSON.stringify({ dashboardOrigin, ...supabase }),
+    },
     plugins: [manifestPlugin(buildMode, dashboardOrigin)],
     build: {
       outDir: `dist/${buildMode}`,

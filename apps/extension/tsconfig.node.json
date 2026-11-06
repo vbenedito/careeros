@@ -1,7 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node", "chrome"],
+    "lib": ["ES2023", "DOM"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "manifest.config.ts", "*.test.ts", "scripts"]
+  "include": [
+    "*.test.ts",
+    "manifest.config.ts",
+    "scripts",
+    "tests",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.integration.config.ts"
+  ]
 }
