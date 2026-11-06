@@ -108,10 +108,9 @@ describe("interval sync (real Chromium)", () => {
   });
 
   it("SYNC-05 an interval the server rejects goes to quarantine; the rest still syncs", async () => {
-    const tooOld = interval(deviceId, 60 * 24 * 40, {
-      ended_at: iso(Date.now() - (60 * 24 * 40 - 5) * 60_000),
-    });
-    await putOutbox([tooOld, interval(deviceId, 30)]);
+    // Valid locally, but the server refuses intervals ending > 5 min in the future (DATA-07).
+    const future = interval(deviceId, -20);
+    await putOutbox([future, interval(deviceId, 30)]);
     await triggerSync();
     await expect.poll(() => rows(), { timeout: 15_000 }).toBe(4);
     await expect.poll(async () => (await storage<unknown[]>(QUARANTINE))?.length).toBe(1);
