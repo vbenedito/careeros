@@ -101,7 +101,7 @@ const handleInternal = domains
   : null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!handleInternal) return false;
-  handleInternal(message, { id: sender.id, tab: sender.tab }).then(
+  handleInternal(message, { id: sender.id, url: sender.url }).then(
     (reply) => sendResponse(reply ?? undefined),
     () => sendResponse(undefined),
   );

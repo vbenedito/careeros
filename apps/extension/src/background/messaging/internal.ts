@@ -7,8 +7,8 @@ import type { DomainService, DomainsResult } from "../domains/domain-service";
 
 export interface InternalSender {
   id?: string | undefined;
-  /** Set when the sender is a tab (content script or web page): never accepted. */
-  tab?: unknown;
+  /** URL of the sending document: must be one of the extension's own pages. */
+  url?: string | undefined;
 }
 
 export function createInternalMessageHandler(deps: {
@@ -19,7 +19,10 @@ export function createInternalMessageHandler(deps: {
     message: unknown,
     sender: InternalSender,
   ): Promise<DomainsResult | null> {
-    if (sender.id !== deps.extensionId || sender.tab !== undefined) return null;
+    // Only the extension's own pages (popup, or popup.html opened in a tab). A content script
+    // would carry the web page's URL (and v0 has none, SEC-01).
+    const ownPage = sender.url?.startsWith(`chrome-extension://${deps.extensionId}/`) === true;
+    if (sender.id !== deps.extensionId || !ownPage) return null;
     const parsed = PopupRequestSchema.safeParse(message);
     if (!parsed.success) return null;
     const request = parsed.data;

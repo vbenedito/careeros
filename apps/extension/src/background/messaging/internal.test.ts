@@ -13,24 +13,30 @@ const domains: DomainService = {
   add: record("add"),
   remove: record("remove"),
 };
+const OWN = { id: "ext", url: "chrome-extension://ext/popup.html" };
 const handle = createInternalMessageHandler({ extensionId: "ext", domains });
 
 describe("popup → worker messages (EXT-UI-05a)", () => {
   it("EXT-UI-05a routes valid commands from the extension's own pages", async () => {
-    expect(await handle({ type: "DOMAINS_REFRESH" }, { id: "ext" })).toEqual(ok);
-    expect(await handle({ type: "DOMAINS_ADD", input: "neetcode.io" }, { id: "ext" })).toEqual(ok);
-    expect(await handle({ type: "DOMAINS_REMOVE", domain: "neetcode.io" }, { id: "ext" })).toEqual(
-      ok,
-    );
+    expect(await handle({ type: "DOMAINS_REFRESH" }, OWN)).toEqual(ok);
+    expect(await handle({ type: "DOMAINS_ADD", input: "neetcode.io" }, OWN)).toEqual(ok);
+    expect(await handle({ type: "DOMAINS_REMOVE", domain: "neetcode.io" }, OWN)).toEqual(ok);
     expect(calls).toEqual(["refresh", "add:neetcode.io", "remove:neetcode.io"]);
   });
 
-  it("SEC-05 ignores other extensions, tabs and malformed messages", async () => {
+  it("SEC-05 ignores other extensions, web pages and malformed messages", async () => {
     calls.length = 0;
-    expect(await handle({ type: "DOMAINS_REFRESH" }, { id: "other" })).toBeNull();
-    expect(await handle({ type: "DOMAINS_REFRESH" }, { id: "ext", tab: {} })).toBeNull();
-    expect(await handle({ type: "DOMAINS_ADD" }, { id: "ext" })).toBeNull();
-    expect(await handle({ type: "DOMAINS_REFRESH", extra: 1 }, { id: "ext" })).toBeNull();
+    expect(
+      await handle(
+        { type: "DOMAINS_REFRESH" },
+        { id: "other", url: "chrome-extension://other/popup.html" },
+      ),
+    ).toBeNull();
+    expect(
+      await handle({ type: "DOMAINS_REFRESH" }, { id: "ext", url: "https://evil.example/" }),
+    ).toBeNull();
+    expect(await handle({ type: "DOMAINS_ADD" }, OWN)).toBeNull();
+    expect(await handle({ type: "DOMAINS_REFRESH", extra: 1 }, OWN)).toBeNull();
     expect(calls).toEqual([]);
   });
 });
