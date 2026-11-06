@@ -10,7 +10,13 @@ export function createDataClient(config: {
   accessToken: () => Promise<string | null>;
 }): SupabaseClient {
   return createClient(config.supabaseUrl, config.publishableKey, {
-    accessToken: async () => (await config.accessToken()) ?? "",
+    // No token (not connected, or refresh temporarily unavailable): fail the request instead of
+    // sending it anonymously — an anonymous 401 would look like a revoked session (AUTH-11).
+    accessToken: async () => {
+      const token = await config.accessToken();
+      if (!token) throw new Error("NO_ACCESS_TOKEN");
+      return token;
+    },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }
