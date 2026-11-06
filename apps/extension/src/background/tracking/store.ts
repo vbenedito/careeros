@@ -47,8 +47,6 @@ export function parseOutbox(value: unknown): Interval[] {
   });
 }
 
-const DomainsCacheSchema = z.object({ domains: z.array(DomainSchema) });
-
 export function createTrackingStore(area: KeyValueArea) {
   return {
     async load(): Promise<{ state: EngineState; outbox: Interval[] }> {
@@ -75,17 +73,24 @@ export function createTrackingStore(area: KeyValueArea) {
       return (await area.get(TRACKING_ENABLED_KEY))[TRACKING_ENABLED_KEY] !== false;
     },
 
-    /** The cached domain list, or null when it has never been loaded (TRK-01). */
+    /**
+     * The cached domain list, or null when it has never been loaded (TRK-01). Invalid entries
+     * are dropped one by one, never the whole list.
+     */
     async trackedDomains(): Promise<string[] | null> {
-      const parsed = DomainsCacheSchema.safeParse(
-        (await area.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY],
-      );
-      return parsed.success ? parsed.data.domains : null;
+      const cache = (await area.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY] as
+        | { domains?: unknown }
+        | undefined;
+      if (!cache || !Array.isArray(cache.domains)) return null;
+      return cache.domains.filter((d): d is string => DomainSchema.safeParse(d).success);
     },
 
-    /** Deletes engine state and outbox (AUTH-11/12). Settings and the domain cache stay. */
+    /**
+     * Deletes the account's local tracking data (AUTH-11/12, SEC-14): engine state, outbox and
+     * the tracked-domain cache (it belongs to the user). The per-device switch stays.
+     */
     async clear(): Promise<void> {
-      await area.remove([ENGINE_STATE_KEY, OUTBOX_KEY]);
+      await area.remove([ENGINE_STATE_KEY, OUTBOX_KEY, DOMAINS_CACHE_KEY]);
     },
   };
 }

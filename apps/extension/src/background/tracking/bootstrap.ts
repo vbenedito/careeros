@@ -31,7 +31,11 @@ export async function startTracking(deps: {
 type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;
 
 /** Turns chrome.storage changes into engine events (popup switch, domain sync, sign-in/out). */
-export function createStorageChangeHandler(deps: { tracker: Tracker; store: TrackingStore }) {
+export function createStorageChangeHandler(deps: {
+  tracker: Tracker;
+  store: TrackingStore;
+  isConnected: () => Promise<boolean>;
+}) {
   const { tracker, store } = deps;
   return (changes: StorageChanges, areaName: string) => {
     if (areaName !== "local") return;
@@ -47,10 +51,9 @@ export function createStorageChangeHandler(deps: { tracker: Tracker; store: Trac
         domains: (await store.trackedDomains()) ?? [],
       }));
     }
-    const session = changes[SESSION_STORAGE_KEY];
-    if (session) {
-      const connected = session.newValue !== undefined && session.newValue !== null;
-      void tracker.dispatch({ type: "AUTH", connected });
+    if (SESSION_STORAGE_KEY in changes) {
+      // Same definition of "connected" everywhere: a valid stored session.
+      void tracker.dispatch(async () => ({ type: "AUTH", connected: await deps.isConnected() }));
     }
   };
 }
@@ -63,19 +66,32 @@ export function createTrackingLocalData(deps: {
   tracker: Tracker;
   store: TrackingStore;
   isConnected: () => Promise<boolean>;
-}): LocalData {
+}): LocalData & { isConnected: () => Promise<boolean> } {
   const { tracker, store } = deps;
+  /** Set by stopTracking: nothing (e.g. a start sequence) may report "connected" meanwhile. */
+  let stopped = false;
+  const isConnected = async () => !stopped && (await deps.isConnected());
   const pending = () => tracker.exclusive(async () => (await store.outbox()).length);
   return {
     flush: pending,
     pendingCount: pending,
     async clear() {
+      stopped = false;
       await tracker.exclusive(() => store.clear());
-      // The engine state is gone: replay the start sequence so settings and domains are known.
-      await startTracking(deps);
+      // The engine state is gone: replay the start sequence so settings are known again.
+      await startTracking({ tracker, store, isConnected });
     },
-    stopTracking: () => tracker.dispatch({ type: "AUTH", connected: false }),
-    resumeTracking: () =>
-      tracker.dispatch(async () => ({ type: "AUTH", connected: await deps.isConnected() })),
+    async stopTracking() {
+      stopped = true;
+      if (!(await tracker.dispatch({ type: "AUTH", connected: false }))) {
+        throw new Error("could not close the open interval");
+      }
+    },
+    async resumeTracking() {
+      stopped = false;
+      await tracker.dispatch(async () => ({ type: "AUTH", connected: await isConnected() }));
+    },
+    /** Connected and not stopped: what the worker's own start sequence must use. */
+    isConnected,
   };
 }

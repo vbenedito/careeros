@@ -30,29 +30,37 @@ export interface Timers {
   clearTimeout(handle: unknown): void;
 }
 
-/** Reads the active tab of the focused window, honouring the focus-loss debounce (TRK-18). */
+/**
+ * Reads the active tab of the focused window (TRK-04), honouring the focus-loss debounce
+ * (TRK-18). Nothing is cached: URLs of untracked tabs never outlive the call (SEC-02).
+ */
 export function createChromeBrowserPort(api: ChromeTrackingApi) {
-  /** True while a focus loss is waiting for its debounce: still treated as focused. */
+  /** True while a focus loss is waiting for its debounce: the last window still counts. */
   let pendingBlur = false;
-  let lastSnapshot: TabSnapshot | null = null;
 
   const port: BrowserPort & { setPendingBlur(value: boolean): void } = {
     setPendingBlur(value) {
       pendingBlur = value;
     },
     async focusedTab() {
-      if (pendingBlur) return lastSnapshot;
-      const win = await api.windows.getLastFocused({});
-      let snapshot: TabSnapshot | null = null;
-      if (win.focused && win.id !== undefined) {
+      try {
+        const win = await api.windows.getLastFocused({});
+        if (win.id === undefined || !(win.focused || pendingBlur)) return null;
         const [tab] = await api.tabs.query({ active: true, windowId: win.id });
-        snapshot = tab ? toTabSnapshot(tab) : null;
+        // Incognito is never tracked (SEC-01), even when the extension is allowed there.
+        if (!tab || tab.incognito) return null;
+        return toTabSnapshot(tab);
+      } catch {
+        // "No last-focused window" (e.g. macOS with every window closed) means not focused.
+        return null;
       }
-      lastSnapshot = snapshot;
-      return snapshot;
     },
     async idleState(seconds) {
-      return (await api.idle.queryState(seconds)) as IdleState;
+      try {
+        return (await api.idle.queryState(seconds)) as IdleState;
+      } catch {
+        return "locked"; // fails closed: pauses tracking
+      }
     },
   };
   return port;
@@ -113,8 +121,8 @@ export function registerTrackingListeners(deps: {
     void tracker.dispatch(async () => ({
       type: "HEARTBEAT",
       tab: await port.focusedTab(),
-      idle: (await api.idle.queryState(TRACKING.IDLE_THRESHOLD_S)) as IdleState,
-      mediaIdle: (await api.idle.queryState(TRACKING.MEDIA_IDLE_CEILING_S)) as IdleState,
+      idle: await port.idleState(TRACKING.IDLE_THRESHOLD_S),
+      mediaIdle: await port.idleState(TRACKING.MEDIA_IDLE_CEILING_S),
     }));
   });
 }

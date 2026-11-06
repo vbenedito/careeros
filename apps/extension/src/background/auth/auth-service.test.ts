@@ -157,6 +157,18 @@ describe("disconnect", () => {
     expect(ld.state.calls).toEqual(["stop", "flush", "resume"]);
   });
 
+  it("AUTH-12 a failure while stopping tracking resumes it and propagates", async () => {
+    const { auth, fb, ld } = setup({ pending: 0 });
+    fb.setCurrent(session("alice"));
+    ld.localData.stopTracking = async () => {
+      ld.state.calls.push("stop");
+      throw new Error("storage full");
+    };
+    await expect(auth.disconnect()).rejects.toThrow("storage full");
+    expect(ld.state.calls).toEqual(["stop", "resume"]);
+    expect(fb.calls).not.toContain("signOut");
+  });
+
   it("AUTH-12 the open interval is closed into the outbox before the final sync", async () => {
     const { auth, fb, ld } = setup({ pending: 0, afterFlush: 0 });
     fb.setCurrent(session("alice"));

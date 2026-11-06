@@ -26,6 +26,8 @@ export type EventSource = EngineEvent | (() => Promise<EngineEvent>);
 
 /** Re-query rounds per slot; the engine asks at most twice, so this only guards against bugs. */
 const MAX_EFFECT_ROUNDS = 4;
+/** A slot that has not settled by then releases the queue (a hung Chrome API must not freeze it). */
+export const SLOT_TIMEOUT_MS = 10_000;
 
 export function createTracker(deps: {
   store: TrackingStore;
@@ -74,16 +76,28 @@ export function createTracker(deps: {
   }
 
   return {
-    /** Queues an event; resolves once it (and its re-queries) has been processed and stored. */
-    dispatch(source: EventSource): Promise<void> {
+    /**
+     * Queues an event; resolves `true` once it (and its re-queries) has been processed and
+     * stored, `false` when it failed or timed out (logged, never thrown).
+     */
+    dispatch(source: EventSource): Promise<boolean> {
       return enqueue(async () => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<"timeout">((resolve) => {
+          timer = setTimeout(() => resolve("timeout"), SLOT_TIMEOUT_MS);
+        });
         try {
-          await process(source);
+          const outcome = await Promise.race([process(source).then(() => "ok" as const), timeout]);
+          if (outcome === "timeout") log.error("tracking.step_timeout", {});
+          return outcome === "ok";
         } catch (error) {
           // Never log the error message itself: it could contain a URL (SEC-06).
           log.error("tracking.step_failed", {
             error: error instanceof Error ? error.name : "unknown",
           });
+          return false;
+        } finally {
+          clearTimeout(timer);
         }
       });
     },

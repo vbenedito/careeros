@@ -26,7 +26,10 @@ const NONE = -1;
 
 function fakeChrome() {
   const state = {
-    window: { id: 1 as number | undefined, focused: true },
+    window: { id: 1 as number | undefined, focused: true } as {
+      id: number | undefined;
+      focused: boolean;
+    } | null,
     tab: { url: "https://leetcode.com/problems/x", audible: false, mutedInfo: { muted: false } } as
       | chrome.tabs.Tab
       | undefined,
@@ -48,7 +51,10 @@ function fakeChrome() {
       onUpdated: ev.updated,
     },
     windows: {
-      getLastFocused: async () => state.window,
+      getLastFocused: async () => {
+        if (!state.window) throw new Error("No last-focused window");
+        return state.window;
+      },
       onFocusChanged: ev.focus,
       WINDOW_ID_NONE: NONE,
     },
@@ -78,8 +84,9 @@ function recordingTracker() {
     dispatch(source: EventSource) {
       const p = (async () => {
         events.push(typeof source === "function" ? await source() : source);
+        return true;
       })();
-      pending.push(p);
+      pending.push(p.then(() => {}));
       return p;
     },
     exclusive: async <T>(task: () => Promise<T>) => task(),
@@ -163,11 +170,10 @@ describe("Chrome adapter (TRK-02, 04, 06, 13, 18, 19)", () => {
     }
   });
 
-  it("TRK-18 a heartbeat during the debounce uses the last tab, not a fresh unfocused read", async () => {
+  it("TRK-18 a heartbeat during the debounce still sees the window's tab, even on a fresh worker", async () => {
     vi.useFakeTimers();
     try {
-      const s = setup();
-      await s.port.focusedTab(); // last snapshot: leetcode
+      const s = setup(); // fresh port: nothing observed yet
       s.ev.focus.emit(NONE);
       s.state.window = { id: 1, focused: false };
       s.ev.alarm.emit({ name: HEARTBEAT_ALARM } as chrome.alarms.Alarm);
@@ -176,6 +182,23 @@ describe("Chrome adapter (TRK-02, 04, 06, 13, 18, 19)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("TRK-04 no Chrome window at all (macOS) and query errors mean not focused, never a failure", async () => {
+    const s = setup();
+    s.state.window = null;
+    expect(await s.port.focusedTab()).toBeNull();
+    const broken = fakeChrome();
+    (broken.api.idle as { queryState: unknown }).queryState = async () => {
+      throw new Error("x");
+    };
+    expect(await createChromeBrowserPort(broken.api).idleState(60)).toBe("locked");
+  });
+
+  it("SEC-01 incognito tabs are never tracked", async () => {
+    const s = setup();
+    s.state.tab = { url: "https://leetcode.com/", incognito: true } as chrome.tabs.Tab;
+    expect(await s.port.focusedTab()).toBeNull();
   });
 
   it("TRK-05 TRK-13 idle changes and heartbeats carry the idle and 15-minute media states", async () => {

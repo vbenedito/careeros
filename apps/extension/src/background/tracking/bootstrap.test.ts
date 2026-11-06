@@ -12,6 +12,7 @@ function recordingTracker() {
   const tracker = {
     async dispatch(source: EventSource) {
       events.push(typeof source === "function" ? await source() : source);
+      return true;
     },
     exclusive: async <T>(task: () => Promise<T>) => task(),
   } as Tracker;
@@ -54,13 +55,17 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       [TRACKING_ENABLED_KEY]: false,
       [DOMAINS_CACHE_KEY]: { domains: ["neetcode.io"] },
     });
+    let connected = true;
     const handle = createStorageChangeHandler({
       tracker: rec.tracker,
       store: createTrackingStore(storage),
+      isConnected: async () => connected,
     });
     handle({ [TRACKING_ENABLED_KEY]: { newValue: false } }, "local");
     handle({ [DOMAINS_CACHE_KEY]: { newValue: {} } }, "local");
     handle({ [SESSION_STORAGE_KEY]: { newValue: "{}" } }, "local");
+    await new Promise((r) => setTimeout(r, 0));
+    connected = false;
     handle({ [SESSION_STORAGE_KEY]: { oldValue: "{}" } }, "local");
     handle({ [TRACKING_ENABLED_KEY]: { newValue: true } }, "sync");
     await new Promise((r) => setTimeout(r, 0));
@@ -78,7 +83,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
 
   it("AUTH-12 pending data is the outbox; stop/resume go through the engine", async () => {
     const rec = recordingTracker();
-    const storage = fakeStorage({ [OUTBOX_KEY]: [interval], [SESSION_STORAGE_KEY]: "{}" });
+    const storage = fakeStorage({ [OUTBOX_KEY]: [interval] });
     const store = createTrackingStore(storage);
     const ld = createTrackingLocalData({
       tracker: rec.tracker,
@@ -88,16 +93,36 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     expect(await ld.pendingCount()).toBe(1);
     expect(await ld.flush()).toBe(1); // no upload before #18: nothing is lost
     await ld.stopTracking();
+    // While stopped, nothing (e.g. the worker's own start sequence) reports "connected".
+    expect(await ld.isConnected()).toBe(false);
     await ld.resumeTracking();
+    expect(await ld.isConnected()).toBe(true);
     expect(rec.events).toEqual([
       { type: "AUTH", connected: false },
       { type: "AUTH", connected: true },
     ]);
   });
 
+  it("AUTH-12 stopTracking fails loudly when the open interval could not be closed", async () => {
+    const tracker = {
+      dispatch: async () => false,
+      exclusive: async <T>(t: () => Promise<T>) => t(),
+    } as Tracker;
+    const ld = createTrackingLocalData({
+      tracker,
+      store: createTrackingStore(fakeStorage()),
+      isConnected: async () => true,
+    });
+    await expect(ld.stopTracking()).rejects.toThrow();
+  });
+
   it("AUTH-11 clear removes local tracking data and replays the start sequence", async () => {
     const rec = recordingTracker();
-    const storage = fakeStorage({ [OUTBOX_KEY]: [interval], [ENGINE_STATE_KEY]: {} });
+    const storage = fakeStorage({
+      [OUTBOX_KEY]: [interval],
+      [ENGINE_STATE_KEY]: {},
+      [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com"] },
+    });
     const store = createTrackingStore(storage);
     await createTrackingLocalData({
       tracker: rec.tracker,
@@ -106,6 +131,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     }).clear();
     expect(storage.data.has(OUTBOX_KEY)).toBe(false);
     expect(storage.data.has(ENGINE_STATE_KEY)).toBe(false);
+    expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false); // the list belongs to the user
     expect(rec.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS"]);
   });
 });

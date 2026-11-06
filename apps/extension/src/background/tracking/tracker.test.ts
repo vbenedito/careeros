@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { type EngineEnv, INITIAL_ENGINE_STATE } from "../../engine/engine";
 import type { IdleState, TabSnapshot } from "../../engine/signals";
 import { createLogger } from "../../lib/log";
 import { fakeStorage } from "../../test/fakes";
 import { DOMAINS_CACHE_KEY, ENGINE_STATE_KEY, OUTBOX_KEY, TRACKING_ENABLED_KEY } from "./keys";
 import { createTrackingStore, parseEngineState, parseOutbox } from "./store";
-import { createTracker } from "./tracker";
+import { createTracker, SLOT_TIMEOUT_MS } from "./tracker";
 
 const T0 = Date.UTC(2026, 10, 9, 13, 0, 0);
 const LEETCODE: TabSnapshot = { url: "https://www.leetcode.com/problems/two-sum/", audible: false };
@@ -125,6 +125,22 @@ describe("tracker (TRK-12, TRK-17)", () => {
   });
 });
 
+describe("tracker slot timeout", () => {
+  it("TRK-17 a hung slot releases the queue after SLOT_TIMEOUT_MS", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      const hung = s.tracker.dispatch(() => new Promise(() => {}));
+      const next = s.tracker.dispatch({ type: "AUTH", connected: true });
+      await vi.advanceTimersByTimeAsync(SLOT_TIMEOUT_MS);
+      expect(await hung).toBe(false);
+      expect(await next).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("tracking store (TRK-12, SEC-02)", () => {
   it("TRK-12 invalid or legacy stored state falls back to the initial state (fails closed)", () => {
     expect(parseEngineState(undefined)).toEqual(INITIAL_ENGINE_STATE);
@@ -158,6 +174,10 @@ describe("tracking store (TRK-12, SEC-02)", () => {
     const store = createTrackingStore(fakeStorage());
     expect(await store.trackingEnabled()).toBe(true);
     expect(await store.trackedDomains()).toBeNull();
+    const partlyBad = createTrackingStore(
+      fakeStorage({ [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com", "https://bad", 3] } }),
+    );
+    expect(await partlyBad.trackedDomains()).toEqual(["leetcode.com"]); // entries dropped one by one
     const off = createTrackingStore(
       fakeStorage({
         [TRACKING_ENABLED_KEY]: false,
@@ -167,13 +187,11 @@ describe("tracking store (TRK-12, SEC-02)", () => {
     expect(await off.trackingEnabled()).toBe(false);
     expect(await off.trackedDomains()).toEqual(["leetcode.com"]);
     expect(
-      await createTrackingStore(
-        fakeStorage({ [DOMAINS_CACHE_KEY]: { domains: ["https://bad"] } }),
-      ).trackedDomains(),
+      await createTrackingStore(fakeStorage({ [DOMAINS_CACHE_KEY]: "junk" })).trackedDomains(),
     ).toBeNull();
   });
 
-  it("AUTH-12 clear removes engine state and outbox but keeps settings and the domain cache", async () => {
+  it("AUTH-12 SEC-14 clear removes engine state, outbox and the user's domain list; the device switch stays", async () => {
     const storage = fakeStorage({
       [ENGINE_STATE_KEY]: {},
       [OUTBOX_KEY]: [],
@@ -181,9 +199,7 @@ describe("tracking store (TRK-12, SEC-02)", () => {
       [DOMAINS_CACHE_KEY]: { domains: [] },
     });
     await createTrackingStore(storage).clear();
-    expect([...storage.data.keys()].sort()).toEqual(
-      [DOMAINS_CACHE_KEY, TRACKING_ENABLED_KEY].sort(),
-    );
+    expect([...storage.data.keys()]).toEqual([TRACKING_ENABLED_KEY]);
   });
 
   it("SEC acceptance 2: after a scripted session no stored value contains a path or an untracked host", async () => {

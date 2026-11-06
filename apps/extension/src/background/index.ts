@@ -9,7 +9,6 @@ import { config, isSupabaseConfigured } from "../lib/config";
 import { IS_DEV_BUILD } from "../lib/env";
 import { createLogger } from "../lib/log";
 import { createAuthService } from "./auth/auth-service";
-import { SESSION_STORAGE_KEY } from "./auth/storage";
 import { createSupabaseAuthBackend } from "./auth/supabase-backend";
 import { createExternalMessageHandler } from "./messaging/external";
 import {
@@ -40,26 +39,25 @@ const tracker = createTracker({
   log,
   idleThresholdS: TRACKING.IDLE_THRESHOLD_S,
 });
-/** Connected = a stored session exists (the auth service owns it, AUTH-10). */
-const isConnected = async () =>
-  (await storage.get(SESSION_STORAGE_KEY))[SESSION_STORAGE_KEY] !== undefined;
-
-registerTrackingListeners({ api: chrome, port, tracker, timers: globalThis });
-chrome.storage.onChanged.addListener(createStorageChangeHandler({ tracker, store }));
-
-// --- Auth and dashboard messaging -----------------------------------------------------------
-const auth = isSupabaseConfigured()
-  ? createAuthService({
-      backend: createSupabaseAuthBackend({
-        supabaseUrl: config.supabaseUrl,
-        publishableKey: config.supabasePublishableKey,
-        storage,
-      }),
+// --- Auth -----------------------------------------------------------------------------------
+const backend = isSupabaseConfigured()
+  ? createSupabaseAuthBackend({
+      supabaseUrl: config.supabaseUrl,
+      publishableKey: config.supabasePublishableKey,
       storage,
-      localData: createTrackingLocalData({ tracker, store, isConnected }),
-      now: () => Date.now(),
     })
   : null;
+/** Connected = a valid stored session (same parsing as AuthService; no lock, no network). */
+const hasSession = async () => (backend ? (await backend.currentSession()) !== null : false);
+const localData = createTrackingLocalData({ tracker, store, isConnected: hasSession });
+const auth = backend
+  ? createAuthService({ backend, storage, localData, now: () => Date.now() })
+  : null;
+
+registerTrackingListeners({ api: chrome, port, tracker, timers: globalThis });
+chrome.storage.onChanged.addListener(
+  createStorageChangeHandler({ tracker, store, isConnected: localData.isConnected }),
+);
 
 if (!auth) log.warn("config.supabase_missing", { hint: "run pnpm setup:env and rebuild" });
 
@@ -81,4 +79,8 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 });
 
 // --- Start ----------------------------------------------------------------------------------
-void setUpChromeTracking(chrome).then(() => startTracking({ tracker, store, isConnected }));
+// Tracking starts even if alarm setup fails (the gap rule covers missing heartbeats).
+void setUpChromeTracking(chrome)
+  .catch(() => log.error("tracking.setup_failed", {}))
+  .then(() => startTracking({ tracker, store, isConnected: localData.isConnected }))
+  .catch(() => log.error("tracking.start_failed", {}));
