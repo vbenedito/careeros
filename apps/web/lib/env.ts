@@ -28,3 +28,8 @@ export function publicEnv() {
 export function siteUrl(): string {
   return new URL(required("SITE_URL", process.env.SITE_URL)).origin;
 }
+
+/** ID of the extension build this dashboard talks to (AUTH-06). Public by design. */
+export function extensionId(): string {
+  return required("NEXT_PUBLIC_EXTENSION_ID", process.env.NEXT_PUBLIC_EXTENSION_ID);
+}

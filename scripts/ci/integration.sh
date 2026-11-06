@@ -10,6 +10,8 @@ export SITE_URL=http://localhost:3000
 export NEXT_PUBLIC_SUPABASE_URL=$API_URL
 export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY
 export SUPABASE_SECRET_KEY=$SECRET_KEY
+# The development extension build (pinned ID, apps/extension/manifest.config.ts).
+export NEXT_PUBLIC_EXTENSION_ID=jfklbpedlpkginmdfckogdgaggmdmkbk
 export NEXT_TELEMETRY_DISABLED=1
 
 pnpm --filter @careeros/web build
