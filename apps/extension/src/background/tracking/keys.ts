@@ -10,3 +10,9 @@ export const TRACKING_ENABLED_KEY = "careeros.settings.trackingEnabled";
 export const DOMAINS_CACHE_KEY = "careeros.domains.cache";
 /** Stable random id of this browser profile's extension install (TRK-10 device_id). */
 export const DEVICE_ID_KEY = "careeros.device.id";
+/** Intervals the server rejected (SYNC-05): kept, never retried, counted in the popup. */
+export const QUARANTINE_KEY = "careeros.tracking.quarantine";
+/** Intervals of today already confirmed by the server (SYNC-08), for the popup's totals. */
+export const SYNCED_TODAY_KEY = "careeros.tracking.syncedToday";
+/** Number of intervals dropped because they were too old to sync (SYNC-07). */
+export const DROPPED_COUNT_KEY = "careeros.tracking.droppedCount";

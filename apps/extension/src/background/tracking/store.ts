@@ -10,7 +10,15 @@ import { DomainSchema, type Interval, IntervalSchema } from "@careeros/shared";
 import { z } from "zod";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../../engine/engine";
 import type { KeyValueArea } from "../auth/storage";
-import { DOMAINS_CACHE_KEY, ENGINE_STATE_KEY, OUTBOX_KEY, TRACKING_ENABLED_KEY } from "./keys";
+import {
+  DOMAINS_CACHE_KEY,
+  DROPPED_COUNT_KEY,
+  ENGINE_STATE_KEY,
+  OUTBOX_KEY,
+  QUARANTINE_KEY,
+  SYNCED_TODAY_KEY,
+  TRACKING_ENABLED_KEY,
+} from "./keys";
 
 const epoch = z.number().int().nonnegative();
 const nullableEpoch = epoch.nullable().default(null);
@@ -86,11 +94,19 @@ export function createTrackingStore(area: KeyValueArea) {
     },
 
     /**
-     * Deletes the account's local tracking data (AUTH-11/12, SEC-14): engine state, outbox and
-     * the tracked-domain cache (it belongs to the user). The per-device switch stays.
+     * Deletes the account's local tracking data (AUTH-11/12, SEC-14): engine state, outbox,
+     * quarantine, today cache, counters and the tracked-domain cache (it belongs to the user).
+     * The per-device switch stays.
      */
     async clear(): Promise<void> {
-      await area.remove([ENGINE_STATE_KEY, OUTBOX_KEY, DOMAINS_CACHE_KEY]);
+      await area.remove([
+        ENGINE_STATE_KEY,
+        OUTBOX_KEY,
+        QUARANTINE_KEY,
+        SYNCED_TODAY_KEY,
+        DROPPED_COUNT_KEY,
+        DOMAINS_CACHE_KEY,
+      ]);
     },
   };
 }
