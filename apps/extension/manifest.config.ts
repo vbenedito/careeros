@@ -68,6 +68,29 @@ export function assertNoSecrets(env: Record<string, string | undefined>): void {
   }
 }
 
+/**
+ * Supabase settings bundled into the extension (both public by design, SEC-07). Production
+ * builds require both; development builds may omit the key, and the extension then reports
+ * itself as not configured instead of failing (CI builds run without a Supabase stack).
+ */
+export function parseSupabaseConfig(
+  env: Record<string, string | undefined>,
+  mode: BuildMode,
+): { supabaseUrl: string; supabasePublishableKey: string } {
+  const supabaseUrl = env.VITE_SUPABASE_URL ?? "";
+  const supabasePublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+  if (mode === "production") {
+    if (!supabaseUrl.startsWith("https://")) {
+      throw new Error("VITE_SUPABASE_URL must be an https URL in production builds");
+    }
+    if (!supabasePublishableKey) {
+      throw new Error("VITE_SUPABASE_PUBLISHABLE_KEY is required for production builds");
+    }
+  }
+  if (supabaseUrl) new URL(supabaseUrl); // throws on an invalid URL
+  return { supabaseUrl, supabasePublishableKey };
+}
+
 export function buildManifest(mode: BuildMode, config: ExtensionBuildConfig) {
   const name = mode === "production" ? "CareerOS" : "CareerOS (dev)";
   return {

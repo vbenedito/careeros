@@ -1,0 +1,168 @@
+/**
+ * The extension's own Supabase session (AUTH-07b, AUTH-10..12).
+ * Pure application logic: Supabase and chrome.storage are injected, so every rule is unit-tested.
+ */
+import { createMutex } from "./mutex";
+import { DATA_OWNER_KEY, type KeyValueArea, NEEDS_RECONNECT_KEY } from "./storage";
+
+/** Refresh when the access token expires within this window (AUTH-10). */
+export const REFRESH_MARGIN_S = 60;
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  /** Unix seconds. */
+  expiresAt: number;
+  userId: string;
+  email: string | null;
+}
+
+export type RefreshResult =
+  | { ok: true; session: AuthSession }
+  /** The session is no longer valid (revoked, user deleted): reconnect required. */
+  | { ok: false; reason: "invalid" }
+  /** Network or server problem: keep the session and try again later. */
+  | { ok: false; reason: "unavailable" };
+
+/** What the service needs from Supabase Auth (implemented with supabase-js in supabase-backend.ts). */
+export interface AuthBackend {
+  /** Exchanges a single-use token hash for a new session without storing it. */
+  verifyTokenHash(tokenHash: string): Promise<AuthSession>;
+  /** Stores `session` as the current session (written to storage before it is used). */
+  adoptSession(session: AuthSession): Promise<void>;
+  /** The stored session, or null. Does not contact the server. */
+  currentSession(): Promise<AuthSession | null>;
+  refresh(): Promise<RefreshResult>;
+  /** Revokes the current session on the server (best effort) and removes it locally. */
+  signOutLocal(): Promise<void>;
+  /** Revokes a session that was verified but not adopted. */
+  discardSession(session: AuthSession): Promise<void>;
+  /** Removes the stored session without contacting the server. */
+  clearLocalSession(): Promise<void>;
+}
+
+/** Hooks into the sync and tracking modules (#16–#18). */
+export interface LocalData {
+  /** Tries to upload pending intervals; returns how many remain unsynced. */
+  flush(): Promise<number>;
+  /** Number of intervals waiting to be uploaded. */
+  pendingCount(): Promise<number>;
+  /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
+  clear(): Promise<void>;
+}
+
+export type ConnectResult =
+  | { ok: true; email: string | null }
+  | { ok: false; code: "ALREADY_CONNECTED" | "UNSYNCED_DATA" | "INVALID_TOKEN" };
+
+export type DisconnectResult = { ok: true } | { ok: false; code: "UNSYNCED_DATA" };
+
+export interface AuthStatus {
+  connected: boolean;
+  email: string | null;
+  needsReconnect: boolean;
+}
+
+export function createAuthService(deps: {
+  backend: AuthBackend;
+  storage: KeyValueArea;
+  localData: LocalData;
+  now: () => number;
+}) {
+  const { backend, storage, localData, now } = deps;
+  const exclusive = createMutex();
+
+  async function dataOwner(): Promise<string | null> {
+    const value = (await storage.get(DATA_OWNER_KEY))[DATA_OWNER_KEY];
+    return typeof value === "string" ? value : null;
+  }
+
+  /** AUTH-11: forget the session but keep unsynced intervals for a same-user reconnect. */
+  async function markInvalid(): Promise<void> {
+    await backend.clearLocalSession();
+    await storage.set({ [NEEDS_RECONNECT_KEY]: true });
+  }
+
+  return {
+    async status(): Promise<AuthStatus> {
+      const session = await backend.currentSession();
+      const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
+      return {
+        connected: session !== null,
+        email: session?.email ?? null,
+        needsReconnect: session === null && flag,
+      };
+    },
+
+    /** AUTH-07b, AUTH-11: CONNECT from the dashboard with a single-use token hash. */
+    connect(tokenHash: string, options: { discardOtherUsersData?: boolean } = {}) {
+      return exclusive(async (): Promise<ConnectResult> => {
+        let incoming: AuthSession;
+        try {
+          incoming = await backend.verifyTokenHash(tokenHash);
+        } catch {
+          return { ok: false, code: "INVALID_TOKEN" };
+        }
+
+        const current = await backend.currentSession();
+        if (current) {
+          // The new session is not needed either way: revoke it so it does not linger.
+          await backend.discardSession(incoming);
+          return current.userId === incoming.userId
+            ? { ok: true, email: current.email }
+            : { ok: false, code: "ALREADY_CONNECTED" };
+        }
+
+        const owner = await dataOwner();
+        if (owner && owner !== incoming.userId && (await localData.pendingCount()) > 0) {
+          if (!options.discardOtherUsersData) {
+            await backend.discardSession(incoming);
+            return { ok: false, code: "UNSYNCED_DATA" };
+          }
+          await localData.clear();
+        }
+
+        await backend.adoptSession(incoming);
+        await storage.set({ [DATA_OWNER_KEY]: incoming.userId });
+        await storage.remove(NEEDS_RECONNECT_KEY);
+        return { ok: true, email: incoming.email };
+      });
+    },
+
+    /**
+     * AUTH-10: a valid access token for an API call, refreshed first when it expires within
+     * REFRESH_MARGIN_S. Returns null when not connected or temporarily unavailable.
+     */
+    accessToken() {
+      return exclusive(async (): Promise<string | null> => {
+        const session = await backend.currentSession();
+        if (!session) return null;
+        if (session.expiresAt - now() / 1000 > REFRESH_MARGIN_S) return session.accessToken;
+
+        const result = await backend.refresh();
+        if (result.ok) return result.session.accessToken;
+        if (result.reason === "invalid") await markInvalid();
+        return null;
+      });
+    },
+
+    /** AUTH-11: an API call proved the session or the user is gone (401, deleted user). */
+    sessionRejected() {
+      return exclusive(markInvalid);
+    },
+
+    /** AUTH-12: final sync, then sign out and clear local data. */
+    disconnect(options: { discardUnsynced?: boolean } = {}) {
+      return exclusive(async (): Promise<DisconnectResult> => {
+        const remaining = await localData.flush();
+        if (remaining > 0 && !options.discardUnsynced) return { ok: false, code: "UNSYNCED_DATA" };
+        await backend.signOutLocal();
+        await localData.clear();
+        await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
+        return { ok: true };
+      });
+    },
+  };
+}
+
+export type AuthService = ReturnType<typeof createAuthService>;

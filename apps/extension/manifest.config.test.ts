@@ -7,6 +7,7 @@ import {
   EXTENSION_PAGES_CSP,
   MANIFEST_KEYS,
   parseDashboardOrigin,
+  parseSupabaseConfig,
 } from "./manifest.config";
 
 const config = { dashboardOrigin: "http://localhost:3000", version: "0.1.0" };
@@ -94,5 +95,32 @@ describe("assertNoSecrets", () => {
     expect(() =>
       assertNoSecrets({ VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc" }),
     ).not.toThrow();
+  });
+});
+
+describe("parseSupabaseConfig", () => {
+  it("development builds may omit the key (CI builds without a Supabase stack)", () => {
+    expect(
+      parseSupabaseConfig({ VITE_SUPABASE_URL: "http://127.0.0.1:54321" }, "development"),
+    ).toEqual({
+      supabaseUrl: "http://127.0.0.1:54321",
+      supabasePublishableKey: "",
+    });
+  });
+
+  it("production builds require an https URL and a publishable key", () => {
+    expect(() => parseSupabaseConfig({}, "production")).toThrow(/https/);
+    expect(() =>
+      parseSupabaseConfig({ VITE_SUPABASE_URL: "https://abc.supabase.co" }, "production"),
+    ).toThrow(/PUBLISHABLE_KEY/);
+    expect(
+      parseSupabaseConfig(
+        {
+          VITE_SUPABASE_URL: "https://abc.supabase.co",
+          VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_x",
+        },
+        "production",
+      ).supabaseUrl,
+    ).toBe("https://abc.supabase.co");
   });
 });

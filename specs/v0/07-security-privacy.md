@@ -19,7 +19,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 
 ## 2. Extension
 
-- **SEC-03** Permissions: `tabs` (read active tab URL to derive hostname — ADR-0006), `idle`, `alarms`, `storage`. No host permissions (the Supabase API is reachable via CORS; to be confirmed in issue #12, else only the Supabase project origin is added). No `<all_urls>`, no `scripting`, no `webRequest`.
+- **SEC-03** Permissions: `tabs` (read active tab URL to derive hostname — ADR-0006), `idle`, `alarms`, `storage`. No host permissions: the Supabase API is reachable from the service worker via CORS (confirmed in real Chromium by the #12 integration test). No `<all_urls>`, no `scripting`, no `webRequest`.
 - **SEC-04** Strict MV3 CSP; no remote code, no `eval`.
 - **SEC-05** External messaging limited by AUTH-06/07.
 - **SEC-06** Logs never contain tokens, emails or hosts of non-tracked sites. Debug logging is off in production builds.
