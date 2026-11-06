@@ -43,12 +43,22 @@ export interface AuthBackend {
 
 /** Hooks into the sync and tracking modules (#16–#18). */
 export interface LocalData {
-  /** Tries to upload pending intervals; returns how many remain unsynced. */
+  /**
+   * Tries to upload pending intervals; returns how many remain unsynced.
+   * Called while AuthService's (non-reentrant) lock is held: it must never call back into
+   * AuthService — take what it needs (e.g. an access token) as an argument (#18).
+   */
   flush(): Promise<number>;
   /** Number of intervals waiting to be uploaded. */
   pendingCount(): Promise<number>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
   clear(): Promise<void>;
+  /**
+   * Stops tracking and waits until the open interval is closed into the outbox, so the final
+   * flush includes it (AUTH-12). `resumeTracking` undoes it when the disconnect is refused.
+   */
+  stopTracking(): Promise<void>;
+  resumeTracking(): Promise<void>;
 }
 
 export type ConnectResult =
@@ -161,12 +171,21 @@ export function createAuthService(deps: {
     /** AUTH-12: final sync, then sign out and clear local data. */
     disconnect(options: { discardUnsynced?: boolean } = {}) {
       return exclusive(async (): Promise<DisconnectResult> => {
-        const remaining = await localData.flush();
-        if (remaining > 0 && !options.discardUnsynced) return { ok: false, code: "UNSYNCED_DATA" };
-        await backend.signOutLocal();
-        await localData.clear();
-        await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
-        return { ok: true };
+        let done = false;
+        try {
+          await localData.stopTracking();
+          const remaining = await localData.flush();
+          if (remaining > 0 && !options.discardUnsynced)
+            return { ok: false, code: "UNSYNCED_DATA" };
+          await backend.signOutLocal();
+          await localData.clear();
+          await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
+          done = true;
+          return { ok: true };
+        } finally {
+          // Refused or failed: keep tracking for the session that is still there.
+          if (!done) await localData.resumeTracking();
+        }
       });
     },
   };

@@ -147,10 +147,33 @@ describe("sessionRejected", () => {
 
 describe("disconnect", () => {
   it("AUTH-12 refuses while intervals remain unsynced after a final sync", async () => {
-    const { auth, fb } = setup({ pending: 4, afterFlush: 1 });
+    const setupResult = setup({ pending: 4, afterFlush: 1 });
+    const { auth, fb } = setupResult;
     fb.setCurrent(session("alice"));
+    const ld = setupResult.ld;
     expect(await auth.disconnect()).toEqual({ ok: false, code: "UNSYNCED_DATA" });
     expect(fb.calls).not.toContain("signOut");
+    // Tracking was stopped before the final sync and resumed after the refusal.
+    expect(ld.state.calls).toEqual(["stop", "flush", "resume"]);
+  });
+
+  it("AUTH-12 a failure while stopping tracking resumes it and propagates", async () => {
+    const { auth, fb, ld } = setup({ pending: 0 });
+    fb.setCurrent(session("alice"));
+    ld.localData.stopTracking = async () => {
+      ld.state.calls.push("stop");
+      throw new Error("storage full");
+    };
+    await expect(auth.disconnect()).rejects.toThrow("storage full");
+    expect(ld.state.calls).toEqual(["stop", "resume"]);
+    expect(fb.calls).not.toContain("signOut");
+  });
+
+  it("AUTH-12 the open interval is closed into the outbox before the final sync", async () => {
+    const { auth, fb, ld } = setup({ pending: 0, afterFlush: 0 });
+    fb.setCurrent(session("alice"));
+    expect(await auth.disconnect()).toEqual({ ok: true });
+    expect(ld.state.calls).toEqual(["stop", "flush"]);
   });
 
   it("AUTH-12 signs out locally and clears local data once everything is synced", async () => {

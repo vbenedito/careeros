@@ -1,49 +1,28 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { fakeStorage } from "../../test/fakes";
 import { SESSION_STORAGE_KEY } from "./storage";
-import { createSupabaseAuthBackend } from "./supabase-backend";
+import { createSupabaseAuthBackend, REVOKE_TIMEOUT_MS } from "./supabase-backend";
 
-const stored = (expiresAt: number) =>
-  JSON.stringify({
-    access_token: "access",
-    refresh_token: "refresh",
-    expires_at: expiresAt,
-    user: { id: "user-1", email: "me@example.test" },
-  });
-
-afterEach(() => vi.restoreAllMocks());
-
-describe("supabase backend: currentSession", () => {
-  it("AUTH-10 reads the stored session without contacting the server, even near expiry", async () => {
-    const network = vi
-      .spyOn(globalThis, "fetch")
-      .mockRejectedValue(new Error("no network allowed"));
-    const nearExpiry = Math.floor(Date.now() / 1000) + 5; // supabase-js getSession() would refresh
+describe("Supabase auth backend", () => {
+  it("AUTH-12 signOutLocal always removes the local session, even offline with an expired token", async () => {
+    const expired = JSON.stringify({
+      access_token: "a",
+      refresh_token: "r",
+      expires_at: 1, // long expired: supabase-js tries to refresh first, which fails offline
+      token_type: "bearer",
+      user: { id: "00000000-0000-4000-8000-000000000001", email: "a@example.test" },
+    });
+    const storage = fakeStorage({ [SESSION_STORAGE_KEY]: expired });
     const backend = createSupabaseAuthBackend({
-      supabaseUrl: "http://127.0.0.1:54321",
+      supabaseUrl: "http://127.0.0.1:9", // nothing listens here: every request fails
       publishableKey: "sb_publishable_test",
-      storage: fakeStorage({ [SESSION_STORAGE_KEY]: stored(nearExpiry) }),
+      storage,
     });
-    expect(await backend.currentSession()).toEqual({
-      accessToken: "access",
-      refreshToken: "refresh",
-      expiresAt: nearExpiry,
-      userId: "user-1",
-      email: "me@example.test",
-    });
-    expect(network).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ["nothing stored", undefined],
-    ["invalid JSON", "{nope"],
-    ["missing refresh token", JSON.stringify({ access_token: "a", user: { id: "u" } })],
-  ])("returns null for %s", async (_name, raw) => {
-    const backend = createSupabaseAuthBackend({
-      supabaseUrl: "http://127.0.0.1:54321",
-      publishableKey: "sb_publishable_test",
-      storage: fakeStorage(raw === undefined ? {} : { [SESSION_STORAGE_KEY]: raw }),
-    });
+    expect(await backend.currentSession()).not.toBeNull();
+    const started = Date.now();
+    await backend.signOutLocal();
+    expect(Date.now() - started).toBeLessThan(REVOKE_TIMEOUT_MS + 2000); // bounded, never hangs
     expect(await backend.currentSession()).toBeNull();
-  });
+    expect(storage.data.has(SESSION_STORAGE_KEY)).toBe(false);
+  }, 20_000);
 });

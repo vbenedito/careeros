@@ -28,6 +28,9 @@ function parseStoredSession(raw: unknown): AuthSession | null {
   }
 }
 
+/** How long a sign-out waits for the server before giving up (the session is already gone locally). */
+export const REVOKE_TIMEOUT_MS = 5000;
+
 function toAuthSession(session: Session): AuthSession {
   return {
     accessToken: session.access_token,
@@ -62,6 +65,29 @@ export function createSupabaseAuthBackend(config: {
     createClient(supabaseUrl, publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
+
+  /** Best effort: a session we could not revoke still expires on its own. */
+  async function discard(session: AuthSession) {
+    try {
+      const temp = ephemeral();
+      await temp.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      });
+      await temp.auth.signOut({ scope: "local" });
+    } catch {
+      // ignore
+    }
+  }
+
+  async function removeStoredSession() {
+    // supabase-js may also keep the user and a PKCE verifier under derived keys.
+    await config.storage.remove([
+      SESSION_STORAGE_KEY,
+      `${SESSION_STORAGE_KEY}-user`,
+      `${SESSION_STORAGE_KEY}-code-verifier`,
+    ]);
+  }
 
   return {
     client,
@@ -106,31 +132,23 @@ export function createSupabaseAuthBackend(config: {
     },
 
     async signOutLocal() {
-      // Revokes this session only, never the dashboard's (AUTH-12). Clears storage even offline.
-      await client.auth.signOut({ scope: "local" });
-    },
-
-    async discardSession(session) {
-      // Best effort: a session we could not revoke still expires on its own.
-      try {
-        const temp = ephemeral();
-        await temp.auth.setSession({
-          access_token: session.accessToken,
-          refresh_token: session.refreshToken,
-        });
-        await temp.auth.signOut({ scope: "local" });
-      } catch {
-        // ignore
+      // AUTH-12: the local session is removed first and always. Revoking it on the server
+      // (this session only, never the dashboard's) is best effort and bounded: offline,
+      // supabase-js would first retry refreshing an expired token for a long time.
+      const stored = parseStoredSession(
+        (await config.storage.get(SESSION_STORAGE_KEY))[SESSION_STORAGE_KEY],
+      );
+      await removeStoredSession();
+      if (stored) {
+        await Promise.race([
+          discard(stored),
+          new Promise((resolve) => setTimeout(resolve, REVOKE_TIMEOUT_MS)),
+        ]);
       }
     },
 
-    async clearLocalSession() {
-      // supabase-js may also keep the user and a PKCE verifier under derived keys.
-      await config.storage.remove([
-        SESSION_STORAGE_KEY,
-        `${SESSION_STORAGE_KEY}-user`,
-        `${SESSION_STORAGE_KEY}-code-verifier`,
-      ]);
-    },
+    discardSession: discard,
+
+    clearLocalSession: removeStoredSession,
   };
 }

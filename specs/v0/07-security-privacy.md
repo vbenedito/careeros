@@ -14,7 +14,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 | Extension session tokens | `chrome.storage.local` | Keep the extension connected |
 | Tracking enabled flag, engine state, outbox, today's intervals | `chrome.storage.local` | Operation & offline resilience |
 
-- **SEC-01** Nothing else is collected. Explicitly never: full URLs, paths, query strings, page titles, page content, keystrokes, form data, passwords, screenshots, or hosts of non-tracked sites. The extension has **no content scripts**.
+- **SEC-01** Nothing else is collected. Explicitly never: full URLs, paths, query strings, page titles, page content, keystrokes, form data, passwords, screenshots, or hosts of non-tracked sites. The extension has **no content scripts**. Incognito tabs are never tracked, even if the user allows the extension in incognito.
 - **SEC-02** Hostnames of non-tracked tabs are evaluated in memory and discarded immediately; they are never persisted or logged.
 
 ## 2. Extension

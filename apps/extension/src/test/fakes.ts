@@ -90,11 +90,18 @@ export function fakeBackend(tokens: Record<string, AuthSession> = {}) {
 }
 
 export function fakeLocalData(pending = 0, afterFlush = pending) {
-  const state = { pending, cleared: 0 };
+  const state = { pending, cleared: 0, calls: [] as string[] };
   const localData: LocalData = {
     flush: async () => {
+      state.calls.push("flush");
       state.pending = afterFlush;
       return afterFlush;
+    },
+    stopTracking: async () => {
+      state.calls.push("stop");
+    },
+    resumeTracking: async () => {
+      state.calls.push("resume");
     },
     pendingCount: async () => state.pending,
     clear: async () => {
