@@ -91,7 +91,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       isConnected: async () => true,
     });
     expect(await ld.pendingCount()).toBe(1);
-    expect(await ld.flush()).toBe(1); // no upload before #18: nothing is lost
+    expect(await ld.flush(async () => null)).toBe(1); // nothing uploaded: still pending
     await ld.stopTracking();
     // While stopped, nothing (e.g. the worker's own start sequence) reports "connected".
     expect(await ld.isConnected()).toBe(false);
@@ -101,6 +101,23 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       { type: "AUTH", connected: false },
       { type: "AUTH", connected: true },
     ]);
+  });
+
+  it("AUTH-12 flush runs the final upload with the given token provider, then counts", async () => {
+    const rec = recordingTracker();
+    const storage = fakeStorage({ [OUTBOX_KEY]: [interval] });
+    const tokens: (string | null)[] = [];
+    const ld = createTrackingLocalData({
+      tracker: rec.tracker,
+      store: createTrackingStore(storage),
+      isConnected: async () => true,
+      upload: async (accessToken) => {
+        tokens.push(await accessToken());
+        storage.data.set(OUTBOX_KEY, []);
+      },
+    });
+    expect(await ld.flush(async () => "t")).toBe(0);
+    expect(tokens).toEqual(["t"]);
   });
 
   it("AUTH-12 stopTracking fails loudly when the open interval could not be closed", async () => {

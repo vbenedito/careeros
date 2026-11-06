@@ -58,14 +58,13 @@ export function createStorageChangeHandler(deps: {
   };
 }
 
-/**
- * LocalData for AuthService. There is no upload yet (#18): `flush` reports what is still in
- * the outbox, so a disconnect with unsynced intervals is refused instead of losing them.
- */
+/** LocalData for AuthService: tracking stop/resume, final upload, counts and local clear. */
 export function createTrackingLocalData(deps: {
   tracker: Tracker;
   store: TrackingStore;
   isConnected: () => Promise<boolean>;
+  /** Final upload attempt with the given token provider (sync, #18). */
+  upload?: (accessToken: () => Promise<string | null>) => Promise<unknown>;
 }): LocalData & { isConnected: () => Promise<boolean> } {
   const { tracker, store } = deps;
   /** Set by stopTracking: nothing (e.g. a start sequence) may report "connected" meanwhile. */
@@ -73,7 +72,10 @@ export function createTrackingLocalData(deps: {
   const isConnected = async () => !stopped && (await deps.isConnected());
   const pending = () => tracker.exclusive(async () => (await store.outbox()).length);
   return {
-    flush: pending,
+    async flush(accessToken) {
+      await deps.upload?.(accessToken);
+      return pending();
+    },
     pendingCount: pending,
     async clear() {
       stopped = false;

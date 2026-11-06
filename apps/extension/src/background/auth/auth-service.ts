@@ -45,10 +45,10 @@ export interface AuthBackend {
 export interface LocalData {
   /**
    * Tries to upload pending intervals; returns how many remain unsynced.
-   * Called while AuthService's (non-reentrant) lock is held: it must never call back into
-   * AuthService — take what it needs (e.g. an access token) as an argument (#18).
+   * Called while AuthService's (non-reentrant) lock is held, so it must never call back into
+   * AuthService: it gets a token provider that works under that lock.
    */
-  flush(): Promise<number>;
+  flush(accessToken: () => Promise<string | null>): Promise<number>;
   /** Number of intervals waiting to be uploaded. */
   pendingCount(): Promise<number>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
@@ -91,6 +91,17 @@ export function createAuthService(deps: {
   async function markInvalid(): Promise<void> {
     await backend.clearLocalSession();
     await storage.set({ [NEEDS_RECONNECT_KEY]: true });
+  }
+
+  /** AUTH-10: the token logic itself; callers must hold the lock. */
+  async function accessTokenLocked(): Promise<string | null> {
+    const session = await backend.currentSession();
+    if (!session) return null;
+    if (session.expiresAt - now() / 1000 > REFRESH_MARGIN_S) return session.accessToken;
+    const result = await backend.refresh();
+    if (result.ok) return result.session.accessToken;
+    if (result.reason === "invalid") await markInvalid();
+    return null;
   }
 
   return {
@@ -151,16 +162,7 @@ export function createAuthService(deps: {
      * REFRESH_MARGIN_S. Returns null when not connected or temporarily unavailable.
      */
     accessToken() {
-      return exclusive(async (): Promise<string | null> => {
-        const session = await backend.currentSession();
-        if (!session) return null;
-        if (session.expiresAt - now() / 1000 > REFRESH_MARGIN_S) return session.accessToken;
-
-        const result = await backend.refresh();
-        if (result.ok) return result.session.accessToken;
-        if (result.reason === "invalid") await markInvalid();
-        return null;
-      });
+      return exclusive(accessTokenLocked);
     },
 
     /** AUTH-11: an API call proved the session or the user is gone (401, deleted user). */
@@ -174,7 +176,7 @@ export function createAuthService(deps: {
         let done = false;
         try {
           await localData.stopTracking();
-          const remaining = await localData.flush();
+          const remaining = await localData.flush(accessTokenLocked);
           if (remaining > 0 && !options.discardUnsynced)
             return { ok: false, code: "UNSYNCED_DATA" };
           await backend.signOutLocal();
