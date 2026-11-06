@@ -1,15 +1,11 @@
 import type { Interval } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
+import { SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
 import { OUTBOX_KEY, QUARANTINE_KEY } from "../tracking/keys";
 import { createOutbox } from "../tracking/outbox";
 import { classify } from "./supabase-ingest";
-import {
-  createSyncService,
-  type IngestResult,
-  SYNC_STATE_KEY,
-  type SyncState,
-} from "./sync-service";
+import { createSyncService, type IngestResult } from "./sync-service";
 
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0);
 let n = 0;
@@ -80,7 +76,11 @@ describe("sync cycle (SYNC-02..06)", () => {
       [item],
     );
     expect(await s.sync.run(token)).toBe("failed");
-    expect(s.state()).toMatchObject({ failures: 1, notBefore: NOW + 60_000 });
+    expect(s.state()).toMatchObject({
+      failures: 1,
+      notBefore: NOW + 60_000,
+      lastOutcome: "offline",
+    });
     expect(await s.sync.run(token)).toBe("skipped"); // still backing off
     s.clock.now = NOW + 60_000;
     expect(await s.sync.run(token)).toBe("failed");
@@ -95,14 +95,14 @@ describe("sync cycle (SYNC-02..06)", () => {
     const item = interval();
     const s = setup([{ ok: false, kind: "abuse" }], [item]);
     expect(await s.sync.run(token)).toBe("failed");
-    expect(s.state()).toMatchObject({ notBefore: NOW + 3600_000, lastError: null });
+    expect(s.state()).toMatchObject({ notBefore: NOW + 3600_000, lastOutcome: "abuse" });
     expect(s.storage.data.get(OUTBOX_KEY)).toEqual([item]);
   });
 
   it("SYNC-06 a malformed call waits an hour and shows a sync error", async () => {
     const s = setup([{ ok: false, kind: "client" }], [interval()]);
     expect(await s.sync.run(token)).toBe("failed");
-    expect(s.state()).toMatchObject({ notBefore: NOW + 3600_000, lastError: "SYNC_ERROR" });
+    expect(s.state()).toMatchObject({ notBefore: NOW + 3600_000, lastOutcome: "error" });
   });
 
   it("SYNC-06 AUTH-11 an auth failure marks the session rejected and keeps the data", async () => {
@@ -111,6 +111,20 @@ describe("sync cycle (SYNC-02..06)", () => {
     expect(await s.sync.run(token)).toBe("not-connected");
     expect(s.rejected()).toBe(1);
     expect(s.storage.data.get(OUTBOX_KEY)).toEqual([item]);
+  });
+
+  it("AUTH-11 an expired token (device clock behind) is refreshed and retried — never a sign-out", async () => {
+    const item = interval();
+    const s = setup([{ ok: false, kind: "expired" }], [item]);
+    const calls: (boolean | undefined)[] = [];
+    const provider = async (o?: { forceRefresh?: boolean }) => {
+      calls.push(o?.forceRefresh);
+      return "token";
+    };
+    expect(await s.sync.run(provider)).toBe("done");
+    expect(calls).toEqual([undefined, true]);
+    expect(s.rejected()).toBe(0);
+    expect(s.storage.data.get(OUTBOX_KEY)).toEqual([]);
   });
 
   it("not connected: nothing is sent", async () => {
@@ -139,6 +153,8 @@ describe("sync cycle (SYNC-02..06)", () => {
 
   it("SYNC-06 error classification", () => {
     expect(classify(401, "PT401", undefined)).toBe("auth");
+    expect(classify(401, "PGRST301", "JWT expired")).toBe("expired");
+    expect(classify(403, "42501", "permission denied")).toBe("client");
     expect(classify(409, "23503", undefined)).toBe("auth"); // user gone (FK)
     expect(classify(429, "PT429", "ABUSE_LIMIT")).toBe("abuse");
     expect(classify(0, undefined, "fetch failed")).toBe("unavailable");

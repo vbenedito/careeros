@@ -23,7 +23,11 @@ export function classify(
   code: string | undefined,
   message: string | undefined,
 ): Extract<IngestResult, { ok: false }>["kind"] {
-  if (status === 401 || status === 403 || code === "PT401" || code === "23503") return "auth";
+  // PostgREST: PGRST301/303 = JWT expired or invalid — refresh and retry, not a revoked
+  // session. PT401 = no user; 23503 = the user no longer exists (AUTH-11). 403 = missing grant:
+  // a deployment bug, shown as "Sync error", never a sign-out.
+  if (code === "PGRST301" || code === "PGRST303") return "expired";
+  if (code === "PT401" || code === "23503" || status === 401) return "auth";
   if (message === "ABUSE_LIMIT") return "abuse";
   if (status === 0 || status === 429 || status >= 500) return "unavailable";
   return "client";

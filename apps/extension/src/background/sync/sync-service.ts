@@ -4,30 +4,19 @@
  * rest of the batch goes to quarantine. Failures back off and never discard data.
  */
 import { type Interval, SYNC } from "@careeros/shared";
+import { parseSyncState, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
+import type { TokenProvider } from "../auth/auth-service";
 import type { KeyValueArea } from "../auth/storage";
 import type { Outbox } from "../tracking/outbox";
 
-/** Persisted sync status (backoff and the last error shown in the popup, ENV-10). */
-export const SYNC_STATE_KEY = "careeros.sync.state";
-
 export type IngestResult =
   | { ok: true; confirmedIds: string[] }
-  | { ok: false; kind: "unavailable" | "abuse" | "auth" | "client" };
+  /** `expired`: the server says the access token expired (device clock behind): refresh, retry. */
+  | { ok: false; kind: "unavailable" | "abuse" | "auth" | "client" | "expired" };
 
 /** The RPC call (implemented with supabase-js in supabase-ingest.ts). */
 export type Ingest = (batch: Interval[], accessToken: string) => Promise<IngestResult>;
 
-export interface SyncState {
-  /** Consecutive failures (index into BACKOFF_MIN). */
-  failures: number;
-  /** Epoch ms before which cycles are skipped (backoff). */
-  notBefore: number;
-  /** Shown in the popup footer: "SYNC_ERROR" for client bugs (SYNC-06). */
-  lastError: "SYNC_ERROR" | null;
-  lastSyncedAt: number | null;
-}
-
-const INITIAL: SyncState = { failures: 0, notBefore: 0, lastError: null, lastSyncedAt: null };
 const LONG_BACKOFF_MS = 60 * 60_000;
 
 export type CycleOutcome =
@@ -47,18 +36,10 @@ export function createSyncService(deps: {
   const { outbox, storage, now } = deps;
   let running: Promise<CycleOutcome> | null = null;
 
-  async function readState(): Promise<SyncState> {
-    const value = (await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY];
-    return value && typeof value === "object"
-      ? { ...INITIAL, ...(value as Partial<SyncState>) }
-      : INITIAL;
-  }
+  const readState = async () => parseSyncState((await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY]);
   const writeState = (state: SyncState) => storage.set({ [SYNC_STATE_KEY]: state });
 
-  async function cycle(
-    accessToken: () => Promise<string | null>,
-    force: boolean,
-  ): Promise<CycleOutcome> {
+  async function cycle(accessToken: TokenProvider, force: boolean): Promise<CycleOutcome> {
     const state = await readState();
     if (!force && now() < state.notBefore) return "skipped";
     await outbox.prune(); // SYNC-07/08
@@ -66,19 +47,21 @@ export function createSyncService(deps: {
     for (;;) {
       const batch = await outbox.batch(SYNC.SYNC_BATCH_MAX);
       if (batch.length === 0) {
-        await writeState({
-          ...state,
-          failures: 0,
-          notBefore: 0,
-          lastError: null,
-          lastSyncedAt: now(),
-        });
+        await writeState({ failures: 0, notBefore: 0, lastOutcome: "ok", lastSyncedAt: now() });
         return "done";
       }
-      const token = await accessToken();
-      if (!token) return "not-connected";
+      let token = await accessToken();
+      if (!token) {
+        await writeState({ ...state, lastOutcome: "not-connected" });
+        return "not-connected";
+      }
 
-      const result = await deps.ingest(batch, token);
+      let result = await deps.ingest(batch, token);
+      if (!result.ok && result.kind === "expired") {
+        // Not a revoked session (AUTH-11): refresh once and retry.
+        token = await accessToken({ forceRefresh: true });
+        result = token ? await deps.ingest(batch, token) : { ok: false, kind: "unavailable" };
+      }
       if (result.ok) {
         await outbox.settle(batch, result.confirmedIds); // SYNC-04/05
         state.failures = 0;
@@ -88,18 +71,24 @@ export function createSyncService(deps: {
       // SYNC-06
       if (result.kind === "auth") {
         await deps.sessionRejected();
+        await writeState({ ...state, lastOutcome: "not-connected" });
         return "not-connected";
       }
-      if (result.kind === "unavailable") {
+      if (result.kind === "unavailable" || result.kind === "expired") {
         const failures = state.failures + 1;
         const minutes = SYNC.BACKOFF_MIN[Math.min(failures, SYNC.BACKOFF_MIN.length) - 1] ?? 30;
-        await writeState({ ...state, failures, notBefore: now() + minutes * 60_000 });
+        await writeState({
+          ...state,
+          failures,
+          notBefore: now() + minutes * 60_000,
+          lastOutcome: "offline",
+        });
       } else {
-        // abuse limit: wait an hour; client bug: wait an hour and show "Sync error". Data stays.
+        // Abuse limit or a malformed call (bug): wait an hour. Data is never dropped.
         await writeState({
           ...state,
           notBefore: now() + LONG_BACKOFF_MS,
-          lastError: result.kind === "client" ? "SYNC_ERROR" : state.lastError,
+          lastOutcome: result.kind === "abuse" ? "abuse" : "error",
         });
       }
       return "failed";
@@ -112,7 +101,7 @@ export function createSyncService(deps: {
      * an in-memory guard is enough). `force` ignores the backoff (the final sync).
      */
     run(
-      accessToken: () => Promise<string | null>,
+      accessToken: TokenProvider,
       options: { force?: boolean; ifIdle?: boolean } = {},
     ): Promise<CycleOutcome> {
       // `ifIdle`: never wait for a running cycle — it may be waiting for the AuthService lock
