@@ -64,7 +64,7 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 ### `private.link_requests` (AUTH-08 rate limit)
 
-`user_id`, `created_at`; written and counted only by a definer function called from the link route; rows older than 1 h are deleted by the same function.
+`user_id` (FK → `auth.users`, cascade), `created_at`; written and counted only by the definer function `public.consume_extension_link_quota() → boolean` (authenticated only; acts on `auth.uid()`; false after 5 requests in a rolling minute), called from the link route with the user's session; the caller's rows older than 1 h are deleted by the same function.
 
 ## 4. Account deletion
 

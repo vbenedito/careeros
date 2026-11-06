@@ -89,14 +89,13 @@ jobs:
       - name: Database tests (pgTAP)
         run: pnpm db:test
 
-      - name: Dashboard integration tests (auth against local Supabase)
-        run: scripts/ci/web-integration.sh
-
       - name: Install Chromium for Playwright
         run: pnpm --filter @careeros/extension exec playwright install --with-deps chromium
 
-      - name: Extension integration tests (real Chromium against local Supabase)
-        run: scripts/ci/extension-integration.sh
+      # One dashboard server for both suites: dashboard HTTP tests, then real-Chromium
+      # extension tests (including the /connect end-to-end flow).
+      - name: Integration tests (dashboard + extension against local Supabase)
+        run: scripts/ci/integration.sh
 
       - name: Dashboard server log (on failure)
         if: failure()
