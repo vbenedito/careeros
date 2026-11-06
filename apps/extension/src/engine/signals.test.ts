@@ -23,7 +23,9 @@ function run(events: SignalEvent[], from: Signals = INITIAL_SIGNALS): Signals {
 const tracking = (audible = false): Signals =>
   run([
     { type: "AUTH", connected: true },
+    { type: "SETTINGS", trackingEnabled: true },
     { type: "DOMAINS", domains: DOMAINS },
+    { type: "IDLE", state: "active" },
     { type: "TAB", tab: { ...LEETCODE, audible } },
   ]);
 
@@ -53,7 +55,12 @@ describe("Engine A — eligibility (TRK-01..04)", () => {
   });
 
   it("TRK-01 loading the domain list asks for the current tab again", () => {
-    const { signals, effects } = reduceSignals(run([{ type: "AUTH", connected: true }]), {
+    const ready = run([
+      { type: "AUTH", connected: true },
+      { type: "SETTINGS", trackingEnabled: true },
+      { type: "IDLE", state: "active" },
+    ]);
+    const { signals, effects } = reduceSignals(ready, {
       type: "DOMAINS",
       domains: DOMAINS,
     });
@@ -100,6 +107,24 @@ describe("Engine A — eligibility (TRK-01..04)", () => {
     expect(domainOfTab(tab("https://notleetcode.com"), DOMAINS)).toBeNull();
     expect(domainOfTab(tab("https://docs.python.org/3/"), DOMAINS)).toBe("docs.python.org");
     expect(domainOfTab(tab("https://wiki.python.org/"), DOMAINS)).toBe("python.org");
+    // Longest wins regardless of list order.
+    const reversed = ["python.org", "docs.python.org"];
+    expect(domainOfTab(tab("https://docs.python.org/3/"), reversed)).toBe("docs.python.org");
+  });
+
+  it("TRK-03 an untracked subdomain of a tracked domain is recorded as the tracked domain", () => {
+    const s = run([{ type: "TAB", tab: tab("https://mail.leetcode.com/inbox") }], tracking());
+    expect(s.focusedDomain).toBe("leetcode.com");
+    expect(JSON.stringify(s)).not.toMatch(/mail|inbox/);
+  });
+
+  it("TRK-03 invalid entries in the domain list are ignored (defense in depth)", () => {
+    const s = run(
+      [{ type: "DOMAINS", domains: ["com", "LeetCode.com", "neetcode.io"] }],
+      tracking(),
+    );
+    expect(s.trackedDomains).toEqual(["neetcode.io"]);
+    expect(domainOfTab(tab("https://example.com"), s.trackedDomains)).toBeNull();
   });
 
   it("TRK-04 an unfocused window (no focused tab) is not tracked; refocusing resumes", () => {
@@ -216,6 +241,126 @@ describe("Engine A — activity (TRK-05..07)", () => {
     const snapshot = structuredClone(before);
     reduceSignals(before, { type: "IDLE", state: "idle" });
     reduceSignals(before, { type: "DOMAINS", domains: [] });
+    reduceSignals(before, { type: "TAB", tab: tab("https://neetcode.io") });
+    reduceSignals(before, heartbeat(null, "locked", "locked"));
+    reduceSignals(before, { type: "RESYNC" });
     expect(before).toEqual(snapshot);
+  });
+});
+
+describe("Engine A — heartbeats that observe several changes at once (TRK-06, TRK-13)", () => {
+  it("TRK-06 a heartbeat that changes domain and goes idle together does not create a hold", () => {
+    const s = run([heartbeat(tab("https://neetcode.io/x", true), "idle")], tracking(true));
+    expect(s.mediaHold).toBe(false);
+    expect(trackingTarget(s)).toBeNull();
+  });
+
+  it("TRK-06 a heartbeat that sees audio start and idle together does not create a hold", () => {
+    const s = run([heartbeat({ ...LEETCODE, audible: true }, "idle")], tracking(false));
+    expect(s.mediaHold).toBe(false);
+    expect(trackingTarget(s)).toBeNull();
+  });
+
+  it("TRK-06 the ceiling also ends the hold when the 15-minute query reports locked", () => {
+    const held = run([{ type: "IDLE", state: "idle" }], tracking(true));
+    const s = run([heartbeat({ ...LEETCODE, audible: true }, "idle", "locked")], held);
+    expect(trackingTarget(s)).toBeNull();
+  });
+
+  it("TRK-07 a heartbeat reporting active resumes after a missed IDLE active event", () => {
+    const idle = run([{ type: "IDLE", state: "idle" }], tracking());
+    expect(trackingTarget(run([heartbeat(LEETCODE, "active")], idle))).toBe("leetcode.com");
+  });
+
+  it("TRK-02 SEC-02 heartbeats never put URLs or untracked hosts into the signals", () => {
+    const s = run([heartbeat(tab("https://bank.example/account/123?x=1"), "active")], tracking());
+    expect(JSON.stringify(s)).not.toMatch(/bank|account|123/);
+  });
+});
+
+describe("Engine A — domain list changes during a media hold (TRK-01, TRK-06)", () => {
+  it("TRK-06 keeping the domain keeps the hold; removing it ends it and re-adding does not restore it", () => {
+    const held = run([{ type: "IDLE", state: "idle" }], tracking(true));
+    expect(trackingTarget(run([{ type: "DOMAINS", domains: DOMAINS }], held))).toBe("leetcode.com");
+    const removed = run([{ type: "DOMAINS", domains: ["neetcode.io"] }], held);
+    expect(trackingTarget(removed)).toBeNull();
+    const readded = run(
+      [
+        { type: "DOMAINS", domains: DOMAINS },
+        { type: "TAB", tab: { ...LEETCODE, audible: true } },
+      ],
+      removed,
+    );
+    expect(trackingTarget(readded)).toBeNull();
+  });
+});
+
+describe("Engine A — startup and resync (TRK-01, TRK-14, TRK-15, TRK-19)", () => {
+  it("TRK-01 a fresh worker assumes nothing: settings and idle state must be reported first", () => {
+    const partial = run([
+      { type: "AUTH", connected: true },
+      { type: "DOMAINS", domains: DOMAINS },
+      { type: "TAB", tab: LEETCODE },
+    ]);
+    expect(trackingTarget(partial)).toBeNull(); // tracking setting not loaded, idle unknown
+    const withSettings = run([{ type: "SETTINGS", trackingEnabled: true }], partial);
+    expect(trackingTarget(withSettings)).toBeNull(); // idle still unknown
+    expect(trackingTarget(run([{ type: "IDLE", state: "active" }], withSettings))).toBe(
+      "leetcode.com",
+    );
+  });
+
+  it("TRK-01 tracking disabled on this device is respected even if SETTINGS arrives last", () => {
+    const s = run([{ type: "SETTINGS", trackingEnabled: false }], tracking());
+    expect(trackingTarget(s)).toBeNull();
+  });
+
+  it("TRK-14 RESYNC forgets stale observations and asks for fresh ones", () => {
+    const { signals, effects } = reduceSignals(
+      run([{ type: "IDLE", state: "idle" }], tracking(true)),
+      {
+        type: "RESYNC",
+      },
+    );
+    expect(effects).toEqual([{ type: "REQUERY_TAB" }, { type: "REQUERY_IDLE" }]);
+    expect(signals).toMatchObject({
+      focusedDomain: null,
+      audible: false,
+      idle: "unknown",
+      mediaHold: false,
+    });
+    expect(signals).toMatchObject({
+      connected: true,
+      trackingEnabled: true,
+      trackedDomains: DOMAINS,
+    });
+    expect(trackingTarget(signals)).toBeNull();
+    // Fresh observations bring tracking back, but a stale media hold never returns.
+    const fresh = run(
+      [
+        { type: "TAB", tab: { ...LEETCODE, audible: true } },
+        { type: "IDLE", state: "idle" },
+      ],
+      signals,
+    );
+    expect(trackingTarget(fresh)).toBeNull();
+    expect(trackingTarget(run([{ type: "IDLE", state: "active" }], fresh))).toBe("leetcode.com");
+  });
+
+  it("TRK-16 one event changes the tracking target at most once (B diffs before/after)", () => {
+    // Every event type maps to a single reducer step; this guards the contract B relies on.
+    const events: SignalEvent[] = [
+      { type: "AUTH", connected: false },
+      { type: "SETTINGS", trackingEnabled: false },
+      { type: "DOMAINS", domains: [] },
+      { type: "TAB", tab: null },
+      { type: "IDLE", state: "locked" },
+      heartbeat(null, "idle", "idle"),
+      { type: "RESYNC" },
+    ];
+    for (const e of events) {
+      const { signals } = reduceSignals(tracking(), e);
+      expect(trackingTarget(signals)).toBeNull();
+    }
   });
 });

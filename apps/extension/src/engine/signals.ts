@@ -8,24 +8,35 @@
  * Privacy (TRK-02, SEC-02): events carry the tab URL only transiently. `Signals` keeps the
  * matched *tracked* domain, never the URL or the hostname of a non-tracked site, so it is safe to
  * persist.
+ *
+ * Composition with Engine B (#15): B is the only entry point, `(state, event, now)`. Its state
+ * holds `signals` next to the open interval and timestamps; it compares
+ * `trackingTarget(before)` with `trackingTarget(after)` around each `reduceSignals` call. One
+ * event changes the target at most once. After a worker start, a heartbeat gap (TRK-14) or a
+ * clock jump (TRK-15), B sends RESYNC so stale persisted observations are never trusted.
  */
-import { hostnameFromUrl, matchTrackedDomain } from "@careeros/shared";
+import { hostnameFromUrl, isValidDomain, matchTrackedDomain } from "@careeros/shared";
 
-/** `chrome.idle` states. */
+/** `chrome.idle` states, plus `unknown` until the first report after a RESYNC (never active). */
 export type IdleState = "active" | "idle" | "locked";
+export type ObservedIdleState = IdleState | "unknown";
 
 /** The active tab of the focused window, as reported by the adapter. */
 export interface TabSnapshot {
   /** Read only to derive the hostname; never stored. */
   url: string | undefined;
+  /**
+   * TRK-06: the tab is playing sound the user can hear: `tab.audible && !tab.mutedInfo?.muted`
+   * (Chrome reports muted tabs as audible).
+   */
   audible: boolean;
 }
 
 export interface Signals {
   /** TRK-01: the extension holds a session (spec 02). */
   connected: boolean;
-  /** TRK-01: tracking enabled on this device (popup setting). */
-  trackingEnabled: boolean;
+  /** TRK-01: tracking enabled on this device (popup setting); null until loaded (fails closed). */
+  trackingEnabled: boolean | null;
   /** TRK-01: the tracked-domain list; null until it has been loaded. */
   trackedDomains: readonly string[] | null;
   /** TRK-02..04: tracked domain of the active tab of the focused window; null otherwise. */
@@ -33,7 +44,7 @@ export interface Signals {
   /** Whether that tab is playing audio (TRK-06). */
   audible: boolean;
   /** TRK-05: last `chrome.idle` state (detection interval IDLE_THRESHOLD_S). */
-  idle: IdleState;
+  idle: ObservedIdleState;
   /**
    * TRK-06: tracking continues through an `idle` state because the tab was audible when the
    * user went idle. Cleared by audio stopping, the media ceiling, locking or any break in
@@ -53,19 +64,27 @@ export type SignalEvent =
    * TRK-13: periodic re-evaluation. `idle` is `queryState(IDLE_THRESHOLD_S)`; `mediaIdle` is
    * `queryState(MEDIA_IDLE_CEILING_S)` (TRK-06 ceiling).
    */
-  | { type: "HEARTBEAT"; tab: TabSnapshot | null; idle: IdleState; mediaIdle: IdleState };
+  | { type: "HEARTBEAT"; tab: TabSnapshot | null; idle: IdleState; mediaIdle: IdleState }
+  /**
+   * TRK-14/15/19: forget everything observed about the tab and the user (it may be stale) and
+   * ask the adapter for fresh observations. Settings, auth and the domain list are kept.
+   */
+  | { type: "RESYNC" };
 
 export type SignalEffect =
-  /** The tracked-domain list changed: the adapter must send a fresh TAB event. */
-  { type: "REQUERY_TAB" };
+  /** The adapter must send a fresh TAB event (from the same serialized queue slot, TRK-17). */
+  | { type: "REQUERY_TAB" }
+  /** The adapter must send a fresh IDLE event (`chrome.idle.queryState`). */
+  | { type: "REQUERY_IDLE" };
 
+/** A fresh worker with nothing stored: nothing is assumed, so nothing is tracked. */
 export const INITIAL_SIGNALS: Signals = {
   connected: false,
-  trackingEnabled: true,
+  trackingEnabled: null,
   trackedDomains: null,
   focusedDomain: null,
   audible: false,
-  idle: "active",
+  idle: "unknown",
   mediaHold: false,
 };
 
@@ -81,7 +100,7 @@ export function domainOfTab(
 
 /** TRK-01 (minus activity): every condition except the user being active. */
 function eligibleDomain(s: Signals): string | null {
-  return s.connected && s.trackingEnabled && s.trackedDomains ? s.focusedDomain : null;
+  return s.connected && s.trackingEnabled === true && s.trackedDomains ? s.focusedDomain : null;
 }
 
 /** TRK-05/06: the user counts as active. */
@@ -102,9 +121,15 @@ function withTab(s: Signals, tab: TabSnapshot | null): Signals {
 
 function withIdle(before: Signals, s: Signals, idle: IdleState): Signals {
   if (idle === before.idle) return s;
-  // TRK-06: going idle keeps tracking only if we were tracking an audible tab at that moment.
+  // TRK-06: going idle keeps tracking only if we were tracking an audible tab at that moment —
+  // the same tab before and after this event (a heartbeat can observe both changes at once).
   const mediaHold =
-    idle === "idle" && before.idle === "active" && trackingTarget(before) !== null && s.audible;
+    idle === "idle" &&
+    before.idle === "active" &&
+    trackingTarget(before) !== null &&
+    before.audible &&
+    s.audible &&
+    s.focusedDomain === before.focusedDomain;
   return { ...s, idle, mediaHold };
 }
 
@@ -118,7 +143,7 @@ function settleMediaHold(before: Signals, s: Signals): Signals {
     s.idle === "idle" &&
     s.audible &&
     eligibleDomain(s) !== null &&
-    (before.mediaHold ? s.focusedDomain === before.focusedDomain : true);
+    s.focusedDomain === before.focusedDomain;
   return keep ? s : { ...s, mediaHold: false };
 }
 
@@ -138,7 +163,9 @@ export function reduceSignals(
       s = { ...s, trackingEnabled: event.trackingEnabled };
       break;
     case "DOMAINS": {
-      const trackedDomains = [...event.domains];
+      // Defense in depth: the list is validated at the boundary too; never trust an entry like
+      // "com" that would match every .com host.
+      const trackedDomains = event.domains.filter(isValidDomain);
       // The stored domain cannot be re-matched (the URL is not kept): drop it if it is no longer
       // tracked and ask the adapter for the current tab, which may match a newly added domain.
       const focusedDomain =
@@ -157,6 +184,10 @@ export function reduceSignals(
       s = withIdle(before, withTab(s, event.tab), event.idle);
       // TRK-06 ceiling: no input for MEDIA_IDLE_CEILING_S ends the media exception.
       if (event.mediaIdle !== "active") s = { ...s, mediaHold: false };
+      break;
+    case "RESYNC":
+      s = { ...s, focusedDomain: null, audible: false, idle: "unknown", mediaHold: false };
+      effects.push({ type: "REQUERY_TAB" }, { type: "REQUERY_IDLE" });
       break;
   }
 
