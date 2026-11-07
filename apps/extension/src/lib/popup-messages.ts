@@ -9,6 +9,8 @@ export const PopupRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("DOMAINS_REFRESH") }).strict(),
   z.object({ type: z.literal("DOMAINS_ADD"), input: z.string().min(1).max(2048) }).strict(),
   z.object({ type: z.literal("DOMAINS_REMOVE"), domain: z.string().min(1).max(253) }).strict(),
+  z.object({ type: z.literal("TRACKING_SET"), enabled: z.boolean() }).strict(),
+  z.object({ type: z.literal("DISCONNECT"), discardUnsynced: z.boolean() }).strict(),
 ]);
 
 export type PopupRequest = z.infer<typeof PopupRequestSchema>;
@@ -19,6 +21,12 @@ export interface PopupAuthStatus {
   email: string | null;
   needsReconnect: boolean;
 }
+
+/** Reply to DISCONNECT (AUTH-12): refused while intervals are unsynced, unless discarding. */
+export type PopupDisconnectResult =
+  | { ok: true }
+  | { ok: false; code: "UNSYNCED_DATA"; pending: number }
+  | { ok: false; code: "FAILED" };
 
 /** Name of the port the popup keeps open while shown (the worker treats Chrome as focused). */
 export const POPUP_PORT = "careeros.popup";

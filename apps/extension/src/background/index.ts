@@ -29,6 +29,7 @@ import {
   setUpChromeTracking,
 } from "./tracking/chrome-port";
 import { createEngineEnv } from "./tracking/device";
+import { TRACKING_ENABLED_KEY } from "./tracking/keys";
 import { createOutbox, startOfLocalDay } from "./tracking/outbox";
 import { createTrackingStore } from "./tracking/store";
 import { createTracker } from "./tracking/tracker";
@@ -154,6 +155,18 @@ const handleInternal = domains
           email: session?.email ?? null,
           needsReconnect: session == null && flag,
         };
+      },
+      // The storage change becomes a SETTINGS event: the engine closes or reopens (EXT-UI-06).
+      setTracking: (enabled) => storage.set({ [TRACKING_ENABLED_KEY]: enabled }),
+      disconnect: async (discardUnsynced) => {
+        if (!auth) return { ok: false, code: "FAILED" };
+        try {
+          const result = await auth.disconnect({ discardUnsynced });
+          if (result.ok) return { ok: true };
+          return { ok: false, code: "UNSYNCED_DATA", pending: (await outbox.counts()).pending };
+        } catch {
+          return { ok: false, code: "FAILED" };
+        }
       },
     })
   : null;

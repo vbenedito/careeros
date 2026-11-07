@@ -1,11 +1,13 @@
-import type { ButtonHTMLAttributes } from "react";
+import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "./cn";
 
 const VARIANTS = {
   primary: "bg-primary text-primary-foreground hover:opacity-90",
   outline: "border border-border bg-background hover:bg-muted",
   ghost: "hover:bg-muted",
+  subtle: "text-muted-foreground hover:bg-muted hover:text-foreground",
   link: "text-primary underline-offset-4 hover:underline",
+  "link-xs": "text-xs text-primary underline-offset-4 hover:underline",
   destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
 } as const;
 
@@ -22,17 +24,21 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** The only button in the popup. Icon-only buttons must pass `aria-label`. */
-export function Button({ variant = "primary", size = "sm", className, ...props }: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = "primary", size = "sm", className, ...props },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-60",
+        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 aria-disabled:opacity-60",
         VARIANTS[variant],
-        variant !== "link" && SIZES[size],
+        !variant.startsWith("link") && SIZES[size],
         className,
       )}
       {...props}
     />
   );
-}
+});

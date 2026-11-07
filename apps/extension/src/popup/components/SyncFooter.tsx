@@ -21,7 +21,7 @@ export function SyncFooter(props: {
       </span>
       <span className="flex items-center gap-2">
         <span>v{props.version}</span>
-        <Button variant="link" className="text-xs" onClick={props.onOpenDashboard}>
+        <Button variant="link-xs" onClick={props.onOpenDashboard}>
           Open dashboard ↗
         </Button>
       </span>

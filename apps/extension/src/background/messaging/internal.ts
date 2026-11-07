@@ -2,7 +2,11 @@
  * Messages from the extension's own pages (the popup, EXT-UI-05a). Anything from elsewhere or
  * not matching the schema is ignored.
  */
-import { type PopupAuthStatus, PopupRequestSchema } from "../../lib/popup-messages";
+import {
+  type PopupAuthStatus,
+  type PopupDisconnectResult,
+  PopupRequestSchema,
+} from "../../lib/popup-messages";
 import type { DomainService, DomainsResult } from "../domains/domain-service";
 
 export interface InternalSender {
@@ -15,11 +19,15 @@ export function createInternalMessageHandler(deps: {
   extensionId: string;
   domains: DomainService;
   authStatus: () => Promise<PopupAuthStatus>;
+  /** EXT-UI-06: per-device switch. */
+  setTracking: (enabled: boolean) => Promise<void>;
+  /** AUTH-12 from the popup. */
+  disconnect: (discardUnsynced: boolean) => Promise<PopupDisconnectResult>;
 }) {
   return async function handle(
     message: unknown,
     sender: InternalSender,
-  ): Promise<DomainsResult | PopupAuthStatus | null> {
+  ): Promise<DomainsResult | PopupAuthStatus | PopupDisconnectResult | { ok: true } | null> {
     // Only the extension's own pages (popup, or popup.html opened in a tab). A content script
     // would carry the web page's URL (and v0 has none, SEC-01).
     const ownPage = sender.url?.startsWith(`chrome-extension://${deps.extensionId}/`) === true;
@@ -36,6 +44,11 @@ export function createInternalMessageHandler(deps: {
         return deps.domains.add(request.input);
       case "DOMAINS_REMOVE":
         return deps.domains.remove(request.domain);
+      case "TRACKING_SET":
+        await deps.setTracking(request.enabled);
+        return { ok: true };
+      case "DISCONNECT":
+        return deps.disconnect(request.discardUnsynced);
     }
   };
 }

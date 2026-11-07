@@ -18,6 +18,11 @@ const handle = createInternalMessageHandler({
   extensionId: "ext",
   domains,
   authStatus: async () => ({ connected: true, email: "a@example.test", needsReconnect: false }),
+  setTracking: async (enabled) => {
+    calls.push(`tracking:${enabled}`);
+  },
+  disconnect: async (discard) =>
+    discard ? { ok: true } : { ok: false, code: "UNSYNCED_DATA", pending: 2 },
 });
 
 describe("popup → worker messages (EXT-UI-05a)", () => {
@@ -26,6 +31,14 @@ describe("popup → worker messages (EXT-UI-05a)", () => {
     expect(await handle({ type: "DOMAINS_ADD", input: "neetcode.io" }, OWN)).toEqual(ok);
     expect(await handle({ type: "DOMAINS_REMOVE", domain: "neetcode.io" }, OWN)).toEqual(ok);
     expect(calls).toEqual(["refresh", "add:neetcode.io", "remove:neetcode.io"]);
+    expect(await handle({ type: "TRACKING_SET", enabled: false }, OWN)).toEqual({ ok: true });
+    expect(calls.at(-1)).toBe("tracking:false");
+    expect(await handle({ type: "DISCONNECT", discardUnsynced: false }, OWN)).toEqual({
+      ok: false,
+      code: "UNSYNCED_DATA",
+      pending: 2,
+    });
+    expect(await handle({ type: "DISCONNECT", discardUnsynced: true }, OWN)).toEqual({ ok: true });
     expect(await handle({ type: "AUTH_STATUS" }, OWN)).toEqual({
       connected: true,
       email: "a@example.test",

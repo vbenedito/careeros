@@ -7,10 +7,18 @@ import { TopSites } from "../components/TopSites";
 import type { PopupData } from "../data";
 
 /** Popup main view (spec 05 §2): layout only; every value comes from `buildPopupView`. */
-export function MainView({ view, data }: { view: PopupView; data: PopupData }) {
+export function MainView({
+  view,
+  data,
+  onOpenSettings,
+}: {
+  view: PopupView;
+  data: PopupData;
+  onOpenSettings: () => void;
+}) {
   return (
     <>
-      <StatusSection status={view.status} data={data} />
+      <StatusSection status={view.status} data={data} onOpenSettings={onOpenSettings} />
       <TodayCard seconds={view.todaySeconds} />
       {view.current ? <CurrentSession {...view.current} /> : null}
       <TopSites sites={view.top} />
