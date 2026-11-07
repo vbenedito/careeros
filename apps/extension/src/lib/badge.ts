@@ -15,7 +15,7 @@ export interface Badge {
 }
 
 const SUCCESS = "#16a34a";
-const WARNING = "#d97706";
+const WARNING = "#b45309"; // darker amber: white "!" stays readable (≈5:1)
 
 export function badgeFor(state: EngineState, name: string): Badge {
   if (!state.signals.connected) {

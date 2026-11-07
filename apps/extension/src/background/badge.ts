@@ -15,11 +15,11 @@ export function createBadgeUpdater(action: ActionApi, name: string) {
     if (last && last.text === next.text && last.color === next.color && last.title === next.title) {
       return; // unchanged: no API calls on every heartbeat
     }
-    last = next;
     await Promise.all([
       action.setBadgeBackgroundColor({ color: next.color }),
       action.setBadgeText({ text: next.text }),
       action.setTitle({ title: next.title }),
     ]);
+    last = next; // only once applied: a failed call is retried on the next change
   };
 }
