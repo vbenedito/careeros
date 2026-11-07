@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import {
   assertNoSecrets,
@@ -54,7 +56,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __CAREEROS_CONFIG__: JSON.stringify({ dashboardOrigin, ...supabase }),
     },
-    plugins: [manifestPlugin(buildMode, dashboardOrigin)],
+    plugins: [react(), tailwindcss(), manifestPlugin(buildMode, dashboardOrigin)],
     build: {
       outDir: `dist/${buildMode}`,
       emptyOutDir: true,

@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Design tokens shared with the dashboard theme (ADR-0007): same names, copied values. */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.97 0.01 265);
+  --border: oklch(0.9 0.01 265);
+  --muted-foreground: oklch(0.45 0 0);
+  --primary: oklch(0.5 0.17 265);
+  --primary-foreground: oklch(0.985 0 0);
+  --success: oklch(0.52 0.14 150);
+  --warning: oklch(0.55 0.16 60);
+  --bar: oklch(0.5 0.17 265 / 0.75);
+  --radius: 0.625rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.17 0.005 265);
+    --foreground: oklch(0.97 0 0);
+    --card: oklch(0.23 0.02 265);
+    --border: oklch(0.32 0.02 265);
+    --muted-foreground: oklch(0.72 0 0);
+    --primary: oklch(0.72 0.14 265);
+    --primary-foreground: oklch(0.17 0 0);
+    --success: oklch(0.75 0.15 150);
+    --warning: oklch(0.8 0.14 75);
+    --bar: oklch(0.72 0.14 265 / 0.8);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-bar: var(--bar);
+  --radius-lg: var(--radius);
+}
+
+body {
+  margin: 0;
+  width: 360px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* EXT-UI-09: visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

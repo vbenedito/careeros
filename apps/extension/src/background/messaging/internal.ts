@@ -2,7 +2,7 @@
  * Messages from the extension's own pages (the popup, EXT-UI-05a). Anything from elsewhere or
  * not matching the schema is ignored.
  */
-import { PopupRequestSchema } from "../../lib/popup-messages";
+import { type PopupAuthStatus, PopupRequestSchema } from "../../lib/popup-messages";
 import type { DomainService, DomainsResult } from "../domains/domain-service";
 
 export interface InternalSender {
@@ -14,11 +14,12 @@ export interface InternalSender {
 export function createInternalMessageHandler(deps: {
   extensionId: string;
   domains: DomainService;
+  authStatus: () => Promise<PopupAuthStatus>;
 }) {
   return async function handle(
     message: unknown,
     sender: InternalSender,
-  ): Promise<DomainsResult | null> {
+  ): Promise<DomainsResult | PopupAuthStatus | null> {
     // Only the extension's own pages (popup, or popup.html opened in a tab). A content script
     // would carry the web page's URL (and v0 has none, SEC-01).
     const ownPage = sender.url?.startsWith(`chrome-extension://${deps.extensionId}/`) === true;
@@ -27,6 +28,8 @@ export function createInternalMessageHandler(deps: {
     if (!parsed.success) return null;
     const request = parsed.data;
     switch (request.type) {
+      case "AUTH_STATUS":
+        return deps.authStatus();
       case "DOMAINS_REFRESH":
         return deps.domains.refresh();
       case "DOMAINS_ADD":

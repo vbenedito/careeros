@@ -141,7 +141,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 const handleInternal = domains
-  ? createInternalMessageHandler({ extensionId: chrome.runtime.id, domains })
+  ? createInternalMessageHandler({
+      extensionId: chrome.runtime.id,
+      domains,
+      authStatus: async () => {
+        const { connected, email, needsReconnect } = await (auth?.status() ??
+          Promise.resolve({ connected: false, email: null, needsReconnect: false }));
+        return { connected, email, needsReconnect };
+      },
+    })
   : null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!handleInternal) return false;
