@@ -43,6 +43,8 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 `Synced · 2m ago` · `3 pending · retrying in 4m` · `Offline · 3 pending` · `Sync error · 3 pending` · `2 not synced` (quarantine, SYNC-05, with tooltip). `Syncing…` is deferred (a cycle takes under a second; #58).
 
+- **EXT-UI-10** **Toolbar badge** on the extension icon: a small green dot while tracking, an amber `!` when not connected, nothing otherwise. The icon's tooltip states the same in words ("CareerOS — tracking leetcode.com"). No live timer in the badge (#63).
+
 ## 3. Settings view (inside the popup, back arrow to main)
 
 - **EXT-UI-06** **Tracking** switch (on by default). Off ⇒ closes any open interval and tracks nothing until turned on. Stored per device.
