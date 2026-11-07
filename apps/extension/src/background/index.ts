@@ -12,6 +12,7 @@ import { createDataClient } from "./api/data-client";
 import { createAuthService } from "./auth/auth-service";
 import { NEEDS_RECONNECT_KEY, SESSION_STORAGE_KEY } from "./auth/storage";
 import { createSupabaseAuthBackend } from "./auth/supabase-backend";
+import { createBadgeUpdater } from "./badge";
 import { createDomainService } from "./domains/domain-service";
 import { createSupabaseDomainsApi } from "./domains/supabase-domains";
 import { createExternalMessageHandler } from "./messaging/external";
@@ -29,9 +30,9 @@ import {
   setUpChromeTracking,
 } from "./tracking/chrome-port";
 import { createEngineEnv } from "./tracking/device";
-import { TRACKING_ENABLED_KEY } from "./tracking/keys";
+import { ENGINE_STATE_KEY, TRACKING_ENABLED_KEY } from "./tracking/keys";
 import { createOutbox, startOfLocalDay } from "./tracking/outbox";
-import { createTrackingStore } from "./tracking/store";
+import { createTrackingStore, parseEngineState } from "./tracking/store";
 import { createTracker } from "./tracking/tracker";
 
 const storage = chrome.storage.local;
@@ -48,6 +49,17 @@ const tracker = createTracker({
   log,
   idleThresholdS: TRACKING.IDLE_THRESHOLD_S,
 });
+// --- Toolbar badge (EXT-UI-10) --------------------------------------------------------------
+const updateBadge = createBadgeUpdater(chrome.action, chrome.runtime.getManifest().name);
+const refreshBadge = async () =>
+  updateBadge(parseEngineState((await storage.get(ENGINE_STATE_KEY))[ENGINE_STATE_KEY])).catch(() =>
+    log.warn("badge.update_failed", {}),
+  );
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && ENGINE_STATE_KEY in changes) void refreshBadge();
+});
+void refreshBadge();
+
 // --- Auth -----------------------------------------------------------------------------------
 const backend = isSupabaseConfigured()
   ? createSupabaseAuthBackend({
