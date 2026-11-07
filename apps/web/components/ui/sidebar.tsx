@@ -98,7 +98,12 @@ export function Sidebar({ children, label }: { children: ReactNode; label: strin
         {children}
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent aria-describedby={undefined} className="md:hidden">
+        <SheetContent
+          id="mobile-sidebar"
+          aria-describedby={undefined}
+          className="md:hidden"
+          overlayClassName="md:hidden"
+        >
           <SheetTitle className="sr-only">{label}</SheetTitle>
           <div data-state="expanded" className="group/sidebar flex h-full flex-col bg-card">
             {children}
@@ -110,7 +115,7 @@ export function Sidebar({ children, label }: { children: ReactNode; label: strin
 }
 
 export function SidebarTrigger({ className }: { className?: string }) {
-  const { toggle, open, isMobile } = useSidebar();
+  const { toggle, open, isMobile, mobileOpen } = useSidebar();
   return (
     <Button
       variant="ghost"
@@ -118,6 +123,8 @@ export function SidebarTrigger({ className }: { className?: string }) {
       className={className}
       onClick={toggle}
       aria-label={isMobile ? "Open menu" : open ? "Collapse sidebar" : "Expand sidebar"}
+      aria-expanded={isMobile ? mobileOpen : open}
+      {...(isMobile ? { "aria-controls": "mobile-sidebar" } : {})}
     >
       <PanelLeft />
     </Button>

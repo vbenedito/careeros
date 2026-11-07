@@ -15,7 +15,7 @@ import {
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Theme">
           <Sun className="dark:hidden" />

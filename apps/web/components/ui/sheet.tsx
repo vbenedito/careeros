@@ -11,12 +11,15 @@ export const SheetTitle = SheetPrimitive.Title;
 /** Side drawer (mobile sidebar, DASH-02). */
 export function SheetContent({
   className,
+  overlayClassName,
   children,
   ...props
-}: ComponentProps<typeof SheetPrimitive.Content>) {
+}: ComponentProps<typeof SheetPrimitive.Content> & { overlayClassName?: string }) {
   return (
     <SheetPrimitive.Portal>
-      <SheetPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40" />
+      <SheetPrimitive.Overlay
+        className={cn("fixed inset-0 z-40 bg-background/70 backdrop-blur-sm", overlayClassName)}
+      />
       <SheetPrimitive.Content
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-background",

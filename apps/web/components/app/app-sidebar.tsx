@@ -73,7 +73,7 @@ function Logo() {
 function UserMenu({ email }: { email: string }) {
   const initial = email.charAt(0).toUpperCase() || "?";
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         aria-label="Account menu"
         className="flex h-10 w-full items-center gap-3 rounded-md px-1.5 text-left text-sm hover:bg-muted"
@@ -96,7 +96,8 @@ function UserMenu({ email }: { email: string }) {
         <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <form method="post" action="/auth/sign-out">
-          <DropdownMenuItem asChild>
+          {/* Keep the menu (and its form) mounted on select so the browser can submit it. */}
+          <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
             <button type="submit" className="w-full">
               <LogOut /> Sign out
             </button>
