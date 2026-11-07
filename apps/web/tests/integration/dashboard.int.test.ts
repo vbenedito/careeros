@@ -37,7 +37,7 @@ describe("dashboard data (integration)", () => {
     const { status, html } = await page("/?view=week&date=2026-10-28", cookie, "America/Sao_Paulo");
     expect(status).toBe(200);
     expect(text(html, "period-label")).toBe("Oct 26 – Nov 1, 2026");
-    expect(text(html, "period-seconds")).toBe("45m");
+    expect(text(html, "card-period-value")).toBe("45m");
   });
 
   it("DASH-07 days are aggregated in the viewer's time zone from the tz cookie", async () => {
@@ -46,8 +46,8 @@ describe("dashboard data (integration)", () => {
     addSession(id, "2026-11-02T01:30:00Z", 10);
     const inUtc = await page("/?view=week&date=2026-11-02", cookie, "UTC");
     const inSaoPaulo = await page("/?view=week&date=2026-11-02", cookie, "America/Sao_Paulo");
-    expect(text(inUtc.html, "period-seconds")).toBe("10m");
-    expect(text(inSaoPaulo.html, "period-seconds")).toBe("0m");
+    expect(text(inUtc.html, "card-period-value")).toBe("10m");
+    expect(text(inSaoPaulo.html, "card-period-value")).toBe("0m");
   });
 
   it("DASH-07 an invalid tz cookie falls back to UTC instead of failing", async () => {
@@ -63,7 +63,27 @@ describe("dashboard data (integration)", () => {
     // Intl accepts any letter case; pg_timezone_names compares exactly.
     const { status, html } = await page("/?view=week&date=2026-10-28", cookie, "america/sao_paulo");
     expect(status).toBe(200);
-    expect(text(html, "period-seconds")).toBe("30m");
+    expect(text(html, "card-period-value")).toBe("30m");
+  });
+
+  it("DASH-06 cards: today stays today; the period card and the top platform follow the period", async () => {
+    const { id, cookie } = await seededUser();
+    const now = Date.now();
+    const midnightUtc = now - (now % 86_400_000);
+    addSession(id, new Date(Math.max(midnightUtc, now - 20 * 60_000)).toISOString(), 12); // today (UTC)
+    addSession(id, "2026-10-27T15:00:00Z", 30, "neetcode.io");
+    addSession(id, "2026-10-28T15:00:00Z", 10, "leetcode.com");
+    const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
+    expect(text(html, "card-today-value")).toBe("12m");
+    expect(text(html, "card-period-value")).toBe("40m");
+    expect(text(html, "card-top-value")).toBe("30m");
+    expect(html).toContain('data-value="neetcode.io · 75%"');
+  });
+
+  it("DASH-06 top platform is — when the period has no data", async () => {
+    const { cookie } = await seededUser();
+    const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
+    expect(text(html, "card-top-value")).toBe("—");
   });
 
   it("DASH-04 months by URL", async () => {
@@ -72,6 +92,6 @@ describe("dashboard data (integration)", () => {
     addSession(id, "2026-10-31T12:00:00Z", 5);
     const { html } = await page("/?view=month&date=2026-10-15", cookie, "UTC");
     expect(text(html, "period-label")).toBe("Oct 2026");
-    expect(text(html, "period-seconds")).toBe("30m");
+    expect(text(html, "card-period-value")).toBe("30m");
   });
 });
