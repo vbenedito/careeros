@@ -38,8 +38,18 @@ describe("dashboard shell (real Chromium)", () => {
       .toBe(1);
     expect(await page.getByRole("link", { name: "Settings" }).count()).toBeGreaterThan(0);
 
-    await page.getByRole("button", { name: "Theme" }).click();
-    await page.getByRole("menuitemradio", { name: "Dark" }).click();
+    // A click before hydration does nothing: retry until the menu is really open.
+    const dark = page.getByRole("menuitemradio", { name: "Dark" });
+    await expect
+      .poll(
+        async () => {
+          if ((await dark.count()) === 0) await page.getByRole("button", { name: "Theme" }).click();
+          return dark.count();
+        },
+        { timeout: 15_000, interval: 500 },
+      )
+      .toBe(1);
+    await dark.click();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.className))
       .toContain("dark");
