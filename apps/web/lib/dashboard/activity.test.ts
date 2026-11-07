@@ -36,6 +36,16 @@ describe("study activity chart data (DASH-08)", () => {
     expect(past.some((b) => b.isToday)).toBe(false);
   });
 
+  it("DASH-08 a day with less than a minute of study still gets a visible bar", () => {
+    const [mon] = activityBars(
+      [{ day: "2026-11-02", seconds: 20 }],
+      resolvePeriod({}, TODAY),
+      TODAY,
+    );
+    expect(mon?.minutes).toBe(1);
+    expect(mon?.tooltip).toBe("Mon, Nov 2 · <1m");
+  });
+
   it("y-axis ticks read as durations", () => {
     expect(formatMinutesTick(30)).toBe("30m");
     expect(formatMinutesTick(60)).toBe("1h 00m");

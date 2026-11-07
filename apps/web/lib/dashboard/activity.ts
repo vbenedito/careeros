@@ -37,7 +37,8 @@ export function activityBars(daily: DayTotal[], period: Period, today: string): 
     return {
       day,
       label: period.view === "week" ? weekday : String(dayOfMonth),
-      minutes: Math.round(seconds / 60),
+      // Any study at all shows a visible bar: under a minute rounds up, never to zero.
+      minutes: seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0,
       isToday: day === today,
       tooltip: `${weekday}, ${month} ${dayOfMonth} · ${formatDuration(seconds)}`,
     };

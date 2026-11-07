@@ -35,7 +35,12 @@ export function ActivityChart({ bars, className }: { bars: ActivityBar[]; classN
           data-total-minutes={total}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={bars} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <BarChart
+              data={bars}
+              margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+              // The hidden list above is the accessible version; no focusable, unnamed SVG.
+              accessibilityLayer={false}
+            >
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis
                 dataKey="label"
