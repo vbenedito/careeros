@@ -30,7 +30,7 @@ Light and dark values live side by side. The dashboard switches with a `.dark` /
 | App | Where | What |
 |---|---|---|
 | Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · subtle · link · link-xs · destructive; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
-| Dashboard | `apps/web/components/ui/` (#22) | shadcn/ui components, copied into the repo, using the same tokens |
+| Dashboard | `apps/web/components/ui/` | shadcn/ui-style components on Radix (`button`, `card`, `skeleton`, `tooltip`, `sheet`, `dropdown-menu`, `sidebar`), written into the repo, using the same tokens; app-level pieces (sidebar content, page header, theme toggle) in `components/app/` |
 
 A primitive owns its look (variants, sizes, focus, disabled state). Screens never restyle a
 primitive beyond layout classes (margin, width, alignment).

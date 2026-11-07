@@ -17,10 +17,11 @@ export function ConnectMessage({ view }: { view: ConnectView }) {
       return (
         <div>
           <p>The CareerOS extension isn't installed in this browser (or it's turned off).</p>
-          <ol>
+          <ol className="ml-5 list-decimal space-y-1">
             <li>Download and unzip the latest extension build.</li>
             <li>
-              Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong>.
+              Open <code className="rounded bg-muted px-1">chrome://extensions</code> and turn on{" "}
+              <strong>Developer mode</strong>.
             </li>
             <li>
               Click <strong>Load unpacked</strong> and choose the unzipped folder.
@@ -45,21 +46,29 @@ export function ConnectMessage({ view }: { view: ConnectView }) {
     case "other-account":
     case "already-connected":
       return (
-        <p role="alert">
+        <p role="alert" className="text-warning">
           The extension is connected to a different account. Disconnect it from the extension popup
           first, then try again.
         </p>
       );
     case "unsynced-data":
       return (
-        <p role="alert">
+        <p role="alert" className="text-warning">
           The extension still holds study time from another account that hasn't been uploaded. Open
           the extension popup to resolve it, then try again.
         </p>
       );
     case "rate-limited":
-      return <p role="alert">Too many attempts. Wait a minute and try again.</p>;
+      return (
+        <p role="alert" className="text-warning">
+          Too many attempts. Wait a minute and try again.
+        </p>
+      );
     case "failed":
-      return <p role="alert">We couldn't connect the extension. Please try again.</p>;
+      return (
+        <p role="alert" className="text-warning">
+          We couldn't connect the extension. Please try again.
+        </p>
+      );
   }
 }

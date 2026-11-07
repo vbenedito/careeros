@@ -30,6 +30,9 @@ export function buildCsp({
     // 'strict-dynamic' lets nonce'd Next.js bundles load their chunks; dev needs eval for React.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    // Inline style *attributes* (positioning in Radix popovers, chart sizes) cannot run code;
+    // <style> elements still need the nonce.
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
     `connect-src 'self' ${supabaseOrigin}`,
