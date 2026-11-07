@@ -1,14 +1,8 @@
 import { type ReactNode, useState } from "react";
 import type { PopupStatus } from "../../lib/popup-view";
 import type { PopupData } from "../data";
+import { errorMessage } from "../messages";
 import { Button, cn } from "../ui";
-
-const ERRORS: Record<string, string> = {
-  INVALID_DOMAIN: "That doesn't look like a website address.",
-  LIMIT_REACHED: "You can track up to 50 sites.",
-  NOT_CONNECTED: "Connect your account first.",
-  UNAVAILABLE: "Couldn't reach CareerOS. Try again in a moment.",
-};
 
 type Tone = "success" | "muted" | "warning";
 const TONES: Record<Tone, string> = {
@@ -18,7 +12,15 @@ const TONES: Record<Tone, string> = {
 };
 
 /** Status line with one optional action (spec 05 §2 "Status states"). */
-export function StatusSection({ status, data }: { status: PopupStatus; data: PopupData }) {
+export function StatusSection({
+  status,
+  data,
+  onOpenSettings,
+}: {
+  status: PopupStatus;
+  data: PopupData;
+  onOpenSettings: () => void;
+}) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +29,7 @@ export function StatusSection({ status, data }: { status: PopupStatus; data: Pop
     setError(null);
     const result = await data.addSite(host);
     setAdding(false);
-    if (!result.ok) setError(ERRORS[result.error] ?? ERRORS.UNAVAILABLE ?? null);
+    if (!result.ok) setError(errorMessage(result.error));
   }
   const addButton = (host: string | null, label: string) =>
     host ? (
@@ -36,7 +38,12 @@ export function StatusSection({ status, data }: { status: PopupStatus; data: Pop
       </Button>
     ) : null;
 
-  const { label, tone, hint } = describe(status, addButton, data);
+  const settingsLink = (label: string) => (
+    <Button variant="link" className="text-xs" onClick={onOpenSettings}>
+      {label}
+    </Button>
+  );
+  const { label, tone, hint } = describe(status, addButton, settingsLink, data);
   return (
     <section aria-label="Status" aria-live="polite" className="flex flex-col gap-1.5">
       <p
@@ -62,6 +69,7 @@ export function StatusSection({ status, data }: { status: PopupStatus; data: Pop
 function describe(
   status: PopupStatus,
   addButton: (host: string | null, label: string) => ReactNode,
+  settingsLink: (label: string) => ReactNode,
   data: PopupData,
 ): { label: string; tone: Tone; hint: ReactNode } {
   switch (status.kind) {
@@ -79,12 +87,12 @@ function describe(
       return {
         label: "No study sites yet",
         tone: "muted",
-        hint: addButton(status.addHost, "Add this site"),
+        hint: addButton(status.addHost, "Add this site") ?? settingsLink("Manage sites"),
       };
     case "loading-sites":
       return { label: "Loading your sites…", tone: "muted", hint: null };
     case "disabled":
-      return { label: "Tracking off", tone: "muted", hint: "Turn on in Settings" };
+      return { label: "Tracking off", tone: "muted", hint: settingsLink("Turn on in Settings") };
     case "disconnected":
       return {
         label: "Not connected",
