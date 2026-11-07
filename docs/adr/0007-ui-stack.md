@@ -20,3 +20,6 @@ Popup: React + Tailwind, sharing the theme CSS variables with the dashboard (cop
 ## Consequences
 + Consistent look, fast delivery of sidebar/charts, light/dark built in.
 − Recharts adds ~100 KB to the dashboard page; acceptable for v0; loaded only on the dashboard route.
+
+## Amendment (2026-11-07, #20)
+Tokens are **shared, not copied**: one CSS file, `packages/shared/theme/tokens.css`, imported by the popup and the dashboard, so the two cannot drift. Primitives stay per app (a handful in the popup, shadcn/ui in the dashboard). Conventions in `docs/design-system.md`.
