@@ -28,7 +28,8 @@ export function ExtensionSettings(props: { extensionId: string; userEmail: strin
     );
     setBusy(false);
     setOutcome(result);
-    if (result === "disconnected") setRevision((r) => r + 1);
+    // Re-read the status after a failure too: the extension may have disconnected anyway.
+    if (result !== "unsynced-data") setRevision((r) => r + 1);
   }
 
   if (state.kind === "checking") return <Skeleton className="h-9 w-64" />;
@@ -55,7 +56,7 @@ export function ExtensionSettings(props: { extensionId: string; userEmail: strin
           disconnect there to discard it.
         </p>
       ) : null}
-      {outcome === "failed" ? (
+      {outcome === "failed" && connected ? (
         <p role="alert" className="text-destructive">
           Couldn't disconnect the extension. Try again.
         </p>

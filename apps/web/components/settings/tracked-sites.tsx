@@ -21,6 +21,7 @@ export function TrackedSites({ sites }: { sites: Site[] }) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<Site | null>(null);
 
@@ -47,8 +48,8 @@ export function TrackedSites({ sites }: { sites: Site[] }) {
     });
     setBusy(false);
     setRemoving(null);
-    if (!result.ok) return setError(siteErrorMessage(result.error, result.status));
-    setError(null);
+    if (!result.ok) return setRemoveError(siteErrorMessage(result.error, result.status));
+    setRemoveError(null);
     router.refresh();
   }
 
@@ -80,6 +81,11 @@ export function TrackedSites({ sites }: { sites: Site[] }) {
         ) : null}
       </form>
 
+      {removeError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {removeError}
+        </p>
+      ) : null}
       {sites.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No sites yet. Time is only tracked on the sites you add here or in the extension.
