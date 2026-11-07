@@ -3,6 +3,7 @@
  * the top platform. Components only render the result.
  */
 import type { DashboardData } from "./data";
+import { wholePercentages } from "./percent";
 import type { Period } from "./period";
 
 export interface SummaryCard {
@@ -19,8 +20,8 @@ export interface SummaryCard {
 
 export function summarize(data: DashboardData, period: Period): SummaryCard[] {
   const top = data.domains.find((d) => d.seconds > 0) ?? null;
-  const share =
-    top && data.periodSeconds > 0 ? Math.round((top.seconds / data.periodSeconds) * 100) : null;
+  // Same rounding as the donut legend (DASH-09), so the card and the chart always agree.
+  const share = top ? (wholePercentages(data.domains.map((d) => d.seconds))[0] ?? null) : null;
   return [
     { id: "today", title: "Today", seconds: data.todaySeconds, detail: null },
     {
