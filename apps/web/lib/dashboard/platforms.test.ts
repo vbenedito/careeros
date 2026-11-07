@@ -61,4 +61,15 @@ describe("platform slices (DASH-09)", () => {
     const top = cards[2];
     expect(top && "share" in top ? top.share : null).toBe(platformSlices(d)[0]?.percent);
   });
+
+  it("card and legend agree with more than 5 domains (Other changes the rounding)", () => {
+    const seconds = [2647, 2272, 1625, 987, 468, 206, 201];
+    const d = seconds.map((s, i) => ({ domain: `d${i}.com`, seconds: s }));
+    const cards = summarize(
+      { todaySeconds: 0, daily: [], domains: d, periodSeconds: sum(seconds) },
+      resolvePeriod({}, "2026-11-07"),
+    );
+    const top = cards[2];
+    expect(top && "share" in top ? top.share : null).toBe(platformSlices(d)[0]?.percent);
+  });
 });

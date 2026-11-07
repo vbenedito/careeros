@@ -62,7 +62,9 @@ export function PlatformChart({
                     style={{ backgroundColor: s.color }}
                     aria-hidden="true"
                   />
-                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                  <span className="min-w-0 flex-1 truncate" title={s.name}>
+                    {s.name}
+                  </span>
                   <span className="tabular-nums text-muted-foreground">{s.duration}</span>
                   <span className="w-10 text-right tabular-nums">{s.percent}%</span>
                 </li>
