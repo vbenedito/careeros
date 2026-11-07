@@ -1,11 +1,13 @@
 import { cookies } from "next/headers";
 import { ExtensionStatus } from "@/components/app/extension-status";
 import { PageHeader } from "@/components/app/page-header";
+import { ActivityChart } from "@/components/dashboard/activity-chart";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TimeZoneSync } from "@/components/dashboard/time-zone-sync";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { activityBars } from "@/lib/dashboard/activity";
 import { loadDashboard } from "@/lib/dashboard/data";
 import { resolvePeriod } from "@/lib/dashboard/period";
 import { summarize } from "@/lib/dashboard/summary";
@@ -44,7 +46,14 @@ export default async function DashboardPage({
         {result.ok ? (
           <>
             <SummaryCards cards={summarize(result.data, period)} />
-            {/* Charts arrive in #25–#26; empty/loading states and the Connect CTA in #28. */}
+            {/* DASH-10: ≥ xl bar chart col-span-2 and (#26) the donut beside it; stacked below. */}
+            <div className="grid gap-4 xl:grid-cols-3">
+              <ActivityChart
+                className="xl:col-span-2"
+                bars={activityBars(result.data.daily, period, today)}
+              />
+            </div>
+            {/* Empty/loading states and the Connect CTA in #28. */}
             <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
           </>
         ) : (
