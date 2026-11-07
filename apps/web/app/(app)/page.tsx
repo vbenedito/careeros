@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadDashboard } from "@/lib/dashboard/data";
 import { resolvePeriod } from "@/lib/dashboard/period";
-import { resolveTimeZone, TZ_COOKIE, todayIn } from "@/lib/dashboard/time-zone";
+import { FALLBACK_TZ, resolveTimeZone, TZ_COOKIE, todayIn } from "@/lib/dashboard/time-zone";
 import { extensionId } from "@/lib/env";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -17,13 +17,23 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ view?: string; date?: string }>;
 }) {
-  const timeZone = resolveTimeZone((await cookies()).get(TZ_COOKIE)?.value);
-  const today = todayIn(timeZone);
-  const period = resolvePeriod(await searchParams, today);
-  const [user, result] = await Promise.all([
+  const params = await searchParams;
+  const supabase = await createClient();
+  let timeZone = resolveTimeZone((await cookies()).get(TZ_COOKIE)?.value);
+  let today = todayIn(timeZone);
+  let period = resolvePeriod(params, today);
+  let [user, result] = await Promise.all([
     getCurrentUser(),
-    loadDashboard(await createClient(), period, today, timeZone),
+    loadDashboard(supabase, period, today, timeZone),
   ]);
+  // DASH-07: a zone Node accepts but the database does not know falls back to UTC instead of
+  // breaking the page for as long as the cookie lives.
+  if (!result.ok && result.reason === "invalid-time-zone" && timeZone !== FALLBACK_TZ) {
+    timeZone = FALLBACK_TZ;
+    today = todayIn(timeZone);
+    period = resolvePeriod(params, today);
+    result = await loadDashboard(supabase, period, today, timeZone);
+  }
 
   return (
     <>

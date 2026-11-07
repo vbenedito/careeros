@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 export function PeriodSelector({ period, today }: { period: Period; today: string }) {
   const viewLink = (view: View, label: string) => (
     <a
-      href={periodHref(view, view === period.view ? period.anchor : today)}
+      // Switching view keeps the date being looked at (its first day), or today when current.
+      href={periodHref(view, period.isCurrent ? today : period.anchor)}
       aria-current={view === period.view ? "page" : undefined}
       className={cn(
         "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",

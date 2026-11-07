@@ -23,11 +23,12 @@ export function resolveTimeZone(cookieValue: string | undefined): string {
 
 /** Today's date (YYYY-MM-DD) in `timeZone`. */
 export function todayIn(timeZone: string, now: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
-  return parts; // en-CA formats as YYYY-MM-DD
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }

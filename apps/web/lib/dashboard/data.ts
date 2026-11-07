@@ -25,7 +25,10 @@ export interface DashboardData {
   periodSeconds: number;
 }
 
-export type DashboardResult = { ok: true; data: DashboardData } | { ok: false };
+export type DashboardResult =
+  | { ok: true; data: DashboardData }
+  /** `invalid-time-zone`: the database does not know the zone (its list can differ from Node's). */
+  | { ok: false; reason: "invalid-time-zone" | "failed" };
 
 export async function loadDashboard(
   supabase: SupabaseClient,
@@ -40,7 +43,13 @@ export async function loadDashboard(
     // Today may be outside the selected period; ask for it separately (one tiny row).
     supabase.rpc("get_daily_totals", { p_from: today, p_to: today, p_tz: timeZone }),
   ]);
-  if (daily.error || domains.error || todayRow.error) return { ok: false };
+  const error = daily.error ?? domains.error ?? todayRow.error;
+  if (error) {
+    return {
+      ok: false,
+      reason: error.message === "INVALID_TIME_ZONE" ? "invalid-time-zone" : "failed",
+    };
+  }
 
   const days = ((daily.data ?? []) as { day: string; seconds: number | string }[]).map((r) => ({
     day: r.day,

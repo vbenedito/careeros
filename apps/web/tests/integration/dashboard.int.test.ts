@@ -57,6 +57,15 @@ describe("dashboard data (integration)", () => {
     expect(text(html, "period-label")).toBe("This week");
   });
 
+  it("DASH-07 a zone Node accepts but Postgres does not know falls back to UTC (no broken page)", async () => {
+    const { id, cookie } = await seededUser();
+    addSession(id, "2026-10-27T15:00:00Z", 30);
+    // Intl accepts any letter case; pg_timezone_names compares exactly.
+    const { status, html } = await page("/?view=week&date=2026-10-28", cookie, "america/sao_paulo");
+    expect(status).toBe(200);
+    expect(text(html, "period-seconds")).toBe("30m");
+  });
+
   it("DASH-04 months by URL", async () => {
     const { id, cookie } = await seededUser();
     addSession(id, "2026-10-01T12:00:00Z", 25);
