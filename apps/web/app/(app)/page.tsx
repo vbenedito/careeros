@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { ExtensionStatus } from "@/components/app/extension-status";
 import { PageHeader } from "@/components/app/page-header";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { PlatformChart } from "@/components/dashboard/platform-chart";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
@@ -48,16 +49,21 @@ export default async function DashboardPage({
         {result.ok ? (
           <>
             <SummaryCards cards={summarize(result.data, period)} />
-            {/* DASH-10: ≥ xl bar chart col-span-2 and the donut beside it; stacked below. */}
-            <div className="grid gap-4 xl:grid-cols-3">
-              <ActivityChart
-                className="xl:col-span-2"
-                bars={activityBars(result.data.daily, period, today)}
-              />
-              <PlatformChart slices={platformSlices(result.data.domains)} />
-            </div>
-            {/* Empty/loading states and the Connect CTA in #28. */}
-            <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
+            {result.data.periodSeconds > 0 ? (
+              <>
+                {/* DASH-10: ≥ xl bar chart col-span-2 and the donut beside it; stacked below. */}
+                <div className="grid gap-4 xl:grid-cols-3">
+                  <ActivityChart
+                    className="xl:col-span-2"
+                    bars={activityBars(result.data.daily, period, today)}
+                  />
+                  <PlatformChart slices={platformSlices(result.data.domains)} />
+                </div>
+                <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
+              </>
+            ) : (
+              <EmptyState extensionId={extensionId()} userEmail={user?.email ?? null} />
+            )}
           </>
         ) : (
           <Card role="alert">
