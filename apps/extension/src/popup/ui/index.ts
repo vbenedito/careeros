@@ -2,4 +2,6 @@
 export { Button, type ButtonProps } from "./Button";
 export { Card } from "./Card";
 export { cn } from "./cn";
+export { Input } from "./Input";
 export { Meter } from "./Meter";
+export { Switch } from "./Switch";

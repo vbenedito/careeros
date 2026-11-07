@@ -12,7 +12,12 @@ import {
 } from "../background/tracking/keys";
 import { parseEngineState, parseOutbox } from "../background/tracking/store";
 import { config } from "../lib/config";
-import { POPUP_PORT, type PopupAuthStatus, type PopupRequest } from "../lib/popup-messages";
+import {
+  POPUP_PORT,
+  type PopupAuthStatus,
+  type PopupDisconnectResult,
+  type PopupRequest,
+} from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
 
@@ -33,6 +38,11 @@ export interface PopupData {
   /** Calls back whenever the worker changes what the popup shows. */
   subscribe(onChange: () => void): () => void;
   addSite(input: string): Promise<CommandResult>;
+  removeSite(domain: string): Promise<CommandResult>;
+  /** EXT-UI-06: per-device tracking switch. */
+  setTracking(enabled: boolean): Promise<void>;
+  /** AUTH-12: refused with UNSYNCED_DATA unless `discardUnsynced`. */
+  disconnect(discardUnsynced: boolean): Promise<PopupDisconnectResult>;
   refreshSites(): Promise<void>;
   openDashboard(path?: string): void;
   /** Tells the worker the popup is open (not "left Chrome", TRK-04); returns a closer. */
@@ -91,6 +101,24 @@ export function createChromePopupData(): PopupData {
     async addSite(input) {
       const reply = await send<{ ok: boolean; error?: string }>({ type: "DOMAINS_ADD", input });
       return reply?.ok ? { ok: true } : { ok: false, error: reply?.error ?? "UNAVAILABLE" };
+    },
+
+    async removeSite(domain) {
+      const reply = await send<{ ok: boolean; error?: string }>({ type: "DOMAINS_REMOVE", domain });
+      return reply?.ok ? { ok: true } : { ok: false, error: reply?.error ?? "UNAVAILABLE" };
+    },
+
+    async setTracking(enabled) {
+      await send({ type: "TRACKING_SET", enabled });
+    },
+
+    async disconnect(discardUnsynced) {
+      return (
+        (await send<PopupDisconnectResult>({ type: "DISCONNECT", discardUnsynced })) ?? {
+          ok: false,
+          code: "FAILED",
+        }
+      );
     },
 
     async refreshSites() {

@@ -2,10 +2,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../engine/engine";
+import type { PopupDisconnectResult } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { INITIAL_SYNC_STATE } from "../lib/sync-state";
 import { App } from "./App";
-import type { PopupData } from "./data";
+import type { CommandResult, PopupData } from "./data";
 
 const TODAY = Date.UTC(2026, 10, 9, 3, 0, 0);
 const NOW = TODAY + 3600_000;
@@ -31,20 +32,43 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     activeTabUrl: "https://news.example/x",
     ...over,
   };
-  const data: PopupData & { added: string[]; opened: (string | undefined)[] } = {
-    added: [],
-    opened: [],
+  const calls: string[] = [];
+  const added: string[] = [];
+  const opened: (string | undefined)[] = [];
+  const data: PopupData & {
+    added: string[];
+    opened: (string | undefined)[];
+    calls: string[];
+    disconnectReply: PopupDisconnectResult[];
+    addReply: CommandResult[];
+  } = {
+    added,
+    opened,
+    calls,
+    disconnectReply: [],
+    addReply: [],
     version: "0.1.0",
     load: async () => loaded,
     subscribe: () => () => {},
     holdFocus: () => () => {},
     refreshSites: async () => {},
-    async addSite(input) {
-      this.added.push(input);
+    addSite: async (input) => {
+      added.push(input);
+      return data.addReply.shift() ?? { ok: true };
+    },
+    removeSite: async (domain) => {
+      calls.push(`remove:${domain}`);
       return { ok: true };
     },
-    openDashboard(path) {
-      this.opened.push(path);
+    setTracking: async (enabled) => {
+      calls.push(`tracking:${enabled}`);
+    },
+    disconnect: async (discard) => {
+      calls.push(`disconnect:${discard}`);
+      return data.disconnectReply.shift() ?? { ok: true };
+    },
+    openDashboard: (path) => {
+      opened.push(path);
     },
   };
   return data;
@@ -115,8 +139,10 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
   it("EXT-UI-09 every control is a real button with a text label; status is text, not color only", async () => {
     renderApp(fixture({ engine: tracking }));
     await screen.findByTestId("status");
-    for (const button of screen.getAllByRole("button"))
-      expect(button.textContent?.trim()).not.toBe("");
+    for (const button of screen.getAllByRole("button")) {
+      // A visible text label, or an aria-label for the icon-only Settings button.
+      expect(button.textContent?.trim() || button.getAttribute("aria-label")).toBeTruthy();
+    }
     expect(screen.getByTestId("status").textContent).toContain("Tracking");
   });
 
@@ -128,5 +154,87 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
     await waitFor(() => expect(screen.getByTestId("today-total").textContent).toBe("26m"), {
       timeout: 2500,
     });
+  });
+});
+
+describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
+  const openSettings = async (data: PopupData) => {
+    renderApp(data);
+    fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+  };
+
+  it("EXT-UI-06 the tracking switch sends the new value to the worker", async () => {
+    const data = fixture();
+    await openSettings(data);
+    const toggle = screen.getByRole("switch", { name: /Tracking/ });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(toggle);
+    await waitFor(() => expect(data.calls).toContain("tracking:false"));
+  });
+
+  it("EXT-UI-07 lists the sites; remove and add go to the worker; errors are shown", async () => {
+    const data = fixture({ trackedDomains: ["leetcode.com", "neetcode.io"] });
+    await openSettings(data);
+    expect(screen.getByTestId("sites").textContent).toContain("neetcode.io");
+    fireEvent.click(screen.getByRole("button", { name: "Remove neetcode.io" }));
+    await waitFor(() => expect(data.calls).toContain("remove:neetcode.io"));
+    fireEvent.change(screen.getByRole("textbox", { name: "Site to track" }), {
+      target: { value: " docs.python.org " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(data.added).toEqual(["docs.python.org"]));
+    data.addReply.push({ ok: false, error: "INVALID_DOMAIN" });
+    fireEvent.change(screen.getByRole("textbox", { name: "Site to track" }), {
+      target: { value: "x" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "That doesn't look like a website address.",
+    );
+  });
+
+  it("AUTH-12 disconnect asks before deleting unsynced sessions", async () => {
+    const data = fixture();
+    const unsynced = { ok: false, code: "UNSYNCED_DATA", pending: 3 } as const;
+    data.disconnectReply.push(unsynced, unsynced);
+    await openSettings(data);
+    expect(screen.getByTestId("account-email").textContent).toBe("a@example.test");
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete unsynced sessions?" });
+    expect(dialog.textContent).toContain("3 study sessions haven't been uploaded yet");
+    // EXT-UI-09: the confirmation takes focus (safe choice first) and gives it back on close.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep connected" })),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Keep connected" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Disconnect" })),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    await screen.findByRole("alertdialog");
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect and delete" }));
+    await waitFor(() =>
+      expect(data.calls).toEqual(["disconnect:false", "disconnect:false", "disconnect:true"]),
+    );
+  });
+
+  it("EXT-UI-08 no account section when not connected; Back returns to the main view", async () => {
+    const data = fixture({ auth: { connected: false, email: null } });
+    await openSettings(data);
+    expect(screen.queryByRole("heading", { name: "Account" })).toBeNull();
+    // No site list or Add form that could only fail; a way to connect instead.
+    expect(screen.queryByText("Loading your sites…")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Site to track" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Connect account" }));
+    expect(data.opened).toEqual(["/connect"]);
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByTestId("today-total")).toBeTruthy();
+  });
+
+  it("main view: 'Turn on in Settings' opens the settings view", async () => {
+    renderApp(fixture({ trackingEnabled: false }));
+    fireEvent.click(await screen.findByRole("button", { name: "Turn on in Settings" }));
+    expect(screen.getByRole("switch", { name: /Tracking/ })).toBeTruthy();
   });
 });
