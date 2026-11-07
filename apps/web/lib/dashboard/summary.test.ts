@@ -20,7 +20,14 @@ describe("summary cards (DASH-06)", () => {
     expect(cards).toEqual([
       { id: "today", title: "Today", seconds: 600, detail: null },
       { id: "period", title: "This week", seconds: 2400, detail: null },
-      { id: "top", title: "Top platform", seconds: 1800, detail: "neetcode.io · 75%" },
+      {
+        id: "top",
+        title: "Top platform",
+        seconds: 1800,
+        detail: "neetcode.io · 75%",
+        domain: "neetcode.io",
+        share: 75,
+      },
     ]);
   });
 

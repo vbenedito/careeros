@@ -12,6 +12,9 @@ export interface SummaryCard {
   seconds: number | null;
   /** Secondary line: the top domain and its share, or a short caption. */
   detail: string | null;
+  /** Top platform only: kept apart so a long domain is truncated, never the share. */
+  domain?: string;
+  share?: number;
 }
 
 export function summarize(data: DashboardData, period: Period): SummaryCard[] {
@@ -32,6 +35,7 @@ export function summarize(data: DashboardData, period: Period): SummaryCard[] {
       title: "Top platform",
       seconds: top ? top.seconds : null,
       detail: top ? `${top.domain} · ${share}%` : null,
+      ...(top && share !== null ? { domain: top.domain, share } : {}),
     },
   ];
 }
