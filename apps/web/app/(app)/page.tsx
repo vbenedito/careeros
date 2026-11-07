@@ -1,13 +1,14 @@
-import { formatDuration } from "@careeros/shared";
 import { cookies } from "next/headers";
 import { ExtensionStatus } from "@/components/app/extension-status";
 import { PageHeader } from "@/components/app/page-header";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
+import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TimeZoneSync } from "@/components/dashboard/time-zone-sync";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import { loadDashboard } from "@/lib/dashboard/data";
 import { resolvePeriod } from "@/lib/dashboard/period";
+import { summarize } from "@/lib/dashboard/summary";
 import { FALLBACK_TZ, resolveTimeZone, TZ_COOKIE, todayIn } from "@/lib/dashboard/time-zone";
 import { extensionId } from "@/lib/env";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -41,25 +42,11 @@ export default async function DashboardPage({
       <PageHeader title="Dashboard" actions={<PeriodSelector period={period} today={today} />} />
       <main className="flex flex-col gap-4 p-4 md:p-6">
         {result.ok ? (
-          // Summary cards and charts replace this card in #24–#26.
-          <Card>
-            <CardHeader>
-              <CardTitle>{period.label}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              <p>
-                Today:{" "}
-                <strong data-testid="today-seconds">
-                  {formatDuration(result.data.todaySeconds)}
-                </strong>{" "}
-                · Period:{" "}
-                <strong data-testid="period-seconds">
-                  {formatDuration(result.data.periodSeconds)}
-                </strong>
-              </p>
-              <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
-            </CardContent>
-          </Card>
+          <>
+            <SummaryCards cards={summarize(result.data, period)} />
+            {/* Charts arrive in #25–#26; empty/loading states and the Connect CTA in #28. */}
+            <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
+          </>
         ) : (
           <Card role="alert">
             <CardTitle>Couldn't load your study time</CardTitle>
