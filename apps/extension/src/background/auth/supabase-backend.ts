@@ -126,9 +126,7 @@ export function createSupabaseAuthBackend(config: {
         refresh_token: stored.refreshToken,
       });
       if (data.session) return { ok: true, session: toAuthSession(data.session) };
-      // An API error (e.g. revoked or reused refresh token) means the session is gone;
-      // anything else (offline, 5xx) is temporary.
-      return { ok: false, reason: error && isAuthApiError(error) ? "invalid" : "unavailable" };
+      return { ok: false, reason: refreshFailureReason(error) };
     },
 
     async signOutLocal() {
@@ -151,4 +149,17 @@ export function createSupabaseAuthBackend(config: {
 
     clearLocalSession: removeStoredSession,
   };
+}
+
+/**
+ * AUTH-11: only a client error from Supabase Auth (revoked, reused or unknown refresh token,
+ * deleted user) means the session is gone. Rate limits (429), timeouts (408), server errors
+ * and network failures are temporary: the extension stays connected and retries later.
+ */
+export function refreshFailureReason(error: unknown): "invalid" | "unavailable" {
+  if (!error || !isAuthApiError(error)) return "unavailable";
+  const status = error.status;
+  return status >= 400 && status < 500 && status !== 408 && status !== 429
+    ? "invalid"
+    : "unavailable";
 }

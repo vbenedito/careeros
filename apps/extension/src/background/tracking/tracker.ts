@@ -40,12 +40,24 @@ export function createTracker(deps: {
   const { store, browser, now, log } = deps;
   const enqueue = createSerialQueue();
 
-  async function stepAndCommit(event: EngineEvent, env: EngineEnv): Promise<EngineEffect[]> {
+  /** Set when a slot timed out: its late work must never touch storage again (TRK-17). */
+  interface Slot {
+    aborted: boolean;
+  }
+
+  async function stepAndCommit(
+    event: EngineEvent,
+    env: EngineEnv,
+    slot: Slot,
+  ): Promise<EngineEffect[]> {
+    if (slot.aborted) return [];
     const { state, outbox } = await store.load();
     const result = step(state, event, now(), env);
     const emitted: Interval[] = result.effects.flatMap((e) =>
       e.type === "EMIT_INTERVAL" ? [e.interval] : [],
     );
+    // A slot that timed out while loading must not overwrite what later slots stored.
+    if (slot.aborted) return [];
     await store.commit(result.state, outbox, emitted);
     log.debug("tracking.step", {
       event: event.type,
@@ -55,20 +67,20 @@ export function createTracker(deps: {
     return result.effects;
   }
 
-  async function process(source: EventSource): Promise<void> {
+  async function process(source: EventSource, slot: Slot): Promise<void> {
     const env = await deps.env();
     const event = typeof source === "function" ? await source() : source;
-    let effects = await stepAndCommit(event, env);
+    let effects = await stepAndCommit(event, env, slot);
     for (let round = 0; round < MAX_EFFECT_ROUNDS && effects.length > 0; round++) {
       const next: EngineEffect[] = [];
       for (const effect of effects) {
         if (effect.type === "REQUERY_TAB") {
           next.push(
-            ...(await stepAndCommit({ type: "TAB", tab: await browser.focusedTab() }, env)),
+            ...(await stepAndCommit({ type: "TAB", tab: await browser.focusedTab() }, env, slot)),
           );
         } else if (effect.type === "REQUERY_IDLE") {
           const state = await browser.idleState(deps.idleThresholdS);
-          next.push(...(await stepAndCommit({ type: "IDLE", state }, env)));
+          next.push(...(await stepAndCommit({ type: "IDLE", state }, env, slot)));
         }
       }
       effects = next;
@@ -83,12 +95,19 @@ export function createTracker(deps: {
     dispatch(source: EventSource): Promise<boolean> {
       return enqueue(async () => {
         let timer: ReturnType<typeof setTimeout> | undefined;
+        const slot: Slot = { aborted: false };
         const timeout = new Promise<"timeout">((resolve) => {
           timer = setTimeout(() => resolve("timeout"), SLOT_TIMEOUT_MS);
         });
         try {
-          const outcome = await Promise.race([process(source).then(() => "ok" as const), timeout]);
-          if (outcome === "timeout") log.error("tracking.step_timeout", {});
+          const outcome = await Promise.race([
+            process(source, slot).then(() => "ok" as const),
+            timeout,
+          ]);
+          if (outcome === "timeout") {
+            slot.aborted = true;
+            log.error("tracking.step_timeout", {});
+          }
           return outcome === "ok";
         } catch (error) {
           // Never log the error message itself: it could contain a URL (SEC-06).

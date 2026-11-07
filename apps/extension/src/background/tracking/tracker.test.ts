@@ -141,6 +141,26 @@ describe("tracker slot timeout", () => {
   });
 });
 
+describe("tracker slot timeout: late work", () => {
+  it("TRK-17 an observation arriving after its slot timed out is never stored", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      let resolveLate: (e: { type: "AUTH"; connected: boolean }) => void = () => {};
+      const late = s.tracker.dispatch(() => new Promise((resolve) => (resolveLate = resolve)));
+      await vi.advanceTimersByTimeAsync(SLOT_TIMEOUT_MS);
+      expect(await late).toBe(false);
+      expect(await s.tracker.dispatch({ type: "AUTH", connected: false })).toBe(true);
+      // The hung observation finally resolves — with stale data.
+      resolveLate({ type: "AUTH", connected: true });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(parseEngineState(s.storage.data.get(ENGINE_STATE_KEY)).signals.connected).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("tracking store (TRK-12, SEC-02)", () => {
   it("TRK-12 invalid or legacy stored state falls back to the initial state (fails closed)", () => {
     expect(parseEngineState(undefined)).toEqual(INITIAL_ENGINE_STATE);
