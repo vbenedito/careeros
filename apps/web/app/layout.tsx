@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
+import { ThemeProvider } from "@/components/app/theme-provider";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CareerOS",
@@ -10,10 +12,13 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Reading request headers renders every page per request, which the nonce-based CSP requires
   // (SEC-09): a statically built page would have no nonce and its scripts would be blocked.
-  await headers();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en">
-      <body>{children}</body>
+    // next-themes sets the theme class before hydration.
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-svh antialiased">
+        <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

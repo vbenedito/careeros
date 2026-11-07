@@ -44,6 +44,10 @@ describe("/connect page (real Chromium + real extension)", () => {
     const state = page.getByTestId("connect-state");
     await expect.poll(() => state.getAttribute("data-state")).toBe("not-installed");
     expect(await state.textContent()).toContain("Load unpacked");
+    await page.goto(`${DASHBOARD_URL}/`);
+    await expect
+      .poll(() => page.getByTestId("extension-status").getAttribute("data-state"))
+      .toBe("not-installed");
     await browser.close();
   });
 
@@ -60,6 +64,12 @@ describe("/connect page (real Chromium + real extension)", () => {
     // A fresh visit reads the status from the extension again.
     await page.reload();
     await expect.poll(() => state.getAttribute("data-state")).toBe("connected");
+
+    // DASH-11: the dashboard asks the extension too, and offers Connect only when needed.
+    await page.goto(`${DASHBOARD_URL}/`);
+    const status = page.getByTestId("extension-status");
+    await expect.poll(() => status.getAttribute("data-state")).toBe("connected");
+    expect(await page.getByRole("link", { name: "Connect the extension" }).count()).toBe(0);
     await page.close();
   });
 });

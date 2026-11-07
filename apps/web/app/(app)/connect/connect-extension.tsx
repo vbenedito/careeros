@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { requestLinkToken } from "@/lib/extension/link-token";
 import { sendToExtension } from "@/lib/extension/messenger";
 import { interpretConnect, interpretStatus } from "@/lib/extension/protocol";
@@ -42,17 +43,20 @@ export function ConnectExtension({
   }
 
   return (
-    <section aria-live="polite" data-testid="connect-state" data-state={view.kind}>
+    <section
+      aria-live="polite"
+      data-testid="connect-state"
+      data-state={view.kind}
+      className="flex flex-col items-start gap-3 text-sm"
+    >
       <ConnectMessage view={view} />
       {view.kind === "not-connected" || view.kind === "failed" || view.kind === "rate-limited" ? (
-        <button type="button" onClick={connect}>
-          Connect extension
-        </button>
+        <Button onClick={connect}>Connect extension</Button>
       ) : null}
       {view.kind === "not-installed" || view.kind === "outdated" ? (
-        <button type="button" onClick={check}>
+        <Button variant="outline" onClick={check}>
           Check again
-        </button>
+        </Button>
       ) : null}
     </section>
   );
