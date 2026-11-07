@@ -45,10 +45,10 @@ export interface AuthBackend {
 export interface LocalData {
   /**
    * Tries to upload pending intervals; returns how many remain unsynced.
-   * Called while AuthService's (non-reentrant) lock is held: it must never call back into
-   * AuthService — take what it needs (e.g. an access token) as an argument (#18).
+   * Called while AuthService's (non-reentrant) lock is held, so it must never call back into
+   * AuthService: it gets a token provider that works under that lock.
    */
-  flush(): Promise<number>;
+  flush(accessToken: TokenProvider): Promise<number>;
   /** Number of intervals waiting to be uploaded. */
   pendingCount(): Promise<number>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
@@ -66,6 +66,14 @@ export type ConnectResult =
   | { ok: false; code: "ALREADY_CONNECTED" | "UNSYNCED_DATA" | "INVALID_TOKEN" };
 
 export type DisconnectResult = { ok: true } | { ok: false; code: "UNSYNCED_DATA" };
+
+export interface TokenOptions {
+  /** Refresh even if the token looks valid locally (the device clock may be behind). */
+  forceRefresh?: boolean;
+}
+
+/** Gives a valid access token, or null when not connected / temporarily unavailable. */
+export type TokenProvider = (options?: TokenOptions) => Promise<string | null>;
 
 export interface AuthStatus {
   connected: boolean;
@@ -91,6 +99,18 @@ export function createAuthService(deps: {
   async function markInvalid(): Promise<void> {
     await backend.clearLocalSession();
     await storage.set({ [NEEDS_RECONNECT_KEY]: true });
+  }
+
+  /** AUTH-10: the token logic itself; callers must hold the lock. */
+  async function accessTokenLocked(options: TokenOptions = {}): Promise<string | null> {
+    const session = await backend.currentSession();
+    if (!session) return null;
+    const fresh = session.expiresAt - now() / 1000 > REFRESH_MARGIN_S;
+    if (fresh && !options.forceRefresh) return session.accessToken;
+    const result = await backend.refresh();
+    if (result.ok) return result.session.accessToken;
+    if (result.reason === "invalid") await markInvalid();
+    return null;
   }
 
   return {
@@ -150,17 +170,9 @@ export function createAuthService(deps: {
      * AUTH-10: a valid access token for an API call, refreshed first when it expires within
      * REFRESH_MARGIN_S. Returns null when not connected or temporarily unavailable.
      */
-    accessToken() {
-      return exclusive(async (): Promise<string | null> => {
-        const session = await backend.currentSession();
-        if (!session) return null;
-        if (session.expiresAt - now() / 1000 > REFRESH_MARGIN_S) return session.accessToken;
-
-        const result = await backend.refresh();
-        if (result.ok) return result.session.accessToken;
-        if (result.reason === "invalid") await markInvalid();
-        return null;
-      });
+    /** `forceRefresh`: the server said the token expired although it looks valid here. */
+    accessToken(options: TokenOptions = {}) {
+      return exclusive(() => accessTokenLocked(options));
     },
 
     /** AUTH-11: an API call proved the session or the user is gone (401, deleted user). */
@@ -174,7 +186,7 @@ export function createAuthService(deps: {
         let done = false;
         try {
           await localData.stopTracking();
-          const remaining = await localData.flush();
+          const remaining = await localData.flush(accessTokenLocked);
           if (remaining > 0 && !options.discardUnsynced)
             return { ok: false, code: "UNSYNCED_DATA" };
           await backend.signOutLocal();

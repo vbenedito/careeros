@@ -4,9 +4,10 @@ import { type DomainsApi, DomainsApiError } from "./domain-service";
 
 function toError(error: PostgrestError | null, status: number): DomainsApiError | null {
   if (!error) return null;
-  if (status === 401 || error.code === "PGRST301" || error.code === "PGRST303") {
-    return new DomainsApiError("UNAUTHORIZED");
-  }
+  // An expired JWT (PGRST301/303, e.g. device clock behind) is temporary, not a revoked session.
+  if (error.code === "PGRST301" || error.code === "PGRST303")
+    return new DomainsApiError("UNAVAILABLE");
+  if (status === 401) return new DomainsApiError("UNAUTHORIZED");
   if (error.hint === "DATA-01") return new DomainsApiError("LIMIT_REACHED");
   return new DomainsApiError("UNAVAILABLE");
 }

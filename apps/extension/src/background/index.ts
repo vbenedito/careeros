@@ -4,7 +4,7 @@
  *
  * Every listener is registered synchronously at startup so Chrome events can wake the worker.
  */
-import { TRACKING } from "@careeros/shared";
+import { SYNC, TRACKING } from "@careeros/shared";
 import { config, isSupabaseConfigured } from "../lib/config";
 import { IS_DEV_BUILD } from "../lib/env";
 import { createLogger } from "../lib/log";
@@ -16,6 +16,8 @@ import { createDomainService } from "./domains/domain-service";
 import { createSupabaseDomainsApi } from "./domains/supabase-domains";
 import { createExternalMessageHandler } from "./messaging/external";
 import { createInternalMessageHandler } from "./messaging/internal";
+import { createSupabaseIngest } from "./sync/supabase-ingest";
+import { createSyncService } from "./sync/sync-service";
 import {
   createStorageChangeHandler,
   createTrackingLocalData,
@@ -27,6 +29,7 @@ import {
   setUpChromeTracking,
 } from "./tracking/chrome-port";
 import { createEngineEnv } from "./tracking/device";
+import { createOutbox, startOfLocalDay } from "./tracking/outbox";
 import { createTrackingStore } from "./tracking/store";
 import { createTracker } from "./tracking/tracker";
 
@@ -54,7 +57,36 @@ const backend = isSupabaseConfigured()
   : null;
 /** Connected = a valid stored session (same parsing as AuthService; no lock, no network). */
 const hasSession = async () => (backend ? (await backend.currentSession()) !== null : false);
-const localData = createTrackingLocalData({ tracker, store, isConnected: hasSession });
+
+// --- Sync (SYNC-01..08) ---------------------------------------------------------------------
+const SYNC_ALARM = "careeros.sync";
+const outbox = createOutbox({
+  area: storage,
+  exclusive: tracker.exclusive,
+  now: () => Date.now(),
+  startOfLocalDay,
+});
+const sync = backend
+  ? createSyncService({
+      outbox,
+      ingest: createSupabaseIngest({
+        supabaseUrl: config.supabaseUrl,
+        publishableKey: config.supabasePublishableKey,
+      }),
+      storage,
+      now: () => Date.now(),
+      sessionRejected: () => auth?.sessionRejected() ?? Promise.resolve(),
+    })
+  : null;
+
+const localData = createTrackingLocalData({
+  tracker,
+  store,
+  isConnected: hasSession,
+  // AUTH-12 final sync: ignores backoff, never waits for a cycle that may need the auth lock.
+  upload: (accessToken) =>
+    sync?.run(accessToken, { force: true, ifIdle: true }) ?? Promise.resolve(),
+});
 const auth = backend
   ? createAuthService({ backend, storage, localData, now: () => Date.now() })
   : null;
@@ -83,17 +115,29 @@ const domains = auth
     })
   : null;
 
-/** SYNC-09: refresh on startup, after connecting and when the popup opens. */
+/** SYNC-09: refresh on startup, each sync cycle, after connecting and when the popup opens. */
 const refreshDomains = async () => {
   const result = await domains?.refresh();
   if (result && !result.ok && result.error !== "NOT_CONNECTED") {
     log.warn("domains.refresh_failed", { error: result.error });
   }
 };
+
+/** SYNC-02: one upload cycle (alarm, startup, after reconnecting). */
+const syncNow = async () => {
+  if (!sync || !auth) return;
+  const outcome = await sync.run(() => auth.accessToken());
+  log.debug("sync.cycle", { outcome });
+  await refreshDomains();
+};
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes[SESSION_STORAGE_KEY]?.newValue !== undefined) {
-    void refreshDomains();
+    void syncNow();
   }
+});
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === SYNC_ALARM) void syncNow();
 });
 
 const handleInternal = domains
@@ -130,5 +174,10 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 void setUpChromeTracking(chrome)
   .catch(() => log.error("tracking.setup_failed", {}))
   .then(() => startTracking({ tracker, store, isConnected: localData.isConnected }))
-  .then(refreshDomains)
+  .then(async () => {
+    if (!(await chrome.alarms.get(SYNC_ALARM))) {
+      await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: SYNC.SYNC_PERIOD_MIN });
+    }
+  })
+  .then(syncNow)
   .catch(() => log.error("tracking.start_failed", {}));

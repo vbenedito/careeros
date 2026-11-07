@@ -19,7 +19,7 @@ Move closed intervals from the extension to the backend reliably — no loss, no
 ## 3. Interval upload
 
 - **SYNC-01** Closed intervals are appended to a persistent **outbox** in `chrome.storage.local`. An interval leaves the outbox only after the server confirms its `id`.
-- **SYNC-02** A sync cycle runs every `SYNC_PERIOD_MIN` (`chrome.alarms`), on browser startup, and after reconnecting. Only one cycle runs at a time (a persisted lock with 2-minute expiry guards against overlapping wakes).
+- **SYNC-02** A sync cycle runs every `SYNC_PERIOD_MIN` (`chrome.alarms`), on browser startup, and after reconnecting. Only one cycle runs at a time (an in-memory guard: Chrome runs a single service worker per extension, as in AUTH-10; a persisted lock could not be released by a killed worker).
 - **SYNC-03** A cycle uploads the oldest ≤ `SYNC_BATCH_MAX` intervals through the RPC `ingest_study_sessions` (spec 04) and repeats while the outbox is non-empty and the previous call succeeded.
 - **SYNC-04** **Idempotency:** the server inserts by client-generated `id` with `ON CONFLICT (id) DO NOTHING` and returns every `id` from the batch that now exists for the caller (new or previously inserted). Retrying a batch is always safe.
 - **SYNC-05** Ids not returned were **rejected** (validation failure). They move to a local `quarantine` (kept, not retried, counted in the popup footer as "N not synced") so one bad record never blocks the queue.
