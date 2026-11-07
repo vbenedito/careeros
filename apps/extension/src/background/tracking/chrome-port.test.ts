@@ -5,6 +5,7 @@ import {
   createChromeBrowserPort,
   FOCUS_DEBOUNCE_MS,
   HEARTBEAT_ALARM,
+  POPUP_PORT,
   registerTrackingListeners,
   setUpChromeTracking,
   toTabSnapshot,
@@ -43,6 +44,7 @@ function fakeChrome() {
     focus: event<[number]>(),
     idle: event<[string]>(),
     alarm: event<[chrome.alarms.Alarm]>(),
+    connect: event<[chrome.runtime.Port]>(),
   };
   const api = {
     tabs: {
@@ -72,6 +74,7 @@ function fakeChrome() {
       get: async (name: string) => state.alarms.get(name),
       onAlarm: ev.alarm,
     },
+    runtime: { id: "ext", onConnect: ev.connect },
   } as unknown as ChromeTrackingApi;
   return { api, state, ev };
 }
@@ -198,6 +201,49 @@ describe("Chrome adapter (TRK-02, 04, 06, 13, 18, 19)", () => {
   it("SEC-01 incognito tabs are never tracked", async () => {
     const s = setup();
     s.state.tab = { url: "https://leetcode.com/", incognito: true } as chrome.tabs.Tab;
+    expect(await s.port.focusedTab()).toBeNull();
+  });
+
+  it("TRK-04 TRK-18 the open popup does not count as leaving Chrome", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      const disconnected = event<[chrome.runtime.Port]>();
+      const popup = {
+        name: POPUP_PORT,
+        sender: { id: "ext" },
+        onDisconnect: disconnected,
+      } as unknown as chrome.runtime.Port;
+      s.ev.connect.emit(popup);
+      // While the popup is open Chrome reports the window as unfocused (and may send NONE).
+      s.state.window = { id: 1, focused: false };
+      expect(await s.port.focusedTab()).toEqual(leetcodeTab.tab);
+      s.ev.focus.emit(NONE);
+      await vi.advanceTimersByTimeAsync(FOCUS_DEBOUNCE_MS * 2);
+      await s.settle();
+      expect(s.events).toEqual([]); // no "left Chrome"
+      // Closing the popup: no focus event from Chrome, so the worker re-checks at once.
+      disconnected.emit(popup);
+      await s.settle();
+      expect(s.events).toEqual([leetcodeTab]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("SEC-05 ports from other names or senders are ignored", async () => {
+    const s = setup();
+    s.ev.connect.emit({
+      name: "other",
+      sender: { id: "ext" },
+      onDisconnect: event(),
+    } as unknown as chrome.runtime.Port);
+    s.ev.connect.emit({
+      name: POPUP_PORT,
+      sender: { id: "evil" },
+      onDisconnect: event(),
+    } as unknown as chrome.runtime.Port);
+    s.state.window = { id: 1, focused: false };
     expect(await s.port.focusedTab()).toBeNull();
   });
 

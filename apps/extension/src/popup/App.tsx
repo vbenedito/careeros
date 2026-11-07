@@ -18,12 +18,14 @@ export function App({ data, now = () => Date.now() }: { data: PopupData; now?: (
   }, [data]);
 
   useEffect(() => {
+    const releaseFocus = data.holdFocus(); // first: before anything asks the worker to re-check
     reload();
     void data.refreshSites(); // SYNC-09: refresh on popup open
     const unsubscribe = data.subscribe(reload);
     // EXT-UI-02: live values update every second while the popup is open.
     const timer = setInterval(() => setTick(clock.current()), 1000);
     return () => {
+      releaseFocus();
       unsubscribe();
       clearInterval(timer);
     };

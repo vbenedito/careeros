@@ -4,11 +4,13 @@
  */
 import { TRACKING } from "@careeros/shared";
 import type { IdleState, TabSnapshot } from "../../engine/signals";
+import { POPUP_PORT } from "../../lib/popup-messages";
 import type { BrowserPort, Tracker } from "./tracker";
 
 /** TRK-18: a focus loss counts only if it lasts this long. */
 export const FOCUS_DEBOUNCE_MS = 500;
 export const HEARTBEAT_ALARM = "careeros.heartbeat";
+export { POPUP_PORT };
 
 /** TRK-06: Chrome reports muted tabs as audible; they do not count. */
 export function toTabSnapshot(
@@ -23,6 +25,7 @@ export interface ChromeTrackingApi {
   windows: Pick<typeof chrome.windows, "getLastFocused" | "onFocusChanged" | "WINDOW_ID_NONE">;
   idle: Pick<typeof chrome.idle, "queryState" | "setDetectionInterval" | "onStateChanged">;
   alarms: Pick<typeof chrome.alarms, "create" | "get" | "onAlarm">;
+  runtime: Pick<typeof chrome.runtime, "onConnect" | "id">;
 }
 
 export interface Timers {
@@ -37,15 +40,30 @@ export interface Timers {
 export function createChromeBrowserPort(api: ChromeTrackingApi) {
   /** True while a focus loss is waiting for its debounce: the last window still counts. */
   let pendingBlur = false;
+  /**
+   * True while our popup is open. Chrome reports the window as unfocused then, but the popup is
+   * part of Chrome: the user has not left the page they are studying (TRK-04).
+   */
+  let popupOpen = false;
 
-  const port: BrowserPort & { setPendingBlur(value: boolean): void } = {
+  const port: BrowserPort & {
+    setPendingBlur(value: boolean): void;
+    setPopupOpen(value: boolean): void;
+    isPopupOpen(): boolean;
+    focusedTab(options?: { assumeFocused?: boolean }): Promise<TabSnapshot | null>;
+  } = {
     setPendingBlur(value) {
       pendingBlur = value;
     },
-    async focusedTab() {
+    setPopupOpen(value) {
+      popupOpen = value;
+    },
+    isPopupOpen: () => popupOpen,
+    async focusedTab(options: { assumeFocused?: boolean } = {}) {
       try {
         const win = await api.windows.getLastFocused({});
-        if (win.id === undefined || !(win.focused || pendingBlur)) return null;
+        const focused = win.focused || pendingBlur || popupOpen || options.assumeFocused === true;
+        if (win.id === undefined || !focused) return null;
         const [tab] = await api.tabs.query({ active: true, windowId: win.id });
         // Incognito is never tracked (SEC-01), even when the extension is allowed there.
         if (!tab || tab.incognito) return null;
@@ -103,12 +121,28 @@ export function registerTrackingListeners(deps: {
       blurTimer = timers.setTimeout(() => {
         blurTimer = null;
         port.setPendingBlur(false);
+        if (port.isPopupOpen()) return; // the popup took the focus: still in Chrome
         void tracker.dispatch({ type: "TAB", tab: null });
       }, FOCUS_DEBOUNCE_MS);
       return;
     }
     port.setPendingBlur(false);
     void tabEvent();
+  });
+
+  // The popup keeps a port open while shown. Closing it returns to the page, but Chrome sends
+  // no focus event for that: re-check right away, trusting the window this once (the next
+  // heartbeat confirms with Chrome's own focus flag).
+  api.runtime.onConnect.addListener((connection) => {
+    if (connection.name !== POPUP_PORT || connection.sender?.id !== api.runtime.id) return;
+    port.setPopupOpen(true);
+    connection.onDisconnect.addListener(() => {
+      port.setPopupOpen(false);
+      void tracker.dispatch(async () => ({
+        type: "TAB",
+        tab: await port.focusedTab({ assumeFocused: true }),
+      }));
+    });
   });
 
   api.idle.onStateChanged.addListener((state) => {

@@ -37,6 +37,7 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     version: "0.1.0",
     load: async () => loaded,
     subscribe: () => () => {},
+    holdFocus: () => () => {},
     refreshSites: async () => {},
     async addSite(input) {
       this.added.push(input);
