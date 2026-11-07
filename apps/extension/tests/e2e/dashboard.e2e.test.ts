@@ -92,7 +92,7 @@ describe("dashboard journey (E2E)", () => {
     await page.getByRole("button", { name: "Add", exact: true }).click();
     const list = page.getByTestId("site-list");
     await expect.poll(() => list.textContent()).toContain("leetcode.com");
-    expect(await input.inputValue()).toBe("");
+    await expect.poll(() => input.inputValue()).toBe("");
 
     await input.fill("com");
     await page.getByRole("button", { name: "Add", exact: true }).click();
