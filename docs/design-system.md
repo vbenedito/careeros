@@ -17,6 +17,7 @@ dashboard's shadcn components use them as they are.
 | `primary` / `primary-foreground` | Main actions, links, bars |
 | `destructive` | Irreversible actions (Disconnect, Delete account) |
 | `success`, `warning` | Status only ("Tracking", "Not connected") |
+| `chart-1` … `chart-6` | Categorical chart colours (donut slices; `chart-6` is "Other") |
 | `radius` | `rounded-sm` / `md` / `lg` derive from it |
 
 Light and dark values live side by side. The dashboard switches with a `.dark` / `.light` class

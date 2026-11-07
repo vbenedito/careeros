@@ -78,12 +78,17 @@ describe("dashboard data (integration)", () => {
     expect(text(html, "card-period-value")).toBe("40m");
     expect(text(html, "card-top-value")).toBe("30m");
     expect(html).toContain('data-value="neetcode.io · 75%"');
+    // DASH-09: the donut legend agrees with the card.
+    expect(html).toContain('data-testid="platform-legend"');
+    expect(html).toMatch(/data-percent="75"[^>]*>.*?neetcode\.io/s);
+    expect(html).toMatch(/data-percent="25"[^>]*>.*?leetcode\.com/s);
   });
 
   it("DASH-06 top platform is — when the period has no data", async () => {
     const { cookie } = await seededUser();
     const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
     expect(text(html, "card-top-value")).toBe("—");
+    expect(html).toContain("No study time in this period yet.");
   });
 
   it("DASH-04 months by URL", async () => {
