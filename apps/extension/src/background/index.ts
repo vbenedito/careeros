@@ -10,7 +10,7 @@ import { IS_DEV_BUILD } from "../lib/env";
 import { createLogger } from "../lib/log";
 import { createDataClient } from "./api/data-client";
 import { createAuthService } from "./auth/auth-service";
-import { SESSION_STORAGE_KEY } from "./auth/storage";
+import { NEEDS_RECONNECT_KEY, SESSION_STORAGE_KEY } from "./auth/storage";
 import { createSupabaseAuthBackend } from "./auth/supabase-backend";
 import { createDomainService } from "./domains/domain-service";
 import { createSupabaseDomainsApi } from "./domains/supabase-domains";
@@ -141,7 +141,21 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 const handleInternal = domains
-  ? createInternalMessageHandler({ extensionId: chrome.runtime.id, domains })
+  ? createInternalMessageHandler({
+      extensionId: chrome.runtime.id,
+      domains,
+      // Read without the auth lock (like hasSession): the popup must never wait for a token
+      // refresh in flight on a slow network.
+      authStatus: async () => {
+        const session = await backend?.currentSession();
+        const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
+        return {
+          connected: session != null,
+          email: session?.email ?? null,
+          needsReconnect: session == null && flag,
+        };
+      },
+    })
   : null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!handleInternal) return false;

@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "@careeros/shared/theme/tokens.css";
+
+body {
+  margin: 0;
+  width: 360px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* EXT-UI-09: visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

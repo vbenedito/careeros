@@ -96,6 +96,14 @@ export function parseSupabaseConfig(
   return { supabaseUrl, supabasePublishableKey };
 }
 
+/** Toolbar and extensions-page icons (public/icons, rendered from scripts/icon.svg). */
+export const ICONS = {
+  "16": "icons/icon-16.png",
+  "32": "icons/icon-32.png",
+  "48": "icons/icon-48.png",
+  "128": "icons/icon-128.png",
+} as const;
+
 export function buildManifest(mode: BuildMode, config: ExtensionBuildConfig) {
   const name = mode === "production" ? "CareerOS" : "CareerOS (dev)";
   return {
@@ -107,9 +115,11 @@ export function buildManifest(mode: BuildMode, config: ExtensionBuildConfig) {
     version: config.version,
     key: MANIFEST_KEYS[mode].key,
     minimum_chrome_version: "120",
+    icons: ICONS,
     action: {
       default_title: name,
       default_popup: "popup.html",
+      default_icon: ICONS,
     },
     background: {
       service_worker: "background.js",

@@ -1,0 +1,93 @@
+/*
+ * CareerOS design tokens — the single source for colors, radius and type in the popup and the
+ * dashboard (docs/design-system.md). Names follow shadcn/ui so the dashboard's components use
+ * them directly. Components never use raw colors: only these tokens (via Tailwind classes such
+ * as `bg-card`, `text-muted-foreground`, `border-border`).
+ *
+ * Dark mode: the dashboard sets `.dark` / `.light` on <html> (next-themes); the popup has no
+ * class and follows the OS.
+ */
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.97 0.01 265);
+  --card-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.95 0.005 265);
+  --muted-foreground: oklch(0.45 0 0);
+  --border: oklch(0.9 0.01 265);
+  --input: oklch(0.88 0.01 265);
+  --ring: oklch(0.5 0.17 265);
+  --primary: oklch(0.5 0.17 265);
+  --primary-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.52 0.14 150);
+  --warning: oklch(0.55 0.16 60);
+  --radius: 0.625rem;
+  color-scheme: light;
+}
+
+.dark {
+  --background: oklch(0.17 0.005 265);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.23 0.02 265);
+  --card-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.27 0.015 265);
+  --muted-foreground: oklch(0.72 0 0);
+  --border: oklch(0.32 0.02 265);
+  --input: oklch(0.36 0.02 265);
+  --ring: oklch(0.72 0.14 265);
+  --primary: oklch(0.72 0.14 265);
+  --primary-foreground: oklch(0.17 0 0);
+  --destructive: oklch(0.7 0.17 25);
+  --destructive-foreground: oklch(0.17 0 0);
+  --success: oklch(0.75 0.15 150);
+  --warning: oklch(0.8 0.14 75);
+  color-scheme: dark;
+}
+
+/* Same values as `.dark`, for pages without a theme class (the popup). */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: oklch(0.17 0.005 265);
+    --foreground: oklch(0.97 0 0);
+    --card: oklch(0.23 0.02 265);
+    --card-foreground: oklch(0.97 0 0);
+    --muted: oklch(0.27 0.015 265);
+    --muted-foreground: oklch(0.72 0 0);
+    --border: oklch(0.32 0.02 265);
+    --input: oklch(0.36 0.02 265);
+    --ring: oklch(0.72 0.14 265);
+    --primary: oklch(0.72 0.14 265);
+    --primary-foreground: oklch(0.17 0 0);
+    --destructive: oklch(0.7 0.17 25);
+    --destructive-foreground: oklch(0.17 0 0);
+    --success: oklch(0.75 0.15 150);
+    --warning: oklch(0.8 0.14 75);
+    color-scheme: dark;
+  }
+}
+
+/* Tailwind v4: expose the tokens as utilities (bg-card, text-primary, rounded-lg, …). */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}

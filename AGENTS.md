@@ -22,6 +22,7 @@ These rules apply to every human or AI agent working in this repository. They **
 
 - TypeScript `strict`; no `any` without a comment explaining why.
 - Validate external input with schemas from `packages/shared`.
+- UI: follow `docs/design-system.md` — token utilities only (no raw colors), primitives from `ui/`, logic in pure view-model functions.
 - No new dependency without a one-line justification in the PR.
 - Never log tokens, emails, URLs or non-tracked hosts. Never commit secrets; `.env*` except `.env.example` are git-ignored.
 - Database changes only via new migration files; never edit an applied migration.
