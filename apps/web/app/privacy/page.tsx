@@ -70,7 +70,7 @@ export default function PrivacyPage() {
               <Row data="Study periods: tracked site, start and end time, a random device id">
                 Your totals and charts — this is the product
               </Row>
-              <Row data="In the extension, on your computer: its sign-in, settings and study periods not yet uploaded">
+              <Row data="In the extension, on your computer: its sign-in, settings, a random device id, your tracked-site list, today's study periods and periods waiting to upload">
                 Staying connected and not losing time while offline
               </Row>
             </tbody>
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong className="font-medium">Delete it:</strong> Settings → Delete account removes
-              your account and all study data immediately. Disconnecting the extension clears the
-              data it keeps on your computer.
+              your account and all study data immediately. Disconnecting the extension clears your
+              sign-in and study data from your computer.
             </li>
           </ul>
         </Section>
