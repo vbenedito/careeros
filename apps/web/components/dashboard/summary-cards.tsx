@@ -22,7 +22,7 @@ export function SummaryCards({ cards }: { cards: SummaryCard[] }) {
               <p
                 className="flex min-w-0 gap-1 text-xs text-muted-foreground"
                 data-testid={`card-${card.id}-detail`}
-                aria-label={card.detail ?? undefined}
+                data-value={card.detail ?? undefined}
               >
                 <span className="truncate">{card.domain}</span>
                 <span className="shrink-0">· {card.share}%</span>

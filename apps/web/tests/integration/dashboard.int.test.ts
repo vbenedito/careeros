@@ -77,7 +77,7 @@ describe("dashboard data (integration)", () => {
     expect(text(html, "card-today-value")).toBe("12m");
     expect(text(html, "card-period-value")).toBe("40m");
     expect(text(html, "card-top-value")).toBe("30m");
-    expect(html).toContain('aria-label="neetcode.io · 75%"');
+    expect(html).toContain('data-value="neetcode.io · 75%"');
   });
 
   it("DASH-06 top platform is — when the period has no data", async () => {
