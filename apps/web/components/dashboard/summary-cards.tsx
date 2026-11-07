@@ -18,7 +18,16 @@ export function SummaryCards({ cards }: { cards: SummaryCard[] }) {
             >
               {card.seconds === null ? "—" : formatDuration(card.seconds)}
             </p>
-            {card.detail ? (
+            {card.domain !== undefined && card.share !== undefined ? (
+              <p
+                className="flex min-w-0 gap-1 text-xs text-muted-foreground"
+                data-testid={`card-${card.id}-detail`}
+                aria-label={card.detail ?? undefined}
+              >
+                <span className="truncate">{card.domain}</span>
+                <span className="shrink-0">· {card.share}%</span>
+              </p>
+            ) : card.detail ? (
               <p
                 className="truncate text-xs text-muted-foreground"
                 data-testid={`card-${card.id}-detail`}
