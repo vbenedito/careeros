@@ -46,9 +46,8 @@ export function SitesSetting(props: {
             <li key={site} className="flex items-center justify-between text-sm">
               <span>{site}</span>
               <Button
-                variant="ghost"
+                variant="subtle"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
                 disabled={busy}
                 aria-label={`Remove ${site}`}
                 onClick={() => void run(() => props.onRemove(site))}

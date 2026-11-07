@@ -29,7 +29,7 @@ Light and dark values live side by side. The dashboard switches with a `.dark` /
 
 | App | Where | What |
 |---|---|---|
-| Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · link · destructive; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
+| Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · subtle · link · link-xs · destructive; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
 | Dashboard | `apps/web/components/ui/` (#22) | shadcn/ui components, copied into the repo, using the same tokens |
 
 A primitive owns its look (variants, sizes, focus, disabled state). Screens never restyle a

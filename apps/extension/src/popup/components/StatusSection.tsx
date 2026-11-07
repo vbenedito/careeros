@@ -39,7 +39,7 @@ export function StatusSection({
     ) : null;
 
   const settingsLink = (label: string) => (
-    <Button variant="link" className="text-xs" onClick={onOpenSettings}>
+    <Button variant="link-xs" onClick={onOpenSettings}>
       {label}
     </Button>
   );

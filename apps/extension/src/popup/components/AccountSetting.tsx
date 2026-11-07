@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PopupDisconnectResult } from "../../lib/popup-messages";
 import { errorMessage } from "../messages";
 import { Button } from "../ui";
@@ -11,6 +11,16 @@ export function AccountSetting(props: {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const disconnectRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  // EXT-UI-09: the confirmation takes focus (so it is announced); closing it returns focus.
+  useEffect(() => {
+    if (pending !== null) keepRef.current?.focus();
+    else if (wasConfirming.current) disconnectRef.current?.focus();
+    wasConfirming.current = pending !== null;
+  }, [pending]);
 
   async function disconnect(discardUnsynced: boolean) {
     setBusy(true);
@@ -32,7 +42,14 @@ export function AccountSetting(props: {
           {props.email ?? "Connected"}
         </span>
         {pending === null ? (
-          <Button variant="outline" disabled={busy} onClick={() => void disconnect(false)}>
+          <Button
+            ref={disconnectRef}
+            variant="outline"
+            aria-disabled={busy}
+            onClick={() => {
+              if (!busy) void disconnect(false);
+            }}
+          >
             Disconnect
           </Button>
         ) : null}
@@ -40,16 +57,23 @@ export function AccountSetting(props: {
       {pending !== null ? (
         <div
           role="alertdialog"
-          aria-labelledby="unsynced-title"
+          aria-labelledby="unsynced-heading"
+          aria-describedby="unsynced-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setPending(null);
+          }}
           className="flex flex-col gap-2 rounded-md border border-border p-3"
         >
+          <p id="unsynced-heading" className="text-sm font-medium">
+            Delete unsynced sessions?
+          </p>
           <p id="unsynced-title" className="text-xs">
             {pending === 1 ? "1 study session hasn't" : `${pending} study sessions haven't`} been
             uploaded yet. Disconnecting now deletes {pending === 1 ? "it" : "them"} from this
             device.
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" disabled={busy} onClick={() => setPending(null)}>
+            <Button ref={keepRef} variant="ghost" disabled={busy} onClick={() => setPending(null)}>
               Keep connected
             </Button>
             <Button variant="destructive" disabled={busy} onClick={() => void disconnect(true)}>

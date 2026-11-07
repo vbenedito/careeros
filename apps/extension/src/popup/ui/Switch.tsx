@@ -13,9 +13,12 @@ export function Switch(props: {
       type="button"
       role="switch"
       aria-checked={props.checked}
-      disabled={props.disabled}
-      onClick={() => props.onChange(!props.checked)}
-      className="flex w-full items-center justify-between gap-3 text-left disabled:opacity-60"
+      // aria-disabled (not `disabled`) while busy, so keyboard focus is not lost (EXT-UI-09).
+      aria-disabled={props.disabled === true}
+      onClick={() => {
+        if (!props.disabled) props.onChange(!props.checked);
+      }}
+      className="flex w-full items-center justify-between gap-3 text-left aria-disabled:opacity-60"
     >
       <span className="flex flex-col">
         <span className="text-sm font-medium">{props.label}</span>

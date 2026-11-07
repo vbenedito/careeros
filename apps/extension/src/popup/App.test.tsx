@@ -200,10 +200,17 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     await openSettings(data);
     expect(screen.getByTestId("account-email").textContent).toBe("a@example.test");
     fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
-    const dialog = await screen.findByRole("alertdialog");
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete unsynced sessions?" });
     expect(dialog.textContent).toContain("3 study sessions haven't been uploaded yet");
+    // EXT-UI-09: the confirmation takes focus (safe choice first) and gives it back on close.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep connected" })),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Keep connected" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Disconnect" })),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
     await screen.findByRole("alertdialog");
     fireEvent.click(screen.getByRole("button", { name: "Disconnect and delete" }));
@@ -216,6 +223,11 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     const data = fixture({ auth: { connected: false, email: null } });
     await openSettings(data);
     expect(screen.queryByRole("heading", { name: "Account" })).toBeNull();
+    // No site list or Add form that could only fail; a way to connect instead.
+    expect(screen.queryByText("Loading your sites…")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Site to track" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Connect account" }));
+    expect(data.opened).toEqual(["/connect"]);
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByTestId("today-total")).toBeTruthy();
   });
