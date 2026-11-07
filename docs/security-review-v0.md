@@ -7,14 +7,14 @@ Two independent reviews ran on `main` at `8bd9855`. Neither author wrote the cod
 - **Security** (grill:security agent): auth handoff (link route, `externally_connectable`, external and internal message handlers, extension session storage), RPCs, RLS and grants, dashboard routes, CSRF, CSP, secrets and logging.
 - **Edge cases** (grill:edge-cases agent): lost or double-counted time (worker restarts, sleep, clock changes, midnight/DST, retries, token refresh, disconnect during sync) and dashboard totals.
 
-**Result: no High-severity findings.**
+**Result: no High-severity findings.** An independent review of the fixes themselves found a regression in the first E1 fix (a 429 after expiry lost the "Reconnect" prompt). It is corrected and covered by a test that runs the real supabase-js client.
 
 ## Findings and disposition
 
 | # | Severity | Finding | Disposition |
 |---|---|---|---|
 | S1 | Low | Connecting a *different* user cleared the previous user's local data only when unsynced intervals remained. Today's totals and the quarantine stayed visible in a shared Chrome profile. | **Fixed** (#30): the data is always cleared when the owner changes; unsynced intervals still need the explicit discard (AUTH-11). Test: `AUTH-11 SEC-01 synced data of the previous user is cleared…` |
-| E1 | Medium | A 429 or 500 from Supabase Auth during a token refresh counted as a revoked session. The extension signed out and stopped tracking. | **Fixed** (#30): only 4xx client errors (except 408/429) mean the session is gone; rate limits, server errors and network failures are temporary. Tests: `refresh failures (AUTH-11)` |
+| E1 | Medium | The review reported that a 429 or 500 from Supabase Auth during a token refresh counted as a revoked session, which signed the extension out and stopped tracking. | **Partly fixed** (#30). Checked against auth-js: a 500 is already retried as a network error. A 429/408 *before* the access token expires (a proactive refresh) now stays connected. Once the token has expired, supabase-js deletes the stored session itself; the extension then shows "Reconnect" (AUTH-11) instead of a silent "not connected". Tests: `refresh failures (AUTH-11)`, `refresh against a rate-limited server (AUTH-11)`. Avoiding that reconnect entirely would mean working around supabase-js: backlog #83. |
 | E2 | Medium | A device clock more than 5 min fast gets every interval rejected (`ended_at > now() + 5 min`) and quarantined for good. | Backlog #83: needs a badly wrong clock; the data stays visible as "not synced". |
 | E3 | Low | A slot that timed out (10 s) could still commit late, outside the serialized queue. | **Fixed** (#30): a timed-out slot never touches storage again. Test: `TRK-17 an observation arriving after its slot timed out is never stored` |
 | E4 | Low | Disconnect during a running sync cycle can report unsynced data for under a second; retrying works. | Backlog #83 |
