@@ -2,20 +2,27 @@
  * Everything the popup reads and does, behind one interface so components can be tested with
  * fixtures. Reads come from chrome.storage; commands go to the worker (EXT-UI-05a).
  */
+import {
+  DOMAINS_CACHE_KEY,
+  ENGINE_STATE_KEY,
+  OUTBOX_KEY,
+  QUARANTINE_KEY,
+  SYNCED_TODAY_KEY,
+  TRACKING_ENABLED_KEY,
+} from "../background/tracking/keys";
 import { parseEngineState, parseOutbox } from "../background/tracking/store";
 import { config } from "../lib/config";
 import type { PopupAuthStatus, PopupRequest } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
 
-// Same keys the worker writes (background/tracking/keys.ts); read-only here.
 const KEYS = {
-  engine: "careeros.tracking.engine",
-  outbox: "careeros.tracking.outbox",
-  quarantine: "careeros.tracking.quarantine",
-  syncedToday: "careeros.tracking.syncedToday",
-  trackingEnabled: "careeros.settings.trackingEnabled",
-  domains: "careeros.domains.cache",
+  engine: ENGINE_STATE_KEY,
+  outbox: OUTBOX_KEY,
+  quarantine: QUARANTINE_KEY,
+  syncedToday: SYNCED_TODAY_KEY,
+  trackingEnabled: TRACKING_ENABLED_KEY,
+  domains: DOMAINS_CACHE_KEY,
 } as const;
 
 export type CommandResult = { ok: true } | { ok: false; error: string };

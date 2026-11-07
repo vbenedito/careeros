@@ -28,6 +28,8 @@ export type PopupStatus =
   | { kind: "idle"; domain: string }
   | { kind: "untracked"; addHost: string | null }
   | { kind: "no-sites"; addHost: string | null }
+  /** Connected but the site list has not been loaded yet (first open after connecting). */
+  | { kind: "loading-sites" }
   | { kind: "disabled" }
   | { kind: "disconnected" };
 
@@ -103,7 +105,8 @@ function statusOf(input: PopupInput): PopupStatus {
   if (!input.trackingEnabled) return { kind: "disabled" };
   // EXT-UI-05: only http(s) pages, normalized hostname (www. stripped).
   const host = hostnameFromUrl(input.activeTabUrl);
-  const domains = input.trackedDomains ?? [];
+  if (input.trackedDomains === null) return { kind: "loading-sites" };
+  const domains = input.trackedDomains;
   if (domains.length === 0) return { kind: "no-sites", addHost: host };
   if (input.engine.open) return { kind: "tracking", domain: input.engine.open.domain };
   const tracked = host ? matchTrackedDomain(host, domains) : null;

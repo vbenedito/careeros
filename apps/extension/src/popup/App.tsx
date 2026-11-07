@@ -147,6 +147,9 @@ function Status({ status, data }: { status: PopupStatus; data: PopupData }) {
       [label, dot, tone] = ["No study sites yet", DOT.off, "text-muted-foreground"];
       hint = addButton(status.addHost, "Add this site");
       break;
+    case "loading-sites":
+      [label, dot, tone] = ["Loading your sites…", DOT.off, "text-muted-foreground"];
+      break;
     case "disabled":
       [label, dot, tone] = ["Tracking off", DOT.off, "text-muted-foreground"];
       hint = <span>Turn on in Settings</span>;

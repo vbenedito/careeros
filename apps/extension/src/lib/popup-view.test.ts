@@ -91,6 +91,9 @@ describe("popup view (EXT-UI-01..05, SYNC-12)", () => {
       kind: "no-sites",
       addHost: "leetcode.com",
     });
+    expect(buildPopupView(input({ trackedDomains: null })).status).toEqual({
+      kind: "loading-sites",
+    });
     expect(buildPopupView(input({ trackingEnabled: false })).status).toEqual({ kind: "disabled" });
     expect(buildPopupView(input({ auth: { connected: false, email: null } })).status).toEqual({
       kind: "disconnected",

@@ -37,11 +37,11 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 - **EXT-UI-05** "Add this site" is offered only for `http/https` pages and adds the page's normalized hostname (TRK-03; `www.` stripped, nothing else). Users who want a parent domain type it in Settings.
 - **EXT-UI-05a** The popup holds **no Supabase client**. It reads state from `chrome.storage` and sends commands (add/remove site, toggle, disconnect) to the service worker via `chrome.runtime.sendMessage`; the worker is the single owner of auth and network (AUTH-10).
-- **EXT-UI-05b** The footer shows the extension version; when the dashboard reports the build is older than the minimum supported protocol (AUTH-07a), the popup shows "Update available" linking to the release page.
+- **EXT-UI-05b** The footer shows the extension version. "Update available" in the popup is deferred: only protocol 1 exists in v0, and the dashboard already says "Please update the extension" when the protocol is older (AUTH-07a).
 
 ### Sync footer states
 
-`Synced · 2m ago` · `Syncing…` · `3 pending · retrying in 4m` · `Offline · 3 pending` · `2 not synced` (quarantine, SYNC-05, with tooltip).
+`Synced · 2m ago` · `3 pending · retrying in 4m` · `Offline · 3 pending` · `Sync error · 3 pending` · `2 not synced` (quarantine, SYNC-05, with tooltip). `Syncing…` is deferred (a cycle takes under a second; #58).
 
 ## 3. Settings view (inside the popup, back arrow to main)
 
