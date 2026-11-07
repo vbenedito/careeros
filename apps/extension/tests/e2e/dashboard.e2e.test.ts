@@ -51,7 +51,7 @@ describe("dashboard journey (E2E)", () => {
     userId = createOAuthUser(email);
     // This week and last week have data (UTC, the zone the tz cookie will carry).
     addSession(userId, mondayUtc(0), 30, "leetcode.com");
-    addSession(userId, mondayUtc(-1), 45, "neetcode.io");
+    addSession(userId, mondayUtc(-1), 20, "neetcode.io"); // intervals are ≤ 30 min (TRK-09)
     browser = await chromium.launch({ channel: "chromium", headless: true });
     context = await browser.newContext({ timezoneId: "UTC" });
     const { cookies } = await dashboardSession(email);
@@ -73,7 +73,7 @@ describe("dashboard journey (E2E)", () => {
 
     await page.getByRole("link", { name: "Previous week" }).click();
     await page.waitForURL(/view=week&date=/);
-    await expect.poll(() => page.getByTestId("card-period-value").textContent()).toBe("45m");
+    await expect.poll(() => page.getByTestId("card-period-value").textContent()).toBe("20m");
     await expect
       .poll(() => page.getByTestId("platform-legend").textContent())
       .toContain("neetcode.io");
