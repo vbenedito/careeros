@@ -19,3 +19,6 @@ export interface PopupAuthStatus {
   email: string | null;
   needsReconnect: boolean;
 }
+
+/** Name of the port the popup keeps open while shown (the worker treats Chrome as focused). */
+export const POPUP_PORT = "careeros.popup";

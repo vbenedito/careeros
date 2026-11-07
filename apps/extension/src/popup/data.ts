@@ -12,7 +12,7 @@ import {
 } from "../background/tracking/keys";
 import { parseEngineState, parseOutbox } from "../background/tracking/store";
 import { config } from "../lib/config";
-import type { PopupAuthStatus, PopupRequest } from "../lib/popup-messages";
+import { POPUP_PORT, type PopupAuthStatus, type PopupRequest } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
 
@@ -35,6 +35,8 @@ export interface PopupData {
   addSite(input: string): Promise<CommandResult>;
   refreshSites(): Promise<void>;
   openDashboard(path?: string): void;
+  /** Tells the worker the popup is open (not "left Chrome", TRK-04); returns a closer. */
+  holdFocus(): () => void;
   version: string;
 }
 
@@ -93,6 +95,11 @@ export function createChromePopupData(): PopupData {
 
     async refreshSites() {
       await send({ type: "DOMAINS_REFRESH" });
+    },
+
+    holdFocus() {
+      const connection = chrome.runtime.connect({ name: POPUP_PORT });
+      return () => connection.disconnect();
     },
 
     openDashboard(path = "/") {
