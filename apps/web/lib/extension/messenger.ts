@@ -11,6 +11,11 @@ interface ChromeRuntime {
 }
 
 const TIMEOUT_MS = 2000;
+/**
+ * DISCONNECT replies only after a final sync and a bounded session revoke (AUTH-12; the revoke
+ * alone may wait 5 s), so it gets a longer wait than the quick status messages.
+ */
+const SLOW_TIMEOUT_MS = 15_000;
 
 /** A request without its protocolVersion (added here). Distributes over the union. */
 export type OutgoingMessage = ExtensionRequest extends infer R
@@ -32,7 +37,8 @@ export function sendToExtension(extensionId: string, message: OutgoingMessage): 
   if (!rt?.sendMessage || !extensionId) return Promise.resolve(undefined);
   const send = rt.sendMessage;
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(undefined), TIMEOUT_MS);
+    const timeout = message.type === "DISCONNECT" ? SLOW_TIMEOUT_MS : TIMEOUT_MS;
+    const timer = setTimeout(() => resolve(undefined), timeout);
     try {
       send(extensionId, { ...message, protocolVersion: PROTOCOL_VERSION }, (reply) => {
         clearTimeout(timer);

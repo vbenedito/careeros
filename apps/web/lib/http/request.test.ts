@@ -29,7 +29,23 @@ describe("request", () => {
 
   it("reports the status of a non-2xx response", async () => {
     respond(429, { error: "RATE_LIMITED" });
-    expect(await request("/api/x", { schema })).toEqual({ ok: false, status: 429 });
+    expect(await request("/api/x", { schema })).toEqual({
+      ok: false,
+      status: 429,
+      error: "RATE_LIMITED",
+    });
+    respond(500, {});
+    expect(await request("/api/x", { schema })).toEqual({ ok: false, status: 500 });
+  });
+
+  it("sends a JSON body", async () => {
+    respond(200, { tokenHash: "abc" });
+    await request("/api/x", { method: "DELETE", json: { a: 1 }, schema });
+    expect(fetch).toHaveBeenCalledWith("/api/x", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: '{"a":1}',
+    });
   });
 
   it("treats an unexpected body as a failure", async () => {

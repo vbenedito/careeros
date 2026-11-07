@@ -11,9 +11,9 @@ const ERRORS: Record<string, string> = {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; deleted?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const { next, error, deleted } = await searchParams;
   const safeNext = safeNextPath(next);
   const message = error ? (ERRORS[error] ?? ERRORS.callback) : null;
 
@@ -26,6 +26,11 @@ export default async function SignInPage({
             Track how much you study for technical interviews — automatically and privately.
           </p>
         </div>
+        {deleted === "1" && !message ? (
+          <p role="status" className="text-center text-sm text-muted-foreground">
+            Your account and all of its data were deleted.
+          </p>
+        ) : null}
         {message ? (
           <p role="alert" className="text-center text-sm text-warning">
             {message}

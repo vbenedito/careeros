@@ -12,9 +12,15 @@ import { interpretStatus } from "@/lib/extension/protocol";
 
 type State = { kind: "checking" } | ReturnType<typeof interpretStatus>;
 
-export function useExtensionStatus(extensionId: string, userEmail: string | null): State {
+/** `revision` re-asks the extension when it changes (e.g. after a disconnect). */
+export function useExtensionStatus(
+  extensionId: string,
+  userEmail: string | null,
+  revision = 0,
+): State {
   const [state, setState] = useState<State>({ kind: "checking" });
   useEffect(() => {
+    void revision;
     let cancelled = false;
     void sendToExtension(extensionId, { type: "PING" }).then((reply) => {
       if (!cancelled) setState(interpretStatus(reply, userEmail));
@@ -22,7 +28,7 @@ export function useExtensionStatus(extensionId: string, userEmail: string | null
     return () => {
       cancelled = true;
     };
-  }, [extensionId, userEmail]);
+  }, [extensionId, userEmail, revision]);
   return state;
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { interpretConnect, interpretStatus } from "./protocol";
+import { interpretConnect, interpretDisconnect, interpretStatus } from "./protocol";
+
+const PROTOCOL_VERSION = 1;
 
 const status = (over: Record<string, unknown> = {}) => ({
   ok: true,
@@ -70,5 +72,20 @@ describe("interpretConnect (AUTH-07b)", () => {
   it("treats no reply or garbage as a failure", () => {
     expect(interpretConnect(undefined)).toEqual({ kind: "failed" });
     expect(interpretConnect({ ok: true })).toEqual({ kind: "failed" });
+  });
+});
+
+describe("interpretDisconnect (AUTH-12, DASH-13)", () => {
+  it("ack → disconnected; UNSYNCED_DATA → unsynced-data; anything else → failed", () => {
+    expect(interpretDisconnect({ ok: true, protocolVersion: PROTOCOL_VERSION })).toBe(
+      "disconnected",
+    );
+    expect(
+      interpretDisconnect({ ok: false, protocolVersion: PROTOCOL_VERSION, code: "UNSYNCED_DATA" }),
+    ).toBe("unsynced-data");
+    expect(
+      interpretDisconnect({ ok: false, protocolVersion: PROTOCOL_VERSION, code: "INTERNAL" }),
+    ).toBe("failed");
+    expect(interpretDisconnect(undefined)).toBe("failed");
   });
 });

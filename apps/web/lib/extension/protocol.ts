@@ -71,3 +71,15 @@ export function interpretConnect(reply: unknown): ConnectOutcome {
       return { kind: "failed" };
   }
 }
+
+export type DisconnectOutcome = "disconnected" | "unsynced-data" | "failed";
+
+/**
+ * Turns a DISCONNECT reply into what Settings shows (AUTH-12). From the dashboard, unsynced
+ * study time is never discarded: the extension refuses and the user resolves it in the popup.
+ */
+export function interpretDisconnect(reply: unknown): DisconnectOutcome {
+  if (ExtensionAckReplySchema.safeParse(reply).success) return "disconnected";
+  const error = ExtensionErrorSchema.safeParse(reply);
+  return error.success && error.data.code === "UNSYNCED_DATA" ? "unsynced-data" : "failed";
+}
