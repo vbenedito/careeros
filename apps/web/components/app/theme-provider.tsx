@@ -1,5 +1,6 @@
 "use client";
 
+import { setNonce } from "get-nonce";
 import { ThemeProvider as NextThemes } from "next-themes";
 import { type ReactNode, useState } from "react";
 
@@ -8,6 +9,9 @@ import { type ReactNode, useState } from "react";
  * It is pinned to the first render: a client refresh (router.refresh) brings a *new* request
  * nonce, which the document's CSP — set once per page load — would reject. No
  * `disableTransitionOnChange`: it injects a <style> element at runtime.
+ *
+ * The same nonce goes to `get-nonce`, which Radix's scroll lock (dialogs, the mobile sidebar)
+ * uses for the <style> element it injects while open; without it the CSP blocks that style.
  */
 export function ThemeProvider({
   nonce,
@@ -16,7 +20,11 @@ export function ThemeProvider({
   nonce: string | undefined;
   children: ReactNode;
 }) {
-  const [pinnedNonce] = useState(nonce);
+  const [pinnedNonce] = useState(() => {
+    // Browser only: on the server this module state would be shared between requests.
+    if (nonce && typeof window !== "undefined") setNonce(nonce);
+    return nonce;
+  });
   return (
     <NextThemes
       attribute="class"

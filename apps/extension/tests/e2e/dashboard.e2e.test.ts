@@ -106,6 +106,8 @@ describe("dashboard journey (E2E)", () => {
     expect(sql(`select count(*) from public.tracked_domains where user_id = '${userId}'`)).toBe(
       "0",
     );
+    // SEC-09: the dialog's scroll lock injects a <style>; it must carry the CSP nonce.
+    expect(cspErrors).toEqual([]);
     await page.close();
   });
 
