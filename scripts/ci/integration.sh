@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the dashboard and the development extension against the running local Supabase stack,
 # starts one dashboard server, and runs both integration suites against it (dashboard HTTP tests,
-# then real-Chromium extension tests). Used by CI (backend job); works locally with Docker running
+# then real-Chromium extension tests), then the E2E journeys (TEST §2). Used by CI (backend job); works locally with Docker running
 # and Playwright's Chromium installed.
 set -euo pipefail
 eval "$(pnpm exec supabase status -o env | grep -E '^[A-Z_]+=')"
@@ -26,3 +26,4 @@ for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/sign-in && 
 export DASHBOARD_URL=$SITE_URL API_URL PUBLISHABLE_KEY SECRET_KEY DB_CONTAINER=supabase_db_careeros
 pnpm --filter @careeros/web test:integration
 pnpm --filter @careeros/extension test:integration
+pnpm --filter @careeros/extension test:e2e

@@ -1,6 +1,6 @@
 # CI for CareerOS (ENV-08, ENV-09).
 # `checks`: lint, typecheck, unit tests and builds on every PR and push to main.
-# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008). E2E is added in #29.
+# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E.
 
 name: CI
 
@@ -105,7 +105,7 @@ jobs:
 
       # One dashboard server for both suites: dashboard HTTP tests, then real-Chromium
       # extension tests (including the /connect end-to-end flow).
-      - name: Integration tests (dashboard + extension against local Supabase)
+      - name: Integration and E2E tests (dashboard + extension against local Supabase)
         run: scripts/ci/integration.sh
 
       - name: Dashboard server log (on failure)
