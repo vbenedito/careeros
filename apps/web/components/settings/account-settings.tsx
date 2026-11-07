@@ -49,7 +49,12 @@ export function AccountSettings({
         </Button>
       </form>
       <p className="-mt-4 text-xs text-muted-foreground">
-        Signing out of all devices also disconnects the extension in every browser.
+        Signing out of all devices also disconnects the extension in every browser. How your data is
+        handled:{" "}
+        <a href="/privacy" className="text-primary underline-offset-4 hover:underline">
+          Privacy
+        </a>
+        .
       </p>
 
       <div className="flex flex-col items-start gap-2 border-t border-border pt-4">

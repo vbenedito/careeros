@@ -6,7 +6,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 
 | Data | Where | Why |
 |---|---|---|
-| Email, provider, auth ids, OAuth profile metadata (name, avatar URL) | Supabase Auth | Account; name/avatar shown in the user menu |
+| Email, provider, auth ids, OAuth profile metadata (name, avatar URL) | Supabase Auth | Account; name/avatar arrive with the sign-in and are not used by CareerOS in v0 |
 | Session records incl. IP address and user agent; auth audit log | Supabase Auth (platform) | Security of sign-in; not read by CareerOS code |
 | Request logs incl. IP address | Vercel (platform) | Operations; short retention per Vercel plan |
 | Tracked domains | `tracked_domains` | User's study-site list |

@@ -88,7 +88,9 @@ describe("dashboard data (integration)", () => {
     const { cookie } = await seededUser();
     const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
     expect(text(html, "card-top-value")).toBe("—");
-    expect(html).toContain("No study time in this period yet.");
+    // DASH-11: no charts, the empty state instead (its Connect CTA is checked in real Chromium).
+    expect(html).toContain('data-testid="empty-state"');
+    expect(html).not.toContain('data-testid="activity-chart"');
   });
 
   it("DASH-04 months by URL", async () => {

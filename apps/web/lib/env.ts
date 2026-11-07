@@ -33,3 +33,16 @@ export function siteUrl(): string {
 export function extensionId(): string {
   return required("NEXT_PUBLIC_EXTENSION_ID", process.env.NEXT_PUBLIC_EXTENSION_ID);
 }
+
+/**
+ * Publication details for /privacy (SEC-13). Optional so local and CI builds work; set in
+ * production (#31). Missing values render as a visible "not configured" marker.
+ */
+export function privacyConfig() {
+  const value = (name: string) => process.env[name]?.trim() || null;
+  return {
+    controller: value("PRIVACY_CONTROLLER"),
+    contactEmail: value("PRIVACY_CONTACT_EMAIL"),
+    dataRegion: value("DATA_REGION"),
+  };
+}

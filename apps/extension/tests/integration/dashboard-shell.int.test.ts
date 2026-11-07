@@ -50,6 +50,25 @@ describe("dashboard shell (real Chromium)", () => {
     await page.close();
   });
 
+  it("DASH-11 a period without data shows the empty state with the Connect CTA (no extension here)", async () => {
+    const page = await context.newPage();
+    await page.goto(`${DASHBOARD_URL}/`);
+    const empty = page.getByTestId("empty-state");
+    await expect.poll(() => empty.count()).toBe(1);
+    await expect
+      .poll(() => empty.getByRole("link", { name: "Connect the extension" }).count())
+      .toBe(1);
+    await page.close();
+  });
+
+  it("SEC-13 the privacy page renders for a signed-out visitor", async () => {
+    const anonymous = await browser.newContext();
+    const page = await anonymous.newPage();
+    await page.goto(`${DASHBOARD_URL}/privacy`);
+    expect(await page.getByRole("heading", { name: "Privacy", level: 1 }).count()).toBe(1);
+    await anonymous.close();
+  });
+
   it("AUTH-04 Sign out from the account menu (mouse click) ends the dashboard session", async () => {
     const page = await context.newPage();
     await page.goto(`${DASHBOARD_URL}/`);
