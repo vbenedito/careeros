@@ -3,6 +3,8 @@
 # holder of the private key (kept offline by the product owner) can read it.
 # Needs: secret SUPABASE_DB_URL (Session pooler URI, IPv4) and variable BACKUP_AGE_RECIPIENT
 # (an age public key). Without them the job is skipped (forks, before production exists).
+# GitHub disables schedules in public repos after 60 days without repository activity, silently:
+# docs/operations.md §5 has the monthly check.
 
 name: Backup
 
@@ -24,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGURL: ${{ secrets.SUPABASE_DB_URL }}
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
       AGE_VERSION: v1.2.1
       AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
@@ -32,7 +34,7 @@ jobs:
       - name: Check configuration
         id: config
         run: |
-          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$AGE_RECIPIENT" ]; then
+          if [ -z "$PGURL" ] || [ -z "$AGE_RECIPIENT" ]; then
             echo "::notice::SUPABASE_DB_URL or BACKUP_AGE_RECIPIENT not set: skipping the backup."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
@@ -59,9 +61,9 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          name="careeros-$(date -u +%Y-%m-%d).sql.gz.age"
+          name="careeros-$(date -u +%Y-%m-%d)-run${GITHUB_RUN_ID}.sql.gz.age"
           # Data only: the schema is the migrations (restore = migrations + this dump).
-          scripts/ops/db-dump.sh "$SUPABASE_DB_URL" \
+          scripts/ops/db-dump.sh \
             | gzip -9 \
             | age --encrypt --recipient "$AGE_RECIPIENT" > "$name"
           test -s "$name"

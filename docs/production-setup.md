@@ -26,8 +26,8 @@ These must match spike 0003 and the local `supabase/config.toml`:
 
 | Setting | Value |
 |---|---|
-| Sign In / Providers → **Email** | **Disabled** (no password or email sign-up; magic links are only minted by the dashboard server for the extension handoff) |
-| Email OTP / magic link expiry | **300** seconds |
+| Sign In / Providers → Email → **Email OTP expiration** | **300** seconds. Set it **first**: the field is inside the Email provider panel |
+| Sign In / Providers → **Email** | Then **disable** the provider (no password or email sign-up; magic links are only minted by the dashboard server for the extension handoff) |
 | URL Configuration → Site URL | `<dashboard>` |
 | URL Configuration → Redirect URLs | `<dashboard>/auth/callback` (only this one) |
 | Providers → Google, GitHub | Enabled with the client id and secret from step 3 |
@@ -42,7 +42,7 @@ Both providers send users back to **Supabase**, not to the dashboard: the callba
 ## 4. Vercel (dashboard)
 
 1. Import the GitHub repository in Vercel. **Root directory:** `apps/web` (Vercel detects Next.js and pnpm).
-2. Environment variables (Production):
+2. Environment variables, for the **Production** environment only. Do not choose "All environments": preview deployments would then use the production database. Without these variables, preview deployments build but cannot serve pages, which is fine for v0 (ENV-04: no staging).
 
    | Variable | Value | Secret? |
    |---|---|---|
@@ -76,9 +76,9 @@ Both providers send users back to **Supabase**, not to the dashboard: the callba
 
 1. Create an age key pair on your computer (`brew install age`, then `age-keygen -o ~/careeros-backup.key`). Keep the key file offline plus a copy in a password manager; **losing it makes every backup unreadable.**
 2. GitHub → repository → Settings → Secrets and variables → Actions:
-   - **Secret** `SUPABASE_DB_URL`: Supabase → Connect → **Session pooler** connection string, with the database password.
+   - **Secret** `SUPABASE_DB_URL`: Supabase → Connect → **Session pooler** connection string, with the database password (GitHub runners have no IPv6 for the direct connection).
    - **Variable** `BACKUP_AGE_RECIPIENT`: the public key printed by `age-keygen` (`age1…`).
-3. Actions → Backup → **Run workflow** once; it must be green and produce a `careeros-YYYY-MM-DD.sql.gz.age` artifact. Optionally restore it locally ([`operations.md`](operations.md) §4).
+3. Actions → Backup → **Run workflow** once; it must be green and produce a `careeros-YYYY-MM-DD-run….sql.gz.age` artifact. Optionally restore it locally ([`operations.md`](operations.md) §4).
 
 ## 7. Launch checks (manual, recorded in the delivery report)
 

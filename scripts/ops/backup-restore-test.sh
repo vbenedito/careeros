@@ -4,7 +4,8 @@
 # same rows. Destroys local data (runs `supabase db reset`). Used by CI; needs `age` on PATH.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-db_url="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+# The local stack's well-known development credentials (not a secret).
+export PGURL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 psql_local() {
   docker exec -i supabase_db_careeros psql -U postgres -At -v ON_ERROR_STOP=1 -c "$1"
 }
@@ -32,14 +33,14 @@ before=$(fingerprint)
 
 age-keygen -o "$work/key.txt" 2>/dev/null
 recipient=$(grep -o 'age1[0-9a-z]*' "$work/key.txt")
-scripts/ops/db-dump.sh "$db_url" | gzip -9 | age --encrypt --recipient "$recipient" > "$work/dump.age"
+scripts/ops/db-dump.sh | gzip -9 | age --encrypt --recipient "$recipient" > "$work/dump.age"
 # The stored file must not be readable without the key.
 if gzip -dc < "$work/dump.age" >/dev/null 2>&1; then echo "dump is not encrypted" >&2; exit 1; fi
 
 pnpm exec supabase db reset >/dev/null
 [ "$(fingerprint)" != "$before" ] || { echo "reset did not clear the data" >&2; exit 1; }
 
-age --decrypt --identity "$work/key.txt" < "$work/dump.age" | gunzip | scripts/ops/db-restore.sh "$db_url"
+age --decrypt --identity "$work/key.txt" < "$work/dump.age" | gunzip | scripts/ops/db-restore.sh
 after=$(fingerprint)
 echo "before: $before"
 echo "after:  $after"

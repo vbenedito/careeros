@@ -38,8 +38,8 @@ Until then the cost of v0 is zero.
 
 Supabase Free has no automatic backups, so the repository makes its own:
 
-- **What:** a data-only dump of `auth.users`, `auth.identities`, `public.tracked_domains` and `public.study_sessions` ([`scripts/ops/db-dump.sh`](../scripts/ops/db-dump.sh)). The schema is not in the dump: it is the migrations in this repository. Restore = migrations + dump.
-- **When:** every Monday at 06:17 UTC, or on demand (Actions → Backup → Run workflow): [`.github/workflows/backup.yml`](../.github/workflows/backup.yml).
+- **What:** a data-only dump of `auth.users`, `auth.identities`, `public.tracked_domains` and `public.study_sessions` ([`scripts/ops/db-dump.sh`](../scripts/ops/db-dump.sh)). The schema is not in the dump: it is the migrations in this repository. Restore = migrations + dump. Left out on purpose: sign-in sessions (everyone signs in and reconnects the extension after a restore to a new project) and `private.link_requests` (rate-limit counters).
+- **When:** every Monday at 06:17 UTC, or on demand (Actions → Backup → Run workflow): [`.github/workflows/backup.yml`](../.github/workflows/backup.yml). **GitHub silently disables schedules in a public repository after 60 days without repository activity**: see the monthly check in §5.
 - **Protection:** the repository is public, so the dump is **encrypted with [age](https://age-encryption.org) inside the job, before it is stored**. The plaintext never reaches the disk or the artifact store. Only the private key can read it, and it never leaves the product owner's computer (keep a second copy in a password manager).
 - **Where:** an artifact of the workflow run, kept for 90 days (about 13 weekly copies).
 - **Configuration:** repository secret `SUPABASE_DB_URL` (the **Session pooler** connection string; GitHub runners have no IPv6 for the direct connection) and repository variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the job is skipped.
@@ -47,24 +47,34 @@ Supabase Free has no automatic backups, so the repository makes its own:
 
 ### Restore procedure
 
-1. Download the artifact `careeros-YYYY-MM-DD.sql.gz.age` from the Backup workflow run (Actions → Backup → the run → Artifacts) and unzip the download.
+1. Download the artifact `careeros-YYYY-MM-DD-run….sql.gz.age` from the Backup workflow run (Actions → Backup → the run → Artifacts) and unzip the download.
 2. Prepare an empty database with the current schema:
    - **New Supabase project:** create it, then `pnpm exec supabase link --project-ref <ref>` and `pnpm exec supabase db push`.
    - **Local check first (recommended):** `pnpm db:start`, then `pnpm exec supabase db reset`.
-3. Restore (one transaction: all or nothing):
+3. Restore (one transaction: all or nothing). The connection string holds the database password, so type it at a hidden prompt instead of putting it in a command line or the shell history:
 
    ```bash
-   age --decrypt --identity ~/path/to/careeros-backup.key careeros-YYYY-MM-DD.sql.gz.age \
-     | gunzip | scripts/ops/db-restore.sh "<postgres connection string>"
+   read -rs -p "Connection string: " PGURL && export PGURL && echo
+   age --decrypt --identity ~/careeros-backup.key careeros-YYYY-MM-DD-run….sql.gz.age \
+     | gunzip | scripts/ops/db-restore.sh
+   unset PGURL
    ```
 
    Locally the connection string is `postgresql://postgres:postgres@127.0.0.1:54322/postgres`; for a cloud project use its Session pooler string.
-4. **New project only:** update the dashboard's Vercel environment (Supabase URL and keys) and build a new extension release with the new URL and publishable key ([`production-setup.md`](production-setup.md) §4–5). Users sign in again; restored accounts keep their ids, so their data is there.
+4. **New project only**, redo the parts of [`production-setup.md`](production-setup.md) that depend on the project:
+   - §2 auth settings (OTP expiry, email provider disabled, Site URL, redirect URL, providers);
+   - §3 OAuth apps: change the callback URL of the Google and GitHub apps to the new `https://<new-ref>.supabase.co/auth/v1/callback`;
+   - §4 Vercel environment (Supabase URL and both keys), then redeploy;
+   - §5 a new extension release with the new URL and publishable key;
+   - §6 the `SUPABASE_DB_URL` secret.
+
+   Restored accounts keep their ids, so each user finds their data after signing in again and reconnecting the extension (sessions are not in the backup).
 
 ## 5. Routine checks
 
 | When | What |
 |---|---|
-| Weekly (automatic) | Backup workflow is green; a failed scheduled run emails the repository owner. |
+| Weekly (automatic) | Backup workflow runs. A failed scheduled run emails whoever last changed the workflow's schedule. |
+| Monthly | **Actions → Backup:** the workflow is still enabled (GitHub disables schedules after 60 days without repository activity; re-enable it there) and the last run is green. |
 | Monthly | Supabase usage (database size, egress) and Vercel usage pages: far below the limits above. |
 | After a dependency or Supabase upgrade | CI green, including the backup round trip. |
