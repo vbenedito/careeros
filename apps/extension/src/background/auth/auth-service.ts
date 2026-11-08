@@ -146,11 +146,14 @@ export function createAuthService(deps: {
         }
 
         const owner = await dataOwner();
-        if (owner && owner !== incoming.userId && (await localData.pendingCount()) > 0) {
-          if (!options.discardOtherUsersData) {
+        if (owner && owner !== incoming.userId) {
+          // Unsynced intervals of the previous user need an explicit "discard" (AUTH-11)...
+          if ((await localData.pendingCount()) > 0 && !options.discardOtherUsersData) {
             await backend.discardSession(incoming);
             return { ok: false, code: "UNSYNCED_DATA" };
           }
+          // ...and nothing of theirs (today's totals, quarantine) may stay visible to the next
+          // user of a shared profile (SEC-01).
           await localData.clear();
         }
 

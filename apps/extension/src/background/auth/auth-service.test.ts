@@ -70,6 +70,15 @@ describe("connect", () => {
   });
 });
 
+describe("connect: another user's local data", () => {
+  it("AUTH-11 SEC-01 synced data of the previous user is cleared before another user connects", async () => {
+    const { auth, ld, storage } = setup({ pending: 0, storage: { [DATA_OWNER_KEY]: "alice" } });
+    expect((await auth.connect("token-bob")).ok).toBe(true);
+    expect(ld.state.cleared).toBe(1);
+    expect(storage.data.get(DATA_OWNER_KEY)).toBe("bob");
+  });
+});
+
 describe("connect failures", () => {
   it("revokes the verified session when it cannot be adopted", async () => {
     const { auth, fb } = setup();
