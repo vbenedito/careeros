@@ -49,7 +49,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
 
 1. Download the artifact `careeros-YYYY-MM-DD-run….sql.gz.age` from the Backup workflow run (Actions → Backup → the run → Artifacts) and unzip the download.
 2. Prepare an empty database with the current schema:
-   - **New Supabase project:** create it, then `pnpm exec supabase link --project-ref <ref>` and `pnpm exec supabase db push`.
+   - **New Supabase project:** create it, then `pnpm exec supabase link --project-ref <ref>` and `pnpm exec supabase db push --remote` (Supabase CLI 3 targets the local stack unless `--remote` is given).
    - **Local check first (recommended):** `pnpm db:start`, then `pnpm exec supabase db reset`.
 3. Restore (one transaction: all or nothing). The connection string holds the database password, so type it at a hidden prompt instead of putting it in a command line or the shell history:
 

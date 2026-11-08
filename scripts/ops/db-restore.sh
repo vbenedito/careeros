@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Restores a data-only dump made by db-dump.sh into a database that already has the schema
-# (`supabase db reset` locally, or `supabase db push` on a new project). One transaction: all
+# (`supabase db reset` locally, or `supabase db push --remote` on a new project). One transaction: all
 # or nothing. Usage: PGURL=<postgres-url> scripts/ops/db-restore.sh < dump.sql
 # The URL is read from the environment, never from a command line (it holds the password).
 set -euo pipefail
