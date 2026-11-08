@@ -1,0 +1,80 @@
+# Weekly encrypted backup of the production database (#31, docs/operations.md).
+# The repository is public, so the dump is encrypted with `age` BEFORE it is stored: only the
+# holder of the private key (kept offline by the product owner) can read it.
+# Needs: secret SUPABASE_DB_URL (Session pooler URI, IPv4) and variable BACKUP_AGE_RECIPIENT
+# (an age public key). Without them the job is skipped (forks, before production exists).
+# GitHub disables schedules in public repos after 60 days without repository activity, silently:
+# docs/operations.md §5 has the monthly check.
+
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC (03:17 in São Paulo)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypted database dump
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PGURL: ${{ secrets.SUPABASE_DB_URL }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      AGE_VERSION: v1.2.1
+      AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$PGURL" ] || [ -z "$AGE_RECIPIENT" ]; then
+            echo "::notice::SUPABASE_DB_URL or BACKUP_AGE_RECIPIENT not set: skipping the backup."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout (for the dump script)
+        if: steps.config.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install age (pinned, checksum verified)
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          curl -sSfL -o age.tgz \
+            "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  age.tgz" | sha256sum --check
+          tar xzf age.tgz
+          sudo install age/age /usr/local/bin/age
+
+      - name: Dump and encrypt (plaintext never touches the disk)
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          name="careeros-$(date -u +%Y-%m-%d)-run${GITHUB_RUN_ID}.sql.gz.age"
+          # Data only: the schema is the migrations (restore = migrations + this dump).
+          scripts/ops/db-dump.sh \
+            | gzip -9 \
+            | age --encrypt --recipient "$AGE_RECIPIENT" > "$name"
+          test -s "$name"
+          echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
+          ls -l "$name"
+
+      - name: Store the encrypted dump (90 days)
+        if: steps.config.outputs.ready == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
+          if-no-files-found: error
