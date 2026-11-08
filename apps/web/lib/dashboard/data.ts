@@ -4,6 +4,7 @@
  */
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { errorFields, logServerError } from "@/lib/log";
 import type { Period } from "./period";
 
 export interface DayTotal {
@@ -45,6 +46,9 @@ export async function loadDashboard(
   ]);
   const error = daily.error ?? domains.error ?? todayRow.error;
   if (error) {
+    if (error.message !== "INVALID_TIME_ZONE") {
+      logServerError("dashboard.load_failed", errorFields(error));
+    }
     return {
       ok: false,
       reason: error.message === "INVALID_TIME_ZONE" ? "invalid-time-zone" : "failed",
