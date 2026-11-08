@@ -35,7 +35,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 
 ## 4. Privacy & LGPD
 
-- **SEC-13** `/privacy` explains, in plain language (English; Portuguese version optional): the controller (product owner, contact email); what is collected (table above) and why; legal basis (LGPD art. 7 V — performance of the service the user signed up for); processors and **international transfer** (Supabase region chosen at setup, Vercel, Google/GitHub as identity providers); that data is never sold or shared for marketing; retention (until deletion; platform backups/logs per provider retention); data-subject rights (access via the dashboard, export and correction on request by email, deletion via DASH-14).
+- **SEC-13** `/privacy` explains, in plain language (English; Portuguese version optional): the controller (product owner, contact email); what is collected (table above) and why; legal basis (LGPD art. 7 V — performance of the service the user signed up for); processors and **international transfer** (Supabase region chosen at setup, Vercel, Google/GitHub as identity providers); that data is never sold or shared for marketing; retention (until deletion; the project's encrypted weekly backups are kept 90 days (#31); platform logs per provider retention); data-subject rights (access via the dashboard, export and correction on request by email, deletion via DASH-14).
 - **SEC-14** Account deletion removes all application data from the live database immediately (DATA-12). Disconnecting the extension clears its local data after the unsynced-data confirmation in AUTH-12.
 - **SEC-15** No analytics/tracking scripts on the dashboard in v0.
 

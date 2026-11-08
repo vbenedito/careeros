@@ -8,9 +8,9 @@ Track and understand your technical-interview study time — automatically and p
 
 ## What v0 does
 
-- A **Chrome extension** measures time on the study sites you choose. It counts only while the site is the active tab of the focused Chrome window and you are active; a playing video keeps counting for up to 15 minutes without input. It works offline and uploads later.
+- A **Chrome extension** measures time on the study sites you choose. It counts only while the site is the active tab of the focused Chrome window and you are active; a tab playing sound (not muted) keeps counting for up to 15 minutes without input. It works offline and uploads later.
 - A **web dashboard** shows today, the week or month, the top platform, study time per day and time by platform, and lets you manage your sites, the extension connection and your account.
-- Sign in with **Google or GitHub**. From your browsing, only the domain of a tracked site and the start and end of each study period are stored: never full addresses, page content or other sites. Your data is visible only to you, and deleting your account deletes it immediately ([privacy](specs/v0/07-security-privacy.md)).
+- Sign in with **Google or GitHub**. From your browsing, only the domain of a tracked site, the start and end of each study period and a random device id are stored: never full addresses, page content or other sites. Your data is visible only to you; deleting your account removes it from the live database immediately, and from the encrypted backups within 90 days ([privacy](specs/v0/07-security-privacy.md)).
 
 ## Architecture
 
