@@ -2,7 +2,76 @@
 
 Status: **Approved** (Gate 2, 2026-11-04). Details live in [`specs/v0`](../specs/v0/) and [`docs/adr`](adr/).
 
-## System context
+## System design (as implemented)
+
+One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-08.
+
+```mermaid
+flowchart LR
+  subgraph CHROME["User's Chrome — trusted by the user, not by the server"]
+    direction TB
+    subgraph EXT["Extension (MV3)"]
+      POP["Popup (React)<br/>no network calls"]
+      SW["Service worker<br/>engine · outbox · sync · auth"]
+      LS[("chrome.storage.local<br/>extension session 🔑 · engine state<br/>outbox · quarantine · domain cache")]
+      POP <-- "internal messages + port<br/>(own extension only)" --> SW
+      SW --- LS
+    end
+    DUI["Dashboard pages<br/>(HttpOnly session cookies 🔑)"]
+  end
+
+  subgraph VERCEL["Vercel — server-side trust"]
+    direction TB
+    PX["proxy.ts<br/>nonce CSP · refreshes session · AUTH-03 guard"]
+    RSC["Server Components<br/>dashboard · settings"]
+    RH["Route handlers<br/>POSTs/DELETEs same-origin only:<br/>/auth/sign-in · /auth/sign-out · /api/extension/link<br/>/api/sites · /api/sites/[id] · /api/account/delete<br/>GET /auth/callback (OAuth return)"]
+    SEC["SUPABASE_SECRET_KEY 🔒<br/>server-only env"]
+  end
+
+  subgraph SUPA["Supabase — final authority"]
+    direction TB
+    GA["Auth (GoTrue)<br/>Google · GitHub · single-use magic link"]
+    API["PostgREST"]
+    DB[("Postgres · RLS forced<br/>tracked_domains · study_sessions<br/>ingest_study_sessions · get_*_totals<br/>consume_extension_link_quota")]
+    API --> DB
+  end
+
+  GP["Google / GitHub<br/>(OAuth providers)"]
+
+  DUI -- "① form POST" --> RH
+  RH -- "① PKCE: /authorize redirect,<br/>exchangeCodeForSession · signOut" --> GA
+  GA <-- "①" --> GP
+  DUI -- "page requests + cookies" --> PX --> RSC
+  RSC -- "④ user JWT · publishable key<br/>get_daily_totals · get_domain_totals<br/>tracked_domains (settings)" --> API
+  RH -- "user JWT: ② quota RPC<br/>tracked_domains writes" --> API
+  RH -- "② generateLink · deleteUser" --> GA
+  SEC -. "used only here" .- RH
+  DUI <-- "② externally_connectable<br/>PING · STATUS · CONNECT · DISCONNECT" --> SW
+  SW -- "② verifyOtp(token hash) · refresh<br/>signOut (on disconnect)" --> GA
+  SW -- "③ own JWT · publishable key<br/>ingest_study_sessions · tracked_domains" --> API
+```
+
+**Legend**
+
+| Mark | Meaning |
+|---|---|
+| Boxes `CHROME` / `VERCEL` / `SUPA` | Trust boundaries. Nothing inside Chrome is trusted by the server: every request carries a user JWT and RLS decides. |
+| 🔑 | A user's own session (refresh token). Dashboard: HttpOnly, SameSite=Lax cookies. Extension: its **own** session in `chrome.storage.local`; the two never share refresh tokens (ADR-0003). |
+| 🔒 | The Supabase **secret key**: Vercel server env only, never `NEXT_PUBLIC_`, never in the extension (SEC-07). Used for `generateLink` (connect) and `deleteUser` (account deletion). |
+| Publishable key | Public by design (`sb_publishable_…`): in the extension bundle and the dashboard server; RLS protects the data. |
+
+**Flows**
+
+| # | Flow | Path | Specs |
+|---|---|---|---|
+| ① | Sign-in | Sign-in form → `/auth/sign-in` → Supabase `/authorize` (PKCE) → Google/GitHub → `/auth/callback` exchanges the code → session cookies. `/auth/sign-out` ends this session or, with "all devices", every session | AUTH-01..05, AUTH-12a |
+| ② | Extension connection | `/connect` sends `PING` → `POST /api/extension/link` (same origin, `getUser()`, 5/min quota) mints a single-use token hash with the secret key → page sends `CONNECT` to the extension → extension `verifyOtp` → its own session. `DISCONNECT` signs it out | AUTH-06..12 |
+| ③ | Tracking → sync | Chrome events → pure engine → closed intervals into the outbox (one storage write with the state) → every 5 min, on worker start and after (re)connecting: `ingest_study_sessions` with the extension's JWT → confirmed ids leave the outbox, rejected ones go to quarantine | TRK-*, SYNC-01..08, ADR-0004 |
+| ④ | Dashboard totals | `tz` cookie (viewer's IANA zone) → Server Components call `get_daily_totals` / `get_domain_totals` with the user's JWT → cards, bar chart, donut | DASH-04..10, DATA-10/11 |
+
+Tracked sites are read and written by both apps through `tracked_domains` (RLS, 50-site trigger); the extension refreshes its cache on startup, each sync cycle, after connecting and when the popup opens (SYNC-09..11).
+
+## System context (Gate 2 overview)
 
 ```mermaid
 flowchart LR
