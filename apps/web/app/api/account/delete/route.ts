@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { siteUrl } from "@/lib/env";
 import { fail } from "@/lib/http/json";
+import { errorFields, logServerError } from "@/lib/log";
 import { isSameOrigin } from "@/lib/security/origin";
 import { DELETE_CONFIRMATION } from "@/lib/settings/account";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,7 +29,10 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.redirect(new URL("/sign-in", siteUrl()), 303);
 
   const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
-  if (error) return back();
+  if (error) {
+    logServerError("account_delete.failed", errorFields(error));
+    return back();
+  }
 
   // The session no longer exists on the server; this only clears the cookies.
   await supabase.auth.signOut({ scope: "local" });
