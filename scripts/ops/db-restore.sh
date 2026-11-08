@@ -5,5 +5,6 @@
 set -euo pipefail
 url=${1:?usage: db-restore.sh <postgres-url> < dump.sql}
 image=${PG_IMAGE:-postgres:17}
+# The URL (with its password) goes in through the environment, never on a command line.
 docker run --rm -i --network host -e PGURL="$url" "$image" \
-  psql "$PGURL" --quiet --single-transaction --set ON_ERROR_STOP=1
+  sh -c 'psql "$PGURL" --quiet --single-transaction --set ON_ERROR_STOP=1' 
