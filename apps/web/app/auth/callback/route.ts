@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/routes";
 import { siteUrl } from "@/lib/env";
-import { errorFields, logServerError } from "@/lib/log";
+import { errorFields, logServerError, urlErrorCode } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!code) {
     // The provider or Supabase reported an error (e.g. consent denied, unverified email).
     logServerError("auth.callback_no_code", {
-      code: searchParams.get("error_code") ?? searchParams.get("error"),
+      code: urlErrorCode(searchParams.get("error_code") ?? searchParams.get("error")),
     });
     return NextResponse.redirect(new URL("/sign-in?error=oauth", siteUrl()));
   }
