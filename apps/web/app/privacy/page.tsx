@@ -112,8 +112,9 @@ export default function PrivacyPage() {
 
         <Section title="How long we keep it">
           <p>
-            Until you delete your account. Backups and logs kept by Supabase and Vercel expire
-            according to their own retention periods.
+            Until you delete your account. Our own weekly backups are encrypted and kept for 90
+            days, so deleted data disappears from them within 90 days. Logs kept by Supabase and
+            Vercel expire according to their own retention periods.
           </p>
         </Section>
 
