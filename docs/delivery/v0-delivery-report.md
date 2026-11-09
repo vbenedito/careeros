@@ -66,7 +66,7 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 ## 5. How it was built
 
 - **Specification-Driven Development** with four approval gates: direction, specs and backlog, implementation, delivery. Ten specs with requirement IDs; eight ADRs; spike 0003 de-risked the extension handoff before building it.
-- **One issue per branch, one PR per change, an independent review before every merge.** The product owner approved each merge. Reviews ran as separate agents (security, edge cases, code review); their findings were fixed in the same PR or filed as deferred issues.
+- **One issue per branch, one PR per change, an independent review before every code merge** (a few docs and chore PRs, such as `.gitignore`, were approved by the product owner without one). The product owner approved each merge. Reviews ran as separate agents (security, edge cases, code review); their findings were fixed in the same PR or filed as deferred issues.
 - **CI on every PR:** lint, typecheck, unit tests with coverage gates, builds, pgTAP, integration, E2E in real Chromium, and the backup → restore round trip.
 - **Production verified by hand:** launch checks (#31), manual tests (TEST §4), and the fixes they produced (#88–#91).
 

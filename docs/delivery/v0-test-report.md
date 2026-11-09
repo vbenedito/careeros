@@ -15,7 +15,7 @@ All layers run in CI on every pull request and on `main` (TEST §5). Figures fro
 | E2E | Vitest + Playwright (real Chromium) | (a) Dashboard journey: period navigation, Settings site CRUD, delete account, sign-in loading state and first OAuth hop without CSP errors. (b) Extension smoke: real tracking on a local page under a tracked domain → outbox → popup → sync to Supabase; storage holds no paths or untracked hosts | **8 tests**, all passing |
 | Backup → restore | `scripts/ops/backup-restore-test.sh` | Dump → age encryption → decrypt → fresh schema → restore → identical rows | Passing (31 users, 57 sites, 17 sessions restored identically) |
 
-**Coverage (TEST §3):** `packages/shared` 100 % lines, 97.67 % branches; tracking engine 100 % lines, 99.16 % branches (threshold: 90 %). Overall: 83.34 % lines.
+**Coverage (TEST §3):** `packages/shared` 100 % lines, 97.67 % branches; tracking engine 100 % lines, 99.16 % branches (threshold: 90 %). Overall: 83.97 % lines (83.34 % statements).
 
 **Spec-to-test traceability:** test names carry requirement IDs (e.g. `TRK-05 …`, `SYNC-04 …`, `DASH-11 …`), so each acceptance criterion can be found with a search for its ID.
 
