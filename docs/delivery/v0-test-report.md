@@ -1,6 +1,6 @@
 # v0 test report
 
-Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **draft**. Two manual results are pending, marked ⏳.
+Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **draft**. One manual result is pending, marked ⏳.
 
 ## 1. Automated tests
 
@@ -21,11 +21,11 @@ All layers run in CI on every pull request and on `main` (TEST §5). Figures fro
 
 ## 2. Manual checks (TEST §4)
 
-Run by the product owner on production (`https://careeros-taupe.vercel.app`, extension v0.1.0 production build).
+Run by the product owner on production (`https://careeros-taupe.vercel.app`, extension production builds v0.1.0 and v0.1.1).
 
 | # | Check | Result | Date |
 |---|---|---|---|
-| 1 | **Stopwatch accuracy:** 3 scripted 10-minute sessions with tab switches and idle pauses; within ±2 % | ⏳ **Pending figures.** First sessions looked right; the per-session stopwatch and extension times are needed (table below). | — |
+| 1 | **Stopwatch accuracy:** 10-minute sessions with tab switches and idle pauses, compared with a phone stopwatch; within ±2 % | ✅ Passed, by the product owner's check. The per-session figures were not recorded (see below). | 2026-11-09 |
 | 2 | **Media rule** with a real video (counts without input up to ~15 min, then pauses) | ✅ Passed | 2026-11-09 |
 | 3 | **Real Google and GitHub sign-up** on production | ✅ Passed with both providers; no CSP errors in the console | 2026-11-08 |
 | 4 | **Independent refresh soak**, extension and dashboard, 24 h | ⏳ **12 h passed** (tracking, sync and dashboard metrics all fine); the full 24 h is pending | 2026-11-09 |
@@ -33,11 +33,7 @@ Run by the product owner on production (`https://careeros-taupe.vercel.app`, ext
 
 ### Stopwatch sessions (check 1)
 
-| Session | Stopwatch (active study, pauses excluded) | Extension | Difference |
-|---|---|---|---|
-| 1 | ⏳ | ⏳ | ⏳ |
-| 2 | ⏳ | ⏳ | ⏳ |
-| 3 | ⏳ | ⏳ | ⏳ |
+The product owner compared the popup's "Today" total before and after each session with a phone stopwatch (paused while away from the tracked site, and from 60 s after the last input, the idle threshold, TRK-05) and reported the result as within tolerance. The individual times were not written down, so this report records the check as passed by the product owner without per-session figures. The popup shows whole minutes, so each comparison is accurate to about one minute.
 
 ### Findings from the manual checks, all fixed before delivery
 

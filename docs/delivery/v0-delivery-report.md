@@ -1,11 +1,11 @@
 # CareerOS v0 — delivery report (Gate 4)
 
-Status: **draft**, pending two manual results (⏳). Period: 2026-11-04 → 2026-11-09.
+Status: **draft**, pending one manual result: the 24 h soak (⏳). Period: 2026-11-04 → 2026-11-09.
 
 ## 1. What was delivered
 
 - **Dashboard (production):** https://careeros-taupe.vercel.app (Vercel, Supabase Cloud in São Paulo).
-- **Chrome extension:** GitHub Release [v0.1.0](https://github.com/vbenedito/careeros/releases/tag/v0.1.0), installed unpacked (ENV-05a). Version **0.1.1** brings the popup polish from #94/#95; it is released by the product owner after #106.
+- **Chrome extension:** GitHub Release [v0.1.1](https://github.com/vbenedito/careeros/releases/tag/v0.1.1), installed unpacked (ENV-05a). It is built from `main` at `b72774f` and includes the popup polish from #94/#95; v0.1.0 was the first production release.
 - **Code and docs:** this repository. README with the system-design flowchart, `docs/architecture.md`, ADRs, specs, design system, operations, security review.
 
 Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](../../specs/v0/00-product.md) §4):
@@ -29,7 +29,7 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 | Criterion | Status | Evidence |
 |---|---|---|
 | A new user goes from sign-up to their first tracked minutes on the dashboard without help, following on-screen guidance | ✅ | Product owner on production, 2026-11-08 (#31): sign-up → `/connect` → study → minutes on the dashboard |
-| Tracked time within **±2 %** of a manual stopwatch in the scripted test | ⏳ | Pending per-session figures ([test report](v0-test-report.md) §2) |
+| Tracked time within **±2 %** of a manual stopwatch in the scripted test | ✅ | Passed in the product owner's stopwatch sessions on 2026-11-09; per-session figures were not recorded ([test report](v0-test-report.md) §2) |
 | No user can read or write another user's data | ✅ | pgTAP cross-user RLS tests (169 database tests), integration tests, independent security review: no High findings ([security review](../security-review-v0.md)) |
 | No data beyond spec 07 is collected | ✅ | Manifest permission test (SEC-03), E2E storage check (no paths or untracked hosts), privacy page, security review |
 | CI green; every v0 issue closed or explicitly deferred with a reason | ✅ | CI green on `main`; issue table below |
