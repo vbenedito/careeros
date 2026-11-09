@@ -19,7 +19,8 @@ export function PageHeader({ title, actions }: { title: string; actions?: ReactN
             {actions}
           </div>
         ) : null}
-        <div className="ml-auto @2xl/header:order-last @2xl/header:ml-0">
+        {/* Wide with actions: the actions take the free space (ml-auto) and the toggle follows. */}
+        <div className={actions ? "ml-auto @2xl/header:order-last @2xl/header:ml-0" : "ml-auto"}>
           <ThemeToggle />
         </div>
       </div>

@@ -4,13 +4,15 @@
  */
 export interface NavigatorInfo {
   userAgent: string;
-  /** User-Agent Client Hints (Chromium); `mobile` is the reliable signal when present. */
+  /** User-Agent Client Hints (Chromium): `mobile` is true on phones. */
   userAgentData?: { mobile?: boolean };
 }
 
 export function isMobileBrowser(nav: NavigatorInfo): boolean {
-  if (typeof nav.userAgentData?.mobile === "boolean") return nav.userAgentData.mobile;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent);
+  // Client Hints say `mobile: false` for Android *tablets*, so the user agent is checked too.
+  return (
+    nav.userAgentData?.mobile === true || /Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent)
+  );
 }
 
 /** In the browser: is this a phone or tablet? Always false during server rendering. */
