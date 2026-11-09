@@ -73,7 +73,7 @@ Specification-Driven Development with explicit approval gates:
 4. v0 delivery — **in progress**
 5. Further iterations only on request — [`docs/roadmap.md`](docs/roadmap.md) lists candidates, none authorized
 
-Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md). UI conventions: [`docs/design-system.md`](docs/design-system.md). Running it in production: [`docs/operations.md`](docs/operations.md). Security review: [`docs/security-review-v0.md`](docs/security-review-v0.md).
+Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md). UI conventions: [`docs/design-system.md`](docs/design-system.md). Running it in production: [`docs/operations.md`](docs/operations.md). Security review: [`docs/security-review-v0.md`](docs/security-review-v0.md). v0 delivery: [report](docs/delivery/v0-delivery-report.md) and [test report](docs/delivery/v0-test-report.md).
 
 ## Setup
 
