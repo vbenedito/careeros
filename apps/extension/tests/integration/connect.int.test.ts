@@ -5,11 +5,19 @@
  */
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { type BrowserContext, chromium, type Page, type Worker } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MANIFEST_KEYS } from "../../manifest.config";
+
+/** The version the build puts in the manifest (ENV-05a: from package.json). */
+const VERSION = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8")) as {
+    version: string;
+  }
+).version;
 
 const env = (name: string) => {
   const value = process.env[name];
@@ -104,7 +112,7 @@ describe("extension connection (real Chromium)", () => {
     expect(await send(dashboard, { type: "PING", protocolVersion: 1 })).toEqual({
       ok: true,
       protocolVersion: 1,
-      extensionVersion: "0.1.0",
+      extensionVersion: VERSION,
       connected: false,
     });
   });
