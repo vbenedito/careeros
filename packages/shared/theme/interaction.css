@@ -1,0 +1,24 @@
+/*
+ * Interaction defaults shared by the dashboard and the popup (#94, docs/design-system.md).
+ * Tailwind v4 gives <button> the default arrow cursor (v3 used the pointer). Every clickable
+ * control shows the pointer; disabled ones show not-allowed. Links already get the pointer
+ * from the browser. In the base layer, so a primitive can still override it with a utility.
+ */
+@layer base {
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([data-disabled]),
+  [role="menuitemradio"]:not([data-disabled]),
+  [role="menuitemcheckbox"]:not([data-disabled]),
+  [role="tab"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
+}

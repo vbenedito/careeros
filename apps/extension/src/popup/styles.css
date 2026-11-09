@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@careeros/shared/theme/tokens.css";
+@import "@careeros/shared/theme/interaction.css";
 
 body {
   margin: 0;

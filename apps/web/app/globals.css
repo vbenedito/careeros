@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@careeros/shared/theme/tokens.css";
+@import "@careeros/shared/theme/interaction.css";
 
 /* next-themes toggles .dark / .light on <html> (tokens.css). */
 @custom-variant dark (&:where(.dark, .dark *));

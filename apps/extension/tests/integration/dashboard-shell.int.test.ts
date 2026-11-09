@@ -60,6 +60,23 @@ describe("dashboard shell (real Chromium)", () => {
     await page.close();
   });
 
+  it("#94 clickable controls show the pointer cursor (buttons, menu items, links)", async () => {
+    const page = await context.newPage();
+    await page.goto(`${DASHBOARD_URL}/`);
+    const cursor = (locator: ReturnType<typeof page.getByRole>) =>
+      locator.first().evaluate((el) => getComputedStyle(el).cursor);
+    await expect.poll(() => page.getByRole("button", { name: "Theme" }).count()).toBe(1);
+    expect(await cursor(page.getByRole("button", { name: "Theme" }))).toBe("pointer");
+    expect(await cursor(page.getByRole("button", { name: "Account menu" }))).toBe("pointer");
+    expect(await cursor(page.getByRole("link", { name: "Month" }))).toBe("pointer");
+    // Radix menu items render as divs with role="menuitem": they need the rule too.
+    await page.getByRole("button", { name: "Account menu" }).click();
+    const signOut = page.getByRole("menuitem", { name: "Sign out" });
+    await expect.poll(() => signOut.count()).toBe(1);
+    expect(await cursor(signOut)).toBe("pointer");
+    await page.close();
+  });
+
   it("DASH-11 a period without data shows the empty state with the Connect CTA (no extension here)", async () => {
     const page = await context.newPage();
     await page.goto(`${DASHBOARD_URL}/`);
