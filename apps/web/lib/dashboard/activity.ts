@@ -37,12 +37,30 @@ export function activityBars(daily: DayTotal[], period: Period, today: string): 
     return {
       day,
       label: period.view === "week" ? weekday : String(dayOfMonth),
-      // Any study at all shows a visible bar: under a minute rounds up, never to zero.
-      minutes: seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0,
+      // Exact value: the bar must agree with the cards and the tooltip (which round down). A day
+      // with very little study still gets a visible bar from the chart's minimum bar height.
+      minutes: seconds / 60,
       isToday: day === today,
       tooltip: `${weekday}, ${month} ${dayOfMonth} · ${formatDuration(seconds)}`,
     };
   });
+}
+
+/** Minimum bar height in pixels (Recharts `minPointSize`): visible for any study, none for zero. */
+export function minBarSize(minutes: number | null | undefined): number {
+  return minutes && minutes > 0 ? 3 : 0;
+}
+
+/**
+ * Y-axis width in pixels, wide enough for its longest tick label: "45m" (under an hour),
+ * "1h 00m", "10h 00m". The axis rounds its top tick *up* past the data (50 min of study gets a
+ * "1h 00m" tick), so the thresholds leave room for the next tick. A fixed width clipped them.
+ */
+export function yAxisWidth(bars: readonly { minutes: number }[]): number {
+  const max = Math.max(0, ...bars.map((b) => b.minutes));
+  if (max >= 480) return 64;
+  if (max >= 40) return 56;
+  return 40;
 }
 
 /** Y-axis ticks in minutes, shown as durations ("30m", "1h 00m"). */

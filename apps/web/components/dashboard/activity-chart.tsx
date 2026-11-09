@@ -11,11 +11,16 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ActivityBar, formatMinutesTick } from "@/lib/dashboard/activity";
+import {
+  type ActivityBar,
+  formatMinutesTick,
+  minBarSize,
+  yAxisWidth,
+} from "@/lib/dashboard/activity";
 
 /** DASH-08: study time per day of the period; today's bar in the primary colour. */
 export function ActivityChart({ bars, className }: { bars: ActivityBar[]; className?: string }) {
-  const total = bars.reduce((sum, b) => sum + b.minutes, 0);
+  const total = Math.round(bars.reduce((sum, b) => sum + b.minutes, 0));
   return (
     <Card className={className} aria-labelledby="activity-title">
       <CardHeader>
@@ -50,7 +55,7 @@ export function ActivityChart({ bars, className }: { bars: ActivityBar[]; classN
                 tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
               />
               <YAxis
-                width={52}
+                width={yAxisWidth(bars)}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
@@ -69,7 +74,12 @@ export function ActivityChart({ bars, className }: { bars: ActivityBar[]; classN
                   );
                 }}
               />
-              <Bar dataKey="minutes" radius={[4, 4, 0, 0]} maxBarSize={48}>
+              <Bar
+                dataKey="minutes"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={48}
+                minPointSize={minBarSize}
+              >
                 {bars.map((b) => (
                   <Cell
                     key={b.day}

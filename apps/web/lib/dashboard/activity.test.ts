@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityBars, formatMinutesTick } from "./activity";
+import { activityBars, formatMinutesTick, minBarSize, yAxisWidth } from "./activity";
 import { resolvePeriod } from "./period";
 
 const TODAY = "2026-11-07"; // Saturday
@@ -36,18 +36,38 @@ describe("study activity chart data (DASH-08)", () => {
     expect(past.some((b) => b.isToday)).toBe(false);
   });
 
-  it("DASH-08 a day with less than a minute of study still gets a visible bar", () => {
-    const [mon] = activityBars(
-      [{ day: "2026-11-02", seconds: 20 }],
+  it("DASH-08 bar heights are exact, so a 1m 40s day stays below the 2m line the cards never show", () => {
+    const [mon, tue] = activityBars(
+      [
+        { day: "2026-11-02", seconds: 20 },
+        { day: "2026-11-03", seconds: 100 },
+      ],
       resolvePeriod({}, TODAY),
       TODAY,
     );
-    expect(mon?.minutes).toBe(1);
+    expect(mon?.minutes).toBeCloseTo(0.333, 3);
     expect(mon?.tooltip).toBe("Mon, Nov 2 · <1m");
+    expect(tue?.minutes).toBeCloseTo(1.667, 3);
+    expect(tue?.tooltip).toBe("Tue, Nov 3 · 1m");
+  });
+
+  it("DASH-08 any study gets a visible bar; no study gets none", () => {
+    expect(minBarSize(0.01)).toBeGreaterThan(0);
+    expect(minBarSize(0)).toBe(0);
+    expect(minBarSize(undefined)).toBe(0);
   });
 
   it("y-axis ticks read as durations", () => {
     expect(formatMinutesTick(30)).toBe("30m");
     expect(formatMinutesTick(60)).toBe("1h 00m");
+  });
+});
+
+describe("y-axis width (DASH-08)", () => {
+  it("DASH-08 fits the longest tick label, including the rounded-up top tick", () => {
+    expect(yAxisWidth([{ minutes: 30 }])).toBe(40); // ticks up to "40m"
+    expect(yAxisWidth([{ minutes: 0 }, { minutes: 50 }])).toBe(56); // top tick "1h 00m"
+    expect(yAxisWidth([{ minutes: 500 }])).toBe(64); // top tick can reach "10h 00m"
+    expect(yAxisWidth([])).toBe(40);
   });
 });
