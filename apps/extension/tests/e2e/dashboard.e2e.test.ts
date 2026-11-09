@@ -140,7 +140,8 @@ describe("dashboard journey (E2E)", () => {
       if (m.type() === "error" && /Content Security Policy/i.test(m.text()))
         cspErrors.push(m.text());
     });
-    await page.goto(`${DASHBOARD_URL}/sign-in`);
+    // Wait until the page is interactive: a click before hydration submits the plain form.
+    await page.goto(`${DASHBOARD_URL}/sign-in`, { waitUntil: "networkidle" });
     const authorize = page.waitForRequest((r) =>
       r.url().startsWith(`${API_URL}/auth/v1/authorize`),
     );
