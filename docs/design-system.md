@@ -33,7 +33,7 @@ Light and dark values live side by side. The dashboard switches with a `.dark` /
 | Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · subtle · link · link-xs · destructive; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
 | Dashboard | `apps/web/components/ui/` | shadcn/ui-style components on Radix (`button`, `card`, `input`, `dialog`, `skeleton`, `tooltip`, `sheet`, `dropdown-menu`, `sidebar`), written into the repo, using the same tokens; app-level pieces (sidebar content, page header, theme toggle) in `components/app/`; one folder per page for its blocks (`components/dashboard/`, `components/settings/`) |
 
-Interaction defaults live in `packages/shared/theme/interaction.css`, imported by both apps after the tokens: every clickable control (buttons, `role="button"`/`switch`/`menuitem…`/`tab`, `summary`, `label[for]`) shows the **pointer** cursor and disabled ones show **not-allowed** (#94; Tailwind v4 no longer gives buttons the pointer). Links get the pointer from the browser.
+Interaction defaults live in `packages/shared/theme/interaction.css`, imported by both apps after the tokens: every clickable control (buttons, `role="button"`/`switch`/`menuitem…`/`tab`, `summary`) shows the **pointer** cursor and disabled ones show **not-allowed** (#94; Tailwind v4 no longer gives buttons the pointer). Links get the pointer from the browser.
 
 A primitive owns its look (variants, sizes, focus, disabled state). Screens never restyle a
 primitive beyond layout classes (margin, width, alignment).
