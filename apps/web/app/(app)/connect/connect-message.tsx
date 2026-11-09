@@ -6,11 +6,19 @@ export type ConnectView =
   | ReturnType<typeof interpretStatus>
   | { kind: "connecting" }
   | Exclude<ConnectOutcome, { kind: "connected" }>
-  | { kind: "rate-limited" };
+  | { kind: "rate-limited" }
+  /** A phone or tablet: Chrome extensions cannot be installed here. */
+  | { kind: "unsupported-device" };
 
 /** What the /connect page says in each state of the flow. */
 export function ConnectMessage({ view }: { view: ConnectView }) {
   switch (view.kind) {
+    case "unsupported-device":
+      return (
+        <p>
+          The CareerOS extension runs in Chrome on a computer. Open this page there to connect it.
+        </p>
+      );
     case "checking":
       return <p>Looking for the extension…</p>;
     case "not-installed":

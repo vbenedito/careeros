@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { onMobileDevice } from "@/lib/extension/device";
 import { requestLinkToken } from "@/lib/extension/link-token";
 import { sendToExtension } from "@/lib/extension/messenger";
 import { interpretConnect, interpretStatus } from "@/lib/extension/protocol";
@@ -19,6 +20,7 @@ export function ConnectExtension({
   const [view, setView] = useState<ConnectView>({ kind: "checking" });
 
   const check = useCallback(async () => {
+    if (onMobileDevice()) return setView({ kind: "unsupported-device" });
     setView({ kind: "checking" });
     setView(interpretStatus(await sendToExtension(extensionId, { type: "PING" }), userEmail));
   }, [extensionId, userEmail]);
