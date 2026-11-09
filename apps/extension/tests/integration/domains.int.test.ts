@@ -119,6 +119,12 @@ describe("tracked-domain sync (real Chromium)", () => {
     expect(serverDomains()).toBe("docs.python.org,leetcode.com");
   });
 
+  it("#94 popup controls show the pointer cursor", async () => {
+    const settings = popup.getByRole("button", { name: "Settings" });
+    await expect.poll(() => settings.count()).toBe(1);
+    expect(await settings.evaluate((el) => getComputedStyle(el).cursor)).toBe("pointer");
+  });
+
   it("TRK-01 the engine received the list (tracking can start)", async () => {
     const state = await worker.evaluate(
       async () =>

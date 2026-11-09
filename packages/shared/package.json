@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Domain rules, schemas, constants and design tokens shared by the extension and the dashboard (TypeScript source and one CSS file).",
+  "description": "Domain rules, schemas, constants and design tokens shared by the extension and the dashboard (TypeScript source and the theme CSS files).",
   "exports": {
     ".": "./src/index.ts",
-    "./theme/tokens.css": "./theme/tokens.css"
+    "./theme/tokens.css": "./theme/tokens.css",
+    "./theme/interaction.css": "./theme/interaction.css"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json"
