@@ -1,6 +1,6 @@
 # v0 test report
 
-Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **draft**. One manual result is pending, marked ⏳.
+Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **final** (2026-11-09).
 
 ## 1. Automated tests
 
@@ -28,7 +28,7 @@ Run by the product owner on production (`https://careeros-taupe.vercel.app`, ext
 | 1 | **Stopwatch accuracy:** 10-minute sessions with tab switches and idle pauses, compared with a phone stopwatch; within ±2 % | ✅ Passed, by the product owner's check. The per-session figures were not recorded (see below). | 2026-11-09 |
 | 2 | **Media rule** with a real video (counts without input up to ~15 min, then pauses) | ✅ Passed | 2026-11-09 |
 | 3 | **Real Google and GitHub sign-up** on production | ✅ Passed with both providers; no CSP errors in the console | 2026-11-08 |
-| 4 | **Independent refresh soak**, extension and dashboard, 24 h | ⏳ **12 h passed** (tracking, sync and dashboard metrics all fine); the full 24 h is pending | 2026-11-09 |
+| 4 | **Independent refresh soak**, extension and dashboard, 24 h | ✅ Passed: 12 h and then the full 24 h with tracking, sync and dashboard metrics working | 2026-11-09 |
 | 5 | **Visual pass**, light/dark, 360 / 768 / 1440 px | ✅ Passed after fixes (below) | 2026-11-09 |
 
 ### Stopwatch sessions (check 1)

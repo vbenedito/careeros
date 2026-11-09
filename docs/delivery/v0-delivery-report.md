@@ -1,6 +1,6 @@
 # CareerOS v0 — delivery report (Gate 4)
 
-Status: **draft**, pending one manual result: the 24 h soak (⏳). Period: 2026-11-04 → 2026-11-09.
+Status: **final**, for the product owner's Gate 4 approval. Period: 2026-11-04 → 2026-11-09.
 
 ## 1. What was delivered
 
@@ -75,5 +75,7 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 1. The v0 backlog (deferred issues above).
 2. Chrome Web Store publication: new store-assigned extension ID, listing, permission justification, review.
 3. Landing page (#102): research, content, SEO and architecture plans and a design for approval before implementation.
+
+All manual checks of TEST §4 passed ([test report](v0-test-report.md)). Problems found after delivery are reported by the product owner as issues.
 
 Per `AGENTS.md`, no new iteration starts until the product owner approves this report.
