@@ -140,7 +140,40 @@ describe("dashboard journey (E2E)", () => {
       if (m.type() === "error" && /Content Security Policy/i.test(m.text()))
         cspErrors.push(m.text());
     });
-    await page.goto(`${DASHBOARD_URL}/sign-in`);
+    await page.goto(`${DASHBOARD_URL}/sign-in`, { waitUntil: "networkidle" });
+
+    // #93 loading state. Playwright cannot observe a page while a form POST navigates it away,
+    // so this first submit is held back by the test: the UI updates and the data is checked.
+    await page.evaluate(() => {
+      const form = document.querySelector("form") as HTMLFormElement;
+      form.addEventListener(
+        "submit",
+        (e) => {
+          (window as unknown as { sent: unknown }).sent = Object.fromEntries(
+            new FormData(form, (e as SubmitEvent).submitter),
+          );
+          e.preventDefault();
+        },
+        { once: true },
+      );
+    });
+    await page.getByRole("button", { name: "Continue with GitHub" }).click();
+    await expect
+      .poll(() => page.getByRole("button", { name: "Redirecting to GitHub…" }).count())
+      .toBe(1);
+    expect(
+      await page
+        .getByRole("button", { name: "Continue with Google" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    // The clicked button still submits its name/value (it is aria-disabled, never disabled).
+    expect(await page.evaluate(() => (window as unknown as { sent: unknown }).sent)).toEqual({
+      next: "/",
+      provider: "github",
+    });
+
+    // The real redirect, from a fresh page.
+    await page.goto(`${DASHBOARD_URL}/sign-in`, { waitUntil: "networkidle" });
     const authorize = page.waitForRequest((r) =>
       r.url().startsWith(`${API_URL}/auth/v1/authorize`),
     );

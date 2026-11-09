@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { RedirectForm } from "@/components/app/redirect-form";
 import { Card } from "@/components/ui/card";
 import { safeNextPath } from "@/lib/auth/routes";
 
@@ -36,15 +36,24 @@ export default async function SignInPage({
             {message}
           </p>
         ) : null}
-        <form method="post" action="/auth/sign-in" className="flex flex-col gap-2">
-          <input type="hidden" name="next" value={safeNext} />
-          <Button type="submit" name="provider" value="google" variant="outline">
-            Continue with Google
-          </Button>
-          <Button type="submit" name="provider" value="github" variant="outline">
-            Continue with GitHub
-          </Button>
-        </form>
+        <RedirectForm
+          action="/auth/sign-in"
+          name="provider"
+          hidden={{ next: safeNext }}
+          className="flex flex-col gap-2"
+          choices={[
+            {
+              value: "google",
+              label: "Continue with Google",
+              pendingLabel: "Redirecting to Google…",
+            },
+            {
+              value: "github",
+              label: "Continue with GitHub",
+              pendingLabel: "Redirecting to GitHub…",
+            },
+          ]}
+        />
         <p className="text-center text-xs text-muted-foreground">
           <a href="/privacy" className="underline-offset-4 hover:underline">
             Privacy
