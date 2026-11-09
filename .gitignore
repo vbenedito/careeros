@@ -33,6 +33,8 @@ supabase/.temp/
 *.pem
 *.crx
 *.zip
+# Release zips unpacked in place to load the extension in Chrome
+apps/extension/careeros-extension-*/
 
 # deploy tooling
 .vercel/
