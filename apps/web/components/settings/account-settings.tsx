@@ -2,6 +2,7 @@
 
 /** DASH-14: email and provider, sign out, sign out of all devices (AUTH-12a), delete account. */
 import { useState } from "react";
+import { RedirectForm } from "@/components/app/redirect-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,14 +41,20 @@ export function AccountSettings({
         ) : null}
       </dl>
 
-      <form method="post" action="/auth/sign-out" className="flex flex-wrap gap-2">
-        <Button type="submit" variant="outline" size="sm">
-          Sign out
-        </Button>
-        <Button type="submit" name="scope" value="global" variant="outline" size="sm">
-          Sign out of all devices
-        </Button>
-      </form>
+      <RedirectForm
+        action="/auth/sign-out"
+        name="scope"
+        size="sm"
+        className="flex flex-wrap gap-2"
+        choices={[
+          { value: "local", label: "Sign out", pendingLabel: "Signing out…" },
+          {
+            value: "global",
+            label: "Sign out of all devices",
+            pendingLabel: "Signing out everywhere…",
+          },
+        ]}
+      />
       <p className="-mt-4 text-xs text-muted-foreground">
         Signing out of all devices also disconnects the extension in every browser. How your data is
         handled:{" "}

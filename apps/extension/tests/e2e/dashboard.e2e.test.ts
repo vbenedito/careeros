@@ -144,7 +144,20 @@ describe("dashboard journey (E2E)", () => {
     const authorize = page.waitForRequest((r) =>
       r.url().startsWith(`${API_URL}/auth/v1/authorize`),
     );
+    // #93: hold the POST briefly so the loading state is observable before the redirect.
+    await page.route("**/auth/sign-in", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
     await page.getByRole("button", { name: "Continue with GitHub" }).click();
+    await expect
+      .poll(() => page.getByRole("button", { name: "Redirecting to GitHub…" }).count())
+      .toBe(1);
+    expect(
+      await page
+        .getByRole("button", { name: "Continue with Google" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
     const request = await authorize;
     // PKCE flow (AUTH-01) with the GitHub email scope (AUTH-05).
     const url = new URL(request.url());
