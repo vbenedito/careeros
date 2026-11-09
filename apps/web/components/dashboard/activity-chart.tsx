@@ -11,7 +11,12 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ActivityBar, formatMinutesTick, minBarSize } from "@/lib/dashboard/activity";
+import {
+  type ActivityBar,
+  formatMinutesTick,
+  minBarSize,
+  yAxisWidth,
+} from "@/lib/dashboard/activity";
 
 /** DASH-08: study time per day of the period; today's bar in the primary colour. */
 export function ActivityChart({ bars, className }: { bars: ActivityBar[]; className?: string }) {
@@ -50,7 +55,7 @@ export function ActivityChart({ bars, className }: { bars: ActivityBar[]; classN
                 tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
               />
               <YAxis
-                width={52}
+                width={yAxisWidth(bars)}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}

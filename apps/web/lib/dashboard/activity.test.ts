@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityBars, formatMinutesTick, minBarSize } from "./activity";
+import { activityBars, formatMinutesTick, minBarSize, yAxisWidth } from "./activity";
 import { resolvePeriod } from "./period";
 
 const TODAY = "2026-11-07"; // Saturday
@@ -60,5 +60,14 @@ describe("study activity chart data (DASH-08)", () => {
   it("y-axis ticks read as durations", () => {
     expect(formatMinutesTick(30)).toBe("30m");
     expect(formatMinutesTick(60)).toBe("1h 00m");
+  });
+});
+
+describe("y-axis width (DASH-08)", () => {
+  it("DASH-08 fits the longest tick label, including the rounded-up top tick", () => {
+    expect(yAxisWidth([{ minutes: 30 }])).toBe(40); // ticks up to "40m"
+    expect(yAxisWidth([{ minutes: 0 }, { minutes: 50 }])).toBe(56); // top tick "1h 00m"
+    expect(yAxisWidth([{ minutes: 500 }])).toBe(64); // top tick can reach "10h 00m"
+    expect(yAxisWidth([])).toBe(40);
   });
 });

@@ -51,6 +51,18 @@ export function minBarSize(minutes: number | null | undefined): number {
   return minutes && minutes > 0 ? 3 : 0;
 }
 
+/**
+ * Y-axis width in pixels, wide enough for its longest tick label: "45m" (under an hour),
+ * "1h 00m", "10h 00m". The axis rounds its top tick *up* past the data (50 min of study gets a
+ * "1h 00m" tick), so the thresholds leave room for the next tick. A fixed width clipped them.
+ */
+export function yAxisWidth(bars: readonly { minutes: number }[]): number {
+  const max = Math.max(0, ...bars.map((b) => b.minutes));
+  if (max >= 480) return 64;
+  if (max >= 40) return 56;
+  return 40;
+}
+
 /** Y-axis ticks in minutes, shown as durations ("30m", "1h 00m"). */
 export function formatMinutesTick(minutes: number): string {
   return formatDuration(minutes * 60);
