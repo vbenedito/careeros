@@ -9,6 +9,8 @@ const VARIANTS = {
   link: "text-primary underline-offset-4 hover:underline",
   "link-xs": "text-xs text-primary underline-offset-4 hover:underline",
   destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
+  /** Delete/remove/discard without a filled background (e.g. "Remove" in a list). */
+  "destructive-ghost": "text-destructive hover:bg-destructive/10",
 } as const;
 
 const SIZES = {

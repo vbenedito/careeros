@@ -98,7 +98,7 @@ export function TrackedSites({ sites }: { sites: Site[] }) {
                 {site.domain}
               </span>
               <Button
-                variant="ghost"
+                variant="destructive-ghost"
                 size="icon"
                 aria-label={`Remove ${site.domain}`}
                 onClick={() => setRemoving(site)}

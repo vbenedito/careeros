@@ -125,6 +125,21 @@ describe("tracked-domain sync (real Chromium)", () => {
     expect(await settings.evaluate((el) => getComputedStyle(el).cursor)).toBe("pointer");
   });
 
+  it("#95 the popup's Remove buttons use the destructive colour", async () => {
+    await popup.getByRole("button", { name: "Settings" }).click();
+    const remove = popup.getByRole("button", { name: /^Remove / }).first();
+    await expect.poll(() => remove.count()).toBe(1);
+    const [color, destructive] = await remove.evaluate((el) => {
+      const probe = document.body.appendChild(document.createElement("span"));
+      probe.style.color = "var(--destructive)";
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return [getComputedStyle(el).color, expected];
+    });
+    expect(color).toBe(destructive);
+    await popup.getByRole("button", { name: "Back" }).click();
+  });
+
   it("TRK-01 the engine received the list (tracking can start)", async () => {
     const state = await worker.evaluate(
       async () =>

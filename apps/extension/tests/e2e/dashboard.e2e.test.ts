@@ -100,6 +100,19 @@ describe("dashboard journey (E2E)", () => {
       .poll(() => page.getByRole("alert").first().textContent())
       .toContain("website address");
 
+    // #95: removing is a dangerous action, so its control uses the destructive colour.
+    const removeColor = await page
+      .getByRole("button", { name: "Remove leetcode.com" })
+      .evaluate((el) => getComputedStyle(el).color);
+    const destructive = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement("span"));
+      probe.style.color = "var(--destructive)";
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    expect(removeColor).toBe(destructive);
+
     await page.getByRole("button", { name: "Remove leetcode.com" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
     await expect.poll(() => page.getByTestId("site-list").count()).toBe(0);

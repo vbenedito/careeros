@@ -15,7 +15,7 @@ dashboard's shadcn components use them as they are.
 | `muted` / `muted-foreground` | Secondary surfaces (bar tracks) and secondary text |
 | `border`, `input`, `ring` | Dividers, field borders, focus outline |
 | `primary` / `primary-foreground` | Main actions, links, bars |
-| `destructive` | Irreversible actions (Disconnect, Delete account) |
+| `destructive` | Deleting or discarding data (Delete account, Remove a site, Disconnect and delete unsynced time) |
 | `success`, `warning` | Status only ("Tracking", "Not connected") |
 | `chart-1` … `chart-6` | Categorical chart colours (donut slices; `chart-6` is "Other") |
 | `radius` | `rounded-sm` / `md` / `lg` derive from it |
@@ -30,10 +30,12 @@ Light and dark values live side by side. The dashboard switches with a `.dark` /
 
 | App | Where | What |
 |---|---|---|
-| Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · subtle · link · link-xs · destructive; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
+| Popup | `apps/extension/src/popup/ui/` | `Button` (primary · outline · ghost · subtle · link · link-xs · destructive · destructive-ghost; sm · md · icon), `Card`, `Meter`, `Switch`, `Input`, `cn` |
 | Dashboard | `apps/web/components/ui/` | shadcn/ui-style components on Radix (`button`, `card`, `input`, `dialog`, `skeleton`, `tooltip`, `sheet`, `dropdown-menu`, `sidebar`), written into the repo, using the same tokens; app-level pieces (sidebar content, page header, theme toggle) in `components/app/`; one folder per page for its blocks (`components/dashboard/`, `components/settings/`) |
 
 Interaction defaults live in `packages/shared/theme/interaction.css`, imported by both apps after the tokens: every clickable control (buttons, `role="button"`/`switch`/`menuitem…`/`tab`, `summary`) shows the **pointer** cursor and disabled ones show **not-allowed** (#94; Tailwind v4 no longer gives buttons the pointer). Links get the pointer from the browser.
+
+**Dangerous actions are red** (#95): every control that deletes or discards data uses `destructive` (filled, for the final confirmation and for "Delete account") or `destructive-ghost` (red text/icon, for inline actions such as removing a site). Disconnecting or signing out is not deletion and stays neutral; when disconnecting would discard unsynced time, the confirming button is `destructive`. The label always says what happens ("Remove leetcode.com"); colour is never the only signal.
 
 A primitive owns its look (variants, sizes, focus, disabled state). Screens never restyle a
 primitive beyond layout classes (margin, width, alignment).
