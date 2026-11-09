@@ -13,6 +13,7 @@ const STATUS_TEXT = {
   "not-connected": "Installed, not connected.",
   "other-account": "Connected to a different account.",
   outdated: "Installed, but it needs an update.",
+  "unsupported-device": "The extension runs in Chrome on a computer; manage it there.",
 } as const;
 
 export function ExtensionSettings(props: { extensionId: string; userEmail: string | null }) {

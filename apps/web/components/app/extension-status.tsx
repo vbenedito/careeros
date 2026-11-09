@@ -7,10 +7,15 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { onMobileDevice } from "@/lib/extension/device";
 import { sendToExtension } from "@/lib/extension/messenger";
 import { interpretStatus } from "@/lib/extension/protocol";
 
-type State = { kind: "checking" } | ReturnType<typeof interpretStatus>;
+type State =
+  | { kind: "checking" }
+  | ReturnType<typeof interpretStatus>
+  /** A phone or tablet: Chrome extensions cannot be installed here (DASH-11). */
+  | { kind: "unsupported-device" };
 
 /** `revision` re-asks the extension when it changes (e.g. after a disconnect). */
 export function useExtensionStatus(
@@ -21,6 +26,10 @@ export function useExtensionStatus(
   const [state, setState] = useState<State>({ kind: "checking" });
   useEffect(() => {
     void revision;
+    if (onMobileDevice()) {
+      setState({ kind: "unsupported-device" });
+      return;
+    }
     let cancelled = false;
     void sendToExtension(extensionId, { type: "PING" }).then((reply) => {
       if (!cancelled) setState(interpretStatus(reply, userEmail));
@@ -37,6 +46,8 @@ const MESSAGES: Record<Exclude<State["kind"], "checking" | "connected">, string>
   "not-connected": "The extension is installed but not connected to your account.",
   "other-account": "The extension in this browser is connected to a different account.",
   outdated: "Please update the extension.",
+  "unsupported-device":
+    "Tracking runs in the CareerOS extension for Chrome on a computer. Time studied there shows up here.",
 };
 
 /** One line about the extension in this browser, with a Connect action only when needed. */
@@ -62,9 +73,11 @@ export function ExtensionStatus(props: { extensionId: string; userEmail: string 
       data-state={state.kind}
     >
       <p>{MESSAGES[state.kind]}</p>
-      <Button asChild size="sm">
-        <a href="/connect">Connect the extension</a>
-      </Button>
+      {state.kind === "unsupported-device" ? null : (
+        <Button asChild size="sm">
+          <a href="/connect">Connect the extension</a>
+        </Button>
+      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ export function PeriodSelector({ period, today }: { period: Period; today: strin
   );
 
   return (
-    <nav aria-label="Period" className="flex items-center gap-1">
+    <nav aria-label="Period" className="flex flex-wrap items-center justify-center gap-1">
       <div className="mr-1 flex rounded-md bg-muted p-0.5">
         {viewLink("week", "Week")}
         {viewLink("month", "Month")}

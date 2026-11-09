@@ -23,7 +23,7 @@ No other pages or navigation items in v0.
 
 - **DASH-01** Collapsible sidebar (shadcn `Sidebar`, `collapsible="icon"`). Expanded: logo + "CareerOS", nav item **Dashboard**; bottom: **Settings** and the user menu (avatar, email, Sign out). Collapsed: icons with tooltips. State persisted in a cookie (component default).
 - **DASH-02** Below `md`: sidebar becomes a drawer (`Sheet`) opened from a header button.
-- **DASH-03** Header: page title · period selector · theme toggle (Light / Dark / System via `next-themes`).
+- **DASH-03** Header: page title · period selector · theme toggle (Light / Dark / System via `next-themes`). When the header is too narrow for one row, the period selector moves to a second row; the page never scrolls sideways.
 
 ## 4. Dashboard page
 
@@ -52,7 +52,7 @@ No other pages or navigation items in v0.
 
 **States**
 
-- **DASH-11** Loading skeletons; empty state when the period has no data — includes a "Connect extension" CTA when `STATUS` reports the extension missing or not connected **in this browser** (there is no server-side device registry in v0); error state with retry.
+- **DASH-11** Loading skeletons; empty state when the period has no data — includes a "Connect extension" CTA when `STATUS` reports the extension missing or not connected **in this browser** (there is no server-side device registry in v0); on a phone or tablet, where Chrome extensions cannot be installed, it explains instead that tracking runs in Chrome on a computer (no CTA; same for DASH-13 and `/connect`); error state with retry.
 
 ## 5. Settings page
 
