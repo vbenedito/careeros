@@ -5,7 +5,7 @@
  * from the browser. In the base layer, so a primitive can still override it with a utility.
  */
 @layer base {
-  button:not(:disabled),
+  button:not(:disabled):not([aria-disabled="true"]),
   [role="button"]:not([aria-disabled="true"]),
   [role="switch"]:not([aria-disabled="true"]),
   [role="menuitem"]:not([data-disabled]),
