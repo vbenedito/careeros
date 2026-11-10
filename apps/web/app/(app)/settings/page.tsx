@@ -25,7 +25,12 @@ export default async function SettingsPage({
   const user = claims?.claims;
   if (!user) redirect("/sign-in");
   const email = typeof user.email === "string" ? user.email : "";
-  const accountProvider = user.app_metadata?.provider;
+  // AUTH-14: offer every provider linked to the account (the first one used is listed first).
+  const linked = [user.app_metadata?.provider, ...(user.app_metadata?.providers ?? [])].filter(
+    isAuthProvider,
+  );
+  const reauthProviders =
+    linked.length > 0 ? [...new Set(linked)] : (["google", "github"] as const);
 
   return (
     <>
@@ -63,9 +68,7 @@ export default async function SettingsPage({
               provider={providerLabel(user.app_metadata?.provider)}
               deleteFailed={error === "delete"}
               recentSignIn={isRecentSignIn(user, Date.now())}
-              reauthProviders={
-                isAuthProvider(accountProvider) ? [accountProvider] : ["google", "github"]
-              }
+              reauthProviders={reauthProviders}
               reauthRequired={error === "reauth"}
             />
           </CardContent>

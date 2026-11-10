@@ -41,13 +41,14 @@ export function createOAuthUser(email: string): string {
 }
 
 /**
- * Signs in with the same cookie format the dashboard uses. `signedInMinutesAgo` backdates the
- * sign-in recorded for the session (`amr` claim, AUTH-14) and refreshes it, like a session that
- * has been kept alive by refreshes since then.
+ * Signs in with the same cookie format the dashboard uses. The session comes from a single-use
+ * token, so its `amr` claim says `otp`. For AUTH-14, `oauth: true` records it as the OAuth
+ * sign-in it stands for, and `signedInMinutesAgo` moves that sign-in back in time; either one
+ * then refreshes the session, like one kept alive by refreshes since.
  */
 export async function dashboardSession(
   email: string,
-  options: { signedInMinutesAgo?: number } = {},
+  options: { oauth?: boolean; signedInMinutesAgo?: number } = {},
 ) {
   const apiUrl = env("API_URL");
   const admin = createClient(apiUrl, env("SECRET_KEY"), { auth: { persistSession: false } });
@@ -69,12 +70,16 @@ export async function dashboardSession(
   });
   if (verified.error || !verified.data.session) throw verified.error ?? new Error("no session");
   let session = verified.data.session;
-  if (options.signedInMinutesAgo !== undefined) {
-    const ago = `now() - interval '${Math.trunc(options.signedInMinutesAgo)} minutes'`;
-    sql(`update auth.mfa_amr_claims set created_at = ${ago}, updated_at = ${ago}
-         where session_id = (select id from auth.sessions
-                             where user_id = '${session.user.id}'
-                             order by created_at desc limit 1)`);
+  if (options.oauth || options.signedInMinutesAgo !== undefined) {
+    // This token's own session; `amr` timestamps come from mfa_amr_claims.updated_at.
+    const sessionId = jwtPayload(session.access_token).session_id;
+    const changes = [
+      ...(options.oauth ? ["authentication_method = 'oauth'"] : []),
+      ...(options.signedInMinutesAgo !== undefined
+        ? [`updated_at = now() - interval '${Math.trunc(options.signedInMinutesAgo)} minutes'`]
+        : []),
+    ];
+    sql(`update auth.mfa_amr_claims set ${changes.join(", ")} where session_id = '${sessionId}'`);
     const refreshed = await client.auth.refreshSession();
     if (refreshed.error || !refreshed.data.session)
       throw refreshed.error ?? new Error("no session");
@@ -85,4 +90,10 @@ export async function dashboardSession(
     header: [...jar].map(([name, value]) => `${name}=${value}`).join("; "),
     refreshToken: session.refresh_token,
   };
+}
+
+/** Claims of a JWT (no verification: test helper reading a token it just received). */
+function jwtPayload(token: string): { session_id: string; amr?: unknown } {
+  const part = token.split(".")[1] ?? "";
+  return JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
 }

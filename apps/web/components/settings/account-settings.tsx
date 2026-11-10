@@ -1,7 +1,7 @@
 "use client";
 
 /** DASH-14: email and provider, sign out, sign out of all devices (AUTH-12a), delete account. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RedirectForm } from "@/components/app/redirect-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,11 @@ export function AccountSettings({
   reauthRequired?: boolean;
 }) {
   const [typed, setTyped] = useState("");
+  const deleteHeading = useRef<HTMLHeadingElement>(null);
+  // Back from a refused delete: take the reader straight to the reason.
+  useEffect(() => {
+    if (reauthRequired) deleteHeading.current?.focus();
+  }, [reauthRequired]);
   return (
     <div className="flex flex-col gap-6 text-sm">
       <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
@@ -80,7 +85,9 @@ export function AccountSettings({
         id="delete-account"
         className="flex scroll-mt-20 flex-col items-start gap-2 border-t border-border pt-4"
       >
-        <h3 className="font-medium">Delete account</h3>
+        <h3 ref={deleteHeading} tabIndex={-1} className="font-medium outline-none">
+          Delete account
+        </h3>
         <p className="text-muted-foreground">
           Permanently deletes your account, your tracked sites and all recorded study time.
         </p>

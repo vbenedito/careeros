@@ -10,6 +10,7 @@ describe("recent sign-in (AUTH-14)", () => {
       lastSignInAt({
         amr: [
           { method: "oauth", timestamp: now - 3000 },
+          { method: "totp", timestamp: now - 1 },
           { method: "oauth", timestamp: now - 30 },
         ],
       }),
@@ -22,6 +23,17 @@ describe("recent sign-in (AUTH-14)", () => {
     expect(isRecentSignIn({ amr: [{ method: "oauth", timestamp: now - 601 }] }, NOW_MS)).toBe(
       false,
     );
+  });
+
+  it("AUTH-14 only an OAuth sign-in counts: a fresh MFA or magic-link entry does not", () => {
+    const oldOAuth = { method: "oauth", timestamp: now - 3600 };
+    for (const method of ["totp", "phone", "webauthn", "otp", "magiclink", "password", "sso/saml"])
+      expect(isRecentSignIn({ amr: [oldOAuth, { method, timestamp: now - 5 }] }, NOW_MS)).toBe(
+        false,
+      );
+    expect(
+      isRecentSignIn({ amr: [oldOAuth, { method: "oauth", timestamp: now - 5 }] }, NOW_MS),
+    ).toBe(true);
   });
 
   it("AUTH-14 missing, malformed or far-future amr is never recent", () => {

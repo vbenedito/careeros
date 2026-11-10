@@ -28,6 +28,7 @@ describe("account settings: delete needs a recent sign-in (AUTH-14)", () => {
   it("AUTH-14 refused by the server: the reason is announced", () => {
     render(<AccountSettings email="a@example.test" provider="Google" reauthRequired />);
     expect(screen.getByRole("alert").textContent).toContain("more than 10 minutes ago");
+    expect(document.activeElement?.textContent).toBe("Delete account");
     expect(screen.getAllByRole("button", { name: /Sign in again with/ })).toHaveLength(2);
   });
 });

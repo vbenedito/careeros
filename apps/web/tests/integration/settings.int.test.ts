@@ -7,10 +7,10 @@ import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
 
 const DASHBOARD_URL = env("DASHBOARD_URL");
 
-async function signedInUser(label: string) {
+async function signedInUser(label: string, options: Parameters<typeof dashboardSession>[1] = {}) {
   const email = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const id = createOAuthUser(email);
-  return { id, email, cookie: (await dashboardSession(email)).header };
+  return { id, email, cookie: (await dashboardSession(email, options)).header };
 }
 
 const call = (path: string, cookie: string, init: RequestInit = {}, origin = DASHBOARD_URL) =>
@@ -119,7 +119,7 @@ describe("settings (integration)", () => {
   });
 
   it("DASH-14 DATA-12 SEC-14 deleting the account removes the user and all data", async () => {
-    const { id, cookie } = await signedInUser("delete");
+    const { id, cookie } = await signedInUser("delete", { oauth: true });
     await addSite(cookie, "leetcode.com");
     sql(`insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
          values (gen_random_uuid(), '${id}', gen_random_uuid(), 'leetcode.com',
@@ -147,9 +147,7 @@ describe("settings (integration)", () => {
   });
 
   it("AUTH-14 a sign-in older than 10 minutes cannot delete the account; Settings asks again", async () => {
-    const email = `stale-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
-    const id = createOAuthUser(email);
-    const { header: cookie } = await dashboardSession(email, { signedInMinutesAgo: 11 });
+    const { id, cookie } = await signedInUser("stale", { oauth: true, signedInMinutesAgo: 11 });
 
     const page = await (await call("/settings", cookie)).text();
     expect(page).toContain("Sign in again with GitHub");
@@ -162,6 +160,15 @@ describe("settings (integration)", () => {
 
     const asked = await (await call("/settings?error=reauth", cookie)).text();
     expect(asked).toContain("more than 10 minutes ago");
+  });
+
+  it("AUTH-14 a fresh non-OAuth sign-in (e.g. an extension-link token) cannot delete", async () => {
+    // A stolen session can mint and redeem /api/extension/link tokens: that gives a fresh `otp`
+    // entry, never an `oauth` one.
+    const { id, cookie } = await signedInUser("otp-only");
+    const res = await call("/api/account/delete", cookie, form({ confirm: "DELETE" }));
+    expect(res.headers.get("location")).toContain("/settings?error=reauth");
+    expect(sql(`select count(*) from auth.users where id = '${id}'`)).toBe("1");
   });
 
   it("DASH-14 account deletion from a foreign origin is refused", async () => {
