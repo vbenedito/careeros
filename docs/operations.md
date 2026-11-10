@@ -72,7 +72,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
    - §3 OAuth apps: change the callback URL of the Google and GitHub apps to the new `https://<new-ref>.supabase.co/auth/v1/callback`;
    - §4 Vercel environment (Supabase URL and both keys), then redeploy;
    - §5 a new extension release with the new URL and publishable key;
-   - §6 the `SUPABASE_DB_URL` secret.
+   - §6 the `SUPABASE_DB_URL` secret **in the `production-backup` environment** (never at repository level).
 
    Restored accounts keep their ids, so each user finds their data after signing in again and reconnecting the extension (sessions are not in the backup).
 
