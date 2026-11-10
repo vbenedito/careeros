@@ -14,16 +14,28 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { AuthProvider } from "@/lib/auth/routes";
 import { DELETE_CONFIRMATION } from "@/lib/settings/account";
+
+const PROVIDER_NAMES: Record<AuthProvider, string> = { google: "Google", github: "GitHub" };
 
 export function AccountSettings({
   email,
   provider,
   deleteFailed = false,
+  recentSignIn = false,
+  reauthProviders = ["google", "github"],
+  reauthRequired = false,
 }: {
   email: string;
   provider: string | null;
   deleteFailed?: boolean;
+  /** AUTH-14: signed in within the last 10 minutes, so the account can be deleted now. */
+  recentSignIn?: boolean;
+  /** The providers offered to sign in again (the account's own one when known). */
+  reauthProviders?: readonly AuthProvider[];
+  /** The delete request was refused because the sign-in was no longer recent. */
+  reauthRequired?: boolean;
 }) {
   const [typed, setTyped] = useState("");
   return (
@@ -64,7 +76,10 @@ export function AccountSettings({
         .
       </p>
 
-      <div className="flex flex-col items-start gap-2 border-t border-border pt-4">
+      <div
+        id="delete-account"
+        className="flex scroll-mt-20 flex-col items-start gap-2 border-t border-border pt-4"
+      >
         <h3 className="font-medium">Delete account</h3>
         <p className="text-muted-foreground">
           Permanently deletes your account, your tracked sites and all recorded study time.
@@ -74,43 +89,68 @@ export function AccountSettings({
             Your account wasn't deleted. Try again in a moment.
           </p>
         ) : null}
-        <Dialog onOpenChange={() => setTyped("")}>
-          <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              Delete account
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogTitle>Delete your account?</DialogTitle>
-            <DialogDescription>
-              This deletes all of your data and cannot be undone. Type {DELETE_CONFIRMATION} to
-              confirm.
-            </DialogDescription>
-            <form method="post" action="/api/account/delete" className="flex flex-col gap-4">
-              <Input
-                name="confirm"
-                aria-label={`Type ${DELETE_CONFIRMATION} to confirm`}
-                autoComplete="off"
-                value={typed}
-                onChange={(e) => setTyped(e.target.value)}
-              />
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    Cancel
+        {recentSignIn ? (
+          <Dialog onOpenChange={() => setTyped("")}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                Delete account
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogTitle>Delete your account?</DialogTitle>
+              <DialogDescription>
+                This deletes all of your data and cannot be undone. Type {DELETE_CONFIRMATION} to
+                confirm.
+              </DialogDescription>
+              <form method="post" action="/api/account/delete" className="flex flex-col gap-4">
+                <Input
+                  name="confirm"
+                  aria-label={`Type ${DELETE_CONFIRMATION} to confirm`}
+                  autoComplete="off"
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                />
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    disabled={typed !== DELETE_CONFIRMATION}
+                  >
+                    Delete account
                   </Button>
-                </DialogClose>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  disabled={typed !== DELETE_CONFIRMATION}
-                >
-                  Delete account
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <>
+            <p
+              className={reauthRequired ? "text-destructive" : "text-muted-foreground"}
+              role={reauthRequired ? "alert" : undefined}
+            >
+              {reauthRequired
+                ? "Your last sign-in was more than 10 minutes ago. Sign in again to delete your account."
+                : "To keep your account safe, sign in again first. You'll then have 10 minutes to delete it."}
+            </p>
+            <RedirectForm
+              action="/auth/sign-in"
+              name="provider"
+              size="sm"
+              className="flex flex-wrap gap-2"
+              hidden={{ next: "/settings#delete-account" }}
+              choices={reauthProviders.map((p) => ({
+                value: p,
+                label: `Sign in again with ${PROVIDER_NAMES[p]}`,
+                pendingLabel: `Redirecting to ${PROVIDER_NAMES[p]}…`,
+              }))}
+            />
+          </>
+        )}
       </div>
     </div>
   );

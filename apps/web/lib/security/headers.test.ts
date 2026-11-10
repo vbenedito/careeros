@@ -20,9 +20,11 @@ describe("buildCsp", () => {
     expect(csp).toContain("upgrade-insecure-requests");
   });
 
-  it("SEC-09 the browser may only call itself and the Supabase origin", () => {
+  it("SEC-09 the browser may only call this site (#114: never Supabase directly)", () => {
     const csp = buildCsp({ nonce: "x", isDev: false, supabaseUrl, upgradeInsecureRequests: true });
-    expect(csp).toContain("connect-src 'self' https://abc.supabase.co;");
+    expect(csp).toContain("connect-src 'self';");
+    const connect = csp.split("; ").find((d) => d.startsWith("connect-src")) ?? "";
+    expect(connect).not.toContain("supabase");
   });
 
   it("development allows eval for React debugging", () => {
@@ -60,5 +62,11 @@ describe("static headers", () => {
     expect(keys["X-Frame-Options"]).toBe("DENY");
     expect(keys["X-Content-Type-Options"]).toBe("nosniff");
     expect(keys["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+  });
+
+  it("SEC-09 #114 cross-origin isolation of windows and resources", () => {
+    const keys = Object.fromEntries(STATIC_SECURITY_HEADERS.map((h) => [h.key, h.value]));
+    expect(keys["Cross-Origin-Opener-Policy"]).toBe("same-origin");
+    expect(keys["Cross-Origin-Resource-Policy"]).toBe("same-origin");
   });
 });

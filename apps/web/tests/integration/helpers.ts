@@ -40,8 +40,15 @@ export function createOAuthUser(email: string): string {
   return id;
 }
 
-/** Signs in with the same cookie format the dashboard uses. */
-export async function dashboardSession(email: string) {
+/**
+ * Signs in with the same cookie format the dashboard uses. `signedInMinutesAgo` backdates the
+ * sign-in recorded for the session (`amr` claim, AUTH-14) and refreshes it, like a session that
+ * has been kept alive by refreshes since then.
+ */
+export async function dashboardSession(
+  email: string,
+  options: { signedInMinutesAgo?: number } = {},
+) {
   const apiUrl = env("API_URL");
   const admin = createClient(apiUrl, env("SECRET_KEY"), { auth: { persistSession: false } });
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
@@ -61,9 +68,21 @@ export async function dashboardSession(email: string) {
     type: "magiclink",
   });
   if (verified.error || !verified.data.session) throw verified.error ?? new Error("no session");
+  let session = verified.data.session;
+  if (options.signedInMinutesAgo !== undefined) {
+    const ago = `now() - interval '${Math.trunc(options.signedInMinutesAgo)} minutes'`;
+    sql(`update auth.mfa_amr_claims set created_at = ${ago}, updated_at = ${ago}
+         where session_id = (select id from auth.sessions
+                             where user_id = '${session.user.id}'
+                             order by created_at desc limit 1)`);
+    const refreshed = await client.auth.refreshSession();
+    if (refreshed.error || !refreshed.data.session)
+      throw refreshed.error ?? new Error("no session");
+    session = refreshed.data.session;
+  }
   return {
     cookies: [...jar].map(([name, value]) => ({ name, value })),
     header: [...jar].map(([name, value]) => `${name}=${value}`).join("; "),
-    refreshToken: verified.data.session.refresh_token,
+    refreshToken: session.refresh_token,
   };
 }

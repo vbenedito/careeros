@@ -4,6 +4,8 @@ import { AccountSettings } from "@/components/settings/account-settings";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
 import { TrackedSites } from "@/components/settings/tracked-sites";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
+import { isAuthProvider } from "@/lib/auth/routes";
 import { extensionId } from "@/lib/env";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +25,7 @@ export default async function SettingsPage({
   const user = claims?.claims;
   if (!user) redirect("/sign-in");
   const email = typeof user.email === "string" ? user.email : "";
+  const accountProvider = user.app_metadata?.provider;
 
   return (
     <>
@@ -59,6 +62,11 @@ export default async function SettingsPage({
               email={email}
               provider={providerLabel(user.app_metadata?.provider)}
               deleteFailed={error === "delete"}
+              recentSignIn={isRecentSignIn(user, Date.now())}
+              reauthProviders={
+                isAuthProvider(accountProvider) ? [accountProvider] : ["google", "github"]
+              }
+              reauthRequired={error === "reauth"}
             />
           </CardContent>
         </Card>

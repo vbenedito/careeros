@@ -125,6 +125,9 @@ describe("settings (integration)", () => {
          values (gen_random_uuid(), '${id}', gen_random_uuid(), 'leetcode.com',
                  now() - interval '1 hour', now() - interval '30 minutes')`);
 
+    // Signed in just now (AUTH-14): Settings offers deletion directly.
+    expect(await (await call("/settings", cookie)).text()).not.toContain("Sign in again with");
+
     // Without the typed confirmation nothing happens.
     const unconfirmed = await call("/api/account/delete", cookie, form({ confirm: "delete" }));
     expect(unconfirmed.status).toBe(303);
@@ -141,6 +144,24 @@ describe("settings (integration)", () => {
                 + (select count(*) from public.study_sessions where user_id = '${id}')
                 + (select count(*) from auth.sessions where user_id = '${id}')`),
     ).toBe("0");
+  });
+
+  it("AUTH-14 a sign-in older than 10 minutes cannot delete the account; Settings asks again", async () => {
+    const email = `stale-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
+    const id = createOAuthUser(email);
+    const { header: cookie } = await dashboardSession(email, { signedInMinutesAgo: 11 });
+
+    const page = await (await call("/settings", cookie)).text();
+    expect(page).toContain("Sign in again with GitHub");
+    expect(page).toContain('action="/auth/sign-in"');
+
+    const res = await call("/api/account/delete", cookie, form({ confirm: "DELETE" }));
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toContain("/settings?error=reauth");
+    expect(sql(`select count(*) from auth.users where id = '${id}'`)).toBe("1");
+
+    const asked = await (await call("/settings?error=reauth", cookie)).text();
+    expect(asked).toContain("more than 10 minutes ago");
   });
 
   it("DASH-14 account deletion from a foreign origin is refused", async () => {
