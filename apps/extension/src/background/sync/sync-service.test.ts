@@ -93,6 +93,24 @@ describe("sync cycle across a change of account (#113)", () => {
     expect([...s.storage.data.keys()]).toEqual([]);
   });
 
+  it("AUTH-11a not connected with nothing to upload: no sync status appears", async () => {
+    const storage = fakeStorage();
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      ingest: async () => ({ ok: true, confirmedIds: [] }),
+    });
+    expect(await sync.run(async () => null)).toBe("not-connected");
+    expect(storage.data.has(SYNC_STATE_KEY)).toBe(false);
+  });
+
   it("SYNC-06 AUTH-11 a rejected session still records not-connected before the epoch moves", async () => {
     const s = epochSetup(async () => ({ ok: false, kind: "auth" }));
     expect(await s.sync.run(token)).toBe("not-connected");
@@ -174,7 +192,8 @@ describe("sync cycle (SYNC-02..06)", () => {
       return "token";
     };
     expect(await s.sync.run(provider)).toBe("done");
-    expect(calls).toEqual([undefined, true]);
+    // The last call confirms the account before "done" is recorded (#113).
+    expect(calls).toEqual([undefined, true, undefined]);
     expect(s.rejected()).toBe(0);
     expect(s.storage.data.get(OUTBOX_KEY)).toEqual([]);
   });

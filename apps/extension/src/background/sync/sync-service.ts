@@ -53,10 +53,15 @@ export function createSyncService(deps: {
     for (;;) {
       const batch = await outbox.batch(SYNC.SYNC_BATCH_MAX);
       if (batch.length === 0) {
+        // Nothing to upload is only "synced" for a connected account: a disconnected profile
+        // must not grow a sync status of its own (#113, AUTH-11a).
+        if (!(await accessToken())) return "not-connected";
         await writeState({ failures: 0, notBefore: 0, lastOutcome: "ok", lastSyncedAt: now() });
         return "done";
       }
       let token = await accessToken();
+      // If getting the token invalidated the session, the epoch moved and this write is skipped:
+      // fine, the popup shows "Reconnect" from the auth state anyway.
       if (!token) {
         await writeState({ ...state, lastOutcome: "not-connected" });
         return "not-connected";

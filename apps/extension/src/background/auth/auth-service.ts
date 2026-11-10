@@ -168,13 +168,15 @@ export function createAuthService(deps: {
           await localData.clear();
         }
 
+        // Before the session is written: its storage event starts a sync cycle, which must
+        // already see the new epoch, or it would upload and then discard its own result (#113).
+        deps.epoch?.bump();
         try {
           await backend.adoptSession(incoming);
         } catch (error) {
           await backend.discardSession(incoming); // never leave an orphan session behind
           throw error;
         }
-        deps.epoch?.bump();
         await storage.set({ [DATA_OWNER_KEY]: incoming.userId });
         await storage.remove(NEEDS_RECONNECT_KEY);
         return { ok: true, email: incoming.email };
