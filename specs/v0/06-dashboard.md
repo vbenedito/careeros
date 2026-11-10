@@ -58,7 +58,7 @@ No other pages or navigation items in v0.
 
 - **DASH-12** **Tracked sites**: list, add (validated/normalized), remove (confirm). Shared with the extension (SYNC-09).
 - **DASH-13** **Extension**: status via `STATUS` message (Connected as … / Not installed / Not connected), "Connect" (→ `/connect`) and "Disconnect".
-- **DASH-14** **Account**: email and provider, Sign out, **Sign out of all devices** (AUTH-12a), **Delete account** (typed confirmation, DATA-12; afterwards redirect to `/sign-in`).
+- **DASH-14** **Account**: email and provider, Sign out, **Sign out of all devices** (AUTH-12a), **Delete account** (recent sign-in, AUTH-14; typed confirmation, DATA-12; afterwards redirect to `/sign-in`).
 
 ## 6. Data loading
 

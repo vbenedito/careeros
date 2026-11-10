@@ -6,7 +6,7 @@
 export interface CspOptions {
   nonce: string;
   isDev: boolean;
-  /** Supabase API origin the browser may call (auth, data). */
+  /** Supabase API origin: only the sign-in redirect chain (form-action) reaches it. */
   supabaseUrl: string;
   /** Only when the site itself is served over https (not for http://localhost builds). */
   upgradeInsecureRequests: boolean;
@@ -35,7 +35,8 @@ export function buildCsp({
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
-    `connect-src 'self' ${supabaseOrigin}`,
+    // The browser never calls Supabase directly: data and auth go through this server (#114).
+    "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     // Browsers apply form-action to every redirect after a form POST: the sign-in form posts
@@ -53,6 +54,9 @@ export const STATIC_SECURITY_HEADERS: ReadonlyArray<{ key: string; value: string
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  // No other site keeps a handle to our windows, and no other site may embed our responses (#114).
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
 
 /** HSTS only in production: localhost runs over http. */

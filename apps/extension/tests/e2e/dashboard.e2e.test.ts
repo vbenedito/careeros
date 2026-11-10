@@ -54,7 +54,7 @@ describe("dashboard journey (E2E)", () => {
     addSession(userId, mondayUtc(-1), 20, "neetcode.io"); // intervals are ≤ 30 min (TRK-09)
     browser = await chromium.launch({ channel: "chromium", headless: true });
     context = await browser.newContext({ timezoneId: "UTC" });
-    const { cookies } = await dashboardSession(email);
+    const { cookies } = await dashboardSession(email, { oauth: true }); // deletion needs an OAuth sign-in (AUTH-14)
     await context.addCookies([
       ...cookies.map((c) => ({ ...c, url: DASHBOARD_URL })),
       { name: "tz", value: "UTC", url: DASHBOARD_URL },

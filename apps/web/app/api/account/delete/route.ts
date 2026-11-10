@@ -4,8 +4,10 @@
  * with the admin client, which revokes every refresh token and cascades to all application
  * rows. Then the dashboard cookies are cleared and the browser goes to /sign-in. A form post,
  * so failures go back to Settings with a message instead of a JSON page.
+ * AUTH-14: only within 10 minutes of signing in; otherwise Settings asks to sign in again.
  */
 import { NextResponse } from "next/server";
+import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
 import { siteUrl } from "@/lib/env";
 import { fail } from "@/lib/http/json";
 import { errorFields, logServerError } from "@/lib/log";
@@ -14,7 +16,8 @@ import { DELETE_CONFIRMATION } from "@/lib/settings/account";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const back = () => NextResponse.redirect(new URL("/settings?error=delete", siteUrl()), 303);
+const back = (error: "delete" | "reauth" = "delete") =>
+  NextResponse.redirect(new URL(`/settings?error=${error}#delete-account`, siteUrl()), 303);
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return fail(403, "FORBIDDEN");
@@ -27,6 +30,13 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(new URL("/sign-in", siteUrl()), 303);
+
+  // AUTH-14: a stolen or long-lived session alone cannot delete the account. The claims come
+  // from the same (just verified) session; `amr` keeps the time of the actual sign-in.
+  const { data } = await supabase.auth.getClaims();
+  if (data?.claims.sub !== user.id || !isRecentSignIn(data.claims, Date.now())) {
+    return back("reauth");
+  }
 
   const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
   if (error) {

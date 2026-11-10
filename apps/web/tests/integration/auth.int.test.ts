@@ -56,8 +56,10 @@ describe("dashboard auth (integration)", () => {
     const csp = res.headers.get("content-security-policy") ?? "";
     const nonce = /'nonce-([^']+)'/.exec(csp)?.[1];
     expect(nonce).toBeTruthy();
-    expect(csp).toContain(`connect-src 'self' ${new URL(API_URL).origin}`);
+    expect(csp).toContain("connect-src 'self';");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("cross-origin-opener-policy")).toBe("same-origin");
+    expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     const html = await res.text();
     const scripts = html.match(/<script\b[^>]*>/g) ?? [];
