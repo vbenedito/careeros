@@ -31,6 +31,10 @@ supabase/.temp/
 
 # extension signing keys & release artifacts
 *.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
 *.crx
 *.zip
 # Release zips unpacked in place to load the extension in Chrome

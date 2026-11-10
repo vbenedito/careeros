@@ -1,8 +1,11 @@
 # Weekly encrypted backup of the production database (#31, docs/operations.md).
 # The repository is public, so the dump is encrypted with `age` BEFORE it is stored: only the
 # holder of the private key (kept offline by the product owner) can read it.
-# Needs: secret SUPABASE_DB_URL (Session pooler URI, IPv4) and variable BACKUP_AGE_RECIPIENT
-# (an age public key). Without them the job is skipped (forks, before production exists).
+# Needs, in the GitHub environment `production-backup` (deployment branches: `main` only): secret
+# SUPABASE_DB_URL (Session pooler URI, IPv4, ending in `?sslmode=require`) and variable
+# BACKUP_AGE_RECIPIENT (an age public key). Without them the job is skipped.
+# Security (#112): the job runs only on `main`, so a branch with a modified dump script can never
+# reach the secret, and only the dump step receives the database URL.
 # GitHub disables schedules in public repos after 60 days without repository activity, silently:
 # docs/operations.md §5 has the monthly check.
 
@@ -23,16 +26,20 @@ concurrency:
 jobs:
   backup:
     name: Encrypted database dump
+    # Never from another branch: its scripts could be modified to read the secret.
+    if: github.ref == 'refs/heads/main'
+    environment: production-backup
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PGURL: ${{ secrets.SUPABASE_DB_URL }}
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
       AGE_VERSION: v1.2.1
       AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
     steps:
       - name: Check configuration
         id: config
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           if [ -z "$PGURL" ] || [ -z "$AGE_RECIPIENT" ]; then
             echo "::notice::SUPABASE_DB_URL or BACKUP_AGE_RECIPIENT not set: skipping the backup."
@@ -58,6 +65,9 @@ jobs:
 
       - name: Dump and encrypt (plaintext never touches the disk)
         if: steps.config.outputs.ready == 'true'
+        # The only step that receives the database URL.
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           umask 077
