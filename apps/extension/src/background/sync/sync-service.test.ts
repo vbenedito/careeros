@@ -39,6 +39,7 @@ function setup(
     sessionRejected: async () => {
       rejected++;
     },
+    isConnected: async () => true,
     ingest: async (batch) => {
       batches.push(batch);
       const next = responses.shift() ?? { ok: true, confirmedIds: batch.map((i) => i.id) };
@@ -68,6 +69,7 @@ describe("sync cycle across a change of account (#113)", () => {
       sessionRejected: async () => epoch.bump(),
       ingest,
       epoch,
+      isConnected: async () => true,
     });
     return { sync, storage, epoch, pending };
   }
@@ -106,8 +108,14 @@ describe("sync cycle across a change of account (#113)", () => {
       now: () => NOW,
       sessionRejected: async () => {},
       ingest: async () => ({ ok: true, confirmedIds: [] }),
+      isConnected: async () => false,
     });
-    expect(await sync.run(async () => null)).toBe("not-connected");
+    // No token is even asked for: a storage check, so an offline Disconnect never waits.
+    expect(
+      await sync.run(async () => {
+        throw new Error("no token needed");
+      }),
+    ).toBe("not-connected");
     expect(storage.data.has(SYNC_STATE_KEY)).toBe(false);
   });
 
@@ -192,8 +200,7 @@ describe("sync cycle (SYNC-02..06)", () => {
       return "token";
     };
     expect(await s.sync.run(provider)).toBe("done");
-    // The last call confirms the account before "done" is recorded (#113).
-    expect(calls).toEqual([undefined, true, undefined]);
+    expect(calls).toEqual([undefined, true]);
     expect(s.rejected()).toBe(0);
     expect(s.storage.data.get(OUTBOX_KEY)).toEqual([]);
   });

@@ -93,6 +93,7 @@ const sync = backend
       now: () => Date.now(),
       sessionRejected: () => auth?.sessionRejected() ?? Promise.resolve(),
       epoch: accountEpoch,
+      isConnected: hasSession,
     })
   : null;
 

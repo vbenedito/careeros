@@ -35,6 +35,8 @@ export function createSyncService(deps: {
   sessionRejected: () => Promise<void>;
   /** #113: a cycle that outlives a change of account writes nothing. */
   epoch?: AccountEpoch;
+  /** Whether a session is stored, without the auth lock or the network. */
+  isConnected: () => Promise<boolean>;
 }) {
   const { outbox, storage, now } = deps;
   let running: Promise<CycleOutcome> | null = null;
@@ -54,8 +56,9 @@ export function createSyncService(deps: {
       const batch = await outbox.batch(SYNC.SYNC_BATCH_MAX);
       if (batch.length === 0) {
         // Nothing to upload is only "synced" for a connected account: a disconnected profile
-        // must not grow a sync status of its own (#113, AUTH-11a).
-        if (!(await accessToken())) return "not-connected";
+        // must not grow a sync status of its own (#113, AUTH-11a). A storage read, not a token:
+        // an offline Disconnect must not wait for a refresh it does not need.
+        if (!(await deps.isConnected())) return "not-connected";
         await writeState({ failures: 0, notBefore: 0, lastOutcome: "ok", lastSyncedAt: now() });
         return "done";
       }
