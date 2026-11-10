@@ -31,9 +31,17 @@ const toUtc = (d: string) =>
 const fromUtc = (t: number) => new Date(t).toISOString().slice(0, 10);
 const addDays = (d: string, n: number) => fromUtc(toUtc(d) + n * DAY_MS);
 
-/** A real calendar date in YYYY-MM-DD form (rejects 2026-02-30). */
+/**
+ * A real calendar date in YYYY-MM-DD form (rejects 2026-02-30), from year 1000: Date.UTC maps
+ * years 0–99 to 1900+, which would turn a week near year 100 into a 1,900-year range (#111).
+ */
 export function isValidDate(value: unknown): value is string {
-  return typeof value === "string" && DATE.test(value) && fromUtc(toUtc(value)) === value;
+  return (
+    typeof value === "string" &&
+    DATE.test(value) &&
+    value >= "1000-01-01" &&
+    fromUtc(toUtc(value)) === value
+  );
 }
 
 /** Monday of the week containing `d`. */

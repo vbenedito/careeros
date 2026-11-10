@@ -1,6 +1,6 @@
 -- Totals RPC tests for #8 (DATA-10, DATA-11, DASH-07).
 begin;
-select plan(41);
+select plan(47);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
@@ -134,8 +134,25 @@ select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-1
   '22023', 'INVALID_TIME_ZONE', '#111 a POSIX spec with a DST part is refused');
 select lives_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'EST5EDT') $$,
   '#111 real zone files with an offset-like name stay allowed');
-select lives_ok($$ select * from public.get_daily_totals('0100-01-01', '0100-01-07', 'UTC') $$,
-  '#111 the oldest dates the dashboard accepts still return an empty period');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'A1') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a short POSIX spec is refused');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'a1b2') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 digits inside a name are refused');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Europe/Lond0n') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a zone-like name with a digit is refused');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT+99') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 an out-of-range Etc/GMT offset is refused');
+select lives_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT-14') $$,
+  '#111 Etc/GMT-14 is allowed');
+select is(
+  array(select name from pg_catalog.pg_timezone_names
+        where name ~ '[0-9]'
+          and pg_catalog.upper(name) !~ '^(ETC/)?GMT[+-]?([0-9]|1[0-4])$'
+          and pg_catalog.upper(name) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT')),
+  '{}'::text[],
+  '#111 every real zone name with a digit is still allowed');
+select lives_ok($$ select * from public.get_daily_totals('1000-01-01', '1000-01-07', 'UTC') $$,
+  '#111 the oldest dates the dashboard accepts return an empty period');
 select throws_ok($$ select * from public.get_daily_totals('4713-01-01 BC', '4713-01-02 BC', 'UTC') $$,
   '22023', 'INVALID_RANGE', '#111 extreme dates are a clean INVALID_RANGE, not a date overflow');
 select throws_ok($$ select * from public.get_domain_totals('5874897-12-30', '5874897-12-31', 'UTC') $$,

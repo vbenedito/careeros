@@ -154,12 +154,14 @@ begin
   end if;
   -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
   -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
-  -- POSIX-style specs (letters then an offset: 'ABC1', 'FOO-3BAR') are refused: each distinct
-  -- one would stay in the backend's zone cache forever (unbounded memory per connection). The
-  -- real zone files with that shape are allowed by name; Etc/GMT+N has a '/' and is unaffected.
+  -- Any name with a digit can parse as a POSIX spec ('A1', 'x/y+5'), and each distinct one stays
+  -- in the backend's zone cache for good (unbounded memory per pooled connection). So a digit is
+  -- allowed only in the real zone names that have one: Etc/GMT±N and four legacy US zones.
+  -- Names without a digit load only from zone files or the abbreviation list (fixed sets).
   if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$'
-     or (p_tz ~ '^[A-Za-z]{3,}[+-]?[0-9]'
-         and upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'GMT0', 'GMT+0', 'GMT-0'))
+     or (p_tz ~ '[0-9]'
+         and pg_catalog.upper(p_tz) !~ '^(ETC/)?GMT[+-]?([0-9]|1[0-4])$'
+         and pg_catalog.upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT'))
   then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
@@ -217,12 +219,14 @@ begin
   end if;
   -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
   -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
-  -- POSIX-style specs (letters then an offset: 'ABC1', 'FOO-3BAR') are refused: each distinct
-  -- one would stay in the backend's zone cache forever (unbounded memory per connection). The
-  -- real zone files with that shape are allowed by name; Etc/GMT+N has a '/' and is unaffected.
+  -- Any name with a digit can parse as a POSIX spec ('A1', 'x/y+5'), and each distinct one stays
+  -- in the backend's zone cache for good (unbounded memory per pooled connection). So a digit is
+  -- allowed only in the real zone names that have one: Etc/GMT±N and four legacy US zones.
+  -- Names without a digit load only from zone files or the abbreviation list (fixed sets).
   if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$'
-     or (p_tz ~ '^[A-Za-z]{3,}[+-]?[0-9]'
-         and upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'GMT0', 'GMT+0', 'GMT-0'))
+     or (p_tz ~ '[0-9]'
+         and pg_catalog.upper(p_tz) !~ '^(ETC/)?GMT[+-]?([0-9]|1[0-4])$'
+         and pg_catalog.upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT'))
   then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
