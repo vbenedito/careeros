@@ -2,6 +2,7 @@
  * Everything the popup reads and does, behind one interface so components can be tested with
  * fixtures. Reads come from chrome.storage; commands go to the worker (EXT-UI-05a).
  */
+import { isValidDomain } from "@careeros/shared";
 import {
   DOMAINS_CACHE_KEY,
   ENGINE_STATE_KEY,
@@ -16,6 +17,7 @@ import {
   POPUP_PORT,
   type PopupAuthStatus,
   type PopupDisconnectResult,
+  type PopupForgetResult,
   type PopupRequest,
 } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
@@ -43,6 +45,8 @@ export interface PopupData {
   setTracking(enabled: boolean): Promise<void>;
   /** AUTH-12: refused with UNSYNCED_DATA unless `discardUnsynced`. */
   disconnect(discardUnsynced: boolean): Promise<PopupDisconnectResult>;
+  /** AUTH-11 explicit discard while no account is connected (#113). */
+  forgetLocalData(): Promise<PopupForgetResult>;
   refreshSites(): Promise<void>;
   openDashboard(path?: string): void;
   /** Tells the worker the popup is open (not "left Chrome", TRK-04); returns a closer. */
@@ -78,7 +82,10 @@ export function createChromePopupData(): PopupData {
         startOfToday: today,
         auth: { connected: auth?.connected ?? false, email: auth?.email ?? null },
         trackingEnabled: stored[KEYS.trackingEnabled] !== false,
-        trackedDomains: Array.isArray(domains?.domains) ? (domains.domains as string[]) : null,
+        // #113: only valid domains from storage (written by the worker, validated there too).
+        trackedDomains: Array.isArray(domains?.domains)
+          ? domains.domains.filter((d): d is string => typeof d === "string" && isValidDomain(d))
+          : null,
         engine: parseEngineState(stored[KEYS.engine]),
         todayIntervals: [...synced, ...outbox].filter((i) => Date.parse(i.started_at) >= today),
         sync: parseSyncState(stored[SYNC_STATE_KEY]),
@@ -110,6 +117,15 @@ export function createChromePopupData(): PopupData {
 
     async setTracking(enabled) {
       await send({ type: "TRACKING_SET", enabled });
+    },
+
+    async forgetLocalData() {
+      return (
+        (await send<PopupForgetResult>({ type: "FORGET_LOCAL_DATA" })) ?? {
+          ok: false,
+          code: "FAILED",
+        }
+      );
     },
 
     async disconnect(discardUnsynced) {

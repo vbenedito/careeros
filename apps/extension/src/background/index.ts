@@ -8,6 +8,7 @@ import { SYNC, TRACKING } from "@careeros/shared";
 import { config, isSupabaseConfigured } from "../lib/config";
 import { IS_DEV_BUILD } from "../lib/env";
 import { createLogger } from "../lib/log";
+import { createAccountEpoch } from "./account-epoch";
 import { createDataClient } from "./api/data-client";
 import { createAuthService } from "./auth/auth-service";
 import { NEEDS_RECONNECT_KEY, SESSION_STORAGE_KEY } from "./auth/storage";
@@ -39,12 +40,14 @@ const storage = chrome.storage.local;
 const log = createLogger({ debug: IS_DEV_BUILD });
 
 // --- Tracking -------------------------------------------------------------------------------
-const store = createTrackingStore(storage);
+const accountEpoch = createAccountEpoch();
+const store = createTrackingStore(storage, accountEpoch);
 const port = createChromeBrowserPort(chrome);
+const engineEnv = createEngineEnv(storage);
 const tracker = createTracker({
   store,
   browser: port,
-  env: createEngineEnv(storage),
+  env: engineEnv,
   now: () => Date.now(),
   log,
   idleThresholdS: TRACKING.IDLE_THRESHOLD_S,
@@ -89,6 +92,8 @@ const sync = backend
       storage,
       now: () => Date.now(),
       sessionRejected: () => auth?.sessionRejected() ?? Promise.resolve(),
+      epoch: accountEpoch,
+      isConnected: hasSession,
     })
   : null;
 
@@ -99,9 +104,10 @@ const localData = createTrackingLocalData({
   // AUTH-12 final sync: ignores backoff, never waits for a cycle that may need the auth lock.
   upload: (accessToken) =>
     sync?.run(accessToken, { force: true, ifIdle: true }) ?? Promise.resolve(),
+  forgetDevice: () => engineEnv.forget(),
 });
 const auth = backend
-  ? createAuthService({ backend, storage, localData, now: () => Date.now() })
+  ? createAuthService({ backend, storage, localData, now: () => Date.now(), epoch: accountEpoch })
   : null;
 
 registerTrackingListeners({ api: chrome, port, tracker, timers: globalThis });
@@ -125,6 +131,7 @@ const domains = auth
       isConnected: hasSession,
       sessionRejected: () => auth.sessionRejected(),
       now: () => Date.now(),
+      epoch: accountEpoch,
     })
   : null;
 
@@ -176,6 +183,14 @@ const handleInternal = domains
           const result = await auth.disconnect({ discardUnsynced });
           if (result.ok) return { ok: true };
           return { ok: false, code: "UNSYNCED_DATA", pending: (await outbox.counts()).pending };
+        } catch {
+          return { ok: false, code: "FAILED" };
+        }
+      },
+      forgetLocalData: async () => {
+        if (!auth) return { ok: false, code: "FAILED" };
+        try {
+          return await auth.forgetLocalData();
         } catch {
           return { ok: false, code: "FAILED" };
         }

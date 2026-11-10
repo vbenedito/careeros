@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fakeBackend, fakeLocalData, fakeStorage, session } from "../../test/fakes";
+import { createAccountEpoch } from "../account-epoch";
+import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createAuthService, REFRESH_MARGIN_S } from "./auth-service";
 import { DATA_OWNER_KEY, NEEDS_RECONNECT_KEY } from "./storage";
 
@@ -12,13 +14,15 @@ function setup(
   const fb = fakeBackend({ "token-alice": session("alice"), "token-bob": session("bob") });
   const storage = fakeStorage(options.storage);
   const ld = fakeLocalData(options.pending ?? 0, options.afterFlush ?? options.pending ?? 0);
+  const epoch = createAccountEpoch();
   const auth = createAuthService({
     backend: fb.backend,
     storage,
     localData: ld.localData,
     now: () => NOW_MS,
+    epoch,
   });
-  return { auth, fb, storage, ld };
+  return { auth, fb, storage, ld, epoch };
 }
 
 describe("connect", () => {
@@ -79,6 +83,36 @@ describe("connect: another user's local data", () => {
   });
 });
 
+describe("forget local data (#113, AUTH-11a)", () => {
+  it("#113 adopting a session and invalidating one start a new account epoch", async () => {
+    const { auth, epoch } = setup();
+    await auth.connect("token-alice");
+    expect(epoch.current()).toBe(1);
+    await auth.sessionRejected();
+    expect(epoch.current()).toBe(2);
+  });
+
+  it("AUTH-11a while disconnected, everything the last account left is deleted", async () => {
+    const { auth, ld, storage } = setup({
+      pending: 3,
+      storage: { [DATA_OWNER_KEY]: "alice", [NEEDS_RECONNECT_KEY]: true },
+    });
+    expect(await auth.forgetLocalData()).toEqual({ ok: true });
+    expect(ld.state.cleared).toBe(1);
+    expect(storage.data.has(DATA_OWNER_KEY)).toBe(false);
+    expect(storage.data.has(NEEDS_RECONNECT_KEY)).toBe(false);
+    // Afterwards another account connects without UNSYNCED_DATA.
+    expect((await auth.connect("token-bob")).ok).toBe(true);
+  });
+
+  it("AUTH-11a refused while connected: Disconnect is the way", async () => {
+    const { auth, fb, ld } = setup({ pending: 3 });
+    fb.setCurrent(session("alice"));
+    expect(await auth.forgetLocalData()).toEqual({ ok: false, code: "CONNECTED" });
+    expect(ld.state.cleared).toBe(0);
+  });
+});
+
 describe("connect failures", () => {
   it("revokes the verified session when it cannot be adopted", async () => {
     const { auth, fb } = setup();
@@ -125,13 +159,18 @@ describe("accessToken", () => {
   });
 
   it("AUTH-11 an invalid refresh clears the session, keeps data and asks to reconnect", async () => {
-    const { auth, fb, ld, storage } = setup({ pending: 2 });
+    const { auth, fb, ld, storage } = setup({
+      pending: 2,
+      storage: { [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com"] } },
+    });
     fb.setCurrent(session("alice", { expiresAt: nowS - 5 }));
     fb.willRefresh({ ok: false, reason: "invalid" });
     expect(await auth.accessToken()).toBeNull();
     expect(fb.calls).toContain("clearSession");
     expect(storage.data.get(NEEDS_RECONNECT_KEY)).toBe(true);
     expect(ld.state.cleared).toBe(0);
+    // #113: the account's site list does not stay on a shared profile; it reloads on reconnect.
+    expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false);
     expect(await auth.status()).toEqual({ connected: false, email: null, needsReconnect: true });
   });
 

@@ -2,6 +2,9 @@
  * The extension's own Supabase session (AUTH-07b, AUTH-10..12).
  * Pure application logic: Supabase and chrome.storage are injected, so every rule is unit-tested.
  */
+
+import type { AccountEpoch } from "../account-epoch";
+import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createMutex } from "./mutex";
 import { DATA_OWNER_KEY, type KeyValueArea, NEEDS_RECONNECT_KEY } from "./storage";
 
@@ -86,6 +89,8 @@ export function createAuthService(deps: {
   storage: KeyValueArea;
   localData: LocalData;
   now: () => number;
+  /** #113: bumped when the session is invalidated or a new one is adopted. */
+  epoch?: AccountEpoch;
 }) {
   const { backend, storage, localData, now } = deps;
   const exclusive = createMutex();
@@ -95,10 +100,16 @@ export function createAuthService(deps: {
     return typeof value === "string" ? value : null;
   }
 
-  /** AUTH-11: forget the session but keep unsynced intervals for a same-user reconnect. */
+  /**
+   * AUTH-11: forget the session but keep unsynced intervals for a same-user reconnect. The
+   * tracked-site list is not needed for that and belongs to the account (#113): it is dropped
+   * now and loaded again after reconnecting.
+   */
   async function markInvalid(): Promise<void> {
+    deps.epoch?.bump();
     await backend.clearLocalSession();
     await storage.set({ [NEEDS_RECONNECT_KEY]: true });
+    await storage.remove(DOMAINS_CACHE_KEY);
   }
 
   /** AUTH-10: the token logic itself; callers must hold the lock. */
@@ -157,6 +168,9 @@ export function createAuthService(deps: {
           await localData.clear();
         }
 
+        // Before the session is written: its storage event starts a sync cycle, which must
+        // already see the new epoch, or it would upload and then discard its own result (#113).
+        deps.epoch?.bump();
         try {
           await backend.adoptSession(incoming);
         } catch (error) {
@@ -201,6 +215,21 @@ export function createAuthService(deps: {
           // Refused or failed: keep tracking for the session that is still there.
           if (!done) await localData.resumeTracking();
         }
+      });
+    },
+
+    /**
+     * AUTH-11 explicit discard (#113): while NOT connected (account deleted, signed out
+     * everywhere, or someone else's data on a shared profile), the user can delete everything
+     * the last account left on this computer, including unsynced intervals. Afterwards any
+     * account can connect. Refused while connected: then Disconnect is the way (AUTH-12).
+     */
+    forgetLocalData() {
+      return exclusive(async (): Promise<{ ok: true } | { ok: false; code: "CONNECTED" }> => {
+        if (await backend.currentSession()) return { ok: false, code: "CONNECTED" };
+        await localData.clear();
+        await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
+        return { ok: true };
       });
     },
   };

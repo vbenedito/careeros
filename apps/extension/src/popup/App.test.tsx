@@ -67,6 +67,10 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
       calls.push(`disconnect:${discard}`);
       return data.disconnectReply.shift() ?? { ok: true };
     },
+    forgetLocalData: async () => {
+      calls.push("forget");
+      return { ok: true };
+    },
     openDashboard: (path) => {
       opened.push(path);
     },
@@ -230,6 +234,70 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     expect(data.opened).toEqual(["/connect"]);
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByTestId("today-total")).toBeTruthy();
+  });
+
+  it("AUTH-11a disconnected with the last account's data: Forget local data, after confirming", async () => {
+    const data = fixture({
+      auth: { connected: false, email: null },
+      counts: { pending: 2, quarantined: 0 },
+    });
+    await openSettings(data);
+    const section = screen.getByRole("region", { name: "Data on this computer" });
+    expect(section.textContent).toContain("2 sessions not uploaded yet");
+    fireEvent.click(screen.getByRole("button", { name: "Forget local data" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Forget local data?" });
+    expect(dialog.textContent).toContain("are lost");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep" })),
+    );
+    expect(data.calls).toEqual([]);
+    // Escape and Keep close without deleting; focus returns to the opener.
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Forget local data" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Forget local data" }));
+    await screen.findByRole("alertdialog", { name: "Forget local data?" });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Forget local data" }).at(-1) as HTMLElement,
+    );
+    await waitFor(() => expect(data.calls).toEqual(["forget"]));
+    // The section is about to disappear: focus goes to Connect account and the result is announced.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Connect account" })),
+    );
+    expect(screen.getByRole("status").textContent).toBe("Local data deleted.");
+  });
+
+  it("AUTH-11a refused because an account connected meanwhile: says so", async () => {
+    const data = fixture({
+      auth: { connected: false, email: null },
+      counts: { pending: 1, quarantined: 0 },
+    });
+    data.forgetLocalData = async () => ({ ok: false, code: "CONNECTED" });
+    await openSettings(data);
+    fireEvent.click(screen.getByRole("button", { name: "Forget local data" }));
+    await screen.findByRole("alertdialog");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Forget local data" }).at(-1) as HTMLElement,
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("Use Disconnect instead");
+  });
+
+  it("AUTH-11a nothing left on this computer: no Forget local data section", async () => {
+    const data = fixture({
+      auth: { connected: false, email: null },
+      engine: INITIAL_ENGINE_STATE,
+      todayIntervals: [],
+      trackedDomains: null,
+      sync: INITIAL_SYNC_STATE,
+      counts: { pending: 0, quarantined: 0 },
+    });
+    await openSettings(data);
+    expect(screen.queryByRole("region", { name: "Data on this computer" })).toBeNull();
   });
 
   it("main view: 'Turn on in Settings' opens the settings view", async () => {

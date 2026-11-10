@@ -9,6 +9,8 @@
 import { DomainSchema, type Interval, IntervalSchema } from "@careeros/shared";
 import { z } from "zod";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../../engine/engine";
+import { SYNC_STATE_KEY } from "../../lib/sync-state";
+import type { AccountEpoch } from "../account-epoch";
 import type { KeyValueArea } from "../auth/storage";
 import {
   DOMAINS_CACHE_KEY,
@@ -55,7 +57,7 @@ export function parseOutbox(value: unknown): Interval[] {
   });
 }
 
-export function createTrackingStore(area: KeyValueArea) {
+export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
   return {
     async load(): Promise<{ state: EngineState; outbox: Interval[] }> {
       const stored = await area.get([ENGINE_STATE_KEY, OUTBOX_KEY]);
@@ -95,10 +97,12 @@ export function createTrackingStore(area: KeyValueArea) {
 
     /**
      * Deletes the account's local tracking data (AUTH-11/12, SEC-14): engine state, outbox,
-     * quarantine, today cache, counters and the tracked-domain cache (it belongs to the user).
+     * quarantine, today cache, counters, the tracked-domain cache (it belongs to the user) and the
+     * sync status.
      * The per-device switch stays.
      */
     async clear(): Promise<void> {
+      epoch?.bump();
       await area.remove([
         ENGINE_STATE_KEY,
         OUTBOX_KEY,
@@ -106,6 +110,8 @@ export function createTrackingStore(area: KeyValueArea) {
         SYNCED_TODAY_KEY,
         DROPPED_COUNT_KEY,
         DOMAINS_CACHE_KEY,
+        // #113: "Synced · 2h ago" and any backoff belong to the previous account too.
+        SYNC_STATE_KEY,
       ]);
     },
   };

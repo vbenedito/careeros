@@ -5,6 +5,7 @@
  */
 import { type Interval, SYNC } from "@careeros/shared";
 import { parseSyncState, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
+import type { AccountEpoch } from "../account-epoch";
 import type { TokenProvider } from "../auth/auth-service";
 import type { KeyValueArea } from "../auth/storage";
 import type { Outbox } from "../tracking/outbox";
@@ -32,14 +33,21 @@ export function createSyncService(deps: {
   now: () => number;
   /** AUTH-11: the server rejected the session or the user is gone. */
   sessionRejected: () => Promise<void>;
+  /** #113: a cycle that outlives a change of account writes nothing. */
+  epoch?: AccountEpoch;
+  /** Whether a session is stored, without the auth lock or the network. */
+  isConnected: () => Promise<boolean>;
 }) {
   const { outbox, storage, now } = deps;
   let running: Promise<CycleOutcome> | null = null;
 
   const readState = async () => parseSyncState((await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY]);
-  const writeState = (state: SyncState) => storage.set({ [SYNC_STATE_KEY]: state });
-
   async function cycle(accessToken: TokenProvider, force: boolean): Promise<CycleOutcome> {
+    const started = deps.epoch?.current();
+    const stale = () => deps.epoch !== undefined && deps.epoch.current() !== started;
+    const writeState = async (state: SyncState) => {
+      if (!stale()) await storage.set({ [SYNC_STATE_KEY]: state });
+    };
     const state = await readState();
     if (!force && now() < state.notBefore) return "skipped";
     await outbox.prune(); // SYNC-07/08
@@ -47,10 +55,16 @@ export function createSyncService(deps: {
     for (;;) {
       const batch = await outbox.batch(SYNC.SYNC_BATCH_MAX);
       if (batch.length === 0) {
+        // Nothing to upload is only "synced" for a connected account: a disconnected profile
+        // must not grow a sync status of its own (#113, AUTH-11a). A storage read, not a token:
+        // an offline Disconnect must not wait for a refresh it does not need.
+        if (!(await deps.isConnected())) return "not-connected";
         await writeState({ failures: 0, notBefore: 0, lastOutcome: "ok", lastSyncedAt: now() });
         return "done";
       }
       let token = await accessToken();
+      // If getting the token invalidated the session, the epoch moved and this write is skipped:
+      // fine, the popup shows "Reconnect" from the auth state anyway.
       if (!token) {
         await writeState({ ...state, lastOutcome: "not-connected" });
         return "not-connected";
@@ -62,6 +76,8 @@ export function createSyncService(deps: {
         token = await accessToken({ forceRefresh: true });
         result = token ? await deps.ingest(batch, token) : { ok: false, kind: "unavailable" };
       }
+      // The account changed while the batch was in flight: its outbox is gone, settle nothing.
+      if (stale()) return "not-connected";
       if (result.ok) {
         await outbox.settle(batch, result.confirmedIds); // SYNC-04/05
         state.failures = 0;
@@ -70,8 +86,9 @@ export function createSyncService(deps: {
 
       // SYNC-06
       if (result.kind === "auth") {
-        await deps.sessionRejected();
+        // Written first: sessionRejected starts a new account epoch (#113).
         await writeState({ ...state, lastOutcome: "not-connected" });
+        await deps.sessionRejected();
         return "not-connected";
       }
       if (result.kind === "unavailable" || result.kind === "expired") {

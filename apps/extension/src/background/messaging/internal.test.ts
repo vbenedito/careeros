@@ -23,6 +23,10 @@ const handle = createInternalMessageHandler({
   },
   disconnect: async (discard) =>
     discard ? { ok: true } : { ok: false, code: "UNSYNCED_DATA", pending: 2 },
+  forgetLocalData: async () => {
+    calls.push("forget");
+    return { ok: true };
+  },
 });
 
 describe("popup → worker messages (EXT-UI-05a)", () => {
@@ -38,6 +42,9 @@ describe("popup → worker messages (EXT-UI-05a)", () => {
       code: "UNSYNCED_DATA",
       pending: 2,
     });
+    // #113 AUTH-11 explicit discard while disconnected.
+    expect(await handle({ type: "FORGET_LOCAL_DATA" }, OWN)).toEqual({ ok: true });
+    expect(calls.at(-1)).toBe("forget");
     expect(await handle({ type: "DISCONNECT", discardUnsynced: true }, OWN)).toEqual({ ok: true });
     expect(await handle({ type: "AUTH_STATUS" }, OWN)).toEqual({
       connected: true,

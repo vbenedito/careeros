@@ -18,9 +18,9 @@ Spike exit criteria: token hash from `generateLink` yields a session through `ve
 ## Consequences
 + One login; independent sessions; disconnecting one does not affect the other.
 + The token is single-use, short-lived, never e-mailed or put in a URL, and only deliverable to our extension ID from our origin.
-− The token transits dashboard page JavaScript for seconds; an XSS on the dashboard could redeem it. Mitigated by nonce-based CSP and no third-party scripts; same risk class as XSS against cookie-authenticated APIs.
+− The token transits dashboard page JavaScript for seconds; an XSS on the dashboard could ask for one and redeem it itself. That is **worse than XSS against cookie-authenticated APIs**, which only lasts while the page is open: the attacker gets an independent session with its own refresh token that outlives the tab and the dashboard's own sign-out. It ends only with "Sign out of all devices" (AUTH-12a) or account deletion (AUTH-13). Mitigated by the nonce-based CSP (SEC-09), no third-party scripts, the same-origin check and the 5/min quota on `/api/extension/link` (security audit, #113).
 − Remote revocation of an extension in another browser is only possible via "Sign out of all devices" (no per-device session registry in v0).
-− Script injected into the dashboard origin could DISCONNECT the extension (when nothing is pending) and CONNECT it to another account, redirecting future study hostnames. Dashboard XSS is already the worst case (it can read the user's data directly); the nonce CSP (SEC-09) is the defense. Accepted for v0 (review of #45).
+− Script injected into the dashboard origin could DISCONNECT the extension (when nothing is pending) and CONNECT it to another account, redirecting future study hostnames. Dashboard XSS is already the worst case (it can read the user's data directly and, as above, mint a lasting session); the nonce CSP (SEC-09) is the defense. Accepted for v0 (review of #45).
 − Requires service-role usage in a dashboard route (server-only secret, narrowly scoped route).
 − Relies on admin link generation behaving as documented; covered by the spike and an integration test.
 

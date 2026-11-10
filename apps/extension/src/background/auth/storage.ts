@@ -26,10 +26,34 @@ export function createSessionStorage(area: KeyValueArea) {
       return typeof value === "string" ? value : null;
     },
     async setItem(key: string, value: string): Promise<void> {
-      await area.set({ [key]: value });
+      await area.set({ [key]: minimizeSession(value) });
     },
     async removeItem(key: string): Promise<void> {
       await area.remove(key);
     },
   };
+}
+
+/** User fields the extension needs (AUTH-10): who is connected. Nothing else is kept. */
+const KEPT_USER_FIELDS = ["id", "aud", "role", "email", "is_anonymous"] as const;
+
+/**
+ * SEC-01 (#113): supabase-js stores the whole user with the session, including the OAuth name,
+ * avatar and linked identities. The extension needs only the id and the email, so the rest is
+ * dropped before anything is written. Anything that is not a session is stored unchanged.
+ */
+export function minimizeSession(value: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return value;
+  }
+  if (!parsed || typeof parsed !== "object" || !("user" in parsed)) return value;
+  const session = parsed as { user?: unknown };
+  if (!session.user || typeof session.user !== "object") return value;
+  const user = session.user as Record<string, unknown>;
+  const kept: Record<string, unknown> = {};
+  for (const field of KEPT_USER_FIELDS) if (field in user) kept[field] = user[field];
+  return JSON.stringify({ ...session, user: kept });
 }

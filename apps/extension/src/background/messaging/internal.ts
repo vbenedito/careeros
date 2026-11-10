@@ -5,6 +5,7 @@
 import {
   type PopupAuthStatus,
   type PopupDisconnectResult,
+  type PopupForgetResult,
   PopupRequestSchema,
 } from "../../lib/popup-messages";
 import type { DomainService, DomainsResult } from "../domains/domain-service";
@@ -23,11 +24,20 @@ export function createInternalMessageHandler(deps: {
   setTracking: (enabled: boolean) => Promise<void>;
   /** AUTH-12 from the popup. */
   disconnect: (discardUnsynced: boolean) => Promise<PopupDisconnectResult>;
+  /** AUTH-11 explicit discard while not connected (#113). */
+  forgetLocalData: () => Promise<PopupForgetResult>;
 }) {
   return async function handle(
     message: unknown,
     sender: InternalSender,
-  ): Promise<DomainsResult | PopupAuthStatus | PopupDisconnectResult | { ok: true } | null> {
+  ): Promise<
+    | DomainsResult
+    | PopupAuthStatus
+    | PopupDisconnectResult
+    | PopupForgetResult
+    | { ok: true }
+    | null
+  > {
     // Only the extension's own pages (popup, or popup.html opened in a tab). A content script
     // would carry the web page's URL (and v0 has none, SEC-01).
     const ownPage = sender.url?.startsWith(`chrome-extension://${deps.extensionId}/`) === true;
@@ -49,6 +59,8 @@ export function createInternalMessageHandler(deps: {
         return { ok: true };
       case "DISCONNECT":
         return deps.disconnect(request.discardUnsynced);
+      case "FORGET_LOCAL_DATA":
+        return deps.forgetLocalData();
     }
   };
 }
