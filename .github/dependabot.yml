@@ -10,6 +10,10 @@ updates:
       time: "07:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    # Same 7 days as pnpm's minimumReleaseAge (pnpm-workspace.yaml), or the update cannot
+    # resolve. Security updates ignore the cooldown.
+    cooldown:
+      default-days: 7
     groups:
       minor-and-patch:
         update-types: [minor, patch]
@@ -20,3 +24,5 @@ updates:
       day: monday
       time: "07:00"
       timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7

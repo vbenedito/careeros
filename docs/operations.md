@@ -42,7 +42,13 @@ Supabase Free has no automatic backups, so the repository makes its own:
 - **When:** every Monday at 06:17 UTC, or on demand (Actions → Backup → Run workflow): [`.github/workflows/backup.yml`](../.github/workflows/backup.yml). **GitHub silently disables schedules in a public repository after 60 days without repository activity**: see the monthly check in §5.
 - **Protection:** the repository is public, so the dump is **encrypted with [age](https://age-encryption.org) inside the job, before it is stored**. The plaintext never reaches the disk or the artifact store. Only the private key can read it, and it never leaves the product owner's computer (keep a second copy in a password manager).
 - **Where:** an artifact of the workflow run, kept for 90 days (about 13 weekly copies).
-- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the job is skipped. The job runs only on `main` and only its dump step receives the URL, so a branch with a modified script can never read it (#112).
+- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the job is skipped. Only the dump step receives the URL (#112).
+- **Setup checklist (one time, before merging a change to this workflow):**
+  1. Settings → Environments → **New environment** `production-backup`; **Deployment branches and tags → Selected branches → `main`**.
+  2. Add the secret `SUPABASE_DB_URL` and the variable `BACKUP_AGE_RECIPIENT` **to the environment**.
+  3. **Delete the repository-level copies** (Settings → Secrets and variables → Actions → Repository): while one exists, a workflow edited on another branch could read it. The branch rule is the real protection; the workflow's `if: main` is only a second layer, because a branch can edit the workflow.
+  4. Keep `main` protected (pull requests only), since whoever can push to `main` can change the workflow.
+  5. Settings → Code security → **Private vulnerability reporting: on** (used by `SECURITY.md`).
 - **Tested:** every CI run performs the full round trip against the local stack (seed → dump → encrypt → decrypt → fresh database from the migrations → restore → identical rows): [`scripts/ops/backup-restore-test.sh`](../scripts/ops/backup-restore-test.sh).
 
 ### Restore procedure
