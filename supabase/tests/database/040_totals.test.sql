@@ -1,6 +1,6 @@
 -- Totals RPC tests for #8 (DATA-10, DATA-11, DASH-07).
 begin;
-select plan(31);
+select plan(47);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
@@ -120,6 +120,43 @@ select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11
   '22023', 'INVALID_TIME_ZONE', 'an unknown time zone is rejected');
 select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', null) $$,
   '22023', 'INVALID_TIME_ZONE', 'a null time zone is rejected');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'UTC; select 1') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a time zone with other characters is rejected before loading');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', repeat('A', 65)) $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 an over-long time zone is rejected');
+select lives_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'America/Sao_Paulo') $$,
+  '#111 an IANA zone is accepted');
+select lives_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT+3') $$,
+  '#111 an Etc/GMT offset zone is accepted');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'ABC1') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a POSIX-style spec is refused (it would stay in the zone cache)');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'FOO-3BAR') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a POSIX spec with a DST part is refused');
+select lives_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'EST5EDT') $$,
+  '#111 real zone files with an offset-like name stay allowed');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'A1') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a short POSIX spec is refused');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'a1b2') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 digits inside a name are refused');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Europe/Lond0n') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a zone-like name with a digit is refused');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT+99') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 an out-of-range Etc/GMT offset is refused');
+select lives_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT-14') $$,
+  '#111 Etc/GMT-14 is allowed');
+select is(
+  array(select name from pg_catalog.pg_timezone_names
+        where name ~ '[0-9]'
+          and pg_catalog.upper(name) !~ '^(ETC/)?GMT[+-]?([0-9]|1[0-4])$'
+          and pg_catalog.upper(name) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT')),
+  '{}'::text[],
+  '#111 every real zone name with a digit is still allowed');
+select lives_ok($$ select * from public.get_daily_totals('1000-01-01', '1000-01-07', 'UTC') $$,
+  '#111 the oldest dates the dashboard accepts return an empty period');
+select throws_ok($$ select * from public.get_daily_totals('4713-01-01 BC', '4713-01-02 BC', 'UTC') $$,
+  '22023', 'INVALID_RANGE', '#111 extreme dates are a clean INVALID_RANGE, not a date overflow');
+select throws_ok($$ select * from public.get_domain_totals('5874897-12-30', '5874897-12-31', 'UTC') $$,
+  '22023', 'INVALID_RANGE', '#111 far-future dates are rejected');
 
 select tests.clear_authentication();
 reset role;

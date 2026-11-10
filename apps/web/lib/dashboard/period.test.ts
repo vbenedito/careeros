@@ -66,6 +66,9 @@ describe("dashboard period (DASH-04, DASH-05)", () => {
     expect(resolvePeriod({ date: "2030-01-01" }, TODAY).isCurrent).toBe(true); // clamped to today
     expect(isValidDate("2026-11-07")).toBe(true);
     expect(isValidDate("2026-13-01")).toBe(false);
+    // #111: years before 1000 fall back to today (Date.UTC maps years 0–99 to 1900+).
+    expect(isValidDate("0100-01-01")).toBe(false);
+    expect(isValidDate("1000-01-01")).toBe(true);
   });
 
   it("DASH-05 periods are addressed by URL", () => {

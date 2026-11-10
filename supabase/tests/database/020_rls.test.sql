@@ -190,11 +190,14 @@ select table_privs_are('public', 'study_sessions', 'anon', array[]::text[],
 -- =============================================================================================
 -- Exact policy set, functions and default privileges
 -- =============================================================================================
+-- Plus one restrictive policy each that refuses anonymous sign-ins (#111, 060_security).
 select policies_are('public', 'tracked_domains',
-  array['tracked_domains_select_own', 'tracked_domains_insert_own', 'tracked_domains_delete_own'],
-  'tracked_domains has exactly the DATA-04 policies');
-select policies_are('public', 'study_sessions', array['study_sessions_select_own'],
-  'study_sessions has exactly the DATA-05 policy');
+  array['tracked_domains_select_own', 'tracked_domains_insert_own', 'tracked_domains_delete_own',
+        'tracked_domains_no_anonymous'],
+  'tracked_domains has exactly the DATA-04 policies and the anonymous guard');
+select policies_are('public', 'study_sessions',
+  array['study_sessions_select_own', 'study_sessions_no_anonymous'],
+  'study_sessions has exactly the DATA-05 policy and the anonymous guard');
 select ok(
   not has_function_privilege('authenticated', 'private.enforce_tracked_domain_limit()', 'execute')
   and not has_function_privilege('anon', 'private.enforce_tracked_domain_limit()', 'execute'),
