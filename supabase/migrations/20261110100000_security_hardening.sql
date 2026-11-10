@@ -148,13 +148,19 @@ begin
     raise exception 'NOT_AUTHENTICATED' using errcode = 'PT401';
   end if;
   if p_from is null or p_to is null or p_from > p_to or p_to - p_from + 1 > 92
-     or p_from < date '2000-01-01' or p_to > date '2999-12-31' then
+     or p_from < date '0001-01-01' or p_to > date '2999-12-31' then
     raise exception 'INVALID_RANGE' using errcode = '22023',
-      detail = 'from <= to, at most 92 days, between 2000-01-01 and 2999-12-31';
+      detail = 'from <= to, at most 92 days, between 0001-01-01 and 2999-12-31';
   end if;
   -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
   -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
-  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$' then
+  -- POSIX-style specs (letters then an offset: 'ABC1', 'FOO-3BAR') are refused: each distinct
+  -- one would stay in the backend's zone cache forever (unbounded memory per connection). The
+  -- real zone files with that shape are allowed by name; Etc/GMT+N has a '/' and is unaffected.
+  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$'
+     or (p_tz ~ '^[A-Za-z]{3,}[+-]?[0-9]'
+         and upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'GMT0', 'GMT+0', 'GMT-0'))
+  then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
   begin
@@ -205,13 +211,19 @@ begin
     raise exception 'NOT_AUTHENTICATED' using errcode = 'PT401';
   end if;
   if p_from is null or p_to is null or p_from > p_to or p_to - p_from + 1 > 92
-     or p_from < date '2000-01-01' or p_to > date '2999-12-31' then
+     or p_from < date '0001-01-01' or p_to > date '2999-12-31' then
     raise exception 'INVALID_RANGE' using errcode = '22023',
-      detail = 'from <= to, at most 92 days, between 2000-01-01 and 2999-12-31';
+      detail = 'from <= to, at most 92 days, between 0001-01-01 and 2999-12-31';
   end if;
   -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
   -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
-  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$' then
+  -- POSIX-style specs (letters then an offset: 'ABC1', 'FOO-3BAR') are refused: each distinct
+  -- one would stay in the backend's zone cache forever (unbounded memory per connection). The
+  -- real zone files with that shape are allowed by name; Etc/GMT+N has a '/' and is unaffected.
+  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$'
+     or (p_tz ~ '^[A-Za-z]{3,}[+-]?[0-9]'
+         and upper(p_tz) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'GMT0', 'GMT+0', 'GMT-0'))
+  then
     raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
   end if;
   begin
