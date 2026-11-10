@@ -1,0 +1,28 @@
+# Dependency updates (security audit #112). Dependabot opens pull requests; CI and an
+# independent review run on each before the product owner merges (AGENTS.md §2).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    # Same 7 days as pnpm's minimumReleaseAge (pnpm-workspace.yaml), or the update cannot
+    # resolve. Security updates ignore the cooldown.
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7

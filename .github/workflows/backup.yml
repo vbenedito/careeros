@@ -1,8 +1,12 @@
 # Weekly encrypted backup of the production database (#31, docs/operations.md).
 # The repository is public, so the dump is encrypted with `age` BEFORE it is stored: only the
 # holder of the private key (kept offline by the product owner) can read it.
-# Needs: secret SUPABASE_DB_URL (Session pooler URI, IPv4) and variable BACKUP_AGE_RECIPIENT
-# (an age public key). Without them the job is skipped (forks, before production exists).
+# Needs, in the GitHub environment `production-backup` (deployment branches: `main` only): secret
+# SUPABASE_DB_URL (Session pooler URI, IPv4, ending in `?sslmode=require`) and variable
+# BACKUP_AGE_RECIPIENT (an age public key). Without them the job is skipped.
+# Security (#112): the guarantee is the environment's deployment-branch rule (`main` only) with
+# the secret existing nowhere else (no repository-level copy); a branch can edit this file, so
+# the `if:` below is only a second layer. Only the dump step receives the database URL.
 # GitHub disables schedules in public repos after 60 days without repository activity, silently:
 # docs/operations.md §5 has the monthly check.
 
@@ -23,18 +27,23 @@ concurrency:
 jobs:
   backup:
     name: Encrypted database dump
+    # Second layer: never from another branch (the environment's branch rule is the real guard).
+    if: github.ref == 'refs/heads/main'
+    environment: production-backup
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PGURL: ${{ secrets.SUPABASE_DB_URL }}
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
       AGE_VERSION: v1.2.1
       AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
     steps:
       - name: Check configuration
         id: config
+        env:
+          # Only whether it is set, never the URL itself.
+          HAS_DB_URL: ${{ secrets.SUPABASE_DB_URL != '' }}
         run: |
-          if [ -z "$PGURL" ] || [ -z "$AGE_RECIPIENT" ]; then
+          if [ "$HAS_DB_URL" != "true" ] || [ -z "$AGE_RECIPIENT" ]; then
             echo "::notice::SUPABASE_DB_URL or BACKUP_AGE_RECIPIENT not set: skipping the backup."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
@@ -58,6 +67,9 @@ jobs:
 
       - name: Dump and encrypt (plaintext never touches the disk)
         if: steps.config.outputs.ready == 'true'
+        # The only step that receives the database URL.
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           umask 077

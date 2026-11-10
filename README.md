@@ -147,7 +147,7 @@ specs/ docs/     specifications, ADRs, architecture, roadmap, backlog, operation
 | Tool | Version | Note |
 |---|---|---|
 | Node.js | 26 LTS | Active LTS since Oct 2026; Vercel default runtime for new projects |
-| pnpm | 12.16.1 | `minimumReleaseAge` supply-chain policy left at its default; dependencies are pinned exactly |
+| pnpm | 12.16.1 | New package versions must be 7 days old (`minimumReleaseAge`, #112); dependencies are pinned exactly; Dependabot proposes updates weekly |
 | TypeScript | 6.0.3 | 7.x (native compiler) skipped for now: Next.js and editor tooling rely on the 6.x JS API |
 | Next.js / React | 16.4.4 / 19.3.1 | |
 | Vitest | 5.1.0 | |
