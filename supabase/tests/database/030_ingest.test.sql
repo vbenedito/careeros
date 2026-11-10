@@ -216,19 +216,19 @@ select is(
 insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
 select gen_random_uuid(), tests.user_id('bob'), gen_random_uuid(), 'neetcode.io',
        now() - interval '2 hours', now() - interval '2 hours' + interval '10 seconds'
-from generate_series(1, 9999);   -- bob now has 10,000 rows created in this hour
+from generate_series(1, 998);   -- bob now has 999 rows created in this hour (#111: cap 1,000)
 
 select tests.authenticate_as(tests.user_id('bob'));
 select lives_ok(
   $$ select public.ingest_study_sessions(jsonb_build_array(
        tests.session(gen_random_uuid(), 'neetcode.io', interval '30 minutes', interval '1 minute'))) $$,
-  'DATA-09 exactly 10,000 rows in the last hour is still allowed'
+  'DATA-09 below 1,000 rows in the last hour the call is allowed'
 );
 select throws_ok(
   $$ select public.ingest_study_sessions(jsonb_build_array(
        tests.session(gen_random_uuid(), 'neetcode.io', interval '20 minutes', interval '1 minute'))) $$,
   'PT429', 'ABUSE_LIMIT',
-  'DATA-09 more than 10,000 rows in the last hour raises ABUSE_LIMIT (HTTP 429)'
+  'DATA-09 with 1,000 rows in the last hour the next call raises ABUSE_LIMIT (HTTP 429)'
 );
 select tests.clear_authentication();
 reset role;
