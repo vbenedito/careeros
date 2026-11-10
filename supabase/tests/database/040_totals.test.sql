@@ -1,6 +1,6 @@
 -- Totals RPC tests for #8 (DATA-10, DATA-11, DASH-07).
 begin;
-select plan(31);
+select plan(37);
 
 select tests.create_user('alice');
 select tests.create_user('bob');
@@ -120,6 +120,18 @@ select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11
   '22023', 'INVALID_TIME_ZONE', 'an unknown time zone is rejected');
 select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', null) $$,
   '22023', 'INVALID_TIME_ZONE', 'a null time zone is rejected');
+select throws_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'UTC; select 1') $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 a time zone with other characters is rejected before loading');
+select throws_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', repeat('A', 65)) $$,
+  '22023', 'INVALID_TIME_ZONE', '#111 an over-long time zone is rejected');
+select lives_ok($$ select * from public.get_daily_totals('2026-11-02', '2026-11-08', 'America/Sao_Paulo') $$,
+  '#111 an IANA zone is accepted');
+select lives_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11-08', 'Etc/GMT+3') $$,
+  '#111 an Etc/GMT offset zone is accepted');
+select throws_ok($$ select * from public.get_daily_totals('4713-01-01 BC', '4713-01-02 BC', 'UTC') $$,
+  '22023', 'INVALID_RANGE', '#111 extreme dates are a clean INVALID_RANGE, not a date overflow');
+select throws_ok($$ select * from public.get_domain_totals('5874897-12-30', '5874897-12-31', 'UTC') $$,
+  '22023', 'INVALID_RANGE', '#111 far-future dates are rejected');
 
 select tests.clear_authentication();
 reset role;

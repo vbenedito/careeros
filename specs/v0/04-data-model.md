@@ -57,7 +57,7 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 ### `get_daily_totals(p_from date, p_to date, p_tz text) → table(day date, seconds bigint)`
 
-- **DATA-10** Returns one row per day in `[p_from, p_to]` (zero-filled), summing `duration_s` of the caller's intervals by `(started_at AT TIME ZONE p_tz)::date`. Rejects ranges > 92 days and unknown time zones (checked against `pg_timezone_names`).
+- **DATA-10** Returns one row per day in `[p_from, p_to]` (zero-filled), summing `duration_s` of the caller's intervals by `(started_at AT TIME ZONE p_tz)::date`. Rejects ranges > 92 days or outside 2000-01-01..2999-12-31 (`INVALID_RANGE`) and time zones that are not ≤ 64 characters of `[A-Za-z0-9_+/-]` or that the server cannot load (`INVALID_TIME_ZONE`). The zone is checked by loading it, not by scanning `pg_timezone_names` (which reads every zone file per call, #111); POSIX-style specs the server accepts are harmless here.
 
 ### `get_domain_totals(p_from date, p_to date, p_tz text) → table(domain text, seconds bigint)`
 

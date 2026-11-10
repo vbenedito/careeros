@@ -125,3 +125,114 @@ create policy study_sessions_no_anonymous on public.study_sessions
   as restrictive
   for all to authenticated
   using (coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false);
+
+-- ---------------------------------------------------------------------------------------------
+-- Totals RPCs (#111, DATA-10/11): bounded dates (no raw 'date out of range' errors for extreme
+-- values) and a cheap time-zone check. Same signatures, so existing grants stay.
+-- ---------------------------------------------------------------------------------------------
+create or replace function public.get_daily_totals(p_from date, p_to date, p_tz text)
+returns table (day date, seconds bigint)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  lower_at timestamptz;
+  upper_at timestamptz;
+begin
+  -- Input validation is repeated in both functions on purpose: a shared helper would have to
+  -- live in a schema clients can use, and `private` stays closed to them (DATA §2).
+  if (select auth.uid()) is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'PT401';
+  end if;
+  if p_from is null or p_to is null or p_from > p_to or p_to - p_from + 1 > 92
+     or p_from < date '2000-01-01' or p_to > date '2999-12-31' then
+    raise exception 'INVALID_RANGE' using errcode = '22023',
+      detail = 'from <= to, at most 92 days, between 2000-01-01 and 2999-12-31';
+  end if;
+  -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
+  -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
+  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$' then
+    raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
+  end if;
+  begin
+    perform pg_catalog.timezone(p_tz, pg_catalog.now());
+  exception when invalid_parameter_value then
+    raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
+  end;
+  -- Coarse instant range for the (user_id, started_at) index, widened by a day on each side so
+  -- DST and repeated/missing local midnights can never cut off an interval. The exact rule is
+  -- the local-date filter below, identical in both functions, so they always agree.
+  lower_at := (p_from - 1)::timestamp at time zone 'UTC';
+  upper_at := (p_to + 2)::timestamp at time zone 'UTC';
+
+  return query
+  with totals as (
+    select (s.started_at at time zone p_tz)::date as day, sum(s.duration_s)::bigint as seconds
+    from public.study_sessions s
+    where s.user_id = (select auth.uid())          -- also enforced by RLS; lets the index work
+      and s.started_at >= lower_at
+      and s.started_at < upper_at
+      and (s.started_at at time zone p_tz)::date between p_from and p_to
+    group by 1
+  )
+  -- Integer series of dates: independent of the session TimeZone and of DST.
+  select (p_from + i)::date, coalesce(t.seconds, 0)::bigint
+  from generate_series(0, p_to - p_from) as i
+  left join totals t on t.day = p_from + i
+  order by 1;
+end;
+$$;
+
+-- DATA-11: same period, grouped by domain, largest first (ties by name for stable output).
+create or replace function public.get_domain_totals(p_from date, p_to date, p_tz text)
+returns table (domain text, seconds bigint)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  lower_at timestamptz;
+  upper_at timestamptz;
+begin
+  -- Input validation is repeated in both functions on purpose: a shared helper would have to
+  -- live in a schema clients can use, and `private` stays closed to them (DATA §2).
+  if (select auth.uid()) is null then
+    raise exception 'NOT_AUTHENTICATED' using errcode = 'PT401';
+  end if;
+  if p_from is null or p_to is null or p_from > p_to or p_to - p_from + 1 > 92
+     or p_from < date '2000-01-01' or p_to > date '2999-12-31' then
+    raise exception 'INVALID_RANGE' using errcode = '22023',
+      detail = 'from <= to, at most 92 days, between 2000-01-01 and 2999-12-31';
+  end if;
+  -- Same shape check as the dashboard (time-zone.ts), then the zone must load. Cheaper than
+  -- scanning pg_timezone_names, which reads every zone file on each call (security audit, #111).
+  if p_tz is null or length(p_tz) > 64 or p_tz !~ '^[A-Za-z0-9_+/-]+$' then
+    raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
+  end if;
+  begin
+    perform pg_catalog.timezone(p_tz, pg_catalog.now());
+  exception when invalid_parameter_value then
+    raise exception 'INVALID_TIME_ZONE' using errcode = '22023', detail = 'IANA time zone expected';
+  end;
+  -- Coarse instant range for the (user_id, started_at) index, widened by a day on each side so
+  -- DST and repeated/missing local midnights can never cut off an interval. The exact rule is
+  -- the local-date filter below, identical in both functions, so they always agree.
+  lower_at := (p_from - 1)::timestamp at time zone 'UTC';
+  upper_at := (p_to + 2)::timestamp at time zone 'UTC';
+
+  return query
+  select s.domain::text, sum(s.duration_s)::bigint as seconds
+  from public.study_sessions s
+  where s.user_id = (select auth.uid())
+    and s.started_at >= lower_at
+    and s.started_at < upper_at
+    and (s.started_at at time zone p_tz)::date between p_from and p_to
+  group by s.domain
+  order by 2 desc, 1;
+end;
+$$;
