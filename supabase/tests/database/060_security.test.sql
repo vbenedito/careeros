@@ -2,7 +2,7 @@
 -- (DATA-09a), payload size (DATA-06), anonymous sign-ins refused by every table policy, and
 -- catalog-wide checks so a future object cannot be exposed by accident.
 begin;
-select plan(23);
+select plan(27);
 
 select tests.create_user('carol');
 select tests.create_user('dave');
@@ -84,6 +84,37 @@ select is(
                   'd0000000-0000-4000-8000-0000000000a1'))),
   array['d1000000-0000-4000-8000-000000000005']::uuid[],
   'DATA-09a within one batch, an interval overlapping an earlier one of the same device is dropped'
+);
+-- The lookup only scans rows that started up to 1,830 s (the longest interval) earlier.
+select is(
+  public.ingest_study_sessions(jsonb_build_array(
+    tests.session('d1000000-0000-4000-8000-000000000007', 'leetcode.com', interval '10 hours', interval '1830 seconds',
+                  'd0000000-0000-4000-8000-0000000000a3'),
+    tests.session('d1000000-0000-4000-8000-000000000008', 'leetcode.com', interval '10 hours' - interval '1830 seconds',
+                  interval '1 minute', 'd0000000-0000-4000-8000-0000000000a3'))),
+  array['d1000000-0000-4000-8000-000000000007', 'd1000000-0000-4000-8000-000000000008']::uuid[],
+  'DATA-09a a longest interval followed by an adjacent one: both accepted'
+);
+select is(
+  public.ingest_study_sessions(jsonb_build_array(
+    tests.session('d1000000-0000-4000-8000-000000000009', 'leetcode.com', interval '10 hours' - interval '1829 seconds',
+                  interval '1 minute', 'd0000000-0000-4000-8000-0000000000a3'))),
+  '{}'::uuid[],
+  'DATA-09a a stored interval that started 1,829 s earlier still blocks an overlap (range bound)'
+);
+select is(
+  public.ingest_study_sessions(jsonb_build_array(
+    tests.session('d1000000-0000-4000-8000-00000000000a', 'leetcode.com', interval '9 hours', interval '1 minute',
+                  'd0000000-0000-4000-8000-0000000000a4'),
+    tests.session('d1000000-0000-4000-8000-00000000000a', 'leetcode.com', interval '8 hours', interval '1 minute',
+                  'd0000000-0000-4000-8000-0000000000a4'))),
+  array['d1000000-0000-4000-8000-00000000000a']::uuid[],
+  'DATA-08 an id repeated in one batch with other times is stored once (the first)'
+);
+select is(
+  (select tests.iso(started_at) from public.study_sessions where id = 'd1000000-0000-4000-8000-00000000000a'),
+  tests.iso(now() - interval '9 hours'),
+  'DATA-08 the first occurrence wins'
 );
 select tests.clear_authentication();
 reset role;
