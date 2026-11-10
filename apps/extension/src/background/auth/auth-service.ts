@@ -3,6 +3,7 @@
  * Pure application logic: Supabase and chrome.storage are injected, so every rule is unit-tested.
  */
 
+import type { AccountEpoch } from "../account-epoch";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createMutex } from "./mutex";
 import { DATA_OWNER_KEY, type KeyValueArea, NEEDS_RECONNECT_KEY } from "./storage";
@@ -88,6 +89,8 @@ export function createAuthService(deps: {
   storage: KeyValueArea;
   localData: LocalData;
   now: () => number;
+  /** #113: bumped when the session is invalidated or a new one is adopted. */
+  epoch?: AccountEpoch;
 }) {
   const { backend, storage, localData, now } = deps;
   const exclusive = createMutex();
@@ -103,6 +106,7 @@ export function createAuthService(deps: {
    * now and loaded again after reconnecting.
    */
   async function markInvalid(): Promise<void> {
+    deps.epoch?.bump();
     await backend.clearLocalSession();
     await storage.set({ [NEEDS_RECONNECT_KEY]: true });
     await storage.remove(DOMAINS_CACHE_KEY);
@@ -170,6 +174,7 @@ export function createAuthService(deps: {
           await backend.discardSession(incoming); // never leave an orphan session behind
           throw error;
         }
+        deps.epoch?.bump();
         await storage.set({ [DATA_OWNER_KEY]: incoming.userId });
         await storage.remove(NEEDS_RECONNECT_KEY);
         return { ok: true, email: incoming.email };

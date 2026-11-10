@@ -5,6 +5,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   NOT_CONNECTED: "Connect your account first.",
   UNAVAILABLE: "Couldn't reach CareerOS. Try again in a moment.",
   FAILED: "Something went wrong. Try again.",
+  CONNECTED: "An account is connected now. Use Disconnect instead.",
 };
 
 export const errorMessage = (code: string): string =>

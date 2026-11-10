@@ -1,8 +1,8 @@
-import { isValidDomain } from "@careeros/shared";
 /**
  * Everything the popup reads and does, behind one interface so components can be tested with
  * fixtures. Reads come from chrome.storage; commands go to the worker (EXT-UI-05a).
  */
+import { isValidDomain } from "@careeros/shared";
 import {
   DOMAINS_CACHE_KEY,
   ENGINE_STATE_KEY,

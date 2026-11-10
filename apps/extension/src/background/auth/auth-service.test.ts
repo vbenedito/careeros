@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fakeBackend, fakeLocalData, fakeStorage, session } from "../../test/fakes";
+import { createAccountEpoch } from "../account-epoch";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createAuthService, REFRESH_MARGIN_S } from "./auth-service";
 import { DATA_OWNER_KEY, NEEDS_RECONNECT_KEY } from "./storage";
@@ -13,13 +14,15 @@ function setup(
   const fb = fakeBackend({ "token-alice": session("alice"), "token-bob": session("bob") });
   const storage = fakeStorage(options.storage);
   const ld = fakeLocalData(options.pending ?? 0, options.afterFlush ?? options.pending ?? 0);
+  const epoch = createAccountEpoch();
   const auth = createAuthService({
     backend: fb.backend,
     storage,
     localData: ld.localData,
     now: () => NOW_MS,
+    epoch,
   });
-  return { auth, fb, storage, ld };
+  return { auth, fb, storage, ld, epoch };
 }
 
 describe("connect", () => {
@@ -80,8 +83,16 @@ describe("connect: another user's local data", () => {
   });
 });
 
-describe("forget local data (#113, AUTH-11 explicit discard)", () => {
-  it("AUTH-11 while disconnected, everything the last account left is deleted", async () => {
+describe("forget local data (#113, AUTH-11a)", () => {
+  it("#113 adopting a session and invalidating one start a new account epoch", async () => {
+    const { auth, epoch } = setup();
+    await auth.connect("token-alice");
+    expect(epoch.current()).toBe(1);
+    await auth.sessionRejected();
+    expect(epoch.current()).toBe(2);
+  });
+
+  it("AUTH-11a while disconnected, everything the last account left is deleted", async () => {
     const { auth, ld, storage } = setup({
       pending: 3,
       storage: { [DATA_OWNER_KEY]: "alice", [NEEDS_RECONNECT_KEY]: true },
@@ -94,7 +105,7 @@ describe("forget local data (#113, AUTH-11 explicit discard)", () => {
     expect((await auth.connect("token-bob")).ok).toBe(true);
   });
 
-  it("AUTH-12 refused while connected: Disconnect is the way", async () => {
+  it("AUTH-11a refused while connected: Disconnect is the way", async () => {
     const { auth, fb, ld } = setup({ pending: 3 });
     fb.setCurrent(session("alice"));
     expect(await auth.forgetLocalData()).toEqual({ ok: false, code: "CONNECTED" });

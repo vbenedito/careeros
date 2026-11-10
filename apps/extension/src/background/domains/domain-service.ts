@@ -4,6 +4,7 @@
  * the cache changes only after the server accepted them (no offline edits in v0).
  */
 import { isValidDomain, parseDomainInput } from "@careeros/shared";
+import type { AccountEpoch } from "../account-epoch";
 import type { KeyValueArea } from "../auth/storage";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 
@@ -33,6 +34,8 @@ export function createDomainService(deps: {
   /** AUTH-11: the server rejected the session. */
   sessionRejected: () => Promise<void>;
   now: () => number;
+  /** #113: a list fetched before a change of account is not cached. */
+  epoch?: AccountEpoch;
 }) {
   const { api, storage } = deps;
 
@@ -53,7 +56,10 @@ export function createDomainService(deps: {
   async function refreshCache(): Promise<DomainsResult> {
     // #113: validate the server's list like any external input (a bad row such as "com" would
     // match every .com site in the popup).
+    const started = deps.epoch?.current();
     const domains = [...(await api.list())].filter(isValidDomain).sort();
+    if (deps.epoch && deps.epoch.current() !== started)
+      return { ok: false, error: "NOT_CONNECTED" };
     await storage.set({ [DOMAINS_CACHE_KEY]: { domains, fetchedAt: deps.now() } });
     return { ok: true, domains };
   }

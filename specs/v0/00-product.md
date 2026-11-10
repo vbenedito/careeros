@@ -51,7 +51,7 @@ See [`docs/roadmap.md`](../../docs/roadmap.md) for candidate future iterations.
 | **Eligible tab** | The active tab of the focused Chrome window whose host matches a tracked domain (TRK-03). |
 | **Interval** | A contiguous period of tracked time on one tracked domain on one device. Immutable once closed. The unit of storage and sync. |
 | **Session (UI)** | In the popup, the current uninterrupted run of intervals on the current domain. A display concept only. |
-| **Device** | One Chrome profile with the extension installed, identified by a random `device_id`. |
+| **Device** | One Chrome profile with the extension installed, identified by a random `device_id` (new one whenever the extension's local data is cleared, AUTH-11a). |
 
 ## 7. Success criteria for v0
 

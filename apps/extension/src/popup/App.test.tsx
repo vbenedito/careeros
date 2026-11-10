@@ -251,10 +251,40 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
       expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep" })),
     );
     expect(data.calls).toEqual([]);
+    // Escape and Keep close without deleting; focus returns to the opener.
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Forget local data" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Forget local data" }));
+    await screen.findByRole("alertdialog", { name: "Forget local data?" });
     fireEvent.click(
       screen.getAllByRole("button", { name: "Forget local data" }).at(-1) as HTMLElement,
     );
     await waitFor(() => expect(data.calls).toEqual(["forget"]));
+    // The section is about to disappear: focus goes to Connect account and the result is announced.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Connect account" })),
+    );
+    expect(screen.getByRole("status").textContent).toBe("Local data deleted.");
+  });
+
+  it("AUTH-11a refused because an account connected meanwhile: says so", async () => {
+    const data = fixture({
+      auth: { connected: false, email: null },
+      counts: { pending: 1, quarantined: 0 },
+    });
+    data.forgetLocalData = async () => ({ ok: false, code: "CONNECTED" });
+    await openSettings(data);
+    fireEvent.click(screen.getByRole("button", { name: "Forget local data" }));
+    await screen.findByRole("alertdialog");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Forget local data" }).at(-1) as HTMLElement,
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("Use Disconnect instead");
   });
 
   it("AUTH-11a nothing left on this computer: no Forget local data section", async () => {
@@ -263,6 +293,7 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
       engine: INITIAL_ENGINE_STATE,
       todayIntervals: [],
       trackedDomains: null,
+      sync: INITIAL_SYNC_STATE,
       counts: { pending: 0, quarantined: 0 },
     });
     await openSettings(data);

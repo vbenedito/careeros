@@ -2,6 +2,7 @@ import type { Interval } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
 import { SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
+import { createAccountEpoch } from "../account-epoch";
 import { OUTBOX_KEY, QUARANTINE_KEY } from "../tracking/keys";
 import { createOutbox } from "../tracking/outbox";
 import { classify } from "./supabase-ingest";
@@ -48,6 +49,57 @@ function setup(
   return { sync, storage, clock, batches, state, rejected: () => rejected };
 }
 const token = async () => "token";
+
+describe("sync cycle across a change of account (#113)", () => {
+  function epochSetup(ingest: () => Promise<IngestResult>) {
+    const pending = [interval(), interval()];
+    const storage = fakeStorage({ [OUTBOX_KEY]: pending });
+    const epoch = createAccountEpoch();
+    const outbox = createOutbox({
+      area: storage,
+      exclusive: (t) => t(),
+      now: () => NOW,
+      startOfLocalDay: (t) => t - (t % 86_400_000),
+    });
+    const sync = createSyncService({
+      outbox,
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => epoch.bump(),
+      ingest,
+      epoch,
+    });
+    return { sync, storage, epoch, pending };
+  }
+
+  it("#113 local data cleared while waiting for a token: the old sync status is not written back", async () => {
+    const s = epochSetup(async () => ({ ok: true, confirmedIds: [] }));
+    const outcome = await s.sync.run(async () => {
+      s.epoch.bump();
+      s.storage.data.clear(); // what Forget local data does meanwhile
+      return null;
+    });
+    expect(outcome).toBe("not-connected");
+    expect(s.storage.data.has(SYNC_STATE_KEY)).toBe(false);
+  });
+
+  it("#113 cleared while a batch was in flight: nothing is settled or quarantined", async () => {
+    const s = epochSetup(async () => {
+      s.epoch.bump();
+      s.storage.data.clear();
+      return { ok: true, confirmedIds: [] };
+    });
+    expect(await s.sync.run(token)).toBe("not-connected");
+    expect([...s.storage.data.keys()]).toEqual([]);
+  });
+
+  it("SYNC-06 AUTH-11 a rejected session still records not-connected before the epoch moves", async () => {
+    const s = epochSetup(async () => ({ ok: false, kind: "auth" }));
+    expect(await s.sync.run(token)).toBe("not-connected");
+    expect((s.storage.data.get(SYNC_STATE_KEY) as SyncState).lastOutcome).toBe("not-connected");
+    expect(s.storage.data.get(OUTBOX_KEY)).toEqual(s.pending);
+  });
+});
 
 describe("sync cycle (SYNC-02..06)", () => {
   it("SYNC-03 SYNC-04 uploads in batches of ≤ 200 until the outbox is empty", async () => {

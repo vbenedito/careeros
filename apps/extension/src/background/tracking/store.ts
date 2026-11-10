@@ -10,6 +10,7 @@ import { DomainSchema, type Interval, IntervalSchema } from "@careeros/shared";
 import { z } from "zod";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../../engine/engine";
 import { SYNC_STATE_KEY } from "../../lib/sync-state";
+import type { AccountEpoch } from "../account-epoch";
 import type { KeyValueArea } from "../auth/storage";
 import {
   DOMAINS_CACHE_KEY,
@@ -56,7 +57,7 @@ export function parseOutbox(value: unknown): Interval[] {
   });
 }
 
-export function createTrackingStore(area: KeyValueArea) {
+export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
   return {
     async load(): Promise<{ state: EngineState; outbox: Interval[] }> {
       const stored = await area.get([ENGINE_STATE_KEY, OUTBOX_KEY]);
@@ -101,6 +102,7 @@ export function createTrackingStore(area: KeyValueArea) {
      * The per-device switch stays.
      */
     async clear(): Promise<void> {
+      epoch?.bump();
       await area.remove([
         ENGINE_STATE_KEY,
         OUTBOX_KEY,

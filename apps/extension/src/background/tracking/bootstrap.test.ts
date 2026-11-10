@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { EngineEvent } from "../../engine/engine";
+import { SYNC_STATE_KEY } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
+import { createAccountEpoch } from "../account-epoch";
 import { SESSION_STORAGE_KEY } from "../auth/storage";
 import { createStorageChangeHandler, createTrackingLocalData, startTracking } from "./bootstrap";
 import { DOMAINS_CACHE_KEY, ENGINE_STATE_KEY, OUTBOX_KEY, TRACKING_ENABLED_KEY } from "./keys";
@@ -139,13 +141,32 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       [OUTBOX_KEY]: [interval],
       [ENGINE_STATE_KEY]: {},
       [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com"] },
+      [SYNC_STATE_KEY]: { failures: 2, notBefore: 1, lastOutcome: "offline" },
     });
-    const store = createTrackingStore(storage);
+    const epoch = createAccountEpoch();
+    const store = createTrackingStore(storage, epoch);
+    const order: string[] = [];
+    let inQueue = false;
+    rec.tracker.exclusive = async <T>(task: () => Promise<T>) => {
+      inQueue = true;
+      try {
+        return await task();
+      } finally {
+        inQueue = false;
+      }
+    };
     await createTrackingLocalData({
       tracker: rec.tracker,
       store,
       isConnected: async () => false,
+      forgetDevice: async () => {
+        order.push(`forget-device:in-queue=${inQueue}`);
+      },
     }).clear();
+    // #113: a new device id and no sync status of the previous account; in-flight work is stale.
+    expect(order).toEqual(["forget-device:in-queue=true"]);
+    expect(storage.data.has(SYNC_STATE_KEY)).toBe(false);
+    expect(epoch.current()).toBe(1);
     expect(storage.data.has(OUTBOX_KEY)).toBe(false);
     expect(storage.data.has(ENGINE_STATE_KEY)).toBe(false);
     expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false); // the list belongs to the user

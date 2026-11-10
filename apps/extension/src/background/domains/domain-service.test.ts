@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fakeStorage } from "../../test/fakes";
+import { createAccountEpoch } from "../account-epoch";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createDomainService, type DomainsApi, DomainsApiError } from "./domain-service";
 
@@ -43,6 +44,34 @@ function setup(options: { connected?: boolean; server?: string[] } = {}) {
 }
 
 describe("tracked-domain sync (SYNC-09..11)", () => {
+  it("#113 invalid server rows are dropped before caching", async () => {
+    const s = setup({ server: ["leetcode.com", "com", "www.neetcode.io", "LeetCode.org"] });
+    expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
+    expect(s.cache()).toEqual({ domains: ["leetcode.com"], fetchedAt: 1000 });
+  });
+
+  it("#113 a list fetched across a change of account is not cached", async () => {
+    const storage = fakeStorage();
+    const epoch = createAccountEpoch();
+    const service = createDomainService({
+      api: {
+        list: async () => {
+          epoch.bump(); // e.g. the session was invalidated and local data forgotten meanwhile
+          return ["leetcode.com"];
+        },
+        insert: async () => {},
+        delete: async () => {},
+      },
+      storage,
+      isConnected: async () => true,
+      sessionRejected: async () => {},
+      now: () => 1000,
+      epoch,
+    });
+    expect(await service.refresh()).toEqual({ ok: false, error: "NOT_CONNECTED" });
+    expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false);
+  });
+
   it("SYNC-09 refresh replaces the cache with the server list (sorted)", async () => {
     const s = setup({ server: ["neetcode.io", "leetcode.com"] });
     expect(await s.service.refresh()).toEqual({

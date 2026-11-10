@@ -4,13 +4,15 @@ import { errorMessage } from "../messages";
 import { Button } from "../ui";
 
 /**
- * AUTH-11 explicit discard (#113), shown only while no account is connected and data from the
+ * AUTH-11a (#113), shown only while no account is connected and data from the
  * last account is still on this computer (e.g. the account was deleted, signed out everywhere,
  * or someone else used this Chrome profile). Deleting needs a confirmation (EXT-UI-09 focus).
  */
 export function LocalDataSetting(props: {
   pending: number;
   onForget: () => Promise<PopupForgetResult>;
+  /** Called after the data is gone: this section is about to disappear, so the parent moves focus. */
+  onForgotten: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,12 @@ export function LocalDataSetting(props: {
     setError(null);
     const result = await props.onForget();
     setBusy(false);
-    if (result.ok) return setConfirming(false);
+    if (result.ok) {
+      wasConfirming.current = false; // the parent takes focus, not the (unmounting) button
+      setConfirming(false);
+      props.onForgotten();
+      return;
+    }
     setError(errorMessage(result.code));
   }
 
@@ -52,7 +59,7 @@ export function LocalDataSetting(props: {
           aria-labelledby="forget-heading"
           aria-describedby="forget-text"
           onKeyDown={(e) => {
-            if (e.key === "Escape") setConfirming(false);
+            if (e.key === "Escape" && !busy) setConfirming(false);
           }}
           className="flex w-full flex-col gap-2 rounded-md border border-border p-3"
         >
@@ -67,12 +74,20 @@ export function LocalDataSetting(props: {
             <Button
               ref={cancelRef}
               variant="ghost"
-              disabled={busy}
-              onClick={() => setConfirming(false)}
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) setConfirming(false);
+              }}
             >
               Keep
             </Button>
-            <Button variant="destructive" disabled={busy} onClick={() => void forget()}>
+            <Button
+              variant="destructive"
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) void forget();
+              }}
+            >
               Forget local data
             </Button>
           </div>

@@ -8,7 +8,11 @@ export const OUTBOX_KEY = "careeros.tracking.outbox";
 export const TRACKING_ENABLED_KEY = "careeros.settings.trackingEnabled";
 /** Cached tracked-domain list (SYNC-09; filled by domain sync, #19). Missing means not loaded. */
 export const DOMAINS_CACHE_KEY = "careeros.domains.cache";
-/** Stable random id of this browser profile's extension install (TRK-10 device_id). */
+/**
+ * Random id of this browser profile's extension install (TRK-10 device_id). Kept across
+ * restarts; replaced whenever local data is cleared (disconnect, account change, Forget local
+ * data — #113), so it never links two accounts' data.
+ */
 export const DEVICE_ID_KEY = "careeros.device.id";
 /** Intervals the server rejected (SYNC-05): kept, never retried, counted in the popup. */
 export const QUARANTINE_KEY = "careeros.tracking.quarantine";
