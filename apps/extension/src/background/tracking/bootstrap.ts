@@ -65,6 +65,8 @@ export function createTrackingLocalData(deps: {
   isConnected: () => Promise<boolean>;
   /** Final upload attempt with the given token provider (sync, #18). */
   upload?: (accessToken: () => Promise<string | null>) => Promise<unknown>;
+  /** #113: a new device id for the next account on this profile. */
+  forgetDevice?: () => Promise<void>;
 }): LocalData & { isConnected: () => Promise<boolean> } {
   const { tracker, store } = deps;
   /** Set by stopTracking: nothing (e.g. a start sequence) may report "connected" meanwhile. */
@@ -79,7 +81,10 @@ export function createTrackingLocalData(deps: {
     pendingCount: pending,
     async clear() {
       stopped = false;
-      await tracker.exclusive(() => store.clear());
+      await tracker.exclusive(async () => {
+        await store.clear();
+        await deps.forgetDevice?.();
+      });
       // The engine state is gone: replay the start sequence so settings are known again.
       await startTracking({ tracker, store, isConnected });
     },

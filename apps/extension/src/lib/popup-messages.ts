@@ -11,6 +11,7 @@ export const PopupRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("DOMAINS_REMOVE"), domain: z.string().min(1).max(253) }).strict(),
   z.object({ type: z.literal("TRACKING_SET"), enabled: z.boolean() }).strict(),
   z.object({ type: z.literal("DISCONNECT"), discardUnsynced: z.boolean() }).strict(),
+  z.object({ type: z.literal("FORGET_LOCAL_DATA") }).strict(),
 ]);
 
 export type PopupRequest = z.infer<typeof PopupRequestSchema>;
@@ -27,6 +28,9 @@ export type PopupDisconnectResult =
   | { ok: true }
   | { ok: false; code: "UNSYNCED_DATA"; pending: number }
   | { ok: false; code: "FAILED" };
+
+/** Reply to FORGET_LOCAL_DATA (#113): refused while an account is connected. */
+export type PopupForgetResult = { ok: true } | { ok: false; code: "CONNECTED" | "FAILED" };
 
 /** Name of the port the popup keeps open while shown (the worker treats Chrome as focused). */
 export const POPUP_PORT = "careeros.popup";

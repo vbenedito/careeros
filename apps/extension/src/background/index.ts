@@ -41,10 +41,11 @@ const log = createLogger({ debug: IS_DEV_BUILD });
 // --- Tracking -------------------------------------------------------------------------------
 const store = createTrackingStore(storage);
 const port = createChromeBrowserPort(chrome);
+const engineEnv = createEngineEnv(storage);
 const tracker = createTracker({
   store,
   browser: port,
-  env: createEngineEnv(storage),
+  env: engineEnv,
   now: () => Date.now(),
   log,
   idleThresholdS: TRACKING.IDLE_THRESHOLD_S,
@@ -99,6 +100,7 @@ const localData = createTrackingLocalData({
   // AUTH-12 final sync: ignores backoff, never waits for a cycle that may need the auth lock.
   upload: (accessToken) =>
     sync?.run(accessToken, { force: true, ifIdle: true }) ?? Promise.resolve(),
+  forgetDevice: () => engineEnv.forget(),
 });
 const auth = backend
   ? createAuthService({ backend, storage, localData, now: () => Date.now() })
@@ -176,6 +178,14 @@ const handleInternal = domains
           const result = await auth.disconnect({ discardUnsynced });
           if (result.ok) return { ok: true };
           return { ok: false, code: "UNSYNCED_DATA", pending: (await outbox.counts()).pending };
+        } catch {
+          return { ok: false, code: "FAILED" };
+        }
+      },
+      forgetLocalData: async () => {
+        if (!auth) return { ok: false, code: "FAILED" };
+        try {
+          return await auth.forgetLocalData();
         } catch {
           return { ok: false, code: "FAILED" };
         }

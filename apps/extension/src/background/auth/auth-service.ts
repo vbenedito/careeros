@@ -2,6 +2,8 @@
  * The extension's own Supabase session (AUTH-07b, AUTH-10..12).
  * Pure application logic: Supabase and chrome.storage are injected, so every rule is unit-tested.
  */
+
+import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createMutex } from "./mutex";
 import { DATA_OWNER_KEY, type KeyValueArea, NEEDS_RECONNECT_KEY } from "./storage";
 
@@ -95,10 +97,15 @@ export function createAuthService(deps: {
     return typeof value === "string" ? value : null;
   }
 
-  /** AUTH-11: forget the session but keep unsynced intervals for a same-user reconnect. */
+  /**
+   * AUTH-11: forget the session but keep unsynced intervals for a same-user reconnect. The
+   * tracked-site list is not needed for that and belongs to the account (#113): it is dropped
+   * now and loaded again after reconnecting.
+   */
   async function markInvalid(): Promise<void> {
     await backend.clearLocalSession();
     await storage.set({ [NEEDS_RECONNECT_KEY]: true });
+    await storage.remove(DOMAINS_CACHE_KEY);
   }
 
   /** AUTH-10: the token logic itself; callers must hold the lock. */
@@ -201,6 +208,21 @@ export function createAuthService(deps: {
           // Refused or failed: keep tracking for the session that is still there.
           if (!done) await localData.resumeTracking();
         }
+      });
+    },
+
+    /**
+     * AUTH-11 explicit discard (#113): while NOT connected (account deleted, signed out
+     * everywhere, or someone else's data on a shared profile), the user can delete everything
+     * the last account left on this computer, including unsynced intervals. Afterwards any
+     * account can connect. Refused while connected: then Disconnect is the way (AUTH-12).
+     */
+    forgetLocalData() {
+      return exclusive(async (): Promise<{ ok: true } | { ok: false; code: "CONNECTED" }> => {
+        if (await backend.currentSession()) return { ok: false, code: "CONNECTED" };
+        await localData.clear();
+        await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);
+        return { ok: true };
       });
     },
   };

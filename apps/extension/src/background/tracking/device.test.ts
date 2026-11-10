@@ -18,4 +18,15 @@ describe("engine env (TRK-10 device_id)", () => {
     expect(env.deviceId).not.toBe("not-a-uuid");
     expect(env.nextLocalMidnight(1000)).toBeGreaterThan(1000);
   });
+
+  it("#113 forget(): the next account on this profile gets a new device id", async () => {
+    const area = fakeStorage();
+    let n = 0;
+    const env = createEngineEnv(area, () => `00000000-0000-4000-8000-00000000000${++n}`);
+    const first = (await env()).deviceId;
+    await env.forget();
+    expect(area.data.has(DEVICE_ID_KEY)).toBe(false);
+    const second = (await env()).deviceId;
+    expect(second).not.toBe(first);
+  });
 });

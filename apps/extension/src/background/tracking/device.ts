@@ -13,7 +13,7 @@ export function createEngineEnv(
   newId: () => string = () => crypto.randomUUID(),
 ) {
   let cached: EngineEnv | null = null;
-  return async function env(): Promise<EngineEnv> {
+  const env = async function env(): Promise<EngineEnv> {
     if (cached) return cached;
     const stored = (await area.get(DEVICE_ID_KEY))[DEVICE_ID_KEY];
     let deviceId = typeof stored === "string" && UUID.test(stored) ? stored : null;
@@ -24,4 +24,14 @@ export function createEngineEnv(
     cached = { deviceId, newId, nextLocalMidnight: localMidnightAfter };
     return cached;
   };
+  return Object.assign(env, {
+    /**
+     * Security audit #113: when the account's local data is cleared, the next account on this
+     * profile gets a new device id, so two accounts can never be linked through it.
+     */
+    async forget(): Promise<void> {
+      cached = null;
+      await area.remove(DEVICE_ID_KEY);
+    },
+  });
 }

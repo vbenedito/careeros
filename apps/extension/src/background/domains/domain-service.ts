@@ -3,7 +3,7 @@
  * cached copy (read by the tracking engine and the popup). Edits go to the server first and
  * the cache changes only after the server accepted them (no offline edits in v0).
  */
-import { parseDomainInput } from "@careeros/shared";
+import { isValidDomain, parseDomainInput } from "@careeros/shared";
 import type { KeyValueArea } from "../auth/storage";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 
@@ -51,7 +51,9 @@ export function createDomainService(deps: {
   }
 
   async function refreshCache(): Promise<DomainsResult> {
-    const domains = [...(await api.list())].sort();
+    // #113: validate the server's list like any external input (a bad row such as "com" would
+    // match every .com site in the popup).
+    const domains = [...(await api.list())].filter(isValidDomain).sort();
     await storage.set({ [DOMAINS_CACHE_KEY]: { domains, fetchedAt: deps.now() } });
     return { ok: true, domains };
   }

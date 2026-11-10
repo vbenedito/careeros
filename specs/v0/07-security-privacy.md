@@ -14,7 +14,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 | Extension session tokens | `chrome.storage.local` | Keep the extension connected |
 | Tracking enabled flag, engine state, outbox, today's intervals | `chrome.storage.local` | Operation & offline resilience |
 
-- **SEC-01** Nothing else is collected. Explicitly never: full URLs, paths, query strings, page titles, page content, keystrokes, form data, passwords, screenshots, or hosts of non-tracked sites. The extension has **no content scripts**. Incognito tabs are never tracked, even if the user allows the extension in incognito.
+- **SEC-01** Nothing else is collected. Explicitly never: full URLs, paths, query strings, page titles, page content, keystrokes, form data, passwords, screenshots, or hosts of non-tracked sites. The extension has **no content scripts**. The extension's stored session keeps only the user's id and **email** (shown in the popup and used to warn about a different account); the name, avatar and linked identities that come with an OAuth session are stripped before it is written (#113). Tracked-site lists received from the server are validated with the shared domain schema before they are cached or shown. Incognito tabs are never tracked, even if the user allows the extension in incognito.
 - **SEC-02** Hostnames of non-tracked tabs are evaluated in memory and discarded immediately; they are never persisted or logged.
 
 ## 2. Extension
@@ -36,7 +36,7 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 ## 4. Privacy & LGPD
 
 - **SEC-13** `/privacy` explains, in plain language (English; Portuguese version optional): the controller (product owner, contact email); what is collected (table above) and why; legal basis (LGPD art. 7 V — performance of the service the user signed up for); processors and **international transfer** (Supabase region chosen at setup, Vercel, Google/GitHub as identity providers); that data is never sold or shared for marketing; retention (until deletion; the project's encrypted weekly backups are kept 90 days (#31); platform logs per provider retention); data-subject rights (access via the dashboard, export and correction on request by email, deletion via DASH-14).
-- **SEC-14** Account deletion removes all application data from the live database immediately (DATA-12). Disconnecting the extension clears its local data after the unsynced-data confirmation in AUTH-12.
+- **SEC-14** Account deletion removes all application data from the live database immediately (DATA-12). Disconnecting the extension clears its local data after the unsynced-data confirmation in AUTH-12. When the extension is no longer connected (account deleted, signed out everywhere), **Forget local data** (AUTH-11a) clears what the last account left on that computer.
 - **SEC-15** No analytics/tracking scripts on the dashboard in v0.
 
 ## 5. Acceptance criteria
