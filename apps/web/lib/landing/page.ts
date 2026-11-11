@@ -112,7 +112,7 @@ h3{margin:0}
 #v-week:focus-visible~.chart label[for=v-week],#v-month:focus-visible~.chart label[for=v-month],#pause:focus-visible+.wrap label[for=pause]{outline:2px solid var(--primary);outline-offset:3px}
 #v-week:checked~.chart label[for=v-week],#v-month:checked~.chart label[for=v-month]{background:var(--sel);border-color:var(--primary)}
 .section{padding-top:128px;padding-bottom:128px;display:flex;flex-direction:column;gap:40px}
-.rules{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rules{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .rules div{padding:24px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
 .rules dt{font-size:32px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.rules dd{margin:0;font-size:15px;color:var(--muted)}
 .faq{max-width:760px;margin:0 auto;padding:0 24px 96px;display:flex;flex-direction:column;gap:16px}

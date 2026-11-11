@@ -40,8 +40,6 @@ export const RULES = [
   { v: "15 min", d: "a playing video keeps counting without input" },
   { v: "5 s", d: "shortest session saved; shorter blips are dropped" },
   { v: "50", d: "study sites per account, subdomains included" },
-  { v: "00:00", d: "sessions split at your local midnight" },
-  { v: "0", d: "full addresses, page titles or contents stored" },
 ] as const;
 
 export const FAQ = [
