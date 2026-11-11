@@ -17,6 +17,7 @@ describe("landing page (LAND)", () => {
     expect(html.match(/<h1\b/g)).toHaveLength(1);
     expect(html).toContain('<link rel="canonical" href="https://careeros.example/">');
     expect(html).toContain('<html lang="en">');
+    expect(html).toContain('<link rel="icon" href="/icon.svg" type="image/svg+xml">');
     expect(html.toLowerCase()).toContain("study time tracker");
   });
 
@@ -40,6 +41,7 @@ describe("landing page (LAND)", () => {
     expect(csp).toContain("script-src 'none'");
     expect(csp).toContain(`style-src '${LANDING_STYLE_HASH}'`);
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("font-src 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
     expect(buildLandingCsp(false)).not.toContain("upgrade-insecure-requests");
   });
@@ -52,6 +54,17 @@ describe("landing page (LAND)", () => {
       .update(styles[0] ?? "")
       .digest("base64")}`;
     expect(hash).toBe(LANDING_STYLE_HASH);
+  });
+
+  it("LAND-03 the engine log and the site belt show real rules, sample times only", async () => {
+    const { ENGINE_LOG } = await import("./content");
+    for (const l of ENGINE_LOG) expect(html).toContain(l.result);
+    expect(html).toContain("no input for 60 s");
+    // TRK-08: no saved interval is longer than MAX_INTERVAL_S (30 min).
+    const closed = ENGINE_LOG.find((l) => l.result.startsWith("session closed"));
+    expect(Number(/(\d+)m/.exec(closed?.result ?? "")?.[1])).toBeLessThanOrEqual(30);
+    expect(html).toContain('"started_at": "09:20:02", "ended_at": "09:46:10"');
+    expect(html).toContain("Examples. Any site you study on works; you choose.");
   });
 
   it("LAND-08 visitors can pause all motion", () => {

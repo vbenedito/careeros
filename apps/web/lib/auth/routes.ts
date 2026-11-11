@@ -3,10 +3,23 @@
  */
 
 /** Pages reachable without a session. Everything else requires one. */
-export const PUBLIC_PATHS = ["/sign-in", "/auth/callback", "/auth/sign-in", "/privacy"] as const;
+export const PUBLIC_PATHS = [
+  "/sign-in",
+  "/auth/callback",
+  "/auth/sign-in",
+  "/privacy",
+  // Self-hosted landing fonts (LAND-07).
+  "/fonts",
+] as const;
 
 /** Public by exact match only (LAND-01, LAND-07): the landing page and its search files. */
-export const PUBLIC_EXACT_PATHS = ["/", "/robots.txt", "/sitemap.xml", "/opengraph-image"] as const;
+export const PUBLIC_EXACT_PATHS = [
+  "/",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/opengraph-image",
+  "/icon.svg",
+] as const;
 
 /** Where signed-in visitors land (LAND-02). */
 export const DASHBOARD_PATH = "/dashboard";
