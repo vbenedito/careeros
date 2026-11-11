@@ -17,6 +17,7 @@ describe("landing page (LAND)", () => {
     expect(html.match(/<h1\b/g)).toHaveLength(1);
     expect(html).toContain('<link rel="canonical" href="https://careeros.example/">');
     expect(html).toContain('<html lang="en">');
+    expect(html).toContain('<link rel="icon" href="/icon.svg" type="image/svg+xml">');
     expect(html.toLowerCase()).toContain("study time tracker");
   });
 

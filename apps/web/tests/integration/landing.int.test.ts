@@ -43,6 +43,9 @@ describe("landing page (integration)", () => {
     const sitemap = await get("/sitemap.xml");
     expect(sitemap.status).toBe(200);
     expect(await sitemap.text()).toContain("/privacy</loc>");
+    const icon = await get("/icon.svg");
+    expect(icon.status).toBe(200);
+    expect(icon.headers.get("content-type")).toContain("image/svg+xml");
     const og = await get("/opengraph-image");
     expect(og.status).toBe(200);
     expect(og.headers.get("content-type")).toContain("image/png");

@@ -145,10 +145,10 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .gridbg{position:relative}.gridbg::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.4 0.03 265 / .55) 1px,transparent 1px);background-size:24px 24px;-webkit-mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 70%)}.gridbg>section{position:relative}
 .lights{display:flex;gap:6px;align-items:center;padding:0 10px 8px 4px}.lights i{width:10px;height:10px;border-radius:5px;background:var(--line2)}
 .demo{box-shadow:0 30px 80px -30px oklch(0.72 0.14 265 / .35)}
-.belt{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:18px 0;-webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent)}
+.belt{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:20px 0;-webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent)}
 .belt-track{display:flex;gap:40px;width:max-content;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:14px;color:var(--muted)}
 .belt-track span{white-space:nowrap}
-.beltnote{text-align:center;font-size:13px;color:var(--muted);margin:14px 0 0}
+.beltnote{text-align:center;font-size:13px;color:var(--muted);margin:0;padding:14px 24px 28px}
 .bento{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;padding-top:96px;padding-bottom:96px}
 .bento .card{flex:none}
 .bento .wide{grid-column:1/-1;display:flex;flex-direction:row;flex-wrap:wrap;gap:32px;align-items:center}
@@ -233,6 +233,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <meta name="description" content="${esc(DESCRIPTION)}">
 <link rel="canonical" href="${esc(site)}/">
 <meta name="theme-color" content="#16171c">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(TITLE)}">
 <meta property="og:description" content="${esc(DESCRIPTION)}">

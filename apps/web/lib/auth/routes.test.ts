@@ -9,7 +9,7 @@ describe("isPublicPath", () => {
     },
   );
 
-  it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image"])(
+  it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg"])(
     "LAND-01 LAND-07 %s is public (exact match only)",
     (p) => {
       expect(isPublicPath(p)).toBe(true);
