@@ -6,7 +6,7 @@ Status: **final**, for the product owner's Gate 4 approval. Period: 2026-11-04 �
 
 - **Dashboard (production):** https://careeros-taupe.vercel.app (Vercel, Supabase Cloud in São Paulo).
 - **Chrome extension:** GitHub Release [v0.1.1](https://github.com/vbenedito/careeros/releases/tag/v0.1.1), installed unpacked (ENV-05a). It is built from `main` at `b72774f` and includes the popup polish from #94/#95; v0.1.0 was the first production release.
-- **Code and docs:** this repository. README with the system-design flowchart, `docs/architecture.md`, ADRs, specs, design system, operations, security review.
+- **Code and docs:** this repository. README with the system-design flowchart, `docs/architecture.md`, ADRs, specs, design system, operations, security review and security audit.
 
 Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](../../specs/v0/00-product.md) §4):
 
@@ -30,7 +30,7 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 |---|---|---|
 | A new user goes from sign-up to their first tracked minutes on the dashboard without help, following on-screen guidance | ✅ | Product owner on production, 2026-11-08 (#31): sign-up → `/connect` → study → minutes on the dashboard |
 | Tracked time within **±2 %** of a manual stopwatch in the scripted test | ✅ | Passed in the product owner's stopwatch sessions on 2026-11-09; per-session figures were not recorded ([test report](v0-test-report.md) §2) |
-| No user can read or write another user's data | ✅ | pgTAP cross-user RLS tests (169 database tests), integration tests, independent security review: no High findings ([security review](../security-review-v0.md)) |
+| No user can read or write another user's data | ✅ | pgTAP cross-user RLS tests (212 database tests), integration tests, independent security review ([review](../security-review-v0.md)) and pre-Gate-4 security audit: no Critical findings, every finding fixed and production probed ([audit](../security-audit-v0.md)) |
 | No data beyond spec 07 is collected | ✅ | Manifest permission test (SEC-03), E2E storage check (no paths or untracked hosts), privacy page, security review |
 | CI green; every v0 issue closed or explicitly deferred with a reason | ✅ | CI green on `main`; issue table below |
 
@@ -76,6 +76,6 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 2. Chrome Web Store publication: new store-assigned extension ID, listing, permission justification, review.
 3. Landing page (#102): research, content, SEO and architecture plans and a design for approval before implementation.
 
-All manual checks of TEST §4 passed ([test report](v0-test-report.md)). Problems found after delivery are reported by the product owner as issues.
+All manual checks of TEST §4 passed ([test report](v0-test-report.md)). The security audit (#110) is complete and its fixes are merged and live ([audit](../security-audit-v0.md)). Problems found after delivery are reported by the product owner as issues.
 
 Per `AGENTS.md`, no new iteration starts until the product owner approves this report.
