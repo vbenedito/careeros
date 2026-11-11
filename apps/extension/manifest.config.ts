@@ -20,9 +20,10 @@ export const MANIFEST_KEYS: Record<BuildMode, { key: string; id: string }> = {
     key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtUJ+/11+IBazhHs8Z7zlF4p3PJEc1X8VOc5G3rhh1cBoHwz12fNgxhxJiW+ea5+Fj+n5YlNJXEXvCRd1tIOgc2a6p03Y6xlzEPvLhCJOFhkvjKdJJE9frgQ9wolmis0x/XCBbhvz7kg9uL9oRJK+e3kwez+E99eCJzuT1h2+AGQxoIkVnbN9fcxaVHgD/1zqEZCzl+KvpZ1kxSZEJJfM9pGy5q+R5W8jE9d/hds+i+/Kx2vwvyW7X+zP9Q/QutjMny+6ZYsBnU27JsYPuTpFha/ZtENSS/rxIZ2+aMxkLo3cyCA1HQkc6fw97MW8QONT2kmdkraEAajqNyO8guf4hQIDAQAB",
     id: "jfklbpedlpkginmdfckogdgaggmdmkbk",
   },
+  /** The Chrome Web Store item's public key (STORE-05): unpacked production builds share its ID. */
   production: {
-    key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu40eZ45nzjf/knB2oLPaKRrhU3JM9V/V1QS5PsVQiHc/Y0EsHE5Yc+4xLO5VzNKH2M0uZSnLpWTsuJWlXNf2p8Mj5erD4z8jk+RWlKtnDz5ZqITAsg05Ksa6KztgYFpdlq75iukd9TlMDfUsPLcgzvC/XBisOxcsSrdXbtqBv1TRw5FCbHBJb9iG3d0ykNikaTWh+uoh3BTnpskxAXo+V3DuYrPngksDueXGeGaHcoc2vrimwJ5QYVBg9/rO1bsmnIVIxdHL7fiGLU7E20wnbk5pQWfdgiTTPmXL4LlCSf586VKSOrEYrWk/1ZX04y2g22wNXjSuVVqOL6O49Bux9wIDAQAB",
-    id: "negamegjachlkaemamlfhaecippkncbl",
+    key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp7dvQG0vWwi9gaVTieF7dFyV/9zMUZ94VHcWW6VDxNwnUXzDpSFK8hR6Nei+oTHR/oFEaJ2Lbt1rF6Fpl9dB4FKnUbg7LEyYIqY8Q07G9kMa7fzEnvJEkcLzsrBnSVBLeIYWoita5lplt78M/qndXkNg0vJYhkTMCNfFgYLnJHwbzpTzjVmbacQMysk5OqVrZp5r8r0SVsyqr0sTP4CkmTf1jsfDYtJ1Q/MV3ZNrqsmND1FPhwToQLLREjgdCkPtdLxU09D29FAXH38pzB912hyFM5W74ReeBbSoOem3km2tzWuCWep0UrKbFqJbxWC9AgOHmlj8gC4QxF24FOKivQIDAQAB",
+    id: "pddbflgidjmnhidineoejneeipaicgek",
   },
 };
 
