@@ -37,7 +37,7 @@ Out of scope: Supabase, Vercel, Google and GitHub as platforms; the user's own d
 | Low | Anonymous-sign-in JWTs were refused only by the ingest RPC. | #116: restrictive policies on both tables |
 | Low | CSP allowed browser calls to Supabase; no COOP/CORP. | #119: `connect-src 'self'`; `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy: same-origin` |
 | Low | Server site list cached without validation; the extension stored the OAuth name, avatar and identities. | #118 (email kept by decision) |
-| Low | No `SECURITY.md`, no release-age delay for new packages, `.gitignore` gaps for key files. | #117: 7-day `minimumReleaseAge` (temporary exclude list removed in #120), Dependabot with a matching 7-day cooldown |
+| Low | No `SECURITY.md`, no release-age delay for new packages, `.gitignore` gaps for key files. | #117: 7-day `minimumReleaseAge` (temporary exclude list to be removed after 2026-11-13, #120), Dependabot with a matching 7-day cooldown |
 | Docs | ADR-0003 and AUTH-09 understated what a dashboard XSS could do with the extension handoff. | #118 |
 | Production | **The Email sign-in provider was enabled** in production, so anyone could sign up with an email and password, outside AUTH-01. Found by the probe. | Disabled by the product owner on 2026-11-10; the probe confirms `email: false` |
 
@@ -46,7 +46,7 @@ Out of scope: Supabase, Vercel, Google and GitHub as platforms; the user's own d
 The independent reviews of the PRs caught three problems in the first versions of the fixes. All were fixed before merge.
 
 - **Recent sign-in could be faked (#119).** The first version accepted any fresh `amr` entry. A stolen session can create one without signing in again, by enrolling its own MFA factor or by redeeming an extension-link token (an `otp` entry). Now only `oauth` entries count; unit and integration tests cover both routes.
-- **Unbounded memory from time-zone names (#116).** Replacing the costly time-zone lookup with "load the zone" let any name that parses as a POSIX spec (any name with a digit) stay in the database connection's cache for good, about 23 KB each. Now digits are allowed only in the real names that contain one (`Etc/GMT±N`, four legacy US zones). A test keeps every real zone name accepted, and a 50,000-name fuzz run left the cache at about 3 MB.
+- **Unbounded memory from time-zone names (#116).** Replacing the costly time-zone lookup with "load the zone" let any name that parses as a POSIX spec (any name with a digit) stay in the database connection's cache for good, about 23 KB each (measured by the #116 reviewer on a local Postgres 16). Now digits are allowed only in the real names that contain one (`Etc/GMT±N`, four legacy US zones). A test keeps every real zone name accepted, and the reviewer's 50,000-name fuzz run against the final rule left the cache at about 3 MB.
 - **Stale writes after a clear (#118).** A sync cycle or a site-list refresh in flight could write the previous account's sync status or sites back after Forget local data. They are now guarded by the account epoch.
 
 ## Evidence
