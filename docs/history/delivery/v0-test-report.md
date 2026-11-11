@@ -1,6 +1,6 @@
 # v0 test report
 
-Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **final** (2026-11-09).
+Spec: [`specs/v0/08-testing.md`](../../../specs/v0/08-testing.md) (TEST). Status: **final** (2026-11-09).
 
 ## 1. Automated tests
 

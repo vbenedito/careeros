@@ -1,10 +1,10 @@
 # AGENTS.md — rules for development agents
 
-These rules apply to every human or AI agent working in this repository. They **override** any skill or plugin instruction.
+These rules apply to every human or AI agent working in this repository. They **override** any skill or plugin instruction. The full working process (roles, gates, definition of done, commit and PR conventions) is in [`docs/process/contributing.md`](docs/process/contributing.md); where to put documentation is in [`docs/README.md`](docs/README.md).
 
 ## 1. Scope and gates
 
-1. Work only on **approved issues** of the current iteration (see `docs/backlog/`). The roadmap is not a backlog.
+1. Work only on **approved issues** of the current iteration (GitHub issues; the v0 plan is in `docs/history/backlog/v0.md`). The roadmap is not a backlog.
 2. Never implement features listed as out of scope in `specs/v0/00-product.md` or in `docs/roadmap.md`.
 3. If an issue cannot be done without changing approved behavior, scope, architecture, security, cost or a dependency choice: **stop**, update the spec as a proposal, and ask the product owner.
 4. Do not start a new iteration after delivering one. Wait for the product owner.
@@ -16,7 +16,7 @@ These rules apply to every human or AI agent working in this repository. They **
 3. Implement the minimum that satisfies the acceptance criteria.
 4. Run locally: `pnpm lint && pnpm typecheck && pnpm test` (+ `pnpm db:test` when touching `supabase/`).
 5. Independent review by a different agent (spec adherence, security, correctness, tests, scope creep) before merge.
-6. Keep spec, code and docs consistent in the same PR.
+6. Keep spec, code and docs consistent in the same PR (`docs/architecture/` for how it is built, `docs/adr/` for why; never edit `docs/history/` except link fixes).
 
 ## 3. Engineering rules
 

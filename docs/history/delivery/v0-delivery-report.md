@@ -8,9 +8,9 @@ Status: **final**, for the product owner's Gate 4 approval. Period: 2026-11-04 �
 
 - **Dashboard (production):** https://careeros-taupe.vercel.app (Vercel, Supabase Cloud in São Paulo).
 - **Chrome extension:** GitHub Release [v0.1.1](https://github.com/vbenedito/careeros/releases/tag/v0.1.1), installed unpacked (ENV-05a). It is built from `main` at `b72774f` and includes the popup polish from #94/#95; v0.1.0 was the first production release.
-- **Code and docs:** this repository. README with the system-design flowchart, `docs/architecture.md`, ADRs, specs, design system, operations, security review and security audit.
+- **Code and docs:** this repository. README with the system-design flowchart, `docs/architecture.md` (now `docs/architecture/overview.md`), ADRs, specs, design system, operations, security review and security audit.
 
-Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](../../specs/v0/00-product.md) §4):
+Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](../../../specs/v0/00-product.md) §4):
 
 | ID | Capability | Delivered |
 |---|---|---|
@@ -61,7 +61,7 @@ Scope delivered, against the approved product spec ([`specs/v0/00-product.md`](.
 
 - **Extension updates are manual** (unpacked install): users replace the folder and reload. The Chrome Web Store is the next step.
 - **Google sign-in branding is not verified:** Google's screen shows the Supabase project domain instead of CareerOS. A custom domain or brand verification removes it.
-- **Free tiers:** the Supabase project pauses after a week without activity; the extension keeps unsynced time for 30 days, and restoring takes a few minutes ([operations](../operations.md)). Vercel Hobby is non-commercial only.
+- **Free tiers:** the Supabase project pauses after a week without activity; the extension keeps unsynced time for 30 days, and restoring takes a few minutes ([operations](../../operations.md)). Vercel Hobby is non-commercial only.
 - **Extension status is per browser:** the dashboard knows only about the extension in the same browser (no device registry in v0).
 - **Time zones:** an interval that crosses the viewer's midnight counts on its start day when the device and the viewer are in different zones (DATA-10).
 

@@ -29,7 +29,7 @@ Self-service sign-up/sign-in with Google or GitHub on the dashboard, and a secur
 
 The extension gets its **own** Supabase session. Sharing the dashboard's refresh token is forbidden: Supabase rotates refresh tokens and treats reuse outside a short window as theft, revoking the whole session — two clients sharing one session would log each other out.
 
-Flow (validated by spike #10, see `docs/spikes/0003-auth-handoff.md`):
+Flow (validated by spike #10, see `docs/history/spikes/0003-auth-handoff.md`):
 
 ```
 User ── clicks "Connect extension" ──▶ Dashboard page (/connect)

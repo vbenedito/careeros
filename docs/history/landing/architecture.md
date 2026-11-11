@@ -1,8 +1,8 @@
 # Landing page — architecture proposal (#99)
 
-Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102 · ADR draft: [ADR-0009](../adr/0009-landing-route-and-rendering.md).
+Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102 · ADR draft: [ADR-0009](../../adr/0009-landing-route-and-rendering.md).
 
-> **As built (2026-11-11):** a static route handler at `/` with inline CSS allowed by hash, dark only, plus a CSS-only pause control. There is no prebuild step, proxy rewrite or `/landing/` folder: see [LAND-01..08](../../specs/landing/00-landing.md) and the ADR-0009 implementation note. The sections below record the original proposal.
+> **As built (2026-11-11):** a static route handler at `/` with inline CSS allowed by hash, dark only, plus a CSS-only pause control. There is no prebuild step, proxy rewrite or `/landing/` folder: see [LAND-01..08](../../../specs/landing/00-landing.md) and the ADR-0009 implementation note. The sections below record the original proposal.
 >
 > **As built, corrections to the proposal below (2026-11-11, #131):**
 > - The CSS is one inline `<style>` allowed by its SHA-256 hash (`style-src 'sha256-…'`), not a hashed CSS file; the full CSP is in LAND-06 (`lib/landing/csp.ts`). It has no `manifest-src`.

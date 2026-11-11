@@ -1,6 +1,6 @@
 # ADR-0009 — Landing page at `/`, pre-built static HTML with its own CSP
 
-Status: **Accepted** (tech lead, by delegation from the product owner) · Date: 2026-11-10 · Issue: #99 · Details: [`docs/landing/architecture.md`](../landing/architecture.md)
+Status: **Accepted** (tech lead, by delegation from the product owner) · Date: 2026-11-10 · Issue: #99 · Details: [`docs/history/landing/architecture.md`](../history/landing/architecture.md)
 
 ## Context
 A public landing page (#102) needs the root address for search and sharing, and should be as fast as possible. Today `/` is the dashboard, and every page is rendered per request because the CSP uses a per-request nonce (SEC-09). Next.js cannot keep a strict CSP on statically generated pages: its SRI option hashes script files only, while each page also carries inline scripts.

@@ -12,7 +12,7 @@ Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11
 - **Semrush:** connected, but the account has no API units, so it returned no data. Not needed for this plan.
 - **Also done here:**
   - a live look at what ranks for each candidate search (§1);
-  - a review of competitors' pages (`references.md`);
+  - a review of competitors' pages ([`references.md`](../history/landing/references.md));
   - keyword clustering by search intent;
   - on-page, technical and AI-search checklists.
 - **After launch:** Google Search Console and Bing Webmaster Tools (both free) show the real searches that bring visitors, and they drive the next copy changes. A `vercel.app` address can be verified now with a meta tag; the custom domain gets its own property when it arrives.
@@ -89,14 +89,14 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
   - `description` matching the meta description.
 - **No rich result is expected, and that's fine.** Google shows a software rich result only with real ratings or reviews (`aggregateRating` or `review`, per its [software app guidelines](https://developers.google.com/search/docs/appearance/structured-data/software-app)), and we have none: inventing them breaks Google's rules. Google also ended FAQ rich results for all sites in 2026 ([report](https://www.techwyse.com/news/ai-search/google-faq-rich-results-deprecated-2026)). The markup is still worth having: it states plainly what the product is, for search engines and AI tools. So the FAQ is marked up only as plain visible content, without `FAQPage`.
 - **Validation:** Schema.org's [Schema Markup Validator](https://validator.schema.org/), not Google's Rich Results Test (it would flag the missing ratings).
-- **CSP:** JSON-LD goes in `<script type="application/ld+json">`. HTML stops processing a script with a non-JavaScript type before the CSP check, so browsers neither run nor block it, even under the landing page's `script-src 'none'` (architecture §3). It needs no nonce or hash. An E2E check confirms zero CSP violations.
+- **CSP:** JSON-LD goes in `<script type="application/ld+json">`. HTML stops processing a script with a non-JavaScript type before the CSP check, so browsers neither run nor block it, even under the landing page's `script-src 'none'` ([architecture](../history/landing/architecture.md) §3). It needs no nonce or hash. An E2E check confirms zero CSP violations.
 
 ## 5. Technical
 
 | Item | Plan |
 |---|---|
 | Canonical | `<link rel="canonical">` built from `SITE_URL` (the existing server setting), so moving to the custom domain is a configuration change. Old `vercel.app` URLs then redirect with 308 |
-| `robots.txt` | Disallow only `/api` and `/auth`; link the sitemap. The `/landing/` assets stay crawlable (`/landing/index.html` itself redirects to `/`, architecture §3). App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
+| `robots.txt` | Disallow only `/api` and `/auth`; link the sitemap. The `/landing/` assets stay crawlable (`/landing/index.html` itself redirects to `/`, [architecture](../history/landing/architecture.md) §3). App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
 | `sitemap.xml` | `/` and `/privacy` only, built from `SITE_URL` |
 | App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots); signed-out crawlers are redirected to sign-in anyway |
 | Open Graph / Twitter | `og:title`, `og:description`, `og:url`, `og:type=website`, and a **1200×630 OG image** generated from the hero (built at build time, self-hosted); `twitter:card=summary_large_image` |

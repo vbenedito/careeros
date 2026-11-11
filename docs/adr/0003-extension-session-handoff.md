@@ -26,7 +26,7 @@ Spike exit criteria: token hash from `generateLink` yields a session through `ve
 
 ## Spike result (2026-11-05)
 
-Validated in [spike 0003](../spikes/0003-auth-handoff.md) on the real Supabase Auth server: the token yields an independent session, is single-use, expires per `otp_expiry`, sends no e-mail, and both sessions refresh and sign out independently. Running it with the **email provider disabled** keeps the handoff working and closes email sign-up and email login, so AUTH-01 holds without an auth hook. Option B is not needed.
+Validated in [spike 0003](../history/spikes/0003-auth-handoff.md) on the real Supabase Auth server: the token yields an independent session, is single-use, expires per `otp_expiry`, sends no e-mail, and both sessions refresh and sign out independently. Running it with the **email provider disabled** keeps the handoff working and closes email sign-up and email login, so AUTH-01 holds without an auth hook. Option B is not needed.
 
 ## Update 2026-11-11 (#131)
 The extension calls `verifyOtp({ token_hash, type: "magiclink" })` (`apps/extension/src/background/auth/supabase-backend.ts`); the `type` is required.

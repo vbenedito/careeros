@@ -2,7 +2,7 @@
 // through a single-use token, without opening email/password sign-up?
 //
 // Runs against a local Supabase stack (CI). Prints a JSON report and exits non-zero only on
-// unexpected errors; the findings themselves are evaluated in docs/spikes/0003-auth-handoff.md.
+// unexpected errors; the findings themselves are evaluated in docs/history/spikes/0003-auth-handoff.md.
 //
 // Env: SCENARIO, API_URL, PUBLISHABLE_KEY, SECRET_KEY, MAILPIT_URL, DB_CONTAINER, OTP_EXPIRY_S
 import { execFileSync } from "node:child_process";
