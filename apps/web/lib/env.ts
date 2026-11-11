@@ -46,3 +46,16 @@ export function privacyConfig() {
     dataRegion: value("DATA_REGION"),
   };
 }
+
+/**
+ * Origin for pages built at build time (landing, robots, sitemap: LAND-04/07), where SITE_URL
+ * may be absent (CI builds, preview deployments). Falls back to Vercel's production domain,
+ * then localhost. Never used for security decisions: those use siteUrl().
+ */
+export function buildSiteUrl(): string {
+  const configured = process.env.SITE_URL?.trim();
+  if (configured) return new URL(configured).origin;
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercel) return new URL(`https://${vercel}`).origin;
+  return "http://localhost:3000";
+}

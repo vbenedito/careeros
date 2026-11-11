@@ -29,7 +29,7 @@ describe("landing page (integration)", () => {
     const { header } = await dashboardSession(email);
     const res = await get("/?view=week&date=2026-11-02", header);
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe(
+    expect(new URL(res.headers.get("location") ?? "", DASHBOARD_URL).href).toBe(
       `${DASHBOARD_URL}/dashboard?view=week&date=2026-11-02`,
     );
   });

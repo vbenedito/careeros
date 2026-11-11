@@ -82,7 +82,7 @@ describe("dashboard auth (integration)", () => {
     expect(location.searchParams.get("code_challenge")).toBeTruthy();
     expect(location.searchParams.get("scopes")).toBe("user:email");
     expect(location.searchParams.get("redirect_to")).toBe(
-      `${DASHBOARD_URL}/auth/callback?next=%2F`,
+      `${DASHBOARD_URL}/auth/callback?next=%2Fdashboard`,
     );
   });
 

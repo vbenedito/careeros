@@ -16,3 +16,16 @@ describe("landing links (LAND-05)", () => {
     expect(extensionInstallUrl()).toContain("chromewebstore.google.com");
   });
 });
+
+describe("build-time origin (LAND-04, LAND-07)", () => {
+  it("LAND-07 SITE_URL first, then Vercel's production domain, then localhost", async () => {
+    const { buildSiteUrl } = await import("@/lib/env");
+    vi.stubEnv("SITE_URL", "https://careeros.example/x");
+    expect(buildSiteUrl()).toBe("https://careeros.example");
+    vi.stubEnv("SITE_URL", "");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "careeros-taupe.vercel.app");
+    expect(buildSiteUrl()).toBe("https://careeros-taupe.vercel.app");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "");
+    expect(buildSiteUrl()).toBe("http://localhost:3000");
+  });
+});
