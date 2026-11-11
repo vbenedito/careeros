@@ -43,6 +43,8 @@ describe("landing page (integration)", () => {
     const sitemap = await get("/sitemap.xml");
     expect(sitemap.status).toBe(200);
     expect(await sitemap.text()).toContain("/privacy</loc>");
+    const font = await get("/fonts/mona-sans-latin-wght.woff2");
+    expect(font.status).toBe(200);
     const icon = await get("/icon.svg");
     expect(icon.status).toBe(200);
     expect(icon.headers.get("content-type")).toContain("image/svg+xml");

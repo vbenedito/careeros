@@ -41,6 +41,7 @@ describe("landing page (LAND)", () => {
     expect(csp).toContain("script-src 'none'");
     expect(csp).toContain(`style-src '${LANDING_STYLE_HASH}'`);
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("font-src 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
     expect(buildLandingCsp(false)).not.toContain("upgrade-insecure-requests");
   });

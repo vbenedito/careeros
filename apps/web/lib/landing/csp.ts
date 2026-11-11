@@ -14,6 +14,7 @@ export function buildLandingCsp(upgradeInsecureRequests: boolean): string {
     `style-src '${LANDING_STYLE_HASH}'`,
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' data:",
+    "font-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",

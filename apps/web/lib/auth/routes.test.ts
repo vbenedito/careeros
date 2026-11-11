@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { isApiPath, isAuthProvider, isPublicPath, safeNextPath } from "./routes";
 
 describe("isPublicPath", () => {
-  it.each(["/sign-in", "/auth/callback", "/auth/sign-in", "/privacy"])(
-    "AUTH-03 %s is public",
-    (p) => {
-      expect(isPublicPath(p)).toBe(true);
-    },
-  );
+  it.each([
+    "/sign-in",
+    "/auth/callback",
+    "/auth/sign-in",
+    "/privacy",
+    "/fonts/mona-sans-latin-wght.woff2",
+  ])("AUTH-03 %s is public", (p) => {
+    expect(isPublicPath(p)).toBe(true);
+  });
 
   it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg"])(
     "LAND-01 LAND-07 %s is public (exact match only)",
