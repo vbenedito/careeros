@@ -116,7 +116,7 @@ The extension ID is pinned by a public key in the manifest, so it is the same on
 | Build | Name | Extension ID |
 |---|---|---|
 | development | CareerOS (dev) | `jfklbpedlpkginmdfckogdgaggmdmkbk` |
-| production | CareerOS | `negamegjachlkaemamlfhaecippkncbl` |
+| production | CareerOS | `pddbflgidjmnhidineoejneeipaicgek` |
 
 Both can be installed side by side. Permissions are exactly `alarms`, `idle`, `storage`, `tabs` (SEC-03, enforced by a test).
 
