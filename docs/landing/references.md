@@ -34,7 +34,7 @@ Links and our own notes only; no copied text or assets. Screenshots are not atta
 1. **Hero:**
    - An outcome headline (what you get, not what we are) and a one-line subline that says *automatic*, *only the sites you choose* and *private*.
    - **One primary CTA** ("Get started", i.e. sign in) and one quiet secondary ("Install the extension").
-   - The product visible on the first screen: the popup's live timer beside the weekly chart.
+   - The product visible on the first screen: the popup's current session beside the weekly chart.
 2. **Show it in context:** the popup over a study site (a neutral mock of a problem page, not a real site's UI), then the dashboard week view.
 3. **How it works in four steps:** install → choose your study sites → study as usual → see your week. Each step one line long.
 4. **Privacy as a feature section**, phrased as what we never collect (URLs, page content, other sites) plus the controls: choose sites, turn tracking off, delete your account.

@@ -85,7 +85,7 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
   - `name`, `applicationCategory`: `BrowserApplication` (a value Google supports), `operatingSystem`: "Chrome (desktop)";
   - `offers` with `price: 0` and `priceCurrency`;
   - `description` matching the meta description.
-- **No rich result is expected, and that's fine.** Google shows a software rich result only with real ratings or reviews (`aggregateRating` or `review`), and we have none: inventing them breaks Google's rules. Google also ended FAQ rich results for all sites in 2026 ([report](https://www.techwyse.com/news/ai-search/google-faq-rich-results-deprecated-2026); Google's [software app guidelines](https://developers.google.com/search/docs/appearance/structured-data/software-app)). The markup is still worth having: it states plainly what the product is, for search engines and AI tools. So the FAQ is marked up only as plain visible content, without `FAQPage`.
+- **No rich result is expected, and that's fine.** Google shows a software rich result only with real ratings or reviews (`aggregateRating` or `review`, per its [software app guidelines](https://developers.google.com/search/docs/appearance/structured-data/software-app)), and we have none: inventing them breaks Google's rules. Google also ended FAQ rich results for all sites in 2026 ([report](https://www.techwyse.com/news/ai-search/google-faq-rich-results-deprecated-2026)). The markup is still worth having: it states plainly what the product is, for search engines and AI tools. So the FAQ is marked up only as plain visible content, without `FAQPage`.
 - **Validation:** Schema.org's [Schema Markup Validator](https://validator.schema.org/), not Google's Rich Results Test (it would flag the missing ratings).
 - **CSP:** JSON-LD goes in `<script type="application/ld+json">`. HTML stops processing a script with a non-JavaScript type before the CSP check, so browsers neither run nor block it, even under the landing page's `script-src 'none'` (architecture §3). It needs no nonce or hash. An E2E check confirms zero CSP violations.
 
@@ -94,7 +94,7 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
 | Item | Plan |
 |---|---|
 | Canonical | `<link rel="canonical">` built from `SITE_URL` (the existing server setting), so moving to the custom domain is a configuration change. Old `vercel.app` URLs then redirect with 308 |
-| `robots.txt` | Disallow only `/api` and `/auth` (and the raw `/landing/` folder); link the sitemap. App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
+| `robots.txt` | Disallow only `/api` and `/auth`; link the sitemap. The `/landing/` assets stay crawlable (`/landing/index.html` itself redirects to `/`, architecture §3). App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
 | `sitemap.xml` | `/` and `/privacy` only, built from `SITE_URL` |
 | App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots and the `X-Robots-Tag` header); signed-out crawlers are redirected to sign-in anyway |
 | Open Graph / Twitter | `og:title`, `og:description`, `og:url`, `og:type=website`, and a **1200×630 OG image** generated from the hero (built at build time, self-hosted); `twitter:card=summary_large_image` |
@@ -132,7 +132,7 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
 `careeros-taupe.vercel.app` works, but a custom domain earns more trust and keeps all ranking signals when the hosting changes. The product owner will buy one later. Everything here builds URLs from `SITE_URL`, so the switch is:
 - add the domain in Vercel and update `SITE_URL`;
 - update the Supabase Site URL, its redirect allow-list and the OAuth redirect URLs;
-- **first ship an extension release built for the new origin.** One build setting, `VITE_DASHBOARD_ORIGIN`, drives `externally_connectable`, the extension's sender check and its "Open dashboard" link (AUTH-06). Unpacked builds don't auto-update, so old builds can no longer connect, check status or disconnect from the new domain; uploads keep working (they go straight to Supabase). Optionally, a transition build accepts both origins;
+- **first ship an extension release built for the new origin.** One build setting, `VITE_DASHBOARD_ORIGIN`, drives `externally_connectable`, the extension's sender check and its "Open dashboard" link (AUTH-06). Unpacked builds don't auto-update, so old builds can no longer connect, check status or disconnect from the new domain; uploads keep working (they go straight to Supabase). (A transition build accepting both origins would need an AUTH-06 amendment and a code change in the sender check, so it is not planned);
 - then add 308 redirects from the old address;
 - everyone signs in again once (cookies belong to the old host).
 

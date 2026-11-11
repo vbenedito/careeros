@@ -39,7 +39,7 @@ Supporting points:
 ### 4.2 Hero
 - **H1 (recommended, has "study time" for search):** See where your study time really goes
 - **Subline:** CareerOS is a study time tracker for interview prep. It counts your study hours automatically on the sites you choose, like LeetCode and NeetCode, and shows your week at a glance. No timers. Nothing else tracked.
-- **CTAs:** Get started — it's free · Install the extension
+- **CTAs:** Get started — it's free · Download the extension ("Install the extension" once the store listing exists)
 - **Under the CTAs (small):** Sign in with Google or GitHub. Chrome on desktop.
 - **Visual:** the popup ("leetcode.com · 32m", today on this computer) overlapping the dashboard's weekly bar chart. Sample data only; durations in the app's own format (`45m`, `1h 05m`, EXT-UI-02).
 
@@ -48,7 +48,7 @@ Alternatives for the H1, to choose with the design (#100):
 - "Your interview prep study time, measured automatically"
 
 ### 4.3 How it works (4 steps)
-1. **Install the extension.** Until the Chrome Web Store listing: download it from GitHub and load it in Chrome (developer mode, a one-minute step; updates are manual). After: one click from the store.
+1. **Install the extension.** Until the Chrome Web Store listing: download it from GitHub and load it in Chrome (developer mode, a short manual step; updates are manual). After: one click from the store.
 2. **Choose your study sites.** leetcode.com, neetcode.io, docs: any site you study on.
 3. **Study as usual.** Time counts only while you're active on one of them. Step away and it pauses.
 4. **See your week.** Daily totals and time per platform on the dashboard; today's time on this computer in the popup.
@@ -67,7 +67,7 @@ Alternatives for the H1, to choose with the design (#100):
 - **Heading:** Only what it needs. Nothing else.
 - **Text:** For your study, CareerOS records the name of a site you chose and when you started and stopped. That's all it keeps about your browsing.
 - **Two columns:**
-  - **Stored:** the study sites you choose · start and end times · a random device id · your account (email and sign-in provider). Sign-in and hosting providers keep their own security logs: see the privacy policy.
+  - **Stored:** the study sites you choose · start and end times · a random device id · your account (email and sign-in provider; Google or GitHub also send your name and avatar, which CareerOS doesn't use). Sign-in and hosting providers keep their own security logs: see the privacy policy.
   - **Never:** full web addresses or search terms · page titles or content · keystrokes or screenshots · sites you didn't choose · incognito windows · analytics or ad trackers.
 - **Controls (one line each):** Turn tracking off anytime. Remove a site and it stops counting. Delete your account and your data is removed right away (encrypted backups expire within 90 days).
 - **Link:** Read the privacy policy →

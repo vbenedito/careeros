@@ -53,7 +53,7 @@ Today every page is rendered per request, because the nonce-based CSP needs a fr
 - **JSON-LD:** `<script type="application/ld+json">` is a data block: HTML stops processing a script with a non-JavaScript type before the CSP check, so Chrome, Firefox and Safari neither run nor block it under `script-src 'none'`. An E2E test confirms **zero CSP violations**.
 - **CSP for the landing response:** `default-src 'none'; img-src 'self' data:; style-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; script-src 'none'` (no `font-src`: system fonts). The landing page has no forms: the CTAs are links to `/sign-in`. The static security headers (HSTS, COOP, CORP, nosniff, Referrer-Policy) stay on all responses.
 - **Caching:** long cache for the hashed CSS and images; the HTML revalidates on each deploy.
-- **Direct access:** `/landing/index.html` is also reachable directly; it is `noindex` and disallowed in robots.txt so only `/` is indexed.
+- **Direct access:** the proxy answers `/landing/index.html` with a 308 redirect to `/`, so only `/` is ever indexed. The `/landing/` folder is **not** blocked in robots.txt: its CSS and images must stay crawlable so Google renders `/` correctly. No `noindex` goes inside the file, since `/` serves it.
 - **Security review:** like every change, an independent review checks the rewrite, the signed-in redirect (it only chooses a destination, never grants access) and the separate CSP.
 
 ## 4. Configuration: links and addresses
