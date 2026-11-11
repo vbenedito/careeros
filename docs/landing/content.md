@@ -28,7 +28,7 @@ Supporting points:
 | CTA | Label | Target | Notes |
 |---|---|---|---|
 | Primary | **Get started — it's free** | `/sign-in` (Google or GitHub) | A signed-in visitor is taken straight to the dashboard |
-| Secondary | **Add to Chrome** | The Chrome Web Store listing (configurable link, architecture §4) | Quiet style; header and "how it works" step 1. The landing page goes live with the store link (product owner, 2026-11-10): it is built first, then the extension is published, then the link is set and the page launches |
+| Secondary | **Add to Chrome** | The Chrome Web Store listing (configurable link, [architecture](../history/landing/architecture.md) §4) | Quiet style; header and "how it works" step 1. The landing page goes live with the store link (product owner, 2026-11-10): it is built first, then the extension is published, then the link is set and the page launches |
 | Tertiary | **Read the privacy policy** | `/privacy` | In the privacy section and the footer |
 
 "Free" is true for v0 (there is no paid plan, product spec §5). If pricing ever changes, this label changes with it.

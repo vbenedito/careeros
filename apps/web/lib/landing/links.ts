@@ -1,5 +1,5 @@
 /**
- * Landing page links from configuration (LAND-05, docs/landing/architecture.md §4): the store
+ * Landing page links from configuration (LAND-05, docs/history/landing/architecture.md §4): the store
  * listing and the site origin change with configuration only.
  */
 export const REPOSITORY_URL = "https://github.com/vbenedito/careeros";

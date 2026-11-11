@@ -26,7 +26,7 @@ careeros/
 │  ├─ ci/integration.sh   builds and runs the integration and E2E suites (CI backend job)
 │  └─ ops/                database dump, restore and backup → restore test
 ├─ specs/                 SDD specifications
-├─ docs/                  architecture, ADRs, roadmap, backlog, guides
+├─ docs/                  index, architecture, ADRs, process, operations, history
 ├─ spikes/                time-boxed experiments (not part of the product or CI)
 ├─ .github/workflows/     CI
 ├─ AGENTS.md

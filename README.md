@@ -63,19 +63,30 @@ flowchart LR
   SW -- "③ own JWT · publishable key<br/>ingest_study_sessions · tracked_domains" --> API
 ```
 
-① sign-in · ② extension connection · ③ tracking → upload · ④ dashboard totals. 🔑 a user's own session (the dashboard and the extension never share one) · 🔒 the Supabase secret key, server-only. Legend, flows and extension internals: [`docs/architecture.md`](docs/architecture.md); decisions: [ADRs](docs/adr/).
+① sign-in · ② extension connection · ③ tracking → upload · ④ dashboard totals. 🔑 a user's own session (the dashboard and the extension never share one) · 🔒 the Supabase secret key, server-only. Legend, flows and detailed designs: [`docs/architecture/`](docs/architecture/overview.md); decisions: [ADRs](docs/adr/).
 
 ## How this project is built
 
 Specification-Driven Development with explicit approval gates:
 
 1. Understanding & direction — *approved*
-2. v0 specs & backlog — *approved* → [`specs/`](specs/), [`docs/backlog/v0.md`](docs/backlog/v0.md)
+2. v0 specs & backlog — *approved* → [`specs/`](specs/), [`docs/history/backlog/v0.md`](docs/history/backlog/v0.md)
 3. v0 implementation — *done*: one issue per branch, tests named after requirement IDs, an independent review before every merge
 4. v0 delivery — *approved*
 5. Further iterations only on request — so far the landing page ([LAND](specs/landing/00-landing.md), live) and the Chrome Web Store publication ([STORE](specs/store/00-chrome-web-store.md), submission in progress); [`docs/roadmap.md`](docs/roadmap.md) lists other candidates, none authorized
 
-Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md). UI conventions: [`docs/design-system.md`](docs/design-system.md). Running it in production: [`docs/operations.md`](docs/operations.md). Security: [review](docs/security-review-v0.md) and [audit](docs/security-audit-v0.md). Landing page: [spec](specs/landing/00-landing.md) and [plans](docs/landing/). Chrome Web Store: [spec](specs/store/00-chrome-web-store.md) and [listing](docs/chrome-web-store/listing.md). v0 delivery: [report](docs/delivery/v0-delivery-report.md) and [test report](docs/delivery/v0-test-report.md).
+## Documentation
+
+Start at [`docs/README.md`](docs/README.md): the index of every doc, its owner and status. Specs say **what**, architecture says **how**, ADRs say **why**, history is frozen.
+
+| Need | Go to |
+|---|---|
+| Requirements | [`specs/`](specs/README.md) (v0, [landing](specs/landing/00-landing.md), [Chrome Web Store](specs/store/00-chrome-web-store.md)) |
+| How it is built | [Overview](docs/architecture/overview.md) · [extension](docs/architecture/extension.md) · [web](docs/architecture/web.md) · [database](docs/architecture/database.md) · [glossary](docs/glossary.md) |
+| Why | [ADRs](docs/adr/README.md) |
+| How we work and release | [Contributing](docs/process/contributing.md) · [release](docs/process/release.md) · [`AGENTS.md`](AGENTS.md) |
+| Running it | [Operations](docs/operations.md) · [design system](docs/design-system.md) · [store listing](docs/chrome-web-store/listing.md) |
+| Past records | [History](docs/history/README.md): v0 backlog, spike, [security review](docs/history/security-review-v0.md) and [audit](docs/history/security-audit-v0.md), [delivery report](docs/history/delivery/v0-delivery-report.md) |
 
 ## Setup
 
@@ -141,7 +152,7 @@ apps/web         Next.js dashboard
 packages/shared  rules, schemas and constants used by both apps
 supabase         migrations, pgTAP tests, local config
 scripts          CI and operations scripts (integration run, backup/restore)
-specs/ docs/     specifications, ADRs, architecture, roadmap, backlog, operations
+specs/ docs/     specifications; docs index, architecture, ADRs, process, operations, history
 ```
 
 ### Toolchain versions

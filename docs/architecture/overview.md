@@ -1,12 +1,66 @@
-# Architecture (v0)
+# Architecture overview
 
-Status: **Approved** (Gate 2, 2026-11-04). Details live in [`specs/v0`](../specs/v0/) and [`docs/adr`](adr/).
+Type: living · Owner: tech lead · Last reviewed: 2026-11-11
 
-Updated 2026-11-11 (#131): landing page at `/`, dashboard at `/dashboard`, public routes, popup ↔ worker messages. A full rewrite is planned.
+The high-level design of CareerOS: what the parts are, how they talk and where they run. Requirements live in [`specs/`](../../specs/) (WHAT), decisions in [ADRs](../adr/) (WHY). The detailed designs are [extension](extension.md), [web](web.md) and [database](database.md).
+
+## System context (C4 level 1)
+
+```mermaid
+flowchart TB
+  user(["Learner<br/>studies on chosen sites in Chrome"])
+  careeros["CareerOS<br/>extension + dashboard + database"]
+  sites["Study sites<br/>(LeetCode, NeetCode, …)"]
+  oauth["Google / GitHub<br/>OAuth providers"]
+  store["Chrome Web Store<br/>distributes the extension"]
+
+  user -- "browses" --> sites
+  user -- "installs, signs in, views totals" --> careeros
+  careeros -. "reads the active tab's hostname only (SEC-01)" .-> sites
+  careeros -- "sign-in (AUTH-01)" --> oauth
+  store -- "installs and updates" --> careeros
+```
+
+CareerOS never reads page content from study sites. It sees only the hostname of the active tab and keeps it only when it is a tracked domain (SEC-01, SEC-02).
+
+## Containers (C4 level 2)
+
+```mermaid
+flowchart LR
+  subgraph Chrome["User's Chrome"]
+    SW["Service worker<br/>TypeScript, MV3"]
+    POP["Popup<br/>React"]
+    PAGE["Dashboard pages<br/>React (server-rendered)"]
+  end
+  subgraph Vercel
+    NEXT["Next.js app<br/>proxy · pages · route handlers · landing"]
+  end
+  subgraph Supabase
+    AUTH["Auth (GoTrue)"]
+    REST["PostgREST"]
+    PG[("Postgres<br/>RLS forced")]
+  end
+
+  POP -- "chrome.runtime messages" --> SW
+  PAGE -- "HTTPS + cookies" --> NEXT
+  PAGE -- "externally_connectable messages" --> SW
+  NEXT -- "user JWT" --> REST
+  NEXT -- "secret key: generateLink, deleteUser" --> AUTH
+  SW -- "own JWT: ingest RPC, tracked_domains" --> REST
+  SW -- "verifyOtp, refresh" --> AUTH
+  REST --> PG
+```
+
+| Container | Code | Detailed design |
+|---|---|---|
+| Extension (service worker + popup) | `apps/extension` | [extension.md](extension.md) |
+| Dashboard and landing page | `apps/web` | [web.md](web.md) |
+| Database, Auth, PostgREST | `supabase/` (migrations, tests) | [database.md](database.md) |
+| Shared rules and schemas | `packages/shared` | Used by both apps; see [Where code goes](#where-code-goes) |
 
 ## System design (as implemented)
 
-One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-08.
+One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-11.
 
 ```mermaid
 flowchart LR
@@ -79,63 +133,116 @@ flowchart LR
 
 Tracked sites are read and written by both apps through `tracked_domains` (RLS, 50-site trigger); the extension refreshes its cache on startup, each sync cycle, after connecting and when the popup opens (SYNC-09..11).
 
-## System context (Gate 2 overview)
+## Key flows
+
+### Connect handoff (dashboard → extension)
+
+The extension gets its own session; it never shares the dashboard's refresh token ([ADR-0003](../adr/0003-extension-session-handoff.md), AUTH-06..11).
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant P as /connect page
+  participant W as Service worker
+  participant R as POST /api/extension/link
+  participant A as Supabase Auth
+  P->>W: PING (protocolVersion 1)
+  W-->>P: versions, connected?
+  P->>R: same-origin POST with cookies
+  R->>A: getUser() (session still valid?)
+  R->>R: consume_extension_link_quota (5/min)
+  R->>A: admin.generateLink (secret key)
+  A-->>R: hashed token
+  R-->>P: { tokenHash }
+  P->>W: CONNECT { tokenHash }
+  W->>A: verifyOtp(token_hash)
+  A-->>W: new, independent session
+  W->>W: store session in chrome.storage.local
+  W-->>P: ok, email
+```
+
+Code: `apps/web/app/(app)/connect/connect-extension.tsx`, `apps/web/app/api/extension/link/route.ts`, `apps/extension/src/background/messaging/external.ts`, `apps/extension/src/background/auth/auth-service.ts`.
+
+### Tracking → outbox → sync → ingest
+
+```mermaid
+sequenceDiagram
+  participant C as Chrome events
+  participant T as Tracker (queue)
+  participant E as Engine (pure)
+  participant S as chrome.storage.local
+  participant Y as Sync service
+  participant D as ingest_study_sessions
+  C->>T: tab / window / idle / heartbeat
+  T->>E: step(state, event, now)
+  E-->>T: new state + closed intervals
+  T->>S: one write: state + outbox
+  Note over Y: alarm every 5 min, worker start, new session
+  Y->>S: oldest ≤ 200 outbox intervals
+  Y->>D: batch with the extension's JWT
+  D-->>Y: confirmed ids
+  Y->>S: confirmed → synced today, rest → quarantine
+```
+
+Rules: TRK-08..19, SYNC-01..08, [ADR-0004](../adr/0004-idempotent-ingest.md). Details: [extension.md](extension.md#sync-cycle).
+
+### Dashboard read
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant X as proxy.ts
+  participant S as Server Component /dashboard
+  participant DB as Postgres (RLS)
+  B->>X: GET /dashboard?view=week (cookies, tz cookie)
+  X->>X: refresh session, nonce CSP
+  X->>S: request + nonce
+  S->>DB: get_daily_totals, get_domain_totals (user JWT)
+  DB-->>S: rows for auth.uid() only
+  S-->>B: HTML (cards, bar chart, donut)
+```
+
+Rules: DASH-04..10, DASH-15, DATA-10/11. Details: [web.md](web.md#data-access).
+
+## Deployment view
 
 ```mermaid
 flowchart LR
-  subgraph Browser["User's Chrome"]
-    EXT["Extension (MV3)<br/>service worker + popup"]
-    DASH_UI["Dashboard (browser)"]
-  end
-  subgraph Vercel
-    NEXT["Next.js server<br/>RSC + route handlers"]
-  end
-  subgraph Supabase
-    AUTH["Auth (Google, GitHub)"]
-    PG[("Postgres + RLS<br/>tracked_domains<br/>study_sessions")]
-  end
-  DASH_UI -- cookies --> NEXT
-  NEXT -- user JWT --> PG
-  NEXT -- service role:<br/>generateLink, deleteUser --> AUTH
-  DASH_UI <-- externally_connectable<br/>PING/CONNECT/STATUS/DISCONNECT --> EXT
-  EXT -- own session JWT:<br/>ingest RPC, domains --> PG
-  EXT -- verifyOtp, refresh --> AUTH
-  DASH_UI -- OAuth PKCE --> AUTH
+  GH["GitHub<br/>repository + Actions"]
+  V["Vercel<br/>Next.js (Node 26)"]
+  SB["Supabase Cloud<br/>Postgres, Auth, PostgREST"]
+  CWS["Chrome Web Store"]
+  GR["GitHub Releases<br/>unpacked zips"]
+  U["User's Chrome"]
+
+  GH -- "build on push to main" --> V
+  GH -- "CI on PRs and main,<br/>weekly encrypted backup" --> GH
+  GH -. "migrations applied with the Supabase CLI" .-> SB
+  GH -. "release:store zip, manual upload" .-> CWS
+  GH -. "release zip, manual" .-> GR
+  CWS --> U
+  GR --> U
+  U --> V
+  U --> SB
+  V --> SB
 ```
 
-## Extension internals
+| Part | Where | How it gets there | Details |
+|---|---|---|---|
+| Dashboard and landing | Vercel (Hobby) | Built from `main` | [release](../process/release.md#dashboard), ENV-05b |
+| Database, Auth | Supabase (Free) | Migrations in `supabase/migrations` | [release](../process/release.md#database-migrations), [operations](../operations.md) |
+| Extension | Chrome Web Store; GitHub Releases for unpacked builds | `release:store` / `release` zips | [release](../process/release.md#extension), STORE-01..07, ENV-05a |
+| CI and backups | GitHub Actions (`ci.yml`, `backup.yml`) | On pull requests, pushes to `main`, weekly schedule | ENV-08, [operations §4](../operations.md#4-backups) |
 
-```mermaid
-flowchart TB
-  CE["Chrome events<br/>tabs · windows · idle · alarms"] --> AD["Adapters<br/>(background/)"]
-  AD -- engine events --> EN["Tracking engine<br/>pure (state, event, now) → (state, effects)"]
-  EN -- effects --> AD
-  AD --> ST[("chrome.storage.local<br/>state · outbox · quarantine · domains · session")]
-  SY["Sync worker<br/>alarm 5 min · backoff"] --> ST
-  SY -- ingest_study_sessions --> SB["Supabase"]
-  PU["Popup (React)"] -- read + subscribe --> ST
-  PU -- "chrome.runtime messages<br/>(sites, tracking, disconnect, forget)" --> AD
-```
+## Cross-cutting concerns
 
-Key properties:
-
-- **Engine is pure** (TRK-16): all rules testable with a fake clock; Chrome specifics isolated in adapters.
-- **Everything persisted** (TRK-12): the service worker can die at any time.
-- **Exactly-once sync** (ADR-0004): client UUIDs + `ON CONFLICT DO NOTHING` + server-confirmed removal from the outbox.
-- **Independent sessions** (ADR-0003): dashboard and extension never share refresh tokens.
-
-## Interval lifecycle
-
-```mermaid
-stateDiagram-v2
-  [*] --> Open: eligible + active
-  Open --> Closed: pause / domain change / 30 min / midnight / disabled / sign-out
-  Closed --> Outbox: duration ≥ 5 s
-  Closed --> [*]: duration < 5 s (discarded)
-  Outbox --> Synced: server confirms id
-  Outbox --> Quarantine: server rejects id
-  Synced --> [*]: pruned after today
-```
+| Concern | How | Where it is specified |
+|---|---|---|
+| Security | Deny-by-default grants and forced RLS; one write RPC; nonce CSP for the app and a script-free CSP for the landing page; same-origin checks on mutating routes; secret key only in Vercel server env | SEC-03..12, DATA-04..09, LAND-06; [web.md](web.md#security-policies), [database.md](database.md#grants-and-rls) |
+| Privacy | Only tracked hostnames, start/end times and a random device id leave the browser; no analytics | SEC-01, SEC-02, SEC-13..15; [`/privacy`](../../apps/web/app/privacy/page.tsx) |
+| Observability | Extension: structured logger, debug only in dev builds, last sync outcome shown in the popup. Dashboard: one JSON line per server error in Vercel runtime logs, no personal data | ENV-10, ENV-11, SEC-06 |
+| Backups | Weekly data-only dump, encrypted with age inside the job, kept 90 days; restore tested in every CI run | [operations §4](../operations.md#4-backups) |
+| Capacity and cost | Free tiers; limits and upgrade triggers | [operations §1–3](../operations.md) |
 
 ## Code organization & conventions
 
