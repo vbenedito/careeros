@@ -32,7 +32,7 @@ describe("dashboard shell (real Chromium)", () => {
       if (m.type() === "error" && /Content Security Policy|CSP/i.test(m.text()))
         cspErrors.push(m.text());
     });
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     await expect
       .poll(() => page.getByRole("heading", { name: "Dashboard", level: 1 }).count())
       .toBe(1);
@@ -62,7 +62,7 @@ describe("dashboard shell (real Chromium)", () => {
 
   it("#94 clickable controls show the pointer cursor (buttons, menu items, links)", async () => {
     const page = await context.newPage();
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     // Polled, not read once: the page refreshes itself once after setting the tz cookie
     // (DASH-07), and a replaced element reports an empty cursor.
     const cursor = (locator: ReturnType<typeof page.getByRole>) =>
@@ -83,7 +83,7 @@ describe("dashboard shell (real Chromium)", () => {
 
   it("DASH-11 a period without data shows the empty state with the Connect CTA (no extension here)", async () => {
     const page = await context.newPage();
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     const empty = page.getByTestId("empty-state");
     await expect.poll(() => empty.count()).toBe(1);
     await expect
@@ -102,11 +102,11 @@ describe("dashboard shell (real Chromium)", () => {
 
   it("AUTH-04 Sign out from the account menu (mouse click) ends the dashboard session", async () => {
     const page = await context.newPage();
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.waitForURL(/\/sign-in/);
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     expect(new URL(page.url()).pathname).toBe("/sign-in");
     await page.close();
   });

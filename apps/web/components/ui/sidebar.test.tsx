@@ -18,7 +18,7 @@ function renderShell(defaultOpen = true) {
   return render(
     <SidebarProvider defaultOpen={defaultOpen}>
       <Sidebar label="Main navigation">
-        <SidebarItem href="/" label="Dashboard" icon={<LayoutDashboard />} active />
+        <SidebarItem href="/dashboard" label="Dashboard" icon={<LayoutDashboard />} active />
       </Sidebar>
       <SidebarTrigger />
     </SidebarProvider>,

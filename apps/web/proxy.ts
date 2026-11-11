@@ -3,10 +3,12 @@
  *  1. creates a CSP nonce and the Content-Security-Policy header (SEC-09)
  *  2. refreshes the Supabase session cookies (AUTH-02)
  *  3. protects routes: pages redirect to /sign-in, API routes answer 401 (AUTH-03)
+ *  4. at `/`: signed in → /dashboard; signed out → the static landing page, which carries its
+ *     own CSP (LAND-01/02/06, ADR-0009)
  */
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { isApiPath, isPublicPath } from "@/lib/auth/routes";
+import { DASHBOARD_PATH, isApiPath, isPublicPath } from "@/lib/auth/routes";
 import { publicEnv, siteUrl } from "@/lib/env";
 import { buildCsp, createNonce } from "@/lib/security/headers";
 import { sessionCookieOptions } from "@/lib/supabase/cookies";
@@ -65,10 +67,11 @@ export async function proxy(request: NextRequest) {
     const safeMethod = request.method === "GET" || request.method === "HEAD";
     result = NextResponse.redirect(url, safeMethod ? 307 : 303);
   } else if (signedIn && pathname === "/sign-in") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    result = NextResponse.redirect(url);
+    result = NextResponse.redirect(new URL(DASHBOARD_PATH, siteUrl()));
+  } else if (signedIn && pathname === "/") {
+    // The verified session only picks the destination; /dashboard stays guarded. The query
+    // string is kept so old /?view=… links keep their period. Origin from config (SEC-08).
+    result = NextResponse.redirect(new URL(`${DASHBOARD_PATH}${search}`, siteUrl()));
   }
 
   // Keep refreshed/cleared auth cookies and their no-cache headers on whatever we return.
@@ -76,7 +79,10 @@ export async function proxy(request: NextRequest) {
     for (const cookie of response.cookies.getAll()) result.cookies.set(cookie);
   }
   for (const [key, value] of Object.entries(cacheHeaders)) result.headers.set(key, value);
-  result.headers.set("Content-Security-Policy", csp);
+  // The landing page sets its own, stricter CSP (no scripts at all).
+  if (!(result === response && pathname === "/")) {
+    result.headers.set("Content-Security-Policy", csp);
+  }
   return result;
 }
 

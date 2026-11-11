@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { activityBars } from "@/lib/dashboard/activity";
 import { loadDashboard } from "@/lib/dashboard/data";
-import { resolvePeriod } from "@/lib/dashboard/period";
+import { periodHref, resolvePeriod } from "@/lib/dashboard/period";
 import { platformSlices } from "@/lib/dashboard/platforms";
 import { summarize } from "@/lib/dashboard/summary";
 import { FALLBACK_TZ, resolveTimeZone, TZ_COOKIE, todayIn } from "@/lib/dashboard/time-zone";
@@ -69,7 +69,7 @@ export default async function DashboardPage({
           <Card role="alert">
             <CardTitle>Couldn't load your study time</CardTitle>
             <Button asChild variant="outline" size="sm" className="self-start">
-              <a href={`/?view=${period.view}&date=${period.anchor}`}>Try again</a>
+              <a href={periodHref(period.view, period.anchor)}>Try again</a>
             </Button>
           </Card>
         )}

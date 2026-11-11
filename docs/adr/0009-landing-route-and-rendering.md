@@ -20,3 +20,6 @@ Option 4, with option 2 as the fallback if the build step proves fragile.
 − A second rendering path (a build script) to maintain; the landing theme follows the system setting only.
 − The dashboard URL changes: links, redirects, specs and tests are updated; old links keep working through the redirect.
 − The signed-in redirect only picks a destination; authentication stays with the existing guard. Public assets (landing CSS and images, OG image, icons, web manifest, robots.txt, sitemap.xml, llms.txt) must be added to the proxy's public paths.
+
+## Implementation note (2026-11-11)
+Built as a static Next.js route handler at `/` returning the pre-rendered HTML with its CSS inline (allowed by hash), instead of a prebuild step and a proxy rewrite: same properties, one response, no `/landing/` files. Dark only, as in the approved design. See LAND-01..08.

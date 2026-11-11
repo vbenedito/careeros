@@ -9,12 +9,25 @@ describe("isPublicPath", () => {
     },
   );
 
-  it.each(["/", "/settings", "/connect", "/sign-inx", "/auth/sign-out", "/api/extension/link"])(
-    "AUTH-03 %s requires a session",
+  it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image"])(
+    "LAND-01 LAND-07 %s is public (exact match only)",
     (p) => {
-      expect(isPublicPath(p)).toBe(false);
+      expect(isPublicPath(p)).toBe(true);
     },
   );
+
+  it.each([
+    "/dashboard",
+    "/settings",
+    "/connect",
+    "/sign-inx",
+    "/auth/sign-out",
+    "/api/extension/link",
+    "/robots.txt/x",
+    "/opengraph-image/x",
+  ])("AUTH-03 %s requires a session", (p) => {
+    expect(isPublicPath(p)).toBe(false);
+  });
 });
 
 describe("isApiPath", () => {
@@ -51,8 +64,8 @@ describe("safeNextPath", () => {
     "/./../..//evil.example",
     "/\t/evil.example",
     "/\n/evil.example",
-  ])("AUTH-03 rejects %j and falls back to /", (raw) => {
-    expect(safeNextPath(raw)).toBe("/");
+  ])("AUTH-03 LAND-02 rejects %j and falls back to /dashboard", (raw) => {
+    expect(safeNextPath(raw)).toBe("/dashboard");
   });
 });
 

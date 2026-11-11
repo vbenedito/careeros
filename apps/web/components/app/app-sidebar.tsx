@@ -26,10 +26,10 @@ export function AppSidebar({ email }: { email: string }) {
       <nav aria-label="Pages" className="flex-1">
         <SidebarSection>
           <SidebarItem
-            href="/"
+            href="/dashboard"
             label="Dashboard"
             icon={<LayoutDashboard />}
-            active={pathname === "/"}
+            active={pathname === "/dashboard"}
           />
         </SidebarSection>
       </nav>

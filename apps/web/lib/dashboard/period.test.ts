@@ -72,6 +72,6 @@ describe("dashboard period (DASH-04, DASH-05)", () => {
   });
 
   it("DASH-05 periods are addressed by URL", () => {
-    expect(periodHref("month", "2026-10-01")).toBe("/?view=month&date=2026-10-01");
+    expect(periodHref("month", "2026-10-01")).toBe("/dashboard?view=month&date=2026-10-01");
   });
 });

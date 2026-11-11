@@ -34,7 +34,11 @@ describe("dashboard data (integration)", () => {
     addSession(id, "2026-10-27T15:00:00Z", 30); // Tue in the week of Oct 26
     addSession(id, "2026-10-28T15:00:00Z", 15);
     addSession(id, "2026-11-03T15:00:00Z", 20); // next week: not included
-    const { status, html } = await page("/?view=week&date=2026-10-28", cookie, "America/Sao_Paulo");
+    const { status, html } = await page(
+      "/dashboard?view=week&date=2026-10-28",
+      cookie,
+      "America/Sao_Paulo",
+    );
     expect(status).toBe(200);
     expect(text(html, "period-label")).toBe("Oct 26 – Nov 1, 2026");
     expect(text(html, "card-period-value")).toBe("45m");
@@ -44,8 +48,12 @@ describe("dashboard data (integration)", () => {
     const { id, cookie } = await seededUser();
     // 01:30 UTC on Mon Nov 2 = 22:30 on Sun Nov 1 in São Paulo (previous week there).
     addSession(id, "2026-11-02T01:30:00Z", 10);
-    const inUtc = await page("/?view=week&date=2026-11-02", cookie, "UTC");
-    const inSaoPaulo = await page("/?view=week&date=2026-11-02", cookie, "America/Sao_Paulo");
+    const inUtc = await page("/dashboard?view=week&date=2026-11-02", cookie, "UTC");
+    const inSaoPaulo = await page(
+      "/dashboard?view=week&date=2026-11-02",
+      cookie,
+      "America/Sao_Paulo",
+    );
     expect(text(inUtc.html, "card-period-value")).toBe("10m");
     expect(text(inSaoPaulo.html, "card-period-value")).toBe("0m");
   });
@@ -61,7 +69,11 @@ describe("dashboard data (integration)", () => {
     const { id, cookie } = await seededUser();
     addSession(id, "2026-10-27T15:00:00Z", 30);
     // Intl accepts any letter case; pg_timezone_names compares exactly.
-    const { status, html } = await page("/?view=week&date=2026-10-28", cookie, "america/sao_paulo");
+    const { status, html } = await page(
+      "/dashboard?view=week&date=2026-10-28",
+      cookie,
+      "america/sao_paulo",
+    );
     expect(status).toBe(200);
     expect(text(html, "card-period-value")).toBe("30m");
   });
@@ -73,7 +85,7 @@ describe("dashboard data (integration)", () => {
     addSession(id, new Date(Math.max(midnightUtc, now - 20 * 60_000)).toISOString(), 12); // today (UTC)
     addSession(id, "2026-10-27T15:00:00Z", 30, "neetcode.io");
     addSession(id, "2026-10-28T15:00:00Z", 10, "leetcode.com");
-    const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
+    const { html } = await page("/dashboard?view=week&date=2026-10-28", cookie, "UTC");
     expect(text(html, "card-today-value")).toBe("12m");
     expect(text(html, "card-period-value")).toBe("40m");
     expect(text(html, "card-top-value")).toBe("30m");
@@ -86,7 +98,7 @@ describe("dashboard data (integration)", () => {
 
   it("DASH-06 top platform is — when the period has no data", async () => {
     const { cookie } = await seededUser();
-    const { html } = await page("/?view=week&date=2026-10-28", cookie, "UTC");
+    const { html } = await page("/dashboard?view=week&date=2026-10-28", cookie, "UTC");
     expect(text(html, "card-top-value")).toBe("—");
     // DASH-11: no charts, the empty state instead (its Connect CTA is checked in real Chromium).
     expect(html).toContain('data-testid="empty-state"');
@@ -97,7 +109,7 @@ describe("dashboard data (integration)", () => {
     const { id, cookie } = await seededUser();
     addSession(id, "2026-10-01T12:00:00Z", 25);
     addSession(id, "2026-10-31T12:00:00Z", 5);
-    const { html } = await page("/?view=month&date=2026-10-15", cookie, "UTC");
+    const { html } = await page("/dashboard?view=month&date=2026-10-15", cookie, "UTC");
     expect(text(html, "period-label")).toBe("Oct 2026");
     expect(text(html, "card-period-value")).toBe("30m");
   });

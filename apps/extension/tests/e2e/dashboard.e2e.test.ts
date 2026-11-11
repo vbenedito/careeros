@@ -141,7 +141,7 @@ describe("dashboard journey (E2E)", () => {
                 + (select count(*) from public.study_sessions where user_id = '${userId}')`),
     ).toBe("0");
     // The session is gone: the dashboard sends the browser back to sign-in.
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     expect(new URL(page.url()).pathname).toBe("/sign-in");
     await page.close();
   });
@@ -181,7 +181,7 @@ describe("dashboard journey (E2E)", () => {
     ).toBe("true");
     // The clicked button still submits its name/value (it is aria-disabled, never disabled).
     expect(await page.evaluate(() => (window as unknown as { sent: unknown }).sent)).toEqual({
-      next: "/",
+      next: "/dashboard",
       provider: "github",
     });
 

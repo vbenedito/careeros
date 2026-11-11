@@ -146,7 +146,7 @@ export function createChromePopupData(): PopupData {
       return () => connection.disconnect();
     },
 
-    openDashboard(path = "/") {
+    openDashboard(path = "/dashboard") {
       void chrome.tabs.create({ url: new URL(path, config.dashboardOrigin).toString() });
     },
   };

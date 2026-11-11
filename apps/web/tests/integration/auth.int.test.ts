@@ -39,7 +39,7 @@ describe("dashboard auth (integration)", () => {
   });
 
   it("AUTH-02 signed in: the dashboard renders the user from verified claims", async () => {
-    const res = await get("/", cookie);
+    const res = await get("/dashboard", cookie);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain(email);
   });
@@ -47,7 +47,7 @@ describe("dashboard auth (integration)", () => {
   it("AUTH-03 signed in: /sign-in redirects home and API routes are no longer 401", async () => {
     const signIn = await get("/sign-in", cookie);
     expect(signIn.status).toBe(307);
-    expect(location(signIn)).toBe(`${DASHBOARD_URL}/`);
+    expect(location(signIn)).toBe(`${DASHBOARD_URL}/dashboard`);
     expect((await get("/api/does-not-exist", cookie)).status).toBe(404);
   });
 
@@ -82,7 +82,7 @@ describe("dashboard auth (integration)", () => {
     expect(location.searchParams.get("code_challenge")).toBeTruthy();
     expect(location.searchParams.get("scopes")).toBe("user:email");
     expect(location.searchParams.get("redirect_to")).toBe(
-      `${DASHBOARD_URL}/auth/callback?next=%2F`,
+      `${DASHBOARD_URL}/auth/callback?next=%2Fdashboard`,
     );
   });
 
