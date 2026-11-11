@@ -14,4 +14,4 @@ Format: lightweight [MADR](https://adr.github.io/madr/) — Context · Options �
 | [0008](0008-docker-local-backend.md) | Docker-based local backend via Supabase CLI | Accepted |
 | [0009](0009-landing-route-and-rendering.md) | Landing page at `/`, pre-built static HTML with its own CSP | Accepted |
 
-Accepted at Gate 2 approval (2026-11-04); ADR-0003 accepted after spike #10 (2026-11-05).
+Accepted at Gate 2 approval (2026-11-04); ADR-0003 accepted after spike #10 (2026-11-05); ADR-0009 accepted on 2026-11-10 (#99).

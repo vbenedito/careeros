@@ -23,3 +23,6 @@ Option 4, with option 2 as the fallback if the build step proves fragile.
 
 ## Implementation note (2026-11-11)
 Built as a static Next.js route handler at `/` returning the pre-rendered HTML with its CSS inline (allowed by hash), instead of a prebuild step and a proxy rewrite: same properties, one response, no `/landing/` files. Dark only, as in the approved design. See LAND-01..08.
+
+## Update 2026-11-11 (#131)
+The implementation note supersedes parts of the Consequences: there is no build script (a static route handler instead), the landing page is dark only (it does not follow the system setting), and there is no web manifest or `llms.txt` yet. Mona Sans is self-hosted under `/fonts` (`font-src 'self'`), which is a public path.

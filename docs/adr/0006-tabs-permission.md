@@ -15,3 +15,6 @@ Option 1 for v0, with strict handling: only the hostname is derived, compared in
 ## Consequences
 + Domains added anywhere work immediately; simpler code and UX.
 − Broader permission than strictly necessary; must be explained in the privacy page and README.
+
+## Update 2026-11-11 (#131)
+Decided for the Chrome Web Store iteration: the `tabs` permission is kept and option 2 is not adopted (STORE-03, permissions stay exactly SEC-03).

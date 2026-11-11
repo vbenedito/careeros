@@ -19,3 +19,11 @@ Expected footprint: ~150 bytes/interval × a few hundred pending intervals ≪ 1
 ## Consequences
 + Works with MV3 lifecycle; one storage API; easy to fake in tests.
 − Tokens at rest in the profile directory (same exposure as any extension session); mitigated by SEC-06/SEC-14 and disconnect.
+
+## Update 2026-11-11 (#131)
+As built, `chrome.storage.local` holds these key groups (all prefixed `careeros.`):
+- tracking: engine state, outbox, quarantine, today's synced intervals, dropped-interval counter (SYNC-07), tracking-enabled flag, device id, tracked-domain cache;
+- sync: sync state (failures, backoff time, last outcome, last synced time);
+- auth: session, `dataOwner` (the user whose data is on this device, AUTH-11), `needsReconnect` flag.
+
+The stored session is trimmed before it is written: of the user record only `id`, `aud`, `role`, `email` and `is_anonymous` are kept; name, avatar and linked identities are dropped (SEC-01, #113).

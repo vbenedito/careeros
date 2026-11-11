@@ -23,6 +23,10 @@ dashboard's shadcn components use them as they are.
 Light and dark values live side by side. The dashboard switches with a `.dark` / `.light` class
 (next-themes); the popup follows the OS.
 
+The landing page (`/`, LAND) is the exception: it is dark only and defines its own small palette
+as CSS variables inside its inline stylesheet (`apps/web/lib/landing/page.ts`), not from
+`tokens.css`; headings use self-hosted Mona Sans (#131).
+
 **Rule:** components use token utilities (`bg-card`, `text-muted-foreground`, `border-border`)
 — never raw colors (`#fff`, `text-gray-500`, `oklch(...)`).
 

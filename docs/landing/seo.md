@@ -2,6 +2,8 @@
 
 Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11-10 · Part of #102.
 
+> **As built (2026-11-11, #131):** see [LAND-04..07](../../specs/landing/00-landing.md). Differences from the plan below: there is no `/landing/` folder or redirect (`robots.txt` disallows only `/api/` and `/auth/`); `/icon.svg` exists and is the favicon of every page; there is no web manifest or `llms.txt` yet; headings use Mona Sans, self-hosted under `/fonts` (`font-src 'self'`), so fonts are not only the system stack; the page has no hero image to preload.
+
 ## 0. How this plan was made
 
 - **Search data (Ubersuggest, 2026-11-10):** volume and difficulty for 30 candidate keywords, in a saved Ubersuggest list "CareerOS landing" (§2).

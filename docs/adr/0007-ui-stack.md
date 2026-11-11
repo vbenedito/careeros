@@ -23,3 +23,6 @@ Popup: React + Tailwind, sharing the theme CSS variables with the dashboard (cop
 
 ## Amendment (2026-11-07, #20)
 Tokens are **shared, not copied**: one CSS file, `packages/shared/theme/tokens.css`, imported by the popup and the dashboard, so the two cannot drift. Primitives stay per app (a handful in the popup, shadcn/ui in the dashboard). Conventions in `docs/design-system.md`.
+
+## Update 2026-11-11 (#131)
+As built, the dashboard charts use Recharts directly (`components/dashboard/activity-chart.tsx`, `platform-chart.tsx`); the shadcn/ui `Chart` component was not added.
