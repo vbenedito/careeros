@@ -58,6 +58,10 @@ describe("landing page (LAND)", () => {
     const { ENGINE_LOG } = await import("./content");
     for (const l of ENGINE_LOG) expect(html).toContain(l.result);
     expect(html).toContain("no input for 60 s");
+    // TRK-08: no saved interval is longer than MAX_INTERVAL_S (30 min).
+    const closed = ENGINE_LOG.find((l) => l.result.startsWith("session closed"));
+    expect(Number(/(\d+)m/.exec(closed?.result ?? "")?.[1])).toBeLessThanOrEqual(30);
+    expect(html).toContain('"started_at": "09:20:02", "ended_at": "09:46:10"');
     expect(html).toContain("Examples. Any site you study on works; you choose.");
   });
 

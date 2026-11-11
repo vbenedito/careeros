@@ -41,11 +41,18 @@ Supporting points:
 - **Subline:** CareerOS is a study time tracker for interview prep. It counts your study hours automatically on the sites you choose, like LeetCode and NeetCode, and shows your week at a glance. No timers. Nothing else tracked.
 - **CTAs:** Get started — it's free · Add to Chrome
 - **Under the CTAs (small):** Sign in with Google or GitHub. Chrome on desktop.
-- **Visual:** the popup ("leetcode.com · 32m", today on this computer) overlapping the dashboard's weekly bar chart. Sample data only; durations in the app's own format (`45m`, `1h 05m`, EXT-UI-02).
+- **Visual:** the popup ("leetcode.com · 26m", today on this computer) overlapping the dashboard's weekly bar chart. Sample data only; durations in the app's own format (`45m`, `1h 05m`, EXT-UI-02).
 
 Alternatives for the H1, to choose with the design (#100):
 - "Know how much you really study for interviews" (strongest message, but no "study time")
 - "Your interview prep study time, measured automatically"
+
+### 4.2a Site belt (below the hero)
+Monospace, scrolling: leetcode.com · neetcode.io · greatfrontend.com · docs.python.org · developer.mozilla.org · react.dev · coursera.org · github.com. Note under it: "Examples. Any site you study on works; you choose."
+
+### 4.2b Engine log (in How it works, beside the steps)
+Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session never exceeds 30 minutes (TRK-08):
+`09:20:02 tab leetcode.com — study site, counting` · `09:46:10 no input for 60 s — session closed, 26m` · `09:46:10 saved on this computer — 1 waiting to upload` · `09:50:00 sync — 1 session confirmed` · `09:51:15 tab youtube.com — not a study site, ignored` · `09:52:03 tab neetcode.io — study site, counting`.
 
 ### 4.3 How it works (4 steps)
 1. **Add the extension to Chrome.** One click from the Chrome Web Store.

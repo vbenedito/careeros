@@ -124,7 +124,7 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .clock,.tick{counter-reset:m var(--m)}.clock::after,.tick::after{content:counter(m) "m"}
 @media (prefers-reduced-motion:no-preference){
 .clock,.tick{animation:clock 12s linear infinite}
-@keyframes clock{0%{--m:0}38%{--m:32}62%{--m:32}100%{--m:50}}
+@keyframes clock{0%{--m:0}38%{--m:26}62%{--m:26}100%{--m:44}}
 #away:checked~.away .tick{animation-play-state:paused}
 .track div{animation:bar 12s linear infinite}
 @keyframes bar{0%{width:0}38%{width:64%}62%{width:64%}100%{width:100%}}
@@ -155,7 +155,7 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .bento .wide .copy{flex:1 1 300px}.bento .wide .chart{flex:2 1 420px;min-width:0}
 .bento h2{font-size:clamp(26px,3vw,32px)}
 .bento .card .copy{gap:10px;flex:none}
-.term{flex:1 1 480px;min-width:0;border-radius:14px;border:1px solid var(--line);background:oklch(0.14 0.005 265);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.9;overflow:hidden}
+.term{flex:1 1 480px;min-width:0;border-radius:14px;border:1px solid var(--line);background:oklch(0.14 0.005 265);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.9;overflow:clip}
 .term-head{display:flex;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--muted)}.term-head i{width:10px;height:10px;border-radius:5px;background:var(--line2)}.term-head span{margin-left:8px}
 .term ol{list-style:none;margin:0;padding:14px 16px;display:flex;flex-direction:column}
 .term li{display:grid;grid-template-columns:72px 1fr;gap:12px;color:var(--muted)}.term li b{font-weight:400;color:var(--fg)}.term .okc{color:var(--ok)}.term .wc{color:var(--warn)}.term .pc{color:var(--primary)}
@@ -173,8 +173,8 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 }
 #pause:checked~main *,#pause:checked~main *::after{animation-play-state:paused!important}
 .pausebar{display:flex;justify-content:flex-end;padding-top:12px;margin-bottom:-56px;position:relative;z-index:1}.pausebar .chip{font-size:13px;min-height:36px}
-@media (prefers-reduced-motion:reduce){.pausebar{display:none}}
-@media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:32}}
+@media (prefers-reduced-motion:reduce){.pausebar{display:none}.belt-track{flex-wrap:wrap;width:auto;justify-content:center;gap:12px 32px;padding:0 24px}}
+@media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:26}}
 `;
 
 export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOptions): string {
@@ -265,7 +265,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <div class="status"><span class="s1"><i class="dot"></i>Counting · study site</span><span class="s2"><i class="dot idle"></i>Not a study site · nothing recorded</span><span class="s3"><i class="dot"></i>Counting · study site</span></div>
 <div class="between"><span class="label">Today</span><span class="big clock"></span></div>
 <div class="track"><div></div></div>
-<div class="record"><b>Saved when you leave a study site</b><div class="rec">{ "domain": "leetcode.com",<br>&#160;&#160;"started_at": "09:14:02", "ended_at": "09:46:10" }</div></div>
+<div class="record"><b>Saved when you leave a study site</b><div class="rec">{ "domain": "leetcode.com",<br>&#160;&#160;"started_at": "09:20:02", "ended_at": "09:46:10" }</div></div>
 </div>
 </div>
 </section></div>
