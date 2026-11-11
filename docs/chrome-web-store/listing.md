@@ -31,14 +31,14 @@ Interview prep is spread across LeetCode, NeetCode, docs and videos. Timers get 
 HOW IT WORKS
 • Pick your study sites (up to 50; subdomains included), for example leetcode.com or neetcode.io.
 • Study as usual. Time counts only while a study site is the active tab and you are at the keyboard.
-• Step away and it pauses after 60 seconds. A study tab playing a video keeps counting for up to 15 minutes without input.
-• Sessions are saved on your computer first and uploaded every few minutes, so nothing is lost offline.
+• Step away and it pauses after 60 seconds. A study tab playing sound (a video, not muted) keeps counting for up to 15 minutes without input.
+• Sessions are saved on your computer first and uploaded every few minutes; offline, they wait up to 30 days.
 • See your week on the web dashboard: time per day and per platform, across every computer you use.
 
 PRIVATE BY DESIGN
-• For your study it keeps only the site name and when you started and stopped.
+• For your study it keeps only the site name, when you started and stopped, and a random ID for the computer.
 • It reads the active tab's address only to get the site name. It never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
-• No ads, no analytics, nothing sold. Delete your account and your data anytime.
+• No ads, no analytics, nothing sold. Delete your account and your data anytime (see the privacy policy).
 
 Sign in on the dashboard with Google or GitHub, then connect the extension from there. Free, no paid plan.
 
@@ -82,10 +82,11 @@ Free · Public · all regions.
 
 ## After the first upload (before publishing)
 
-1. The dashboard shows the item's **ID** (32 letters) as soon as the draft exists.
-2. In Vercel (Production): set `NEXT_PUBLIC_EXTENSION_ID` to that ID and redeploy. The dashboard can then talk to the store extension (AUTH-06).
-3. Submit for review. When it is published, set `EXTENSION_INSTALL_URL` to the listing URL (`https://chromewebstore.google.com/detail/<slug>/<ID>`) and redeploy: the landing page's "Add to Chrome" then points to it (LAND-05).
-4. Remove your unpacked copy and install from the store: the store version has a different ID, so the unpacked one can no longer connect after step 2.
+1. The dashboard shows the item's **ID** (32 letters) as soon as the draft exists. Under **Package → View public key**, copy the item's **public key** (public by design, safe to share).
+2. Send both to the tech lead: they go into `MANIFEST_KEYS.production` (`apps/extension/manifest.config.ts`), so the unpacked production build and the store item share **one ID** (STORE-05). The docs that name the old ID are updated in the same PR.
+3. In Vercel (Production): set `NEXT_PUBLIC_EXTENSION_ID` to the store ID and redeploy, so the dashboard talks to the store extension (AUTH-06).
+4. Submit for review. When it is published, set `EXTENSION_INSTALL_URL` to the listing URL (`https://chromewebstore.google.com/detail/<slug>/<ID>`) and redeploy: the landing page's "Add to Chrome" then points to it (LAND-05).
+5. Switch your own copy: in the dashboard, **Disconnect** the unpacked extension first (it uploads what is pending, AUTH-12), remove it, then install from the store and connect.
 
 ## Optional: a popup screenshot
 

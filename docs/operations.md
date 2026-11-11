@@ -84,3 +84,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
 | Monthly | **Actions → Backup:** the workflow is still enabled (GitHub disables schedules after 60 days without repository activity; re-enable it there) and the last run is green. |
 | Monthly | Supabase usage (database size, egress) and Vercel usage pages: far below the limits above. |
 | After a dependency or Supabase upgrade | CI green, including the backup round trip. |
+
+## Chrome Web Store
+
+The extension is published from `pnpm --filter @careeros/extension release:store` ([listing](chrome-web-store/listing.md), STORE-01..06). A new dashboard domain means a new store version (its `externally_connectable` origin changes) and a store review before switching the domain.
