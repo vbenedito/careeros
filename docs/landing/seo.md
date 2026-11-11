@@ -1,6 +1,6 @@
 # Landing page — SEO plan (#98)
 
-Status: **Draft for review** · 2026-11-10 · Part of #102.
+Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11-10 · Part of #102.
 
 ## 0. How this plan was made
 

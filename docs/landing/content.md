@@ -1,6 +1,6 @@
 # Landing page — content and messaging (#97)
 
-Status: **Draft for the product owner's review** · 2026-11-10 · Part of #102.
+Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102.
 
 Every claim below is checked against the v0 specs (IDs in brackets). Anything not in v0 stays off the page: no goals, streaks, AI insights, mobile apps, user counts or testimonials.
 
@@ -26,7 +26,7 @@ Supporting points:
 | CTA | Label | Target | Notes |
 |---|---|---|---|
 | Primary | **Get started — it's free** | `/sign-in` (Google or GitHub) | A signed-in visitor is taken straight to the dashboard |
-| Secondary | **Install the extension** | Configurable link (architecture §4): the GitHub release now, the Chrome Web Store later | Quiet style; header and the "how it works" step 1. Until the store listing exists, the label is "Download the extension" and links to the release with its install steps |
+| Secondary | **Add to Chrome** | The Chrome Web Store listing (configurable link, architecture §4) | Quiet style; header and "how it works" step 1. The landing page goes live with the store link (product owner, 2026-11-10): it is built first, then the extension is published, then the link is set and the page launches |
 | Tertiary | **Read the privacy policy** | `/privacy` | In the privacy section and the footer |
 
 "Free" is true for v0 (there is no paid plan, product spec §5). If pricing ever changes, this label changes with it.
@@ -37,9 +37,9 @@ Supporting points:
 `CareerOS` wordmark · links: How it works · Privacy · FAQ · **Sign in** (button). Mobile: wordmark and Sign in only.
 
 ### 4.2 Hero
-- **H1 (recommended, has "study time" for search):** See where your study time really goes
+- **H1 (decided, has "study time" for search):** See where your study time really goes
 - **Subline:** CareerOS is a study time tracker for interview prep. It counts your study hours automatically on the sites you choose, like LeetCode and NeetCode, and shows your week at a glance. No timers. Nothing else tracked.
-- **CTAs:** Get started — it's free · Download the extension ("Install the extension" once the store listing exists)
+- **CTAs:** Get started — it's free · Add to Chrome
 - **Under the CTAs (small):** Sign in with Google or GitHub. Chrome on desktop.
 - **Visual:** the popup ("leetcode.com · 32m", today on this computer) overlapping the dashboard's weekly bar chart. Sample data only; durations in the app's own format (`45m`, `1h 05m`, EXT-UI-02).
 
@@ -48,7 +48,7 @@ Alternatives for the H1, to choose with the design (#100):
 - "Your interview prep study time, measured automatically"
 
 ### 4.3 How it works (4 steps)
-1. **Install the extension.** Until the Chrome Web Store listing: download it from GitHub and load it in Chrome (developer mode, a short manual step; updates are manual). After: one click from the store.
+1. **Add the extension to Chrome.** One click from the Chrome Web Store.
 2. **Choose your study sites.** leetcode.com, neetcode.io, docs: any site you study on.
 3. **Study as usual.** Time counts only while you're active on one of them. Step away and it pauses.
 4. **See your week.** Daily totals and time per platform on the dashboard; today's time on this computer in the popup.
@@ -97,8 +97,9 @@ CareerOS · Privacy · GitHub (repository) · Sign in · © 2026.
 - No hype words ("revolutionary", "supercharge"), no exclamation marks.
 - English only for now (product owner, 2026-11-10).
 
-## 6. Open points for the product owner
+## 6. Decisions (2026-11-10)
 
-1. **H1:** the recommended one or one of the two alternatives (decide with the design).
-2. **"Open source":** the code is public on GitHub but has no license file, so the page says "public code", not "open source". Add a license (e.g. MIT) if you want that claim.
-3. **The GitHub link in the footer:** keep it (it builds trust with developers) or drop it.
+1. **H1:** "See where your study time really goes" (the alternatives stay available if the design needs a shorter line).
+2. **Code wording:** "public code on GitHub", not "open source" (no license; product owner).
+3. **GitHub link in the footer:** kept, because it builds trust with developers.
+4. **Install CTA:** "Add to Chrome", pointing to the Chrome Web Store listing; the page launches once the listing is live.

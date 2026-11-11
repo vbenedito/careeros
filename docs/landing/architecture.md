@@ -1,6 +1,6 @@
 # Landing page — architecture proposal (#99)
 
-Status: **Proposal for the product owner** · 2026-11-10 · Part of #102 · ADR draft: [ADR-0009](../adr/0009-landing-route-and-rendering.md).
+Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102 · ADR draft: [ADR-0009](../adr/0009-landing-route-and-rendering.md).
 
 ## 1. Recommendation in short
 
@@ -63,7 +63,7 @@ One module, `apps/web/lib/landing/links.ts`, reads at build time:
 | Setting | Now | Later |
 |---|---|---|
 | `SITE_URL` (existing) | `https://careeros-taupe.vercel.app` | The custom domain: canonical, sitemap, OG URLs follow |
-| `EXTENSION_INSTALL_URL` (new, optional) | The GitHub release page | The Chrome Web Store listing |
+| `EXTENSION_INSTALL_URL` (new) | The Chrome Web Store listing (set when the listing is published; the landing page launches after that) | — |
 | Repository URL (constant in the same module) | `https://github.com/vbenedito/careeros` | — |
 
 Changing a link means updating the Vercel setting and redeploying; no code change.
@@ -87,8 +87,13 @@ Changing a link means updating the Vercel setting and redeploying; no code chang
 - **Proposal:** a small iteration, *Public landing page*, with a spec `specs/landing/00-landing.md` (LAND-01…) written from these four documents once they are approved, then the design (#100) and the implementation (#101).
 - The Chrome Web Store iteration later only changes `EXTENSION_INSTALL_URL` on the landing side.
 
-## 8. Decisions requested
+## 8. Decisions (2026-11-10)
 
-1. Route A (landing at `/`, dashboard at `/dashboard`)?
-2. Rendering A (static HTML, no JavaScript), with B as the fallback?
-3. The landing page as its own small iteration with a LAND spec?
+1. **Route A:** landing at `/`, dashboard at `/dashboard` (product owner).
+2. **Rendering A:** pre-built static HTML, no JavaScript (tech lead). The product owner asked whether plain Next.js static rendering, or server rendering with a cache, would do:
+   - **For SEO they are equal.** Static, server-rendered and pre-built pages all give crawlers the full HTML; what search engines reward beyond that is speed, and static wins it.
+   - **Next.js static rendering:** possible, but Next.js adds inline scripts to every page, and our strict security policy (SEC-09) only allows them with a per-request nonce, which a static page cannot have. Using it would mean relaxing the policy (`'unsafe-inline'`) on a page that shares the origin with the app (option C, rejected).
+   - **Server rendering with a cache:** has the same conflict. A cached page carries an old nonce that no longer matches the response's policy, so its scripts are blocked.
+   - **Option A *is* static rendering:** written as React components in the Next.js app, rendered to HTML at build time, without the inline scripts. It is the fastest and the most secure.
+   - Option B (a normal per-request Next.js page) stays the fallback if the build step proves fragile.
+3. **Iteration:** the landing page is its own small iteration with a LAND spec (tech lead). Order (product owner): build the landing page, publish the extension to the Chrome Web Store, then launch the landing page with the store link.

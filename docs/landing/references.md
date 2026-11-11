@@ -1,6 +1,6 @@
 # Landing page — external references (#96)
 
-Status: **Draft for review** · 2026-11-10 · Part of #102.
+Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11-10 · Part of #102.
 
 Links and our own notes only; no copied text or assets. Screenshots are not attached: this research environment can only open pages returned by web search, and several sites (linear.app, raycast.com, rescuetime.com) refused direct access. Each entry links to the page or to a published teardown of it. The product owner can open them for the visuals.
 
