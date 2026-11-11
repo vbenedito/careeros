@@ -14,5 +14,5 @@ Two apps (extension, dashboard) share domain rules and validation schemas (domai
 Option 2. One `packages/shared` package only for code genuinely used by both apps. Revisit option 3 if CI time exceeds ~10 min or packages exceed ~4.
 
 ## Consequences
-+ Atomic changes, simple tooling, readable for portfolio reviewers.
++ Atomic changes, simple tooling, easy for reviewers to follow.
 − No task caching; acceptable at v0 size.
