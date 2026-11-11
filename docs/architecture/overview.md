@@ -60,7 +60,7 @@ flowchart LR
 
 ## System design (as implemented)
 
-One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-08.
+One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-11.
 
 ```mermaid
 flowchart LR
