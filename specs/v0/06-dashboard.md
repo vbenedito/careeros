@@ -12,7 +12,7 @@ Answers three questions: *how much did I study, how was it spread across days, o
 |---|---|---|
 | `/sign-in` | Google / GitHub buttons, one-line product description, link to privacy | public |
 | `/auth/callback` | OAuth code exchange | public |
-| `/` (Dashboard) | Metrics (this spec §4) | required |
+| `/dashboard` (Dashboard; `/` is the public landing page since LAND-02) | Metrics (this spec §4) | required |
 | `/settings` | Tracked sites, extension connection, account | required |
 | `/connect` | Extension connection flow (AUTH §3) with install guidance | required |
 | `/privacy` | Privacy policy (spec 07) | public |

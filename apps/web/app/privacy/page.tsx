@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { privacyConfig } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Privacy · CareerOS" };
+export const metadata: Metadata = {
+  title: "Privacy · CareerOS",
+  robots: { index: true, follow: true },
+};
 
 const UPDATED = "November 7, 2026";
 

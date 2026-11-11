@@ -141,7 +141,7 @@ describe("dashboard journey (E2E)", () => {
                 + (select count(*) from public.study_sessions where user_id = '${userId}')`),
     ).toBe("0");
     // The session is gone: the dashboard sends the browser back to sign-in.
-    await page.goto(`${DASHBOARD_URL}/`);
+    await page.goto(`${DASHBOARD_URL}/dashboard`);
     expect(new URL(page.url()).pathname).toBe("/sign-in");
     await page.close();
   });

@@ -118,5 +118,5 @@ export function resolvePeriod(params: { view?: unknown; date?: unknown }, today:
 
 /** URL for a period (DASH-05). */
 export function periodHref(view: View, date: string): string {
-  return `/?view=${view}&date=${date}`;
+  return `/dashboard?view=${view}&date=${date}`;
 }

@@ -7,6 +7,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CareerOS",
   description: "Track your technical-interview study time.",
+  // LAND-07: app pages stay out of search results; /privacy opts back in, the landing page
+  // is not rendered by this layout.
+  robots: { index: false, follow: false },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

@@ -3,7 +3,7 @@
  * Starts the OAuth PKCE flow (AUTH-01) and redirects the browser to the provider.
  */
 import { NextResponse } from "next/server";
-import { isAuthProvider, safeNextPath } from "@/lib/auth/routes";
+import { DASHBOARD_PATH, isAuthProvider, safeNextPath } from "@/lib/auth/routes";
 import { siteUrl } from "@/lib/env";
 import { isSameOrigin } from "@/lib/security/origin";
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!isAuthProvider(provider)) {
     return NextResponse.redirect(new URL("/sign-in?error=provider", siteUrl()), 303);
   }
-  const next = safeNextPath(String(form.get("next") ?? "/"));
+  const next = safeNextPath(String(form.get("next") ?? DASHBOARD_PATH));
   const callback = new URL("/auth/callback", siteUrl());
   callback.searchParams.set("next", next);
 
