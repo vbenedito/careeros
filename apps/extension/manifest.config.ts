@@ -26,6 +26,19 @@ export const MANIFEST_KEYS: Record<BuildMode, { key: string; id: string }> = {
   },
 };
 
+/** Short description: manifest and Chrome Web Store summary (≤ 132 characters, STORE-02). */
+export const STORE_DESCRIPTION =
+  "Automatic study time tracker for interview prep. Counts only on the sites you choose: no URLs, no page content.";
+
+/**
+ * STORE-01: the Chrome Web Store assigns the extension ID itself and rejects a manifest `key`,
+ * so the store package is the production manifest without it.
+ */
+export function storeManifest<T extends { key?: string }>(manifest: T): Omit<T, "key"> {
+  const { key: _key, ...rest } = manifest;
+  return rest;
+}
+
 /** Exact permission set allowed by SEC-03. Anything else is a spec change. */
 export const PERMISSIONS = ["alarms", "idle", "storage", "tabs"] as const;
 
@@ -110,8 +123,7 @@ export function buildManifest(mode: BuildMode, config: ExtensionBuildConfig) {
     manifest_version: 3,
     name,
     short_name: "CareerOS",
-    description:
-      "Tracks time on the study sites you choose. Only hostnames of those sites are recorded.",
+    description: STORE_DESCRIPTION,
     version: config.version,
     key: MANIFEST_KEYS[mode].key,
     minimum_chrome_version: "120",
