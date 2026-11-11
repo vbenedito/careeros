@@ -1,4 +1,4 @@
-# Operations (v0)
+# Operations
 
 How CareerOS runs in production, what it costs, and how to recover it. The one-time production setup (accounts, auth settings, OAuth apps, environment) is kept privately by the product owner.
 
@@ -67,7 +67,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
    ```
 
    Locally the connection string is `postgresql://postgres:postgres@127.0.0.1:54322/postgres`; for a cloud project use its Session pooler string.
-4. **New project only**, redo the parts of the production setup that depend on the project:
+4. **New project only**, redo the parts of the production setup that depend on the project (the § numbers below are sections of the private production setup guide, not of this document):
    - §2 auth settings (OTP expiry, email provider disabled, Site URL, redirect URL, providers);
    - §3 OAuth apps: change the callback URL of the Google and GitHub apps to the new `https://<new-ref>.supabase.co/auth/v1/callback`;
    - §4 Vercel environment (Supabase URL and both keys), then redeploy;
@@ -87,4 +87,4 @@ Supabase Free has no automatic backups, so the repository makes its own:
 
 ## Chrome Web Store
 
-The extension is published from `pnpm --filter @careeros/extension release:store` ([listing](chrome-web-store/listing.md), STORE-01..06). A new dashboard domain means a new store version (its `externally_connectable` origin changes) and a store review before switching the domain.
+The extension is published from `pnpm --filter @careeros/extension release:store` ([listing](chrome-web-store/listing.md), STORE-01..07). A new dashboard domain means a new store version (its `externally_connectable` origin changes) and a store review before switching the domain.

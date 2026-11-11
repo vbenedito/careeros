@@ -2,6 +2,8 @@
 
 Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102.
 
+> **Status 2026-11-11 (#131):** implemented and live at `/` (#125, #127). The binding content rules are LAND-03; the approved design and the shipped page may word sections differently from this plan.
+
 Every claim below is checked against the v0 specs (IDs in brackets). Anything not in v0 stays off the page: no goals, streaks, AI insights, mobile apps, user counts or testimonials.
 
 ## 1. Audience and job

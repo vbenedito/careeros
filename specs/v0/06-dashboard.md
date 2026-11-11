@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Source: *V0 UI/UX Design and Implementation Brief* · Related ADRs: 0007 (UI stack)
 
+Amended 2026-11-11 (#131): §2 route table and sign-in messages, DASH-07 component, error pages, to match `apps/web/app`.
+
 ## 1. Direction
 
 Answers three questions: *how much did I study, how was it spread across days, on which platforms?* Visual language inspired by shadcn/ui dashboard blocks; product-oriented, minimal, light and dark.
@@ -10,14 +12,23 @@ Answers three questions: *how much did I study, how was it spread across days, o
 
 | Route | Purpose | Auth |
 |---|---|---|
+| `/` | Landing page (LAND-01); signed-in visitors are redirected to `/dashboard` (LAND-02) | public |
 | `/sign-in` | Google / GitHub buttons, one-line product description, link to privacy | public |
+| `/auth/sign-in` (POST) | Starts the OAuth redirect for the chosen provider | public |
 | `/auth/callback` | OAuth code exchange | public |
-| `/dashboard` (Dashboard; `/` is the public landing page since LAND-02) | Metrics (this spec §4) | required |
+| `/auth/sign-out` (POST) | Sign out (this device, or all devices, AUTH-12a) | required |
+| `/dashboard` | Metrics (this spec §4) | required |
 | `/settings` | Tracked sites, extension connection, account | required |
 | `/connect` | Extension connection flow (AUTH §3) with install guidance | required |
 | `/privacy` | Privacy policy (spec 07) | public |
+| `/api/sites` (POST), `/api/sites/[id]` (DELETE) | Add / remove a tracked site (DASH-12) | required |
+| `/api/extension/link` (POST) | Token hash for the extension handoff (AUTH-08) | required |
+| `/api/account/delete` (POST) | Account deletion (DASH-14) | required |
 
-No other pages or navigation items in v0.
+No other pages or navigation items in v0. The landing page's search files (`/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`) are public too (LAND-07).
+
+- `/sign-in` shows a message for `?error=oauth` (cancelled, or no verified email), `?error=callback` (code exchange failed; also the fallback for unknown values) and `?error=provider` (provider not available). After account deletion it shows `?deleted=1`: "Your account and all of its data were deleted."
+- `app/error.tsx` is the friendly fallback for an error in a page ("Something went wrong", **Try again**); `app/global-error.tsx` covers a failure of the root layout itself. Neither shows error details.
 
 ## 3. Shell
 
@@ -36,7 +47,7 @@ No other pages or navigation items in v0.
 **Summary cards** (one row ≥ `lg`, 1–3 columns responsive)
 
 - **DASH-06** (1) **Today** — today's total, always "today" regardless of period. (2) **Selected period** — total for the selected week/month, titled "This week" / "This month" when the period is current, otherwise the period label (e.g. "Oct 2026"). (3) **Top platform** — top domain in the selected period with its time and share; "—" when no data.
-- **DASH-07** All aggregations use the viewer's browser IANA time zone, passed to `get_daily_totals` / `get_domain_totals` (DATA-10/11). Server Components cannot see it, so a tiny client component writes it to a `tz` cookie (validated server-side against the IANA list); when the cookie is missing or differs from the browser's zone, it is set and the page refreshes once. Until then UTC is used.
+- **DASH-07** All aggregations use the viewer's browser IANA time zone, passed to `get_daily_totals` / `get_domain_totals` (DATA-10/11). Server Components cannot see it, so a tiny client component (`components/dashboard/time-zone-sync.tsx`, on the dashboard page) writes it to a `tz` cookie (validated server-side against the IANA list); when the cookie is missing or differs from the browser's zone, it is set and the page refreshes once. Until then UTC is used.
 
 **Study activity — bar chart** (primary, wider)
 
@@ -58,7 +69,7 @@ No other pages or navigation items in v0.
 
 - **DASH-12** **Tracked sites**: list, add (validated/normalized), remove (confirm). Shared with the extension (SYNC-09).
 - **DASH-13** **Extension**: status via `STATUS` message (Connected as … / Not installed / Not connected), "Connect" (→ `/connect`) and "Disconnect".
-- **DASH-14** **Account**: email and provider, Sign out, **Sign out of all devices** (AUTH-12a), **Delete account** (recent sign-in, AUTH-14; typed confirmation, DATA-12; afterwards redirect to `/sign-in`).
+- **DASH-14** **Account**: email and provider, Sign out, **Sign out of all devices** (AUTH-12a), **Delete account** (recent sign-in, AUTH-14; typed confirmation, DATA-12; afterwards redirect to `/sign-in?deleted=1`).
 
 ## 6. Data loading
 

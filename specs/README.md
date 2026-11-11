@@ -7,8 +7,12 @@ CareerOS follows **Specification-Driven Development (SDD)**: a behavior is speci
 | Version | Status | Approved |
 |---|---|---|
 | v0 | **Approved** | 2026-11-04 |
+| Landing page (`LAND`) | **Approved** | 2026-11-11 |
+| Chrome Web Store (`STORE`) | **Approved** | 2026-11-11 |
 
-Future ideas live in [`docs/roadmap.md`](../docs/roadmap.md). They are **not** specifications and do not authorize work.
+Amended 2026-11-11 (#131): landing and store specs added to the status table and index.
+
+Future ideas live in [`docs/roadmap.md`](../docs/roadmap.md). They are **not** specifications and do not authorize work: only the specs listed here do.
 
 ## v0 specification set
 
@@ -24,6 +28,13 @@ Future ideas live in [`docs/roadmap.md`](../docs/roadmap.md). They are **not** s
 | 07 | [Security & privacy](v0/07-security-privacy.md) | `SEC` |
 | 08 | [Testing strategy](v0/08-testing.md) | `TEST` |
 | 09 | [Environments, tooling & CI](v0/09-environments.md) | `ENV` |
+
+## Later specifications
+
+| Spec | Prefix |
+|---|---|
+| [Landing page](landing/00-landing.md) | `LAND` |
+| [Chrome Web Store publication](store/00-chrome-web-store.md) | `STORE` |
 
 ## Conventions
 

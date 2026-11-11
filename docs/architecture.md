@@ -2,6 +2,8 @@
 
 Status: **Approved** (Gate 2, 2026-11-04). Details live in [`specs/v0`](../specs/v0/) and [`docs/adr`](adr/).
 
+Updated 2026-11-11 (#131): landing page at `/`, dashboard at `/dashboard`, public routes, popup ↔ worker messages. A full rewrite is planned.
+
 ## System design (as implemented)
 
 One picture of v0 as merged: components, trust boundaries, where each credential lives, and the four main flows (numbers match the table below). Checked against the code, specs and migrations on 2026-11-08.
@@ -14,7 +16,7 @@ flowchart LR
       POP["Popup (React)<br/>no network calls"]
       SW["Service worker<br/>engine · outbox · sync · auth"]
       LS[("chrome.storage.local<br/>extension session 🔑 · engine state<br/>outbox · quarantine · domain cache")]
-      POP <-- "internal messages + port<br/>(own extension only)" --> SW
+      POP <-- "chrome.runtime messages (7 types)<br/>+ popup port (own extension only)" --> SW
       SW --- LS
     end
     DUI["Dashboard pages<br/>(HttpOnly session cookies 🔑)"]
@@ -22,8 +24,9 @@ flowchart LR
 
   subgraph VERCEL["Vercel — server-side trust"]
     direction TB
-    PX["proxy.ts<br/>nonce CSP · refreshes session · AUTH-03 guard"]
-    RSC["Server Components<br/>dashboard · settings"]
+    PX["proxy.ts<br/>nonce CSP · refreshes session · AUTH-03 guard<br/>signed in at / or /sign-in → /dashboard"]
+    LAND["GET / route handler<br/>static landing, own CSP (LAND)<br/>+ robots.txt · sitemap.xml · /opengraph-image · /icon.svg"]
+    RSC["Server Components<br/>/dashboard · /settings · /connect · /sign-in · /privacy"]
     RH["Route handlers<br/>POSTs/DELETEs same-origin only:<br/>/auth/sign-in · /auth/sign-out · /api/extension/link<br/>/api/sites · /api/sites/[id] · /api/account/delete<br/>GET /auth/callback (OAuth return)"]
     SEC["SUPABASE_SECRET_KEY 🔒<br/>server-only env"]
   end
@@ -42,6 +45,7 @@ flowchart LR
   RH -- "① PKCE: /authorize redirect,<br/>exchangeCodeForSession · signOut" --> GA
   GA <-- "①" --> GP
   DUI -- "page requests + cookies" --> PX --> RSC
+  PX -- "signed out at /" --> LAND
   RSC -- "④ user JWT · publishable key<br/>get_daily_totals · get_domain_totals<br/>tracked_domains (settings)" --> API
   RH -- "user JWT: ② quota RPC<br/>tracked_domains writes" --> API
   RH -- "② generateLink · deleteUser" --> GA
@@ -68,6 +72,10 @@ flowchart LR
 | ② | Extension connection | `/connect` sends `PING` → `POST /api/extension/link` (same origin, `getUser()`, 5/min quota) mints a single-use token hash with the secret key → page sends `CONNECT` to the extension → extension `verifyOtp` → its own session. `DISCONNECT` signs it out | AUTH-06..12 |
 | ③ | Tracking → sync | Chrome events → pure engine → closed intervals into the outbox (one storage write with the state) → every 5 min, on worker start and after (re)connecting: `ingest_study_sessions` with the extension's JWT → confirmed ids leave the outbox, rejected ones go to quarantine | TRK-*, SYNC-01..08, ADR-0004 |
 | ④ | Dashboard totals | `tz` cookie (viewer's IANA zone) → Server Components call `get_daily_totals` / `get_domain_totals` with the user's JWT → cards, bar chart, donut | DASH-04..10, DATA-10/11 |
+
+**Public routes** (AUTH-03): `/` (landing, served by `app/route.ts` to signed-out visitors), `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`, `/fonts/*`, `/sign-in`, `/auth/sign-in`, `/auth/callback`, `/privacy`. Everything else needs a session; a signed-in visitor at `/` or `/sign-in` is redirected to `/dashboard`.
+
+**Popup ↔ service worker:** the popup reads state from `chrome.storage.local` and has no Supabase client. Commands go to the worker only as `chrome.runtime.sendMessage` messages, validated with Zod (`lib/popup-messages.ts`): `AUTH_STATUS`, `DOMAINS_REFRESH`, `DOMAINS_ADD`, `DOMAINS_REMOVE`, `TRACKING_SET`, `DISCONNECT`, `FORGET_LOCAL_DATA`. While it is shown, the popup also holds a `chrome.runtime.connect` port (`careeros.popup`), so the worker counts Chrome as focused (TRK-18).
 
 Tracked sites are read and written by both apps through `tracked_domains` (RLS, 50-site trigger); the extension refreshes its cache on startup, each sync cycle, after connecting and when the popup opens (SYNC-09..11).
 
@@ -106,7 +114,7 @@ flowchart TB
   SY["Sync worker<br/>alarm 5 min · backoff"] --> ST
   SY -- ingest_study_sessions --> SB["Supabase"]
   PU["Popup (React)"] -- read + subscribe --> ST
-  PU -- add site / settings --> AD
+  PU -- "chrome.runtime messages<br/>(sites, tracking, disconnect, forget)" --> AD
 ```
 
 Key properties:

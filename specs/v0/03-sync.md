@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Related ADRs: 0002 (storage), 0004 (idempotent ingest)
 
+Amended 2026-11-11 (#131): SYNC-02 triggers, SYNC-06 error classes, SYNC-07 quarantine, cycle rules (SYNC-02a) to match the code.
+
 ## 1. Objective
 
 Move closed intervals from the extension to the backend reliably — no loss, no duplicates — and keep the tracked-domain list consistent between extension and dashboard.
@@ -19,7 +21,7 @@ Move closed intervals from the extension to the backend reliably — no loss, no
 ## 3. Interval upload
 
 - **SYNC-01** Closed intervals are appended to a persistent **outbox** in `chrome.storage.local`. An interval leaves the outbox only after the server confirms its `id`.
-- **SYNC-02** A sync cycle runs every `SYNC_PERIOD_MIN` (`chrome.alarms`), on browser startup, and after reconnecting. Only one cycle runs at a time (an in-memory guard: Chrome runs a single service worker per extension, as in AUTH-10; a persisted lock could not be released by a killed worker).
+- **SYNC-02** A sync cycle runs every `SYNC_PERIOD_MIN` (`chrome.alarms`), at every service-worker start (this covers browser startup), and whenever the stored session is written (connect, reconnect, token refresh). Only one cycle runs at a time (an in-memory guard: Chrome runs a single service worker per extension, as in AUTH-10; a persisted lock could not be released by a killed worker).
 - **SYNC-03** A cycle uploads the oldest ≤ `SYNC_BATCH_MAX` intervals through the RPC `ingest_study_sessions` (spec 04) and repeats while the outbox is non-empty and the previous call succeeded.
 - **SYNC-04** **Idempotency:** the server inserts by client-generated `id` with `ON CONFLICT (id) DO NOTHING` and returns every `id` from the batch that now exists for the caller (new or previously inserted). Retrying a batch is always safe.
 - **SYNC-05** Ids not returned were **rejected** (validation failure). They move to a local `quarantine` (kept, not retried, counted in the popup footer as "N not synced") so one bad record never blocks the queue.
@@ -29,11 +31,17 @@ Move closed intervals from the extension to the backend reliably — no loss, no
 |---|---|
 | Network error, 5xx, 429 | Exponential backoff per `BACKOFF_MIN`; success resets it |
 | `ABUSE_LIMIT` (DATA-09) | Back off 60 min, then continue; never discards data |
-| 401/403, invalid refresh, FK violation (user gone) | AUTH-11 |
-| Other 4xx for the whole call (malformed request) | Client bug: log, back off 60 min, keep data, show "Sync error" in footer |
+| `PGRST301`/`PGRST303` (access token expired or invalid, e.g. device clock behind) | Refresh the token and retry the batch once; if it fails again, treat as "network error" (backoff) |
+| `PT401` (no user), `23503` FK violation (user gone), HTTP 401, invalid refresh | AUTH-11 |
+| 403 (missing grant: a deployment bug) and other 4xx for the whole call (malformed request) | Client error: back off 60 min, keep data, show "Sync error" in footer; never a sign-out |
 
 Per-row rejections are not call errors; they go to quarantine (SYNC-05).
-- **SYNC-07** Intervals older than `LOCAL_QUEUE_MAX_AGE_D` that still could not be synced are dropped and counted (the server would reject them anyway, DATA-07).
+- **SYNC-02a** Cycle rules:
+  - A cycle first checks the backoff, then prunes (SYNC-07/08), then uploads.
+  - When the outbox is empty, the status "ok" is written only if a session is still stored; a disconnected profile gets no sync status.
+  - Each cycle records the account epoch when it starts. If the account changed meanwhile (connect, session rejected, local data cleared), the cycle writes nothing (no status, no settled batch). The epoch is held in memory and resets when the service worker restarts, which also ends any cycle in flight.
+  - The final sync on disconnect (AUTH-12) ignores the backoff, and is skipped if a cycle is already running (it never waits for it).
+- **SYNC-07** Outbox intervals older than `LOCAL_QUEUE_MAX_AGE_D` that still could not be synced are dropped and counted (the server would reject them anyway, DATA-07). Quarantined intervals older than `LOCAL_QUEUE_MAX_AGE_D` are deleted without being counted.
 - **SYNC-08** Synced intervals for **today** are kept locally (for the popup's totals); older synced intervals are pruned.
 
 ## 4. Tracked domains

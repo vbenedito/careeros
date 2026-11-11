@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Applies to all v0 components.
 
+Amended 2026-11-11 (#131): SEC-08 routes and check, SEC-09 headers as implemented.
+
 ## 1. Data inventory (exhaustive)
 
 | Data | Where | Why |
@@ -27,8 +29,12 @@ Status: **Approved (2026-11-04)** · Applies to all v0 components.
 ## 3. Dashboard & backend
 
 - **SEC-07** RLS enabled and forced on every table; covered by pgTAP tests (DATA §5). The Supabase **publishable key** (`sb_publishable_…`, formerly "anon") is public by design; the **secret key** (`sb_secret_…`, formerly "service_role", env `SUPABASE_SECRET_KEY`) is server-only (Vercel env), never shipped to the browser or the extension, and never prefixed `NEXT_PUBLIC_`.
-- **SEC-08** Server routes that mutate (`/api/extension/link`, account deletion) require an authenticated session and a matching `Origin` header (CSRF defense on top of `SameSite=Lax` cookies).
-- **SEC-09** Security headers: CSP with per-request **nonces** set in middleware (`connect-src 'self'`: the browser never calls Supabase directly; Supabase and the OAuth providers appear only in `form-action` for the sign-in redirects; nonce also passed to `next-themes`' inline script — no `unsafe-inline` for scripts), `X-Frame-Options: DENY` / `frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`, HSTS in production.
+- **SEC-08** Server routes that mutate (`/api/extension/link`, `/api/sites` and `/api/sites/[id]`, account deletion, `/auth/sign-in`, `/auth/sign-out`) require a matching `Origin` header (CSRF defense on top of `SameSite=Lax` cookies); all but the sign-in route also require an authenticated session. The check is `isSameOrigin` in `apps/web/lib/security/origin.ts`: the `Origin` header must equal the configured site URL.
+- **SEC-09** Security headers (`apps/web/lib/security/headers.ts`):
+  - **CSP** with a per-request **nonce**, set in the proxy (`apps/web/proxy.ts`, Next 16; formerly "middleware"). Directives: `default-src 'self'`; `script-src 'self' 'nonce-…' 'strict-dynamic'` (plus `'unsafe-eval'` in dev only); `style-src 'self' 'nonce-…'` (`'unsafe-inline'` in dev only); `style-src-attr 'unsafe-inline'` (style attributes cannot run code); `img-src 'self' blob: data:`; `font-src 'self'`; `connect-src 'self'` (the browser never calls Supabase directly); `object-src 'none'`; `base-uri 'self'`; `form-action 'self'` plus the Supabase origin and `https://accounts.google.com`, `https://github.com` (the sign-in redirect chain); `frame-ancestors 'none'`; `upgrade-insecure-requests` when the site URL is https. The nonce is also passed to `next-themes`' inline script and to `get-nonce` (Radix) — no `unsafe-inline` for scripts.
+  - The signed-out landing page at `/` does not get this CSP: it sets its own, stricter one (LAND-06).
+  - **Static headers** on every response, including API routes (`next.config.ts`): `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`. `X-Powered-By` is off.
+  - **HSTS** (`max-age=63072000; includeSubDomains`) only for production builds whose `SITE_URL` is https.
 - **SEC-10** All inputs validated with shared Zod schemas at the boundary and again by database constraints.
 - **SEC-11** OAuth redirect URLs restricted to the dashboard origins in Supabase Auth settings.
 - **SEC-12** Dependencies: lockfile committed; `pnpm audit` (high/critical) and GitHub Dependabot alerts enabled; no dependency added without an issue-level justification.

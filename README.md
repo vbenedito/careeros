@@ -4,7 +4,7 @@
 
 Track and understand your technical-interview study time — automatically and privately.
 
-> **Status: v0 implemented (Gate 3).** Every feature below is merged and tested in CI; production launch and the delivery report (Gate 4) are in progress.
+> **Status:** v0 is delivered and approved (Gate 4). The landing page is live at `/`; the dashboard is at `/dashboard`. The Chrome Web Store submission is in progress ([STORE spec](specs/store/00-chrome-web-store.md)).
 
 ## What v0 does
 
@@ -70,8 +70,8 @@ Specification-Driven Development with explicit approval gates:
 1. Understanding & direction — *approved*
 2. v0 specs & backlog — *approved* → [`specs/`](specs/), [`docs/backlog/v0.md`](docs/backlog/v0.md)
 3. v0 implementation — *done*: one issue per branch, tests named after requirement IDs, an independent review before every merge
-4. v0 delivery — **in progress**
-5. Further iterations only on request — [`docs/roadmap.md`](docs/roadmap.md) lists candidates, none authorized
+4. v0 delivery — *approved*
+5. Further iterations only on request — so far the landing page ([LAND](specs/landing/00-landing.md), live) and the Chrome Web Store publication ([STORE](specs/store/00-chrome-web-store.md), submission in progress); [`docs/roadmap.md`](docs/roadmap.md) lists other candidates, none authorized
 
 Rules for contributors and AI agents: [`AGENTS.md`](AGENTS.md). UI conventions: [`docs/design-system.md`](docs/design-system.md). Running it in production: [`docs/operations.md`](docs/operations.md). Security: [review](docs/security-review-v0.md) and [audit](docs/security-audit-v0.md). Landing page: [spec](specs/landing/00-landing.md) and [plans](docs/landing/). Chrome Web Store: [spec](specs/store/00-chrome-web-store.md) and [listing](docs/chrome-web-store/listing.md). v0 delivery: [report](docs/delivery/v0-delivery-report.md) and [test report](docs/delivery/v0-test-report.md).
 
@@ -148,7 +148,7 @@ specs/ docs/     specifications, ADRs, architecture, roadmap, backlog, operation
 |---|---|---|
 | Node.js | 26 LTS | Active LTS since Oct 2026; Vercel default runtime for new projects |
 | pnpm | 12.16.1 | New package versions must be 7 days old (`minimumReleaseAge`, #112); dependencies are pinned exactly; Dependabot proposes updates weekly |
-| TypeScript | 6.0.3 | 7.x (native compiler) skipped for now: Next.js and editor tooling rely on the 6.x JS API |
+| TypeScript | 7.0.2 | |
 | Next.js / React | 16.4.4 / 19.3.1 | |
 | Vitest | 5.1.0 | |
 | Biome | 2.6.4 | single lint + format tool (React, Next.js and test rule domains) |

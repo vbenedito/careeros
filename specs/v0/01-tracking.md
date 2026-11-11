@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Related ADRs: 0002 (storage), 0005 (media activity), 0006 (permissions)
 
+Amended 2026-11-11 (#131): incognito, failed browser queries, tab-update triggers and the queue slot timeout, to match the code.
+
 ## 1. Objective
 
 Measure time the user spends actively studying on tracked domains, robust to MV3 service-worker termination, browser restarts and crashes, while collecting only what spec 07 allows.
@@ -21,13 +23,13 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 **Eligibility**
 
 - **TRK-01** Tracking happens only when *all* hold: the user is connected (spec 02), tracking is enabled on this device (EXT-UI settings), the tracked-domain list is loaded, and there is an eligible tab. Nothing is assumed before it is reported: until the tracking setting and an idle state have been read on this worker, tracking does not start (fails closed).
-- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted.
+- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. Incognito tabs are never tracked, even when the extension is allowed in incognito (SEC-01). The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted.
 - **TRK-03** A hostname matches a tracked domain `d` when it equals `d` or ends with `.d` (after normalization: lowercase, trailing dot removed, leading `www.` removed). `leetcode.com` matches `leetcode.com` and `www.leetcode.com`, not `notleetcode.com`. The recorded domain is the **tracked domain**, not the raw hostname. If several match, the longest wins.
-- **TRK-04** The tab must be the active tab of the last-focused window, and that window must be focused (`chrome.windows.WINDOW_ID_NONE` ⇒ not focused).
+- **TRK-04** The tab must be the active tab of the last-focused window, and that window must be focused (`chrome.windows.WINDOW_ID_NONE` ⇒ not focused). When Chrome reports no last-focused window (the query fails, e.g. macOS with every window closed), Chrome counts as not focused.
 
 **Activity**
 
-- **TRK-05** The user is *active* while `chrome.idle` reports `active`. When it reports `idle` (no input for `IDLE_THRESHOLD_S`) or `locked`, tracking pauses and the interval ends at the detection moment. The first 60 s after the last input are therefore counted (a short reading pause is still study); anything beyond is not.
+- **TRK-05** The user is *active* while `chrome.idle` reports `active`. When it reports `idle` (no input for `IDLE_THRESHOLD_S`) or `locked`, tracking pauses and the interval ends at the detection moment. The first 60 s after the last input are therefore counted (a short reading pause is still study); anything beyond is not. If `chrome.idle.queryState` fails, the result is treated as `locked` (fails closed).
 - **TRK-06** Media exception (eligibility TRK-01..04 still required — an audible tab in an unfocused window is not tracked): while the eligible tab is `audible` (and not muted — Chrome reports muted tabs as audible), an `idle` state does **not** pause tracking. The heartbeat checks `chrome.idle.queryState(MEDIA_IDLE_CEILING_S)`; when it returns `idle`, tracking pauses and the interval ends at the detection moment. Media time without input is therefore credited up to the ceiling (worst case: ~15 min credited for a video left playing while away — an accepted trade-off, ADR-0005). Audio stopping while the user is `idle` pauses immediately; audio *starting* while the user is idle does not resume tracking (input is required). `locked` always pauses immediately.
 - **TRK-07** Tracking resumes automatically when all TRK-01 conditions hold again. No manual pause/resume exists.
 
@@ -45,7 +47,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 - **TRK-13** A heartbeat alarm every `HEARTBEAT_PERIOD_MIN` re-evaluates eligibility (tabs, window focus, `idle.queryState`, `audible`) and updates `lastHeartbeatAt` (every processed event also updates it: it is the last moment the engine is known to have been running).
 - **TRK-14** **Gap rule, applied to every event** (not only worker start): if an open interval exists and `now − lastHeartbeatAt > 2 × HEARTBEAT_PERIOD_MIN` (browser crash, OS sleep, worker suspended), the interval is closed at `lastHeartbeatAt` before the event is processed; eligibility is then re-evaluated from scratch (stored tab and idle observations are discarded and queried again).
 - **TRK-15** System clock moving backwards (`now < lastHeartbeatAt`) closes the open interval at `lastHeartbeatAt` and starts fresh; no new interval starts before that moment, so intervals never overlap (TRK-11). Steps back of ≤ 2 s are treated as clock noise (no time passed). A jump back of more than `MAX_INTERVAL_S` means the old clock was wrong: tracking is not blocked, and a possible overlap with those wrongly dated intervals is accepted (§5). The server refuses such an overlapping interval (DATA-09a, since 2026-11-10): it stays in the local quarantine, counted as "not synced" in the popup, instead of being counted twice.
-- **TRK-17** Engine events are processed **strictly one at a time** through a serialized queue in the adapter (each read-modify-write of persisted state completes before the next event starts), so near-simultaneous Chrome events (`onActivated` + `onFocusChanged`) cannot lose updates or create overlaps.
+- **TRK-17** Engine events are processed **strictly one at a time** through a serialized queue in the adapter (each read-modify-write of persisted state completes before the next event starts), so near-simultaneous Chrome events (`onActivated` + `onFocusChanged`) cannot lose updates or create overlaps. A slot that has not settled after 10 s releases the queue (a hung Chrome API must not freeze it); its late work never writes to storage. Of `chrome.tabs.onUpdated`, only changes to the active tab's `url`, `audible` or `mutedInfo` produce a tab event.
 - **TRK-18** Window focus loss is confirmed after a 500 ms debounce, so transient `WINDOW_ID_NONE` reports while switching between Chrome windows do not split intervals. While the extension's own popup is open, Chrome counts as focused (Chrome reports the window as unfocused then, and sends no focus event when the popup closes, so the worker re-checks the tab as soon as the popup closes).
 - **TRK-19** `chrome.idle.setDetectionInterval(IDLE_THRESHOLD_S)` is called on every worker start (the setting is not guaranteed to persist). A worker start keeps the stored state and open interval (Chrome wakes the worker for every event) but re-queries the tab and idle state; a mismatch closes the interval when the fresh observation arrives.
 

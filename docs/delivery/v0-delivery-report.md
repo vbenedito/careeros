@@ -1,5 +1,7 @@
 # CareerOS v0 — delivery report (Gate 4)
 
+> Snapshot as of 2026-11-09. Later changes: landing page at `/`, dashboard moved to `/dashboard` (#125/#127); Chrome Web Store package and listing (#128), production extension ID now the store item's (#130).
+
 Status: **final**, for the product owner's Gate 4 approval. Period: 2026-11-04 → 2026-11-09.
 
 ## 1. What was delivered

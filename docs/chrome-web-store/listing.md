@@ -83,7 +83,7 @@ Free · Public · all regions.
 ## After the first upload (before publishing)
 
 1. The dashboard shows the item's **ID** (32 letters) as soon as the draft exists. Under **Package → View public key**, copy the item's **public key** (public by design, safe to share).
-2. Send both to the tech lead: they go into `MANIFEST_KEYS.production` (`apps/extension/manifest.config.ts`), so the unpacked production build and the store item share **one ID** (STORE-05). The docs that name the old ID are updated in the same PR.
+2. Send both to the tech lead: they go into `MANIFEST_KEYS.production` (`apps/extension/manifest.config.ts`), so the unpacked production build and the store item share **one ID** (STORE-05). The docs that name the old ID are updated in the same PR. **Done 2026-11-11** (#130): ID `pddbflgidjmnhidineoejneeipaicgek`.
 3. In Vercel (Production): set `NEXT_PUBLIC_EXTENSION_ID` to the store ID and redeploy, so the dashboard talks to the store extension (AUTH-06).
 4. Submit for review. When it is published, set `EXTENSION_INSTALL_URL` to the listing URL (`https://chromewebstore.google.com/detail/<slug>/<ID>`) and redeploy: the landing page's "Add to Chrome" then points to it (LAND-05).
 5. Switch your own copy: in the dashboard, **Disconnect** the unpacked extension first (it uploads what is pending, AUTH-12), remove it, then install from the store and connect.
