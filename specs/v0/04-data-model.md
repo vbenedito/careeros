@@ -10,7 +10,7 @@ Supabase Postgres. All application tables live in `public`, have RLS **enabled a
 
 ### Domain type `public.hostname`
 
-Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isValidDomain()` in `packages/shared/src/domain.ts` (TRK-03). Its `CHECK` rejects: values longer than 253 characters; uppercase letters; a leading `www.`; a trailing dot; a single label (at least two are required); labels that are empty, longer than 63 characters, or start or end with `-`; IP addresses (the last label must be 2–63 letters or an `xn--` punycode label); and any character other than `a-z`, `0-9`, `-` and `.`.
+Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isValidDomain()` in `packages/shared/src/domain.ts` (TRK-03). Its `CHECK` requires length ≤ 253 and rejects: uppercase letters; a leading `www.`; a trailing dot; a single label (at least two are required); labels that are empty, longer than 63 characters, or start or end with `-`; IP addresses (the last label must be 2–63 letters or an `xn--` punycode label); and any character other than `a-z`, `0-9`, `-` and `.`.
 
 ### `tracked_domains`
 

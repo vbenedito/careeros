@@ -24,7 +24,7 @@ flowchart LR
       POP["Popup (React)<br/>no network calls"]
       SW["Service worker<br/>engine · outbox · sync · auth"]
       LS[("chrome.storage.local<br/>extension session 🔑 · engine state<br/>outbox · quarantine · domain cache")]
-      POP <-- "internal messages + port<br/>(own extension only)" --> SW
+      POP <-- "chrome.runtime messages (7 types)<br/>+ popup port (own extension only)" --> SW
       SW --- LS
     end
     DUI["Dashboard pages<br/>(HttpOnly session cookies 🔑)"]
@@ -32,8 +32,9 @@ flowchart LR
 
   subgraph VERCEL["Vercel — server-side trust"]
     direction TB
-    PX["proxy.ts<br/>nonce CSP · refreshes session · AUTH-03 guard"]
-    RSC["Server Components<br/>dashboard · settings"]
+    PX["proxy.ts<br/>nonce CSP · refreshes session · AUTH-03 guard<br/>signed in at / or /sign-in → /dashboard"]
+    LAND["GET / route handler<br/>static landing, own CSP (LAND)<br/>+ robots.txt · sitemap.xml · /opengraph-image · /icon.svg"]
+    RSC["Server Components<br/>/dashboard · /settings · /connect · /sign-in · /privacy"]
     RH["Route handlers<br/>POSTs/DELETEs same-origin only:<br/>/auth/sign-in · /auth/sign-out · /api/extension/link<br/>/api/sites · /api/sites/[id] · /api/account/delete<br/>GET /auth/callback (OAuth return)"]
     SEC["SUPABASE_SECRET_KEY 🔒<br/>server-only env"]
   end
@@ -52,6 +53,7 @@ flowchart LR
   RH -- "① PKCE: /authorize redirect,<br/>exchangeCodeForSession · signOut" --> GA
   GA <-- "①" --> GP
   DUI -- "page requests + cookies" --> PX --> RSC
+  PX -- "signed out at /" --> LAND
   RSC -- "④ user JWT · publishable key<br/>get_daily_totals · get_domain_totals<br/>tracked_domains (settings)" --> API
   RH -- "user JWT: ② quota RPC<br/>tracked_domains writes" --> API
   RH -- "② generateLink · deleteUser" --> GA
