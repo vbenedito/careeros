@@ -48,7 +48,8 @@ Status: **Draft for review** · 2026-11-10 · Part of #102.
 | "study time tracker chrome extension", "coding interview preparation tracker", "interview prep tracker", "how many hours to study for coding interviews" | ~0 | — | No measurable demand: **don't build titles around them** |
 
 **Conclusion:**
-- **Lead with "study time tracker"**: it names the product exactly, has real demand and is the easiest term to win.
+- **Lead with "study time tracker"**: it names the product exactly and has real demand at low difficulty (19). "Study hours tracker" is even easier (12) but has half the searches, so it is the secondary term.
+- **A caveat on the data:** volumes are global, while the difficulty scores are for the US.
 - **Interview prep as context:** it sets us apart and converts the right visitors, but almost nobody searches for its long phrases.
 - **LeetCode and the other platforms:** named as examples.
 
@@ -80,22 +81,22 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
 ## 4. Structured data (JSON-LD)
 
 - `WebSite` (name, url) and `Organization` (name, url, logo, `sameAs`: GitHub repository).
-- `SoftwareApplication` (or `WebApplication`):
-  - `name`, `applicationCategory`: `ProductivityApplication`, `operatingSystem`: "Chrome (desktop), web";
+- `SoftwareApplication`:
+  - `name`, `applicationCategory`: `BrowserApplication` (a value Google supports), `operatingSystem`: "Chrome (desktop)";
   - `offers` with `price: 0` and `priceCurrency`;
-  - `description` matching the meta description;
-  - no `aggregateRating`: there are no real ratings yet, and inventing them breaks Google's rules.
-- `FAQPage` with the FAQ from `content.md` §4.7, its answers identical to the visible text. Google shows FAQ rich results only for a few authoritative sites now, but the markup still helps search engines and AI tools understand the answers.
-- **CSP:** JSON-LD goes in `<script type="application/ld+json">`. Browsers treat it as a data block and do not run it. Under our CSP it still gets the page's nonce (or hash), and an E2E check makes sure no CSP violation is reported (architecture §3).
+  - `description` matching the meta description.
+- **No rich result is expected, and that's fine.** Google shows a software rich result only with real ratings or reviews (`aggregateRating` or `review`), and we have none: inventing them breaks Google's rules. Google also ended FAQ rich results for all sites in 2026 ([report](https://www.techwyse.com/news/ai-search/google-faq-rich-results-deprecated-2026); Google's [software app guidelines](https://developers.google.com/search/docs/appearance/structured-data/software-app)). The markup is still worth having: it states plainly what the product is, for search engines and AI tools. So the FAQ is marked up only as plain visible content, without `FAQPage`.
+- **Validation:** Schema.org's [Schema Markup Validator](https://validator.schema.org/), not Google's Rich Results Test (it would flag the missing ratings).
+- **CSP:** JSON-LD goes in `<script type="application/ld+json">`. HTML stops processing a script with a non-JavaScript type before the CSP check, so browsers neither run nor block it, even under the landing page's `script-src 'none'` (architecture §3). It needs no nonce or hash. An E2E check confirms zero CSP violations.
 
 ## 5. Technical
 
 | Item | Plan |
 |---|---|
 | Canonical | `<link rel="canonical">` built from `SITE_URL` (the existing server setting), so moving to the custom domain is a configuration change. Old `vercel.app` URLs then redirect with 308 |
-| `robots.txt` | Allow `/` and `/privacy`; disallow `/dashboard`, `/settings`, `/connect`, `/api`, `/auth`; link the sitemap |
+| `robots.txt` | Disallow only `/api` and `/auth` (and the raw `/landing/` folder); link the sitemap. App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
 | `sitemap.xml` | `/` and `/privacy` only, built from `SITE_URL` |
-| App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots and the `X-Robots-Tag` header) |
+| App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots and the `X-Robots-Tag` header); signed-out crawlers are redirected to sign-in anyway |
 | Open Graph / Twitter | `og:title`, `og:description`, `og:url`, `og:type=website`, and a **1200×630 OG image** generated from the hero (built at build time, self-hosted); `twitter:card=summary_large_image` |
 | Icons | Favicon (SVG + ICO), Apple touch icon, web manifest; the same mark as the extension icon |
 | Language | `<html lang="en">` |
@@ -124,14 +125,15 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
 | Lighthouse (mobile), Performance | ≥ 95 | Same |
 | Core Web Vitals | LCP < 2.0 s, CLS < 0.05, INP < 200 ms | Lighthouse in the lab; Search Console field data after launch |
 | Indexing | Landing and privacy indexed; app pages not indexed | Search Console coverage report, 2–4 weeks after launch |
-| Rich data | No errors in Google's Rich Results Test | Before release |
+| Structured data | No errors in the Schema Markup Validator | Before release |
 
 ## 9. Domain note
 
 `careeros-taupe.vercel.app` works, but a custom domain earns more trust and keeps all ranking signals when the hosting changes. The product owner will buy one later. Everything here builds URLs from `SITE_URL`, so the switch is:
 - add the domain in Vercel and update `SITE_URL`;
-- update the Supabase/OAuth redirect URLs;
-- ship an **extension release whose `externally_connectable` origin is the new domain** (the extension only talks to the dashboard origin it was built for, AUTH-06);
-- add 308 redirects from the old address.
+- update the Supabase Site URL, its redirect allow-list and the OAuth redirect URLs;
+- **first ship an extension release built for the new origin.** One build setting, `VITE_DASHBOARD_ORIGIN`, drives `externally_connectable`, the extension's sender check and its "Open dashboard" link (AUTH-06). Unpacked builds don't auto-update, so old builds can no longer connect, check status or disconnect from the new domain; uploads keep working (they go straight to Supabase). Optionally, a transition build accepts both origins;
+- then add 308 redirects from the old address;
+- everyone signs in again once (cookies belong to the old host).
 
 Ideally the domain lands before the Chrome Web Store submission, so the first store version already uses it. The landing page should go live on the custom domain if it's ready by then: links and rankings built on `vercel.app` are partly lost in a move.

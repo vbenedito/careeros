@@ -37,10 +37,10 @@ Links and our own notes only; no copied text or assets. Screenshots are not atta
    - The product visible on the first screen: the popup's live timer beside the weekly chart.
 2. **Show it in context:** the popup over a study site (a neutral mock of a problem page, not a real site's UI), then the dashboard week view.
 3. **How it works in four steps:** install → choose your study sites → study as usual → see your week. Each step one line long.
-4. **Privacy as a feature section**, phrased as what we never collect (URLs, page content, other sites) plus the controls: choose sites, pause tracking, delete everything.
+4. **Privacy as a feature section**, phrased as what we never collect (URLs, page content, other sites) plus the controls: choose sites, turn tracking off, delete your account.
 5. **Specifics over adjectives:**
    - "pauses after 60 seconds without input";
-   - "keeps counting while a video plays, up to 15 minutes";
+   - "keeps counting while the study tab plays sound, up to 15 minutes";
    - "only the sites you add".
    Every one is true to the v0 specs.
 6. **Short FAQ** with direct answers (it also feeds search and AI answers).
