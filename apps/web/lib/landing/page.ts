@@ -20,6 +20,8 @@ export interface LandingOptions {
   /** Chrome Web Store listing (LAND-05). */
   installUrl: string;
   repositoryUrl: string;
+  /** Google Search Console meta-tag token (LAND-09); omitted when not configured. */
+  googleSiteVerification?: string | undefined;
 }
 
 const esc = (s: string) =>
@@ -182,7 +184,12 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:26}}
 `;
 
-export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOptions): string {
+export function renderLanding({
+  siteUrl,
+  installUrl,
+  repositoryUrl,
+  googleSiteVerification,
+}: LandingOptions): string {
   const site = new URL(siteUrl).origin;
   const max = Math.max(...SAMPLE_WEEK);
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -236,7 +243,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(TITLE)}</title>
 <meta name="description" content="${esc(DESCRIPTION)}">
-<link rel="canonical" href="${esc(site)}/">
+<link rel="canonical" href="${esc(site)}/">${googleSiteVerification ? `\n<meta name="google-site-verification" content="${esc(googleSiteVerification)}">` : ""}
 <meta name="theme-color" content="#0c0d10">
 <link rel="preload" href="/fonts/mona-sans-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">

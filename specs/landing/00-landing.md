@@ -2,7 +2,7 @@
 
 Status: **Approved** (product owner, design 2026-11-11) · Issue #101 (parent #102) · Plans: [`docs/landing/`](../../docs/landing/) · Decision: [ADR-0009](../../docs/adr/0009-landing-route-and-rendering.md)
 
-Amended 2026-11-11 (#131): LAND-01 proxy, LAND-04 site URL fallback, LAND-06 full CSP, to match the code.
+Amended 2026-11-11 (#131): LAND-01 proxy, LAND-04 site URL fallback, LAND-06 full CSP, to match the code. Amended 2026-11-11 (#135): LAND-09 Search Console verification.
 
 A public page that explains CareerOS to people preparing for technical interviews, leads with their problem, and shows the product working. Everything it claims matches specs/v0.
 
@@ -14,5 +14,6 @@ A public page that explains CareerOS to people preparing for technical interview
 - **LAND-06** Security: the landing response carries its own CSP (`lib/landing/csp.ts`): `default-src 'none'`; `script-src 'none'`; `style-src 'sha256-…'` (the one inline stylesheet, by hash); `style-src-attr 'unsafe-inline'` (style attributes cannot run code, as in SEC-09); `img-src 'self' data:`; `font-src 'self'`; `base-uri 'none'`; `form-action 'none'`; `frame-ancestors 'none'`; `upgrade-insecure-requests` when the site URL is https. The static security headers (SEC-09) apply as everywhere. The only `<script>` is the JSON-LD data block. Fonts are self-hosted (`font-src 'self'`; Mona Sans, SIL OFL 1.1, for headings). No third-party requests (SEC-15).
 - **LAND-07** Search files: `/robots.txt` (disallows `/api/` and `/auth/` only), `/sitemap.xml` (`/` and `/privacy`), `/opengraph-image` (1200×630, built at build time) and `/icon.svg` (the extension's icon, the favicon of every page), all public. App pages are `noindex`; `/privacy` is indexable.
 - **LAND-08** Interactions use native checkboxes and radio buttons styled with CSS (step away, pick study sites, week/month), each with a label, reachable by keyboard. Motion is CSS only, runs only when the visitor has not asked for reduced motion, and a "Pause animations" control stops it (WCAG 2.2.2).
+- **LAND-09** Search Console: when `GOOGLE_SITE_VERIFICATION` is set at build time, the landing page carries `<meta name="google-site-verification" content="…">` (Google's URL-prefix property for the site origin). The value is public; only `[A-Za-z0-9_-]{20,100}` is accepted, otherwise the build fails. Unset: no tag. Bing Webmaster Tools imports the site from Search Console.
 
 **Implementation note (2026-11-11):** the static page is a Next.js route handler at `/` (`app/route.ts`, `dynamic = "force-static"`) returning the HTML from `lib/landing/page.ts`, rather than a separate prebuild step and rewrite. It is the same decision as ADR-0009 (static, no JavaScript, its own CSP) in one response. The page is dark only, as in the approved design.

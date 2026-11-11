@@ -55,6 +55,7 @@ careeros/
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | web | Required; public |
 | `SUPABASE_SECRET_KEY` | web (server only) | Required for the link route and account deletion; never `NEXT_PUBLIC_` (SEC-07) |
 | `NEXT_PUBLIC_EXTENSION_ID` | web | Required; ID of the extension build this dashboard talks to (AUTH-06) |
+| `GOOGLE_SITE_VERIFICATION` | web | Optional. Google Search Console meta-tag token on the landing page (LAND-09); read at build time |
 | `EXTENSION_INSTALL_URL` | web | Optional; must be https. The landing page's install link; without it, the Chrome Web Store search for CareerOS |
 | `PRIVACY_CONTROLLER`, `PRIVACY_CONTACT_EMAIL`, `DATA_REGION` | web | Shown on `/privacy` (SEC-13). Optional locally (a "not configured" marker is shown); `next.config.ts` fails the build when any is missing and `VERCEL_ENV=production` |
 | `VITE_DASHBOARD_ORIGIN` | extension | Required; an origin without path, https in production builds |

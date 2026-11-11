@@ -10,6 +10,19 @@ const html = renderLanding({
 });
 
 describe("landing page (LAND)", () => {
+  it("LAND-09 the Search Console meta tag appears only when configured", () => {
+    expect(html).not.toContain("google-site-verification");
+    const verified = renderLanding({
+      siteUrl: "https://careeros.example/",
+      installUrl: "https://chromewebstore.google.com/detail/x",
+      repositoryUrl: "https://github.com/vbenedito/careeros",
+      googleSiteVerification: "abcDEF123_-abcDEF123_-xyz",
+    });
+    expect(verified).toContain(
+      '<meta name="google-site-verification" content="abcDEF123_-abcDEF123_-xyz">',
+    );
+  });
+
   it("LAND-04 SEO basics: title ≤ 60, description ≤ 155, one h1, canonical, lang", () => {
     expect(TITLE.length).toBeLessThanOrEqual(60);
     expect(DESCRIPTION.length).toBeLessThanOrEqual(155);
