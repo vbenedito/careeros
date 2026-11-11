@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/app/theme-provider";
+import { buildSiteUrl } from "@/lib/env";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(buildSiteUrl()),
   title: "CareerOS",
   description: "Track your technical-interview study time.",
   // LAND-07: app pages stay out of search results; /privacy opts back in, the landing page

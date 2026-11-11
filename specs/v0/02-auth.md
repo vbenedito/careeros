@@ -10,7 +10,7 @@ Self-service sign-up/sign-in with Google or GitHub on the dashboard, and a secur
 
 - **AUTH-01** Sign-in page offers exactly two providers: **Google** and **GitHub**, via Supabase Auth OAuth with PKCE. Sign-in and sign-up are the same action (first login creates the account).
 - **AUTH-02** Sessions are stored in HTTP-only cookies via `@supabase/ssr`. Server code authorizes with `supabase.auth.getUser()` / verified claims — never trusts unverified `getSession()` data on the server.
-- **AUTH-03** All routes except `/sign-in`, `/auth/callback`, `/privacy` require a session; unauthenticated page requests redirect to `/sign-in?next=…` (only same-origin relative `next` values are honored); unauthenticated `/api/*` requests get `401` JSON, never a redirect.
+- **AUTH-03** All routes except `/sign-in`, `/auth/callback`, `/privacy` and the landing page's exact paths (`/`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, LAND-01/07) require a session; unauthenticated page requests redirect to `/sign-in?next=…` (only same-origin relative `next` values are honored); unauthenticated `/api/*` requests get `401` JSON, never a redirect.
 - **AUTH-04** Sign-out ends the dashboard session only (`scope: 'local'`); the extension stays connected unless the user disconnects it (AUTH-12).
 - **AUTH-05** An OAuth account without a verified email is rejected with a clear message (Supabase requires email for both providers; the GitHub provider requests the `user:email` scope).
 - **AUTH-05a** The Supabase **email provider is disabled** (local `config.toml` and production settings): no email/password sign-up and no email login. The extension handoff (§3) still works because it uses admin-generated tokens (spike #10).

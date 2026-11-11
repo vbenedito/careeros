@@ -2,6 +2,8 @@
 
 Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10) · 2026-11-10 · Part of #102 · ADR draft: [ADR-0009](../adr/0009-landing-route-and-rendering.md).
 
+> **As built (2026-11-11):** a static route handler at `/` with inline CSS allowed by hash, dark only, plus a CSS-only pause control. There is no prebuild step, proxy rewrite or `/landing/` folder: see [LAND-01..08](../../specs/landing/00-landing.md) and the ADR-0009 implementation note. The sections below record the original proposal.
+
 ## 1. Recommendation in short
 
 1. **Route:** the landing page at `/`; the dashboard moves to `/dashboard`. A signed-in visitor who opens `/` is redirected to `/dashboard` (query string kept), so old links and the current extension keep working.

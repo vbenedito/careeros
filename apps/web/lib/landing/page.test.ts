@@ -44,6 +44,21 @@ describe("landing page (LAND)", () => {
     expect(buildLandingCsp(false)).not.toContain("upgrade-insecure-requests");
   });
 
+  it("LAND-06 the CSP hash matches the <style> actually served", async () => {
+    const { createHash } = await import("node:crypto");
+    const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1] ?? "");
+    expect(styles).toHaveLength(1);
+    const hash = `sha256-${createHash("sha256")
+      .update(styles[0] ?? "")
+      .digest("base64")}`;
+    expect(hash).toBe(LANDING_STYLE_HASH);
+  });
+
+  it("LAND-08 visitors can pause all motion", () => {
+    expect(html).toContain('<label for="pause" class="chip">Pause animations</label>');
+    expect(html).toContain("#pause:checked~main *");
+  });
+
   it("LAND-05 CTAs: sign-in and the configured store link", () => {
     expect(html).toContain('href="/sign-in">Get started — it\'s free</a>');
     expect(html).toContain('href="https://chromewebstore.google.com/detail/x">Add to Chrome</a>');

@@ -1,6 +1,6 @@
 /**
  * Landing page copy (LAND-03). Every claim matches specs/v0; see docs/landing/content.md.
- * Kept as data so the FAQ text and its JSON-LD stay identical.
+ * Kept as data so the page and its tests share one source.
  */
 
 export const TITLE = "Study Time Tracker for Coding Interviews | CareerOS";

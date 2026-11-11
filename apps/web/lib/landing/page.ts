@@ -96,6 +96,7 @@ h3{margin:0}
 .total{font-size:26px;font-weight:750;letter-spacing:-.02em}.total .m{display:none}
 #v-month:checked~.chart .mbars{display:flex}#v-month:checked~.chart .bars{display:none}
 #v-month:checked~.chart .total .m{display:inline}#v-month:checked~.chart .total .w{display:none}
+#v-week:focus-visible~.chart label[for=v-week],#v-month:focus-visible~.chart label[for=v-month],#pause:focus-visible+.wrap label[for=pause]{outline:2px solid var(--primary);outline-offset:3px}
 #v-week:checked~.chart label[for=v-week],#v-month:checked~.chart label[for=v-month]{background:var(--sel);border-color:var(--primary)}
 .section{padding-top:96px;padding-bottom:96px;display:flex;flex-direction:column;gap:40px}
 .pipe{position:relative}
@@ -140,6 +141,9 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 @supports (animation-timeline:view()){.bars .col i{transform-origin:bottom;animation:grow linear both;animation-timeline:view();animation-range:entry 10% cover 40%}}
 @keyframes grow{from{transform:scaleY(.05)}to{transform:scaleY(1)}}
 }
+#pause:checked~main *,#pause:checked~main *::after{animation-play-state:paused!important}
+.pausebar{display:flex;justify-content:flex-end;padding-top:12px}.pausebar .chip{font-size:13px;min-height:36px}
+@media (prefers-reduced-motion:reduce){.pausebar{display:none}}
 @media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:32}}
 `;
 
@@ -156,9 +160,9 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
     (m) => `<i style="height:${Math.max(2, Math.round((m / mmax) * 170))}px"></i>`,
   ).join("");
   const steps = STEPS.map(
-    (s, i) => `<li><span class="n">${i + 1}</span><h3>${s.t}</h3><p>${esc(s.d)}</p></li>`,
+    (s, i) => `<li><span class="n">${i + 1}</span><h3>${esc(s.t)}</h3><p>${esc(s.d)}</p></li>`,
   ).join("");
-  const rules = RULES.map((r) => `<div><dt>${r.v}</dt><dd>${esc(r.d)}</dd></div>`).join("");
+  const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
   const faq = FAQ.map(
     (f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`,
   ).join("");
@@ -199,6 +203,9 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <meta property="og:description" content="${esc(DESCRIPTION)}">
 <meta property="og:url" content="${esc(site)}/">
 <meta property="og:image" content="${esc(site)}/opengraph-image">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="CareerOS: see where your study time really goes">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${jsonLd}</script>
 <style>${LANDING_CSS}</style>
@@ -208,6 +215,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <a class="brand" href="/">CareerOS</a>
 <nav class="nav" aria-label="Main"><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a><a class="btn btn-ghost btn-sm" href="/sign-in">Sign in</a></nav>
 </div></header>
+<input type="checkbox" id="pause" class="sr"><div class="wrap pausebar"><label for="pause" class="chip">Pause animations</label></div>
 <main>
 <section class="wrap split hero">
 <div class="copy">
@@ -236,7 +244,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <div class="copy"><h2>Stop starting timers</h2><p>CareerOS counts only while a study site is the tab in front of you and you're active. Step away and it pauses on its own after 60 seconds, then picks up when you're back.</p></div>
 <div class="card">
 <input type="checkbox" id="away" class="sr"><label for="away" class="chip">Step away from the keyboard</label>
-<div class="away" aria-live="polite">
+<div class="away">
 <div class="live"><i class="dot"></i>Counting on leetcode.com</div>
 <div class="paused"><i class="dot warn"></i>Paused: no input for 60 seconds</div>
 <div class="between"><span class="label">Session</span><span class="big tick"></span></div>
@@ -253,16 +261,16 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <input type="checkbox" id="c-nc" class="sr" checked><label for="c-nc" class="chip">neetcode.io</label>
 <input type="checkbox" id="c-py" class="sr"><label for="c-py" class="chip">docs.python.org</label>
 <input type="checkbox" id="c-yt" class="sr"><label for="c-yt" class="chip">youtube.com</label>
-<div class="rows" aria-live="polite">${siteRow("r-lc", "leetcode.com")}${siteRow("r-nc", "neetcode.io")}${siteRow("r-py", "docs.python.org")}${siteRow("r-yt", "youtube.com")}</div>
+<div class="rows">${siteRow("r-lc", "leetcode.com")}${siteRow("r-nc", "neetcode.io")}${siteRow("r-py", "docs.python.org")}${siteRow("r-yt", "youtube.com")}</div>
 </div>
 </div>
 <div class="copy"><h2>Stop counting the scroll as study</h2><p>You decide what study means: up to 50 sites, subdomains included. Everything else is ignored, so your hours are your real study hours.</p></div>
 </section>
 
 <section id="privacy" class="band"><div class="wrap split">
-<div class="copy"><h2>Don't trade your privacy for a number</h2><p>The extension reads the active tab's address only to get the site name. For your study it keeps one small record: the site and when you started and stopped. The address, the page and every other site stay on your computer.</p><a href="/privacy">Read the privacy policy</a></div>
+<div class="copy"><h2>Don't trade your privacy for a number</h2><p>The extension reads the active tab's address only to get the site name. For your study it keeps one small record: the site and when you started and stopped. The address, the page and every other site are never stored or sent.</p><a href="/privacy">Read the privacy policy</a></div>
 <div class="lists">
-<div class="list yes"><h3>Stored</h3><ul><li>Sites you choose</li><li>Start and end times</li><li>A random device id</li><li>Your account email</li></ul></div>
+<div class="list yes"><h3>Stored</h3><ul><li>Sites you choose</li><li>Start and end times</li><li>A random device id</li><li>Your account: email and sign-in provider</li></ul></div>
 <div class="list no"><h3>Never</h3><ul><li>Full addresses or searches</li><li>Page titles or content</li><li>Keystrokes or screenshots</li><li>Other sites, incognito</li><li>Analytics or ad trackers</li></ul></div>
 </div>
 </div></section>

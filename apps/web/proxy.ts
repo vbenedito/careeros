@@ -67,16 +67,11 @@ export async function proxy(request: NextRequest) {
     const safeMethod = request.method === "GET" || request.method === "HEAD";
     result = NextResponse.redirect(url, safeMethod ? 307 : 303);
   } else if (signedIn && pathname === "/sign-in") {
-    const url = request.nextUrl.clone();
-    url.pathname = DASHBOARD_PATH;
-    url.search = "";
-    result = NextResponse.redirect(url);
+    result = NextResponse.redirect(new URL(DASHBOARD_PATH, siteUrl()));
   } else if (signedIn && pathname === "/") {
     // The verified session only picks the destination; /dashboard stays guarded. The query
-    // string is kept so old /?view=… links keep their period.
-    const url = request.nextUrl.clone();
-    url.pathname = DASHBOARD_PATH;
-    result = NextResponse.redirect(url);
+    // string is kept so old /?view=… links keep their period. Origin from config (SEC-08).
+    result = NextResponse.redirect(new URL(`${DASHBOARD_PATH}${search}`, siteUrl()));
   }
 
   // Keep refreshed/cleared auth cookies and their no-cache headers on whatever we return.

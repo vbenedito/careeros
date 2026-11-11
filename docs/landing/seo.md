@@ -96,12 +96,12 @@ Rules: one cluster per page (no two pages targeting the same terms); clusters A,
 | Canonical | `<link rel="canonical">` built from `SITE_URL` (the existing server setting), so moving to the custom domain is a configuration change. Old `vercel.app` URLs then redirect with 308 |
 | `robots.txt` | Disallow only `/api` and `/auth`; link the sitemap. The `/landing/` assets stay crawlable (`/landing/index.html` itself redirects to `/`, architecture §3). App pages are **not** blocked here, because Google never sees a `noindex` on a URL that robots.txt blocks |
 | `sitemap.xml` | `/` and `/privacy` only, built from `SITE_URL` |
-| App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots and the `X-Robots-Tag` header); signed-out crawlers are redirected to sign-in anyway |
+| App pages | `noindex` on the sign-in, dashboard, settings and connect pages (meta robots); signed-out crawlers are redirected to sign-in anyway |
 | Open Graph / Twitter | `og:title`, `og:description`, `og:url`, `og:type=website`, and a **1200×630 OG image** generated from the hero (built at build time, self-hosted); `twitter:card=summary_large_image` |
-| Icons | Favicon (SVG + ICO), Apple touch icon, web manifest; the same mark as the extension icon |
+| Icons | Favicon and web manifest: follow-up (no icon mark exists yet) |
 | Language | `<html lang="en">` |
 | Speed | No client JavaScript needed for the landing content; system fonts (already the design system); hero image preloaded and sized; no third-party requests (SEC-15) |
-| Theme | Follows the visitor's light/dark preference without a flash of the wrong theme |
+| Theme | Dark only, as in the approved design (LAND) |
 
 ## 6. AI-search visibility
 
