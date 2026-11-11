@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { extensionInstallUrl } from "./links";
+import { extensionInstallUrl, siteVerificationToken } from "./links";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -14,6 +14,17 @@ describe("landing links (LAND-05)", () => {
   it("LAND-05 without it, the Chrome Web Store search", () => {
     vi.stubEnv("EXTENSION_INSTALL_URL", "");
     expect(extensionInstallUrl()).toContain("chromewebstore.google.com");
+  });
+});
+
+describe("Search Console verification (LAND-09)", () => {
+  it("LAND-09 optional; accepts Google's token characters only", () => {
+    vi.stubEnv("GOOGLE_SITE_VERIFICATION", "");
+    expect(siteVerificationToken()).toBeUndefined();
+    vi.stubEnv("GOOGLE_SITE_VERIFICATION", " abcDEF123_-abcDEF123_-xyz ");
+    expect(siteVerificationToken()).toBe("abcDEF123_-abcDEF123_-xyz");
+    vi.stubEnv("GOOGLE_SITE_VERIFICATION", '"><script>alert(1)</script>');
+    expect(() => siteVerificationToken()).toThrow();
   });
 });
 

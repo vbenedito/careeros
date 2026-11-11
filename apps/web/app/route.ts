@@ -4,7 +4,7 @@
  */
 import { buildSiteUrl } from "@/lib/env";
 import { buildLandingCsp } from "@/lib/landing/csp";
-import { extensionInstallUrl, REPOSITORY_URL } from "@/lib/landing/links";
+import { extensionInstallUrl, REPOSITORY_URL, siteVerificationToken } from "@/lib/landing/links";
 import { renderLanding } from "@/lib/landing/page";
 
 export const dynamic = "force-static";
@@ -15,6 +15,7 @@ export function GET() {
     siteUrl: site,
     installUrl: extensionInstallUrl(),
     repositoryUrl: REPOSITORY_URL,
+    googleSiteVerification: siteVerificationToken(),
   });
   return new Response(html, {
     headers: {

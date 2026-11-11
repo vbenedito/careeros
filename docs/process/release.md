@@ -10,7 +10,7 @@ How each part of CareerOS reaches users. Steps marked **Proposed** have not been
 |---|---|
 | Build and deploy | Vercel's GitHub integration builds `apps/web` for every pull request (preview, protected) and deploys production when a PR is merged to `main` |
 | Environment | Set in Vercel per environment; the list and rules are ENV-05b in [specs/v0/09-environments.md](../../specs/v0/09-environments.md). `SUPABASE_SECRET_KEY` is scoped to Production only |
-| Build-time values | `EXTENSION_INSTALL_URL`, `SITE_URL` and the `PRIVACY_*` values are read at build time (static landing page, robots, sitemap, the production build check). After changing them, **redeploy** |
+| Build-time values | `EXTENSION_INSTALL_URL`, `GOOGLE_SITE_VERIFICATION`, `SITE_URL` and the `PRIVACY_*` values are read at build time (static landing page, robots, sitemap, the production build check). After changing them, **redeploy** |
 | Check | CI green before merge; after deploy, open `/`, sign in, open `/dashboard` and `/connect` |
 | Rollback | Promote the previous production deployment in Vercel, or revert the commit on `main` |
 
