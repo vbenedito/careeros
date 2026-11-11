@@ -1,6 +1,6 @@
 # v0 test report
 
-Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **draft**. One manual result is pending, marked ⏳.
+Spec: [`specs/v0/08-testing.md`](../../specs/v0/08-testing.md) (TEST). Status: **final** (2026-11-09).
 
 ## 1. Automated tests
 
@@ -8,9 +8,9 @@ All layers run in CI on every pull request and on `main` (TEST §5). Figures fro
 
 | Layer | Tool | Scope | Result |
 |---|---|---|---|
-| Unit and component | Vitest (+ Testing Library, jsdom) | Tracking engine (fake clock), domain rules, formatting, sync queue/backoff/quarantine, storage, message handlers, dashboard view models, popup and dashboard components | **396 tests** in 43 files, all passing |
-| Database | pgTAP (`supabase test db`, Docker) | RLS isolation, constraints, triggers, RPC idempotency and validation, totals with time zones, cascade delete, link rate limit | **169 tests** in 7 files, all passing |
-| Integration: dashboard | Vitest against the local Supabase stack and the built dashboard | Auth guard, extension link route, dashboard data and time zones, settings routes (sites CRUD, sign-out scopes, account deletion), privacy page, no third-party scripts | **34 tests**, all passing |
+| Unit and component | Vitest (+ Testing Library, jsdom) | Tracking engine (fake clock), domain rules, formatting, sync queue/backoff/quarantine, storage, message handlers, dashboard view models, popup and dashboard components | **419 tests** in 45 files, all passing |
+| Database | pgTAP (`supabase test db`, Docker) | RLS isolation, constraints, triggers, RPC idempotency and validation, totals with time zones, cascade delete, link rate limit, upload caps and overlaps, catalog-wide security checks | **212 tests** in 8 files, all passing |
+| Integration: dashboard | Vitest against the local Supabase stack and the built dashboard | Auth guard, extension link route, dashboard data and time zones, settings routes (sites CRUD, sign-out scopes, account deletion and its recent-sign-in rule), privacy page, no third-party scripts | **36 tests**, all passing |
 | Integration: extension | Vitest + Playwright (real Chromium, unpacked build) | Connection handoff, `/connect` page, domain sync, interval sync and quarantine, dashboard shell, pointer cursor and destructive colours | **28 tests**, all passing |
 | E2E | Vitest + Playwright (real Chromium) | (a) Dashboard journey: period navigation, Settings site CRUD, delete account, sign-in loading state and first OAuth hop without CSP errors. (b) Extension smoke: real tracking on a local page under a tracked domain → outbox → popup → sync to Supabase; storage holds no paths or untracked hosts | **8 tests**, all passing |
 | Backup → restore | `scripts/ops/backup-restore-test.sh` | Dump → age encryption → decrypt → fresh schema → restore → identical rows | Passing (31 users, 57 sites, 17 sessions restored identically) |
@@ -28,7 +28,7 @@ Run by the product owner on production (`https://careeros-taupe.vercel.app`, ext
 | 1 | **Stopwatch accuracy:** 10-minute sessions with tab switches and idle pauses, compared with a phone stopwatch; within ±2 % | ✅ Passed, by the product owner's check. The per-session figures were not recorded (see below). | 2026-11-09 |
 | 2 | **Media rule** with a real video (counts without input up to ~15 min, then pauses) | ✅ Passed | 2026-11-09 |
 | 3 | **Real Google and GitHub sign-up** on production | ✅ Passed with both providers; no CSP errors in the console | 2026-11-08 |
-| 4 | **Independent refresh soak**, extension and dashboard, 24 h | ⏳ **12 h passed** (tracking, sync and dashboard metrics all fine); the full 24 h is pending | 2026-11-09 |
+| 4 | **Independent refresh soak**, extension and dashboard, 24 h | ✅ Passed: 12 h and then the full 24 h with tracking, sync and dashboard metrics working | 2026-11-09 |
 | 5 | **Visual pass**, light/dark, 360 / 768 / 1440 px | ✅ Passed after fixes (below) | 2026-11-09 |
 
 ### Stopwatch sessions (check 1)
