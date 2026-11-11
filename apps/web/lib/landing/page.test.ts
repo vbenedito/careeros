@@ -54,6 +54,13 @@ describe("landing page (LAND)", () => {
     expect(hash).toBe(LANDING_STYLE_HASH);
   });
 
+  it("LAND-03 the engine log and the site belt show real rules, sample times only", async () => {
+    const { ENGINE_LOG } = await import("./content");
+    for (const l of ENGINE_LOG) expect(html).toContain(l.result);
+    expect(html).toContain("no input for 60 s");
+    expect(html).toContain("Examples. Any site you study on works; you choose.");
+  });
+
   it("LAND-08 visitors can pause all motion", () => {
     expect(html).toContain('<label for="pause" class="chip">Pause animations</label>');
     expect(html).toContain("#pause:checked~main *");

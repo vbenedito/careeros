@@ -21,6 +21,20 @@ export const STEPS = [
   { t: "Your week", d: "The dashboard adds up every computer you use." },
 ] as const;
 
+/**
+ * Example engine log for "How it works" (LAND-03). Each line is a real rule: TRK-01/03 (counts
+ * on a study site), TRK-05 (60 s idle closes the session), SYNC-01/02 (saved locally, uploaded
+ * on the next cycle, at most 5 minutes), TRK-03 (other sites ignored). Sample times only.
+ */
+export const ENGINE_LOG = [
+  { at: "09:14:02", event: "tab leetcode.com", result: "study site, counting", tone: "okc" },
+  { at: "09:46:10", event: "no input for 60 s", result: "session closed, 32m", tone: "wc" },
+  { at: "09:46:10", event: "saved on this computer", result: "1 waiting to upload", tone: "pc" },
+  { at: "09:50:00", event: "sync", result: "1 session confirmed", tone: "okc" },
+  { at: "09:51:15", event: "tab youtube.com", result: "not a study site, ignored", tone: "" },
+  { at: "09:52:03", event: "tab neetcode.io", result: "study site, counting", tone: "okc" },
+] as const;
+
 export const RULES = [
   { v: "60 s", d: "without input and tracking pauses" },
   { v: "15 min", d: "a playing video keeps counting without input" },

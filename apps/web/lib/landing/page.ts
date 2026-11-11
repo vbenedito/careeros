@@ -3,7 +3,16 @@
  * and no JavaScript. Interactions are native checkboxes and radios styled with CSS; motion is
  * CSS only and stops under prefers-reduced-motion.
  */
-import { DESCRIPTION, FAQ, RULES, SAMPLE_MONTH, SAMPLE_WEEK, STEPS, TITLE } from "./content";
+import {
+  DESCRIPTION,
+  ENGINE_LOG,
+  FAQ,
+  RULES,
+  SAMPLE_MONTH,
+  SAMPLE_WEEK,
+  STEPS,
+  TITLE,
+} from "./content";
 
 export interface LandingOptions {
   /** Origin of the site, e.g. https://careeros-taupe.vercel.app (canonical, OG, JSON-LD). */
@@ -99,13 +108,6 @@ h3{margin:0}
 #v-week:focus-visible~.chart label[for=v-week],#v-month:focus-visible~.chart label[for=v-month],#pause:focus-visible+.wrap label[for=pause]{outline:2px solid var(--primary);outline-offset:3px}
 #v-week:checked~.chart label[for=v-week],#v-month:checked~.chart label[for=v-month]{background:var(--sel);border-color:var(--primary)}
 .section{padding-top:96px;padding-bottom:96px;display:flex;flex-direction:column;gap:40px}
-.pipe{position:relative}
-.pipe .line{position:absolute;left:10%;right:10%;top:27px;height:2px;background:var(--line)}
-.pipe .line span{position:absolute;top:-3px;width:8px;height:8px;border-radius:4px;background:var(--primary);box-shadow:0 0 12px var(--primary)}
-.pipe ol{position:relative;margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
-.pipe li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
-.pipe .n{width:56px;height:56px;border-radius:28px;background:var(--raise);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:700}
-.pipe h3{font-size:17px;font-weight:650}.pipe p{margin:0;font-size:14px;color:var(--muted)}
 .rules{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .rules div{padding:24px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
 .rules dt{font-size:32px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.rules dd{margin:0;font-size:15px;color:var(--muted)}
@@ -136,13 +138,41 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 @keyframes s3{0%{opacity:0}62%{opacity:1}}
 .rec{animation:rec 12s ease-out infinite}
 @keyframes rec{0%,38%{opacity:0;transform:translateY(6px)}42%,100%{opacity:1;transform:none}}
-.pipe .line span{animation:pulse 4s linear infinite}
-@keyframes pulse{from{left:0}to{left:100%}}
 @supports (animation-timeline:view()){.bars .col i{transform-origin:bottom;animation:grow linear both;animation-timeline:view();animation-range:entry 10% cover 40%}}
 @keyframes grow{from{transform:scaleY(.05)}to{transform:scaleY(1)}}
 }
+
+.gridbg{position:relative}.gridbg::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.4 0.03 265 / .55) 1px,transparent 1px);background-size:24px 24px;-webkit-mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse at 70% 40%,#000 20%,transparent 70%)}.gridbg>section{position:relative}
+.lights{display:flex;gap:6px;align-items:center;padding:0 10px 8px 4px}.lights i{width:10px;height:10px;border-radius:5px;background:var(--line2)}
+.demo{box-shadow:0 30px 80px -30px oklch(0.72 0.14 265 / .35)}
+.belt{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:18px 0;-webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent)}
+.belt-track{display:flex;gap:40px;width:max-content;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:14px;color:var(--muted)}
+.belt-track span{white-space:nowrap}
+.beltnote{text-align:center;font-size:13px;color:var(--muted);margin:14px 0 0}
+.bento{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;padding-top:96px;padding-bottom:96px}
+.bento .card{flex:none}
+.bento .wide{grid-column:1/-1;display:flex;flex-direction:row;flex-wrap:wrap;gap:32px;align-items:center}
+.bento .wide .copy{flex:1 1 300px}.bento .wide .chart{flex:2 1 420px;min-width:0}
+.bento h2{font-size:clamp(26px,3vw,32px)}
+.bento .card .copy{gap:10px;flex:none}
+.term{flex:1 1 480px;min-width:0;border-radius:14px;border:1px solid var(--line);background:oklch(0.14 0.005 265);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.9;overflow:hidden}
+.term-head{display:flex;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--muted)}.term-head i{width:10px;height:10px;border-radius:5px;background:var(--line2)}.term-head span{margin-left:8px}
+.term ol{list-style:none;margin:0;padding:14px 16px;display:flex;flex-direction:column}
+.term li{display:grid;grid-template-columns:72px 1fr;gap:12px;color:var(--muted)}.term li b{font-weight:400;color:var(--fg)}.term .okc{color:var(--ok)}.term .wc{color:var(--warn)}.term .pc{color:var(--primary)}
+.howgrid{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.howgrid ol.steps{flex:1 1 300px;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px}
+.howgrid .steps li{display:grid;grid-template-columns:36px 1fr;gap:12px}
+.howgrid .steps .n{width:32px;height:32px;border-radius:16px;background:var(--raise);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.howgrid .steps h3{font-size:17px;font-weight:650}.howgrid .steps p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.rules dt{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:-.02em}
+@media (prefers-reduced-motion:no-preference){
+.belt-track{animation:belt 40s linear infinite}
+@keyframes belt{to{transform:translateX(-50%)}}
+@supports (animation-timeline:view()){.term li{animation:appear linear both;animation-timeline:view();animation-range:entry 20% entry 100%}}
+@keyframes appear{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
 #pause:checked~main *,#pause:checked~main *::after{animation-play-state:paused!important}
-.pausebar{display:flex;justify-content:flex-end;padding-top:12px}.pausebar .chip{font-size:13px;min-height:36px}
+.pausebar{display:flex;justify-content:flex-end;padding-top:12px;margin-bottom:-56px;position:relative;z-index:1}.pausebar .chip{font-size:13px;min-height:36px}
 @media (prefers-reduced-motion:reduce){.pausebar{display:none}}
 @media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:32}}
 `;
@@ -160,7 +190,12 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
     (m) => `<i style="height:${Math.max(2, Math.round((m / mmax) * 170))}px"></i>`,
   ).join("");
   const steps = STEPS.map(
-    (s, i) => `<li><span class="n">${i + 1}</span><h3>${esc(s.t)}</h3><p>${esc(s.d)}</p></li>`,
+    (s, i) =>
+      `<li><span class="n">${i + 1}</span><div><h3>${esc(s.t)}</h3><p>${esc(s.d)}</p></div></li>`,
+  ).join("");
+  const log = ENGINE_LOG.map(
+    (l) =>
+      `<li><span>${l.at}</span><span><b>${esc(l.event)}</b> <span class="${l.tone}">${esc(l.result)}</span></span></li>`,
   ).join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
   const faq = FAQ.map(
@@ -217,7 +252,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 </div></header>
 <input type="checkbox" id="pause" class="sr"><div class="wrap pausebar"><label for="pause" class="chip">Pause animations</label></div>
 <main>
-<section class="wrap split hero">
+<div class="gridbg"><section class="wrap split hero">
 <div class="copy">
 <h1>See where your study time really goes</h1>
 <p class="lede">A study time tracker for interview prep. It counts automatically on the sites you choose, like LeetCode and NeetCode, pauses when you step away, and ignores everything else.</p>
@@ -225,7 +260,7 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <p class="small">Sign in with Google or GitHub. Chrome on desktop.</p>
 </div>
 <div class="demo" role="img" aria-label="Demo: the timer counts on leetcode.com, stops on youtube.com, and resumes on neetcode.io. Only the site and the start and end times are saved.">
-<div class="tabs" aria-hidden="true"><span class="t1">leetcode.com</span><span class="t2">youtube.com</span><span class="t3">neetcode.io</span></div>
+<div class="tabs" aria-hidden="true"><span class="lights"><i></i><i></i><i></i></span><span class="t1">leetcode.com</span><span class="t2">youtube.com</span><span class="t3">neetcode.io</span></div>
 <div class="demo-body" aria-hidden="true">
 <div class="status"><span class="s1"><i class="dot"></i>Counting · study site</span><span class="s2"><i class="dot idle"></i>Not a study site · nothing recorded</span><span class="s3"><i class="dot"></i>Counting · study site</span></div>
 <div class="between"><span class="label">Today</span><span class="big clock"></span></div>
@@ -233,16 +268,21 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <div class="record"><b>Saved when you leave a study site</b><div class="rec">{ "domain": "leetcode.com",<br>&#160;&#160;"started_at": "09:14:02", "ended_at": "09:46:10" }</div></div>
 </div>
 </div>
+</section></div>
+
+<section class="belt" aria-label="Examples of study sites">
+<div class="belt-track"><span>leetcode.com</span><span>neetcode.io</span><span>greatfrontend.com</span><span>docs.python.org</span><span>developer.mozilla.org</span><span>react.dev</span><span>coursera.org</span><span>github.com</span><span aria-hidden="true">leetcode.com</span><span aria-hidden="true">neetcode.io</span><span aria-hidden="true">greatfrontend.com</span><span aria-hidden="true">docs.python.org</span><span aria-hidden="true">developer.mozilla.org</span><span aria-hidden="true">react.dev</span><span aria-hidden="true">coursera.org</span><span aria-hidden="true">github.com</span></div>
 </section>
+<p class="beltnote">Examples. Any site you study on works; you choose.</p>
 
 <section class="band"><div class="problem">
 <h2>How many hours did you study last week?</h2>
 <p>Interview prep is spread across LeetCode, NeetCode, docs and videos. Timers get forgotten, screen-time apps mix study with everything else, and a guess is all that's left. You can't plan what you can't measure.</p>
 </div></section>
 
-<section class="wrap split">
-<div class="copy"><h2>Stop starting timers</h2><p>CareerOS counts only while a study site is the tab in front of you and you're active. Step away and it pauses on its own after 60 seconds, then picks up when you're back.</p></div>
+<section class="wrap bento" aria-label="What CareerOS does">
 <div class="card">
+<div class="copy"><h2>Stop starting timers</h2><p>CareerOS counts only while a study site is the tab in front of you and you're active. Step away and it pauses on its own after 60 seconds, then picks up when you're back.</p></div>
 <input type="checkbox" id="away" class="sr"><label for="away" class="chip">Step away from the keyboard</label>
 <div class="away">
 <div class="live"><i class="dot"></i>Counting on leetcode.com</div>
@@ -251,11 +291,8 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 </div>
 <p class="small">Watching a video? A study tab playing sound keeps counting for up to 15 minutes without input.</p>
 </div>
-</section>
-
-<section class="wrap split rev">
 <div class="card">
-<p class="label">Pick your study sites</p>
+<div class="copy"><h2>Stop counting the scroll as study</h2><p>You decide what study means: up to 50 sites, subdomains included. Everything else is ignored.</p></div>
 <div class="chips">
 <input type="checkbox" id="c-lc" class="sr" checked><label for="c-lc" class="chip">leetcode.com</label>
 <input type="checkbox" id="c-nc" class="sr" checked><label for="c-nc" class="chip">neetcode.io</label>
@@ -264,7 +301,15 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 <div class="rows">${siteRow("r-lc", "leetcode.com")}${siteRow("r-nc", "neetcode.io")}${siteRow("r-py", "docs.python.org")}${siteRow("r-yt", "youtube.com")}</div>
 </div>
 </div>
-<div class="copy"><h2>Stop counting the scroll as study</h2><p>You decide what study means: up to 50 sites, subdomains included. Everything else is ignored, so your hours are your real study hours.</p></div>
+<div class="card wide">
+<div class="copy"><h2>See the week you really had</h2><p>Your study hours per day and per platform, across every computer you use. Look back week by week or month by month and plan the next one on facts.</p></div>
+<input type="radio" name="view" id="v-week" class="sr" checked><input type="radio" name="view" id="v-month" class="sr">
+<div class="chart">
+<div class="between"><div class="chips"><label for="v-week" class="chip">Week</label><label for="v-month" class="chip">Month</label></div><span class="total"><span class="w">${duration(sum(SAMPLE_WEEK))}</span><span class="m">${duration(sum(SAMPLE_MONTH))}</span></span></div>
+<div class="bars" role="img" aria-label="Sample week: ${duration(sum(SAMPLE_WEEK))} of study, most on Thursday">${week}</div>
+<div class="mbars" role="img" aria-label="Sample month: ${duration(sum(SAMPLE_MONTH))} of study">${month}</div>
+</div>
+</div>
 </section>
 
 <section id="privacy" class="band"><div class="wrap split">
@@ -275,21 +320,15 @@ export function renderLanding({ siteUrl, installUrl, repositoryUrl }: LandingOpt
 </div>
 </div></section>
 
-<section class="wrap split">
-<div class="copy"><h2>See the week you really had</h2><p>Your study hours per day and per platform, across every computer you use. Look back week by week or month by month and plan the next one on facts.</p></div>
-<div class="card">
-<input type="radio" name="view" id="v-week" class="sr" checked><input type="radio" name="view" id="v-month" class="sr">
-<div class="chart">
-<div class="between"><div class="chips"><label for="v-week" class="chip">Week</label><label for="v-month" class="chip">Month</label></div><span class="total"><span class="w">${duration(sum(SAMPLE_WEEK))}</span><span class="m">${duration(sum(SAMPLE_MONTH))}</span></span></div>
-<div class="bars" role="img" aria-label="Sample week: ${duration(sum(SAMPLE_WEEK))} of study, most on Thursday">${week}</div>
-<div class="mbars" role="img" aria-label="Sample month: ${duration(sum(SAMPLE_MONTH))} of study">${month}</div>
-</div>
-</div>
-</section>
-
 <section id="how" class="band"><div class="wrap section">
 <h2>How the study time tracker works</h2>
-<div class="pipe"><div class="line" aria-hidden="true"><span></span></div><ol>${steps}</ol></div>
+<div class="howgrid">
+<ol class="steps">${steps}</ol>
+<div class="term" role="img" aria-label="Example log of what the extension does: it counts on leetcode.com, closes the session after 60 seconds without input, saves it on your computer, uploads it, ignores youtube.com and counts again on neetcode.io.">
+<div class="term-head" aria-hidden="true"><i></i><i></i><i></i><span>careeros · this computer</span></div>
+<ol aria-hidden="true">${log}</ol>
+</div>
+</div>
 </div></section>
 
 <section class="wrap section"><h2>The rules, exactly</h2><dl class="rules">${rules}</dl></section>
