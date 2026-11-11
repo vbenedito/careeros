@@ -8,6 +8,8 @@ import {
   MANIFEST_KEYS,
   parseDashboardOrigin,
   parseSupabaseConfig,
+  STORE_DESCRIPTION,
+  storeManifest,
 } from "./manifest.config";
 
 const config = { dashboardOrigin: "http://localhost:3000", version: "0.1.0" };
@@ -133,5 +135,25 @@ describe("parseSupabaseConfig", () => {
         "production",
       ).supabaseUrl,
     ).toBe("https://abc.supabase.co");
+  });
+});
+
+describe("Chrome Web Store package (STORE)", () => {
+  const prod = buildManifest("production", {
+    dashboardOrigin: "https://careeros.example",
+    version: "0.2.0",
+  });
+
+  it("STORE-01 the store manifest has no key; everything else is the production manifest", () => {
+    const store = storeManifest(prod);
+    expect(store).not.toHaveProperty("key");
+    const { key: _key, ...rest } = prod;
+    expect(store).toEqual(rest);
+  });
+
+  it("STORE-02 the description fits the store summary (≤ 132) and claims no more than SEC-01", () => {
+    expect(STORE_DESCRIPTION.length).toBeLessThanOrEqual(132);
+    expect(prod.description).toBe(STORE_DESCRIPTION);
+    expect(STORE_DESCRIPTION).toContain("no URLs");
   });
 });

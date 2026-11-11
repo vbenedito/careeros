@@ -1,6 +1,6 @@
 {
   "name": "@careeros/extension",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "CareerOS Chrome extension (Manifest V3).",
@@ -8,6 +8,7 @@
     "build": "NODE_ENV=development vite build --mode development && node scripts/check-worker.ts",
     "build:prod": "NODE_ENV=production vite build --mode production",
     "release": "pnpm build:prod && node scripts/zip.ts production",
+    "release:store": "pnpm build:prod && node scripts/zip.ts production --store",
     "typecheck": "tsc -p tsconfig.worker.json && tsc -p tsconfig.popup.json && tsc -p tsconfig.node.json",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
