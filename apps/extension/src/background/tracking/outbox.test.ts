@@ -166,6 +166,8 @@ describe("deferred intervals and unreadable entries (#58, #83, #56)", () => {
     const { area, outbox } = setup({
       [DEFERRED_KEY]: [{ interval: future, retryAt: NOW, attempts: 3 }],
     });
+    // Due by the measured skew (its end passed by the estimated server clock), yet rejected again.
+    expect(await outbox.batch(200, -SKEW)).toEqual([future]);
     expect(await outbox.settle([future], [], NOW - SKEW)).toEqual({ deferred: 0, quarantined: 1 });
     expect(area.data.get(QUARANTINE_KEY)).toEqual([future]);
     expect(area.data.get(DEFERRED_KEY)).toEqual([]);
@@ -298,26 +300,52 @@ describe("deferred retry timing (#150 review)", () => {
     expect(area.data.get(DROPPED_COUNT_KEY)).toBe(1);
   });
 
-  it("SYNC-05a a deferred interval that starts in the future is still retried (cap) and ends in quarantine after CLOCK_RETRY_MAX", async () => {
-    const soon = interval(NOW + 2 * 3600_000);
-    const { area, outbox } = setup({
-      [DEFERRED_KEY]: [{ interval: soon, retryAt: NOW + 30 * MIN, attempts: 1 }],
-    });
+  it("SYNC-05a clock 2 h ahead: cap retries do not use up CLOCK_RETRY_MAX; uploaded once due (re-review of #150)", async () => {
+    const AHEAD = 2 * 3600_000;
+    const MIN = 60_000;
+    const iv = interval(NOW - 5 * MIN, 4); // ended 1 min ago on the fast local clock
+    const area = fakeStorage({ [OUTBOX_KEY]: [iv] });
     let now = NOW;
-    for (let round = 0; round < 3; round++) {
-      now += 30 * MIN;
-      const o = createOutbox({
-        area,
-        exclusive: (t) => t(),
-        now: () => now,
-        startOfLocalDay: (t) => t - (t % DAY),
-      });
-      const batch = await o.batch(200, 0);
-      if (batch.length === 0) break;
-      await o.settle(batch, [], now);
+    const outbox = createOutbox({
+      area,
+      exclusive: (t) => t(),
+      now: () => now,
+      startOfLocalDay: (t) => t - (t % DAY),
+    });
+    const server = () => now - AHEAD;
+    // The fake server: accepts once its clock is within the 5-minute tolerance of ended_at.
+    const upload = async () => {
+      const batch = await outbox.batch(200, AHEAD);
+      const accepted = batch.filter((i) => Date.parse(i.ended_at) <= server() + 5 * MIN);
+      if (batch.length > 0)
+        await outbox.settle(
+          batch,
+          accepted.map((i) => i.id),
+          server(),
+        );
+      return batch;
+    };
+    expect(await upload()).toEqual([iv]); // first rejection: deferred
+    const sent: number[] = [];
+    for (let t = 5; t <= 130; t += 5) {
+      now = NOW + t * MIN;
+      if ((await upload()).length > 0) sent.push(t);
+      expect(area.data.get(QUARANTINE_KEY) ?? []).toEqual([]);
+      if (((area.data.get(SYNCED_TODAY_KEY) as Interval[] | undefined) ?? []).length > 0) break;
     }
-    expect(area.data.get(QUARANTINE_KEY)).toEqual([soon]);
+    // Cap checks at +30/+60/+90 are rejected but not counted; at +120 (due by skew) it uploads.
+    expect(sent).toEqual([30, 60, 90, 120]);
+    expect(area.data.get(SYNCED_TODAY_KEY)).toEqual([iv]);
     expect(area.data.get(DEFERRED_KEY)).toEqual([]);
-    void outbox;
+  });
+
+  it("SYNC-05a with no skew known, cap retries still count, so they stay bounded", async () => {
+    const iv = interval(NOW - 5 * 60_000, 4);
+    const { area, outbox } = setup({
+      [DEFERRED_KEY]: [{ interval: iv, retryAt: NOW, attempts: 3 }],
+    });
+    expect(await outbox.batch(200, null)).toEqual([iv]);
+    await outbox.settle([iv], [], NOW - 2 * 3600_000);
+    expect(area.data.get(QUARANTINE_KEY)).toEqual([iv]);
   });
 });

@@ -71,6 +71,11 @@ export function endedInServerFuture(i: Interval, serverNow: number | null): bool
  */
 export function deferredDue(d: DeferredInterval, now: number, skewMs: number | null): boolean {
   if (now >= d.retryAt || d.retryAt - now > RETRY_CAP_MS) return true;
+  return dueBySkew(d, now, skewMs);
+}
+
+/** SYNC-05a: the measured-skew rule alone (`ended_at` passed by the estimated server clock). */
+function dueBySkew(d: DeferredInterval, now: number, skewMs: number | null): boolean {
   return skewMs !== null && now - skewMs >= Date.parse(d.interval.ended_at);
 }
 
@@ -83,6 +88,15 @@ export function createOutbox(deps: {
   startOfLocalDay: (t: number) => number;
 }) {
   const { area, exclusive } = deps;
+  /**
+   * SYNC-05a (re-review of #150): ids of deferred intervals in the last batch whose retry counts
+   * toward CLOCK_RETRY_MAX — those the measured skew said were due, or any when no skew is known.
+   * A cap-triggered retry while the skew is known is only a check: it does not count, so a clock
+   * hours ahead cannot use up the retries before the interval is due. Nothing retries forever:
+   * deferred intervals are dropped at LOCAL_QUEUE_MAX_AGE_D (prune). In memory: lost on a worker
+   * restart, which only makes one retry not count.
+   */
+  let countedRetries = new Set<string>();
 
   async function read() {
     const stored = await area.get([
@@ -119,8 +133,16 @@ export function createOutbox(deps: {
       return exclusive(async () => {
         const s = await read();
         const now = deps.now();
-        const due = s.deferred.filter((d) => deferredDue(d, now, skewMs)).map((d) => d.interval);
-        return [...due, ...s.outbox].slice(0, max);
+        const dueEntries = s.deferred.filter((d) => deferredDue(d, now, skewMs));
+        const picked = [...dueEntries.map((d) => d.interval), ...s.outbox].slice(0, max);
+        const pickedIds = new Set(picked.map((i) => i.id));
+        countedRetries = new Set(
+          dueEntries
+            .filter((d) => pickedIds.has(d.interval.id))
+            .filter((d) => skewMs === null || dueBySkew(d, now, skewMs))
+            .map((d) => d.interval.id),
+        );
+        return picked;
       });
     },
 
@@ -151,7 +173,8 @@ export function createOutbox(deps: {
         const toDefer: DeferredInterval[] = [];
         for (const i of settled) {
           if (confirmed.has(i.id)) continue;
-          const tries = (attempts.get(i.id) ?? 0) + 1;
+          const previous = attempts.get(i.id);
+          const tries = previous === undefined ? 1 : previous + (countedRetries.has(i.id) ? 1 : 0);
           if (
             serverNow !== null &&
             endedInServerFuture(i, serverNow) &&

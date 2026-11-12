@@ -128,7 +128,7 @@ If the account epoch changed during the cycle (connect, session rejected, local 
 
 Disconnect (popup or dashboard) first calls `SyncService.waitIdle(30 s)` outside the auth lock. If the cycle is still running, it replies `SYNC_IN_PROGRESS` (popup) / `UNSYNCED_DATA` (dashboard) and changes nothing; otherwise it takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12b).
 
-A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
+A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. Only skew-due retries (or any, while no skew is known) count toward `CLOCK_RETRY_MAX`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
 
 ### Sync status for the popup (`careeros.sync.state`)
 
