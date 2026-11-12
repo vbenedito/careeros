@@ -19,6 +19,11 @@ describe("isPublicPath", () => {
     },
   );
 
+  it("ENV-11 the error report endpoint answers signed-out visitors too", () => {
+    expect(isPublicPath("/api/client-error")).toBe(true);
+    expect(isPublicPath("/api/client-error/x")).toBe(false);
+  });
+
   it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg"])(
     "LAND-01 LAND-07 %s is public (exact match only)",
     (p) => {

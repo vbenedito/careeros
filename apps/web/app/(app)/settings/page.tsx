@@ -75,7 +75,8 @@ export default async function SettingsPage({
             <AccountSettings
               email={email}
               provider={providerLabel(user.app_metadata?.provider)}
-              deleteFailed={error === "delete"}
+              deleteMismatch={error === "delete"}
+              deleteFailed={error === "failed"}
               recentSignIn={isRecentSignIn(user, Date.now())}
               reauthProviders={reauthProviders}
               reauthRequired={error === "reauth"}

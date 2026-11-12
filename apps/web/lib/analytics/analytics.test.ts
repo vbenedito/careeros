@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterAnalyticsEvent } from "./before-send";
+import { filterAnalyticsEvent, isAnalyticsExcludedPath } from "./before-send";
 import { isAnalyticsEnabled } from "./config";
 
 const view = (url: string) => filterAnalyticsEvent({ type: "pageview" as const, url })?.url ?? null;
@@ -27,6 +27,8 @@ describe("filterAnalyticsEvent (SEC-15)", () => {
       "https://site.example/connect",
       "https://site.example/connect?ext=abc",
       "https://site.example/connect/x",
+      "https://site.example/settings",
+      "https://site.example/settings?error=failed",
     ]) {
       expect(view(url), url).toBeNull();
     }
@@ -54,9 +56,7 @@ describe("filterAnalyticsEvent (SEC-15)", () => {
     expect(view("https://site.example/sign-in?next=%2Fdashboard%3Fdate%3Dx&error=y")).toBe(
       "https://site.example/sign-in",
     );
-    expect(view("https://site.example/settings?error=e#frag")).toBe(
-      "https://site.example/settings",
-    );
+    expect(view("https://site.example/privacy?error=e#frag")).toBe("https://site.example/privacy");
   });
 
   it("SEC-15 keeps the event type and drops unparsable URLs", () => {
@@ -64,5 +64,23 @@ describe("filterAnalyticsEvent (SEC-15)", () => {
       filterAnalyticsEvent({ type: "event" as const, url: "https://a.example/p?q=1" }),
     ).toEqual({ type: "event", url: "https://a.example/p" });
     expect(filterAnalyticsEvent({ type: "pageview" as const, url: "not a url" })).toBeNull();
+  });
+});
+
+describe("isAnalyticsExcludedPath (SEC-15)", () => {
+  it("SEC-15 no analytics script on /connect, /settings and /auth/*", () => {
+    for (const p of [
+      "/connect",
+      "/settings",
+      "/auth/callback",
+      "/Settings",
+      "//connect",
+      "/%73ettings",
+    ]) {
+      expect(isAnalyticsExcludedPath(p), p).toBe(true);
+    }
+    for (const p of ["/", "/dashboard", "/sign-in", "/privacy", "/settingsx"]) {
+      expect(isAnalyticsExcludedPath(p), p).toBe(false);
+    }
   });
 });
