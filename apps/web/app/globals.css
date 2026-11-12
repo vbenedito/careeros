@@ -18,3 +18,33 @@ body {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/*
+ * DASH-07 (#70): first visit without a tz cookie. The server sends the skeleton and the UTC
+ * page; until the client gate takes over, the skeleton shows and the UTC page (with its hint)
+ * replaces it after 4 s (REVEAL_AFTER_S), so no JavaScript or a failed hydration never leaves
+ * the page stuck. Discrete properties only, which every browser can animate.
+ */
+.tz-pending-content {
+  visibility: hidden;
+  max-height: 0;
+  overflow: hidden;
+  animation: tz-reveal 0s linear 4s forwards;
+}
+.tz-pending-skeleton {
+  animation: tz-conceal 0s linear 4s forwards;
+}
+@keyframes tz-reveal {
+  to {
+    visibility: visible;
+    max-height: none;
+    overflow: visible;
+  }
+}
+@keyframes tz-conceal {
+  to {
+    visibility: hidden;
+    max-height: 0;
+    overflow: hidden;
+  }
+}

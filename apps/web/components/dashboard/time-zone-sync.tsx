@@ -2,11 +2,13 @@
 
 import { Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { TZ_COOKIE } from "@/lib/dashboard/time-zone";
 
 const ONE_YEAR_S = 60 * 60 * 24 * 365;
 export const REFRESH_TIMEOUT_MS = 8000;
+/** Without JavaScript, the UTC page replaces the skeleton after this long (globals.css). */
+export const REVEAL_AFTER_S = 4;
 
 function readCookie(name: string): string | undefined {
   return document.cookie
@@ -42,9 +44,12 @@ const UtcContext = createContext(false);
  * DASH-07 (#70): writes the browser's IANA time zone to the `tz` cookie and refreshes the page
  * once when it was missing or different, so the server aggregates days in the viewer's zone.
  *
- * On a first visit (`unresolved`) the server's UTC render stays behind `skeleton` until the
- * refreshed page arrives, so the viewer never sees UTC days flash by. If the zone cannot be
- * detected or stored, the UTC page is shown with `UtcHint`.
+ * On a first visit (`unresolved`) the server sends both `skeleton` and the UTC page with
+ * `UtcHint`; CSS (`.tz-pending-*` in globals.css) shows the skeleton and reveals the UTC page
+ * after REVEAL_AFTER_S, so a page without JavaScript (or whose hydration failed) never stays
+ * on the skeleton. Once hydrated, the gate decides: it keeps only the skeleton while the
+ * refreshed, zone-aware page is on its way, or only the UTC page with the hint if the zone
+ * cannot be detected or stored. No inline style or script: the CSP nonce rules stay intact.
  */
 export function TimeZoneGate({
   status,
@@ -56,23 +61,38 @@ export function TimeZoneGate({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const [undetected, setUndetected] = useState(false);
+  // The effect runs once per status, not per router identity: a second run would find the
+  // cookie already written and wrongly conclude the zone cannot be stored.
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  // "server": as rendered on the server (CSS decides); "waiting": refresh under way.
+  const [phase, setPhase] = useState<"server" | "waiting" | "undetected">("server");
   useEffect(() => {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
     if (!syncTimeZoneCookie(zone)) {
-      if (status === "unresolved") setUndetected(true);
+      if (status === "unresolved") setPhase("undetected");
       return;
     }
-    router.refresh();
+    routerRef.current.refresh();
     if (status !== "unresolved") return;
+    setPhase("waiting");
     // Never keep the skeleton for good: should the refresh not arrive, show the UTC page.
-    const timer = setTimeout(() => setUndetected(true), REFRESH_TIMEOUT_MS);
+    const timer = setTimeout(() => setPhase("undetected"), REFRESH_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [router, status]);
+  }, [status]);
 
-  if (status === "unresolved" && !undetected) return skeleton;
-  const utc = status === "fallback" || (status === "unresolved" && undetected);
-  return <UtcContext.Provider value={utc}>{children}</UtcContext.Provider>;
+  const utcPage = <UtcContext.Provider value={true}>{children}</UtcContext.Provider>;
+  if (status === "unresolved") {
+    if (phase === "waiting") return skeleton;
+    if (phase === "undetected") return utcPage;
+    return (
+      <>
+        <div className="tz-pending-skeleton flex flex-col">{skeleton}</div>
+        <div className="tz-pending-content flex flex-col">{utcPage}</div>
+      </>
+    );
+  }
+  return <UtcContext.Provider value={status === "fallback"}>{children}</UtcContext.Provider>;
 }
 
 /** The PO's hint (#70): shown only when days fall back to UTC. */

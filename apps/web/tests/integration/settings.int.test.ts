@@ -4,6 +4,7 @@
  */
 import { DATA } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
+import { afterDeleteRequest } from "../../lib/settings/account";
 import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
 
 const DASHBOARD_URL = env("DASHBOARD_URL");
@@ -102,15 +103,11 @@ describe("settings (integration)", () => {
     expect(anonymous.status).toBe(401);
   });
 
-  it("AUTH-03 an expired session submitting Delete account is sent to sign-in, not a JSON 401 (#78)", async () => {
-    const res = await call("/api/account/delete", "sb-expired=1", {
-      ...form({ confirm: "DELETE" }),
-      headers: { ...form({}).headers, "sec-fetch-mode": "navigate" },
-    });
-    expect(res.status).toBe(303);
-    const location = new URL(res.headers.get("location") ?? "");
-    expect(location.pathname).toBe("/sign-in");
-    expect(location.searchParams.get("next")).toBe("/settings#delete-account");
+  it("AUTH-03 an expired session on Delete account gets the API's JSON 401, which Settings turns into sign-in (#78)", async () => {
+    const res = await call("/api/account/delete", "sb-expired=1", form({ confirm: "DELETE" }));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "NOT_AUTHENTICATED" });
+    expect(afterDeleteRequest(res)).toBe("/sign-in?next=%2Fsettings%23delete-account");
   });
 
   it("AUTH-12a sign out of all devices revokes every session of the user", async () => {

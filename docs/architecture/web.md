@@ -22,7 +22,7 @@ The browser never calls Supabase. Every Supabase call runs on the server with th
 | `POST /api/extension/link` | Route handler | Session, same origin | Single-use token hash; 5/min quota; secret key | AUTH-08, 09 |
 | `POST /api/sites` | Route handler | Session, same origin | Adds a tracked site (normalized); duplicate = success | DASH-12, DATA-01 |
 | `DELETE /api/sites/[id]` | Route handler | Session, same origin | Removes a tracked site | DASH-12 |
-| `POST /api/account/delete` | Route handler (form) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies | DASH-14, AUTH-13, 14 |
+| `POST /api/account/delete` | Route handler (form, sent with `fetch` by Settings) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies; Settings follows its redirect, or goes to sign-in on the proxy's 401 (#78) | DASH-14, AUTH-13, 14 |
 | `/robots.txt`, `/sitemap.xml` | `app/robots.ts`, `app/sitemap.ts` | Public | Disallow `/api/`, `/auth/`; sitemap lists `/` and `/privacy` | LAND-07 |
 | `/opengraph-image`, `/icon.svg`, `/fonts/*` | Generated image, static files | Public | Share image, favicon, self-hosted fonts | LAND-04, 07 |
 
@@ -37,13 +37,11 @@ flowchart TD
   R["Request"] --> N["Create nonce and app CSP"]
   N --> C["Supabase server client:<br/>getClaims() verifies the JWT, refreshes cookies"]
   C --> Q{"Signed in?"}
-  Q -- "no, form post to<br/>/api/account/delete" --> RF["303 to /sign-in?next=/settings#delete-account"]
-  Q -- "no, other /api/*" --> A401["401 NOT_AUTHENTICATED"]
+  Q -- "no, /api/*" --> A401["401 NOT_AUTHENTICATED"]
   Q -- "no, not public" --> RS["Redirect to /sign-in?next=…<br/>(307 for GET/HEAD, 303 otherwise)"]
   Q -- "yes, /sign-in" --> RD["Redirect to /dashboard"]
   Q -- "yes, /" --> RD2["Redirect to /dashboard + query"]
   Q -- "otherwise" --> NX["Continue: x-nonce + CSP<br/>forwarded to Server Components"]
-  RF --> H
   A401 --> H["Copy refreshed cookies and<br/>no-cache headers to the response"]
   RS --> H
   RD --> H
@@ -95,7 +93,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |
 
-The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
+The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives (the UTC page is sent too and revealed by CSS after 4 s, so a failed hydration never leaves the skeleton up) and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
 
 Browser-side code talks to the extension through `lib/extension/messenger.ts` (2 s timeout, 15 s for `DISCONNECT`) and reads replies with `lib/extension/protocol.ts`, which also detects an outdated extension or another account (AUTH-07a/07b). Browser calls to the app's own API go through `lib/http/request.ts`, which validates every body with Zod.
 

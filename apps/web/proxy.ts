@@ -2,14 +2,13 @@
  * Runs before every matched request (Next.js 16 "proxy", formerly middleware):
  *  1. creates a CSP nonce and the Content-Security-Policy header (SEC-09)
  *  2. refreshes the Supabase session cookies (AUTH-02)
- *  3. protects routes: pages redirect to /sign-in, API routes answer 401 (AUTH-03); a form
- *     submitted to an API route (Delete account) is redirected to /sign-in instead (#78)
+ *  3. protects routes: pages redirect to /sign-in, API routes answer 401 (AUTH-03)
  *  4. at `/`: signed in → /dashboard; signed out → the static landing page, which carries its
  *     own CSP (LAND-01/02/06, ADR-0009)
  */
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { DASHBOARD_PATH, isApiPath, isPublicPath, signedOutApiRedirect } from "@/lib/auth/routes";
+import { DASHBOARD_PATH, isApiPath, isPublicPath } from "@/lib/auth/routes";
 import { publicEnv, siteUrl } from "@/lib/env";
 import { buildCsp, createNonce } from "@/lib/security/headers";
 import { sessionCookieOptions } from "@/lib/supabase/cookies";
@@ -58,11 +57,7 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   let result: NextResponse = response;
-  const formRedirect = signedIn ? null : signedOutApiRedirect(pathname, request.headers);
-  if (formRedirect) {
-    // 303: the browser follows with a GET; the form is never re-sent.
-    result = NextResponse.redirect(new URL(formRedirect, siteUrl()), 303);
-  } else if (!signedIn && isApiPath(pathname)) {
+  if (!signedIn && isApiPath(pathname)) {
     result = NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
   } else if (!signedIn && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();

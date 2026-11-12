@@ -36,25 +36,6 @@ export function isApiPath(pathname: string): boolean {
 }
 
 /**
- * API routes that browsers reach by submitting a plain HTML form; after an expired session they
- * go back to sign-in instead of showing a JSON 401 page (#78). The value is where to return.
- */
-export const FORM_API_RETURN_PATHS: Readonly<Record<string, string>> = {
-  "/api/account/delete": "/settings#delete-account",
-};
-
-/**
- * AUTH-03 (#78): where a signed-out request to an API path should be redirected, or null for
- * the usual `401 NOT_AUTHENTICATED` JSON. Only a browser navigation (a form submission sends
- * `Sec-Fetch-Mode: navigate`) to a form route is redirected; `fetch` callers keep the JSON.
- */
-export function signedOutApiRedirect(pathname: string, headers: Headers): string | null {
-  const back = FORM_API_RETURN_PATHS[pathname];
-  if (!back || headers.get("sec-fetch-mode") !== "navigate") return null;
-  return `/sign-in?next=${encodeURIComponent(back)}`;
-}
-
-/**
  * AUTH-03: only same-origin relative paths are honored as `next` targets, so a crafted link
  * like `/sign-in?next=https://evil.example` can never redirect away after sign-in.
  */

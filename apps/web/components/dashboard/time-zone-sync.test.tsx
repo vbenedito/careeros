@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
+
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REFRESH_TIMEOUT_MS, TimeZoneGate, UtcHint } from "./time-zone-sync";
+import { REFRESH_TIMEOUT_MS, REVEAL_AFTER_S, TimeZoneGate, UtcHint } from "./time-zone-sync";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -88,5 +92,29 @@ describe("DASH-07 time zone (#70)", () => {
     expect(screen.getByText("dashboard")).toBeTruthy();
     expect(document.cookie).toContain("tz=Asia%2FTokyo");
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("first visit without JavaScript: the server HTML holds the UTC page and hint, revealed by CSS (review of #152)", () => {
+    const html = renderToString(
+      <TimeZoneGate status="unresolved" skeleton={<p>skeleton</p>}>
+        <UtcHint />
+        <p>dashboard</p>
+      </TimeZoneGate>,
+    );
+    const content = /<div class="tz-pending-content[^"]*">([\s\S]*)<\/div>$/.exec(html)?.[1] ?? "";
+    expect(html).toMatch(/<div class="tz-pending-skeleton[^"]*"><p>skeleton<\/p><\/div>/);
+    expect(content).toContain("<p>dashboard</p>");
+    expect(content).toContain(
+      "Days are shown in UTC because your time zone couldn&#x27;t be detected.",
+    );
+    // No inline style or script that the nonce CSP would block.
+    expect(html).not.toMatch(/<style|<script| style="/);
+
+    const css = readFileSync(resolve(import.meta.dirname, "../../app/globals.css"), "utf8");
+    const rule = (name: string) =>
+      new RegExp(`\\.${name} \\{[^}]*animation: [\\w-]+ 0s linear ${REVEAL_AFTER_S}s forwards`);
+    expect(css).toMatch(rule("tz-pending-content"));
+    expect(css).toMatch(rule("tz-pending-skeleton"));
+    expect(css).toMatch(/\.tz-pending-content \{[^}]*visibility: hidden/);
   });
 });

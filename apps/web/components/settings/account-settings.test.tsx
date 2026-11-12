@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Card, CardTitle } from "@/components/ui/card";
 import { AccountSettings } from "./account-settings";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("account settings: delete needs a recent sign-in (AUTH-14)", () => {
   it("AUTH-14 recent sign-in: the Delete account button opens the typed confirmation", () => {
@@ -55,5 +58,46 @@ describe("Settings heading outline (#78)", () => {
     expect(h2.className).toContain("font-semibold");
     expect(h3.className).toContain("text-sm");
     expect(screen.getByRole("region", { name: "Account" })).toBeTruthy();
+  });
+});
+
+describe("Delete account with an expired session (#78)", () => {
+  it("AUTH-03 the API's JSON 401 sends the viewer to sign-in, not to a JSON page", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "NOT_AUTHENTICATED" }), { status: 401 }),
+      );
+    const assign = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("location", { ...window.location, assign });
+    render(<AccountSettings email="a@example.test" provider="GitHub" recentSignIn />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete account" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "Type DELETE to confirm" }), {
+      target: { value: "DELETE" },
+    });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Delete account" }).at(-1) as HTMLElement,
+    );
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("/sign-in?next=%2Fsettings%23delete-account"),
+    );
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new URL(url, "http://x").pathname).toBe("/api/account/delete");
+    expect(init.method).toBe("POST");
+    expect((init.body as FormData).get("confirm")).toBe("DELETE");
+  });
+
+  it("a network failure keeps the dialog open with a message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+    render(<AccountSettings email="a@example.test" provider="GitHub" recentSignIn />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete account" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "Type DELETE to confirm" }), {
+      target: { value: "DELETE" },
+    });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Delete account" }).at(-1) as HTMLElement,
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("Check your connection");
   });
 });
