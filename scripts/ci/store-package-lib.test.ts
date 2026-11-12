@@ -19,7 +19,7 @@ const good = () => ({
   content_security_policy: { extension_pages: "script-src 'self'; object-src 'self'" },
 });
 
-describe("#156 store manifest assertions", () => {
+describe("STORE-08 store manifest assertions (#156)", () => {
   it("STORE-01 accepts a good manifest", () => {
     expect(manifestViolations(good(), expected)).toEqual([]);
   });
@@ -147,7 +147,7 @@ describe("#156 store manifest assertions", () => {
   });
 });
 
-describe("#156 store zip contents", () => {
+describe("STORE-08 store zip contents (#156)", () => {
   it("accepts a clean package", () => {
     expect(zipEntryViolations(["manifest.json", "background.js", "assets/popup-abc.js"])).toEqual(
       [],

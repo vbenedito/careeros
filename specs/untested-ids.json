@@ -19,6 +19,5 @@
   "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
   "STORE-03": "Store listing document and review justification; verified in the store review.",
   "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
-  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made.",
-  "STORE-08": "Is the CI check itself (pnpm check:store-package); its assertions are unit-tested in store-package-lib.test.ts without naming the ID."
+  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made."
 }
