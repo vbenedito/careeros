@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DESCRIPTION, FAQ, SAMPLE_MONTH, SAMPLE_WEEK, TITLE } from "./content";
+import {
+  DESCRIPTION,
+  FAQ,
+  REMEMBERED_WEEK,
+  SAMPLE_MONTH,
+  SAMPLE_WEEK,
+  STUDY_HOURS,
+  TITLE,
+} from "./content";
 import { buildLandingCsp, LANDING_STYLE_HASH } from "./csp";
 import { renderLanding } from "./page";
 
@@ -64,9 +72,51 @@ describe("landing page (LAND)", () => {
     expect(html).not.toContain("_vercel");
   });
 
-  it("LAND-06 SEC-15 the Never list no longer promises no analytics", () => {
-    expect(html).toContain("<li>Ad trackers or cookies</li>");
-    expect(html).not.toContain("Analytics or ad trackers");
+  it("LAND-03 sections in order, one h1, the h2 list", () => {
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
+    const h2s = [...html.matchAll(/<h2>(.*?)<\/h2>/g)].map((m) => m[1]);
+    expect(h2s).toEqual([
+      "How many hours did you study last week?",
+      "Stop starting timers",
+      "Stop counting the scroll as study",
+      "See the week you really had",
+      "How the study time tracker works",
+      "How many hours should you study for coding interviews?",
+      "The rules, exactly",
+      "Questions",
+      "Start measuring this week's study",
+    ]);
+    expect(html.indexOf('id="how"')).toBeLessThan(html.indexOf('id="study-hours"'));
+    expect(html.indexOf('id="study-hours"')).toBeLessThan(html.indexOf("The rules, exactly"));
+  });
+
+  it("LAND-03 #140 the privacy section is gone; Privacy links go to /privacy", () => {
+    expect(html).not.toContain('id="privacy"');
+    expect(html).not.toContain('href="#privacy"');
+    expect(html).not.toContain("Don&#39;t trade your privacy");
+    expect(html.match(/href="\/privacy">Privacy<\/a>/g)).toHaveLength(2); // header and footer
+  });
+
+  it("LAND-03 #140 the privacy badge row sits under the hero, as a list, with no cookie claim", () => {
+    const row = /<ul class="wrap badges" role="list" aria-label="Privacy">(.*?)<\/ul>/.exec(html);
+    expect(row).not.toBeNull();
+    const items = [...(row?.[1] ?? "").matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1]);
+    expect(items).toEqual(["Never reads page content", "No URLs stored", "No ad trackers"]);
+    expect(html.indexOf('class="wrap badges"')).toBeGreaterThan(html.indexOf("</h1>"));
+    expect(html.indexOf('class="wrap badges"')).toBeLessThan(html.indexOf('class="belt"'));
+    expect(html.toLowerCase()).not.toContain("cookie");
+  });
+
+  it("LAND-03 #140 the study-hours section: honest copy, example data clearly labelled", () => {
+    for (const p of STUDY_HOURS.points) expect(html).toContain(`<h3>${p.t}</h3>`);
+    expect(html).toContain("There&#39;s no magic number.");
+    expect(html).toContain("Example data, not from real users.");
+    const total = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
+    expect(total(REMEMBERED_WEEK)).toBe(600); // 10h 00m
+    expect(total(REMEMBERED_WEEK)).toBeGreaterThan(total(SAMPLE_WEEK));
+    expect(html).toContain("an invented guess at the week, 10h&#160;00m");
+    expect(html).toContain("the same sample week as counted, 6h&#160;40m");
+    expect(html).not.toMatch(/goal|target|last week&#39;s|vs\. last/i);
   });
 
   it("LAND-06 the CSP allows exactly the inline stylesheet, by hash, and no scripts", () => {
@@ -121,10 +171,24 @@ describe("landing page (LAND)", () => {
   });
 
   it("LAND-08 interactions are native controls with labels; motion respects reduced motion", () => {
-    for (const id of ["away", "c-lc", "c-nc", "c-py", "c-yt", "v-week", "v-month"]) {
-      expect(html).toContain(`id="${id}"`);
-    }
-    for (const id of ["away", "c-lc", "v-month"]) expect(html).toContain(`<label for="${id}"`);
+    const ids = [...html.matchAll(/<input type="(?:checkbox|radio)"[^>]*\bid="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(ids).toEqual([
+      "pause",
+      "away",
+      "c-lc",
+      "c-nc",
+      "c-py",
+      "c-yt",
+      "v-week",
+      "v-month",
+      "r-remembered",
+      "r-measured",
+    ]);
+    for (const id of ids) expect(html).toContain(`<label for="${id}"`);
+    expect(html).toContain('<label for="r-remembered" class="chip">Remembered</label>');
+    expect(html).toContain('<label for="r-measured" class="chip">Measured</label>');
     expect(html).toContain("@media (prefers-reduced-motion:no-preference)");
   });
 

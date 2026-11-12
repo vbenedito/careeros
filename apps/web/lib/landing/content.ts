@@ -74,6 +74,42 @@ export const FAQ = [
   },
 ] as const;
 
+/**
+ * Privacy badges under the hero (LAND-03, #140). Each is true for v0: the extension reads only
+ * the active tab's host (TRK-02, SEC-01), never stores or sends the address, and the site has no
+ * ad trackers (SEC-15). No "no cookies" claim: the dashboard uses session cookies.
+ */
+export const BADGES = ["Never reads page content", "No URLs stored", "No ad trackers"] as const;
+
+/**
+ * "How many hours should you study" explainer (LAND-03, #140): no target numbers, no studies.
+ * The week view exists (DASH-04, weeks start on Monday, so Sunday ends the week).
+ */
+export const STUDY_HOURS = {
+  heading: "How many hours should you study for coding interviews?",
+  lede: "There's no magic number. Steady, measured practice beats occasional marathons, and you can only steer what you measure.",
+  points: [
+    {
+      t: "Measure a normal week first",
+      d: "Let CareerOS count one ordinary week before you plan. A measured week can turn out smaller than the one you remember.",
+    },
+    {
+      t: "Look for consistency",
+      d: "Several steady days add up, and they're easier to keep than one marathon Sunday.",
+    },
+    {
+      t: "Plan from the real week",
+      d: "On Sunday, open the week view and plan the next week from what really happened.",
+    },
+  ],
+} as const;
+
+/**
+ * Invented example of a week as someone might remember it (minutes per day, Monday first):
+ * 10h 00m. Shown only next to SAMPLE_WEEK and labelled as an example; not data, not a study.
+ */
+export const REMEMBERED_WEEK = [90, 120, 60, 120, 90, 60, 60] as const;
+
 /** Sample week (minutes per day, Monday first): 6h 40m. Sample data, never a real user's. */
 export const SAMPLE_WEEK = [55, 80, 40, 95, 65, 30, 35] as const;
 /** Sample month (30 days): 22h 50m. */

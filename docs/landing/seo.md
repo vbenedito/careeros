@@ -3,6 +3,8 @@
 Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11-10 · Part of #102.
 
 > **As built (2026-11-11, #131):** see [LAND-04..07](../../specs/landing/00-landing.md). Differences from the plan below: there is no `/landing/` folder or redirect (`robots.txt` disallows only `/api/` and `/auth/`); `/icon.svg` exists and is the favicon of every page; there is no web manifest or `llms.txt` yet; headings use Mona Sans, self-hosted under `/fonts` (`font-src 'self'`), so fonts are not only the system stack; the page has no hero image to preload.
+>
+> **Update 2026-11-11 (#140):** the informational keyword "how many hours to study for coding interviews" (§1, cluster E) is now covered on the landing page by one `h2`, "How many hours should you study for coding interviews?", with a short honest answer (no target number). It does not replace a future guide (§7). The privacy section was removed; privacy (cluster D) is a badge row under the hero plus `/privacy`.
 
 ## 0. How this plan was made
 
@@ -24,7 +26,7 @@ Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11
 | study time tracker chrome extension | Almost all Chrome Web Store listings (StudyTimer Pro, Study Sync, Study tracker…), one Toggl blog post | People looking for a **tool** land on store listings. Our Chrome Web Store listing will be as important as the landing page; plan its title and description with the same keywords |
 | track time spent on leetcode / leetcode time tracker | Store listings of small LeetCode-only timers (one has about 36 users and no ratings), GitHub repos | Open niche, weak competitors. "LeetCode" is the most specific term people use |
 | coding interview preparation tracker | Spreadsheet-style trackers (problem lists), dev.to posts, prep courses | Here "tracker" means **progress** (problems solved), not time. Mention interview prep, but don't promise problem tracking (not in v0) |
-| how many hours to study for coding interviews | Blogs (Design Gurus, Interview Kickstart, Tech Interview Handbook) | Informational intent: a future guide article could rank, not the landing page. Out of scope for now (§7) |
+| how many hours to study for coding interviews | Blogs (Design Gurus, Interview Kickstart, Tech Interview Handbook) | Informational intent: a future guide article could rank better than the landing page. Since #140 the landing page answers it briefly under its own `h2` |
 | automatic study hours tracker for developers privacy | Memtime, Timing, ActivityWatch, Everhour | Established desktop trackers own "automatic + private". We can't win the broad term; we can own "study" and "interview prep" combined with privacy |
 
 ## 2. Search data and keyword clusters
@@ -62,8 +64,8 @@ Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11
 | **A. Study time tracking** | Commercial (find a tool) | Landing `/` | **study time tracker** | study hours tracker, study tracker, study time tracker app, track study hours |
 | **B. Interview prep and platforms** | Commercial | Landing `/` (subline, how it works, FAQ) | coding interview prep (context) | technical interview preparation, leetcode tracker, leetcode timer, neetcode |
 | **C. The extension** | Transactional (install) | Chrome Web Store listing; landing secondary CTA | time tracker chrome extension | website time tracker, study time tracker chrome extension |
-| **D. Privacy** | Trust | Landing privacy section, `/privacy` | — (no measurable demand; a conversion point, not a search target) | private time tracker |
-| **E. Alternatives and guides** | Comparison / informational | Future pages (§7) | rescuetime alternative, wakatime alternative | how much to study for interviews |
+| **D. Privacy** | Trust | Landing privacy badges (under the hero), `/privacy` | — (no measurable demand; a conversion point, not a search target) | private time tracker |
+| **E. Alternatives and guides** | Comparison / informational | Future pages (§7); "how many hours to study" also as an `h2` on the landing page (#140) | rescuetime alternative, wakatime alternative | how much to study for interviews |
 
 Rules: one cluster per page (no two pages targeting the same terms); clusters A, B and D share the landing page because it is the only marketing page; C belongs to the store listing.
 

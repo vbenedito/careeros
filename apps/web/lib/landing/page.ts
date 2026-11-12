@@ -7,13 +7,16 @@
 
 import { ANALYTICS_SCRIPT_PATH } from "@/lib/analytics/config";
 import {
+  BADGES,
   DESCRIPTION,
   ENGINE_LOG,
   FAQ,
+  REMEMBERED_WEEK,
   RULES,
   SAMPLE_MONTH,
   SAMPLE_WEEK,
   STEPS,
+  STUDY_HOURS,
   TITLE,
 } from "./content";
 
@@ -102,10 +105,6 @@ h3{margin:0}
 .away .paused{display:none;color:var(--warn)}#away:checked~.away .paused{display:flex}#away:checked~.away .live{display:none}
 .away .live,.away .paused{align-items:center;gap:8px;font-weight:600}.away .live{display:flex}
 .away{display:flex;flex-direction:column;gap:14px}
-.lists{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;align-content:start}
-.list{padding:24px;border-radius:14px;border:1px solid var(--line);box-shadow:var(--edge)}
-.list h3{margin-bottom:12px;font-size:16px}.list.yes h3{color:var(--ok)}.list.no h3{color:var(--warn)}
-.list ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px}
 .card p{margin:0}
 .chart{display:flex;flex-direction:column;gap:16px}
 .bars{align-items:flex-end;gap:12px;height:180px;display:flex}
@@ -128,6 +127,7 @@ details{border-bottom:1px solid var(--line);padding-bottom:14px}
 summary{cursor:pointer;font-size:17px;font-weight:600;padding:10px 0}
 details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .final{padding:80px 32px;border-radius:24px;border:1px solid oklch(0.32 0.04 265);background:radial-gradient(ellipse 60% 80% at 50% 0%,oklch(0.3 0.08 265),oklch(0.18 0.03 265));box-shadow:var(--edge);display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;margin-bottom:96px}
+.final .ctas{justify-content:center}
 .foot{border-top:1px solid var(--line)}
 .foot .wrap{display:flex;flex-wrap:wrap;gap:16px 24px;justify-content:space-between;font-size:14px;color:var(--muted);padding-top:24px;padding-bottom:24px}
 .foot nav{display:flex;gap:24px;flex-wrap:wrap}.foot a{color:inherit}
@@ -164,7 +164,7 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .bento{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px;padding-top:128px;padding-bottom:128px}
 .bento .card{flex:none}
 .bento .wide{grid-column:1/-1;display:flex;flex-direction:row;flex-wrap:wrap;gap:32px;align-items:center}
-.bento .wide .copy{flex:1 1 300px}.bento .wide .chart{flex:2 1 420px;min-width:0}
+.bento .card.wide .copy{flex:1 1 300px;min-width:0}.bento .wide .chart{flex:2 1 420px;min-width:0}
 .bento h2{font-size:clamp(26px,3vw,32px)}
 .bento .card .copy{gap:10px;flex:none}
 .term{flex:1 1 480px;min-width:0;border-radius:14px;border:1px solid var(--line);background:oklch(0.1 0.004 265);box-shadow:var(--edge);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.9;overflow:clip}
@@ -174,14 +174,31 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .howgrid{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
 .howgrid ol.steps{flex:1 1 300px;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px}
 .howgrid .steps li{display:grid;grid-template-columns:36px 1fr;gap:12px}
-.howgrid .steps .n{width:32px;height:32px;border-radius:16px;background:var(--raise);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.howgrid .steps .n,.tips .n{width:32px;height:32px;border-radius:16px;background:var(--raise);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
 .howgrid .steps h3{font-size:17px;font-weight:650}.howgrid .steps p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.hero.split{padding-bottom:48px}
+.badges{list-style:none;margin:0 auto;padding-bottom:96px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.badges li{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--line2);background:oklch(0.17 0.012 265 / .8);font-size:14px;color:var(--fg)}
+.badges li::before{content:"";flex:none;width:9px;height:5px;border-left:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:translateY(-2px) rotate(-45deg)}
+.hours .copy{gap:20px}
+.tips{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px}
+.tips li{display:grid;grid-template-columns:36px 1fr;gap:12px}
+.tips h3{font-size:17px;font-weight:650}.copy .tips p{margin:2px 0 0;font-size:15px}
+.hours .card h3{font-size:15px;font-weight:600;color:var(--muted)}
+.hchart{display:flex;flex-direction:column;gap:16px}.hchart .between{flex-wrap:wrap}
+.hbars .col i{height:var(--hr);background:oklch(0.72 0.14 265 / .12);border:1px dashed oklch(0.72 0.14 265 / .75)}
+.hchart .hm{display:none}
+#r-measured:checked~.hchart .hbars .col i{height:var(--hm);background:var(--primary);border-style:solid;border-color:var(--primary)}
+#r-measured:checked~.hchart .hm{display:inline}#r-measured:checked~.hchart .hr{display:none}
+#r-remembered:checked~.hchart label[for=r-remembered],#r-measured:checked~.hchart label[for=r-measured]{background:var(--sel);border-color:var(--primary)}
+#r-remembered:focus-visible~.hchart label[for=r-remembered],#r-measured:focus-visible~.hchart label[for=r-measured]{outline:2px solid var(--primary);outline-offset:3px}
 .rules dt{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:-.02em}
 @media (prefers-reduced-motion:no-preference){
 .belt-track{animation:belt 40s linear infinite}
 @keyframes belt{to{transform:translateX(-50%)}}
 @supports (animation-timeline:view()){.term li{animation:appear linear both;animation-timeline:view();animation-range:entry 20% entry 100%}}
 @keyframes appear{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.hbars .col i{transition:height .45s ease,background-color .45s ease,border-color .45s ease}
 }
 #pause:checked~main *,#pause:checked~main *::after{animation-play-state:paused!important}
 .pausebar{display:flex;justify-content:flex-end;padding-top:12px;margin-bottom:-56px;position:relative;z-index:1}.pausebar .chip{font-size:13px;min-height:36px}
@@ -215,6 +232,22 @@ export function renderLanding({
     (l) =>
       `<li><span>${l.at}</span><span><b>${esc(l.event)}</b> <span class="${l.tone}">${esc(l.result)}</span></span></li>`,
   ).join("");
+  const hmax = Math.max(...REMEMBERED_WEEK, ...SAMPLE_WEEK);
+  const px = (m: number) => `${Math.round((m / hmax) * 150)}px`;
+  const hours = SAMPLE_WEEK.map(
+    (m, i) =>
+      `<div class="col"><i style="--hr:${px(REMEMBERED_WEEK[i] ?? 0)};--hm:${px(m)}"></i><span>${days[i]}</span></div>`,
+  ).join("");
+  const remembered = duration(sum(REMEMBERED_WEEK));
+  const measured = duration(sum(SAMPLE_WEEK));
+  const nb = (t: string) => t.replace(" ", "&#160;");
+  const tips = STUDY_HOURS.points
+    .map(
+      (p, i) =>
+        `<li><span class="n">${i + 1}</span><div><h3>${esc(p.t)}</h3><p>${esc(p.d)}</p></div></li>`,
+    )
+    .join("");
+  const badges = BADGES.map((b) => `<li>${esc(b)}</li>`).join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
   const faq = FAQ.map(
     (f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`,
@@ -268,7 +301,7 @@ export function renderLanding({
 <body>
 <header class="top"><div class="wrap">
 <a class="brand" href="/">CareerOS</a>
-<nav class="nav" aria-label="Main"><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a><a class="btn btn-ghost btn-sm" href="/sign-in">Sign in</a></nav>
+<nav class="nav" aria-label="Main"><a href="#how">How it works</a><a href="/privacy">Privacy</a><a href="#faq">FAQ</a><a class="btn btn-ghost btn-sm" href="/sign-in">Sign in</a></nav>
 </div></header>
 <input type="checkbox" id="pause" class="sr"><div class="wrap pausebar"><label for="pause" class="chip">Pause animations</label></div>
 <main>
@@ -288,7 +321,8 @@ export function renderLanding({
 <div class="record"><b>Saved when you leave a study site</b><div class="rec">{ "domain": "leetcode.com",<br>&#160;&#160;"started_at": "09:20:02", "ended_at": "09:46:10" }</div></div>
 </div>
 </div>
-</section></div>
+</section>
+<ul class="wrap badges" role="list" aria-label="Privacy">${badges}</ul></div>
 
 <section class="belt" aria-label="Examples of study sites">
 <div class="belt-track"><span>leetcode.com</span><span>neetcode.io</span><span>greatfrontend.com</span><span>docs.python.org</span><span>developer.mozilla.org</span><span>react.dev</span><span>coursera.org</span><span>github.com</span><span aria-hidden="true">leetcode.com</span><span aria-hidden="true">neetcode.io</span><span aria-hidden="true">greatfrontend.com</span><span aria-hidden="true">docs.python.org</span><span aria-hidden="true">developer.mozilla.org</span><span aria-hidden="true">react.dev</span><span aria-hidden="true">coursera.org</span><span aria-hidden="true">github.com</span></div>
@@ -332,14 +366,6 @@ export function renderLanding({
 </div>
 </section>
 
-<section id="privacy" class="band"><div class="wrap split">
-<div class="copy"><h2>Don't trade your privacy for a number</h2><p>The extension reads the active tab's address only to get the site name. For your study it keeps one small record: the site and when you started and stopped. The address, the page and every other site are never stored or sent.</p><a href="/privacy">Read the privacy policy</a></div>
-<div class="lists">
-<div class="list yes"><h3>Stored</h3><ul><li>Sites you choose</li><li>Start and end times</li><li>A random device id</li><li>Your account: email and sign-in provider</li></ul></div>
-<div class="list no"><h3>Never</h3><ul><li>Full addresses or searches</li><li>Page titles or content</li><li>Keystrokes or screenshots</li><li>Other sites, incognito</li><li>Ad trackers or cookies</li></ul></div>
-</div>
-</div></section>
-
 <section id="how" class="band"><div class="wrap section">
 <h2>How the study time tracker works</h2>
 <div class="howgrid">
@@ -350,6 +376,19 @@ export function renderLanding({
 </div>
 </div>
 </div></section>
+
+<section id="study-hours" class="wrap split hours">
+<div class="copy"><h2>${esc(STUDY_HOURS.heading)}</h2><p>${esc(STUDY_HOURS.lede)}</p><ol class="tips">${tips}</ol></div>
+<div class="card">
+<h3>An example week, remembered and measured</h3>
+<input type="radio" name="recall" id="r-remembered" class="sr" checked><input type="radio" name="recall" id="r-measured" class="sr">
+<div class="hchart">
+<div class="between"><div class="chips"><label for="r-remembered" class="chip">Remembered</label><label for="r-measured" class="chip">Measured</label></div><span class="total"><span class="hr">${remembered}</span><span class="hm">${measured}</span></span></div>
+<div class="bars hbars" aria-hidden="true">${hours}</div>
+<p class="small">Example data, not from real users. Remembered: an invented guess at the week, ${nb(remembered)}. Measured: the same sample week as counted, ${nb(measured)}.</p>
+</div>
+</div>
+</section>
 
 <section class="wrap section"><h2>The rules, exactly</h2><dl class="rules">${rules}</dl></section>
 
