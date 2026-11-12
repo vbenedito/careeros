@@ -23,11 +23,27 @@ export interface PopupAuthStatus {
   needsReconnect: boolean;
 }
 
-/** Reply to DISCONNECT (AUTH-12): refused while intervals are unsynced, unless discarding. */
+/**
+ * Reply to DISCONNECT (AUTH-12): refused while intervals are not on the server, unless
+ * discarding. `pending` is what the confirmation states (#65): `unsynced` (outbox and deferred,
+ * "Try syncing again" may still upload them) plus `quarantined` (rejected, never uploaded).
+ */
 export type PopupDisconnectResult =
   | { ok: true }
-  | { ok: false; code: "UNSYNCED_DATA"; pending: number }
+  | {
+      ok: false;
+      code: "UNSYNCED_DATA";
+      pending: number;
+      unsynced?: number;
+      quarantined?: number;
+    }
   | { ok: false; code: "FAILED" };
+
+/** Reply to TRACKING_SET: the switch's stored value afterwards (#65: the popup's source of truth). */
+export type PopupTrackingResult = { ok: true; enabled: boolean };
+
+/** Reply to any command in a build without Supabase config (#65, EXT-UI-05c). */
+export type PopupNotConfigured = { ok: false; error: "NOT_CONFIGURED"; code: "FAILED" };
 
 /** Reply to FORGET_LOCAL_DATA (#113): refused while an account is connected. */
 export type PopupForgetResult = { ok: true } | { ok: false; code: "CONNECTED" | "FAILED" };

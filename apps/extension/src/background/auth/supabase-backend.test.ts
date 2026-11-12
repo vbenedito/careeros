@@ -98,8 +98,30 @@ describe("refresh against a rate-limited server (AUTH-11)", () => {
     expect(await backend.currentSession()).not.toBeNull();
   });
 
-  it("AUTH-11 token expired: supabase-js drops the session on 429, so the user must reconnect", async () => {
-    const { result } = await refreshWith429(1);
-    expect(result).toEqual({ ok: false, reason: "invalid" });
+  it("AUTH-10a token expired: a 429 is still temporary and the session is kept (#58)", async () => {
+    const { result, backend } = await refreshWith429(1);
+    expect(result).toEqual({ ok: false, reason: "unavailable" });
+    expect(await backend.currentSession()).not.toBeNull();
+  });
+
+  it("AUTH-11 token expired and the refresh token is rejected (400): the session is gone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ code: "refresh_token_not_found", msg: "Invalid Refresh Token" }),
+            { status: 400, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored(1) });
+    const backend = createSupabaseAuthBackend({
+      supabaseUrl: "http://127.0.0.1:9",
+      publishableKey: "sb_publishable_test",
+      storage,
+    });
+    expect(await backend.refresh()).toEqual({ ok: false, reason: "invalid" });
+    expect(storage.data.has(SESSION_STORAGE_KEY)).toBe(false);
   });
 });

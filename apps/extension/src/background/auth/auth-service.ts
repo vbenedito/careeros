@@ -52,8 +52,15 @@ export interface LocalData {
    * AuthService: it gets a token provider that works under that lock.
    */
   flush(accessToken: TokenProvider): Promise<number>;
-  /** Number of intervals waiting to be uploaded. */
+  /** Number of intervals waiting to be uploaded (outbox and deferred). */
   pendingCount(): Promise<number>;
+  /** #65: intervals the server rejected (quarantine): never synced, deleted by Disconnect. */
+  quarantinedCount?(): Promise<number>;
+  /**
+   * SYNC-02b (#58, #65): bounded wait for a sync cycle already running. Called by Disconnect
+   * *before* it takes the lock (the cycle may need the lock for a token).
+   */
+  waitForUpload?(): Promise<void>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
   clear(): Promise<void>;
   /**
@@ -68,7 +75,10 @@ export type ConnectResult =
   | { ok: true; email: string | null }
   | { ok: false; code: "ALREADY_CONNECTED" | "UNSYNCED_DATA" | "INVALID_TOKEN" };
 
-export type DisconnectResult = { ok: true } | { ok: false; code: "UNSYNCED_DATA" };
+export type DisconnectResult =
+  | { ok: true }
+  /** #65: what the confirmation states: still unsynced (may upload) and rejected intervals. */
+  | { ok: false; code: "UNSYNCED_DATA"; unsynced: number; quarantined: number };
 
 export interface TokenOptions {
   /** Refresh even if the token looks valid locally (the device clock may be behind). */
@@ -168,6 +178,11 @@ export function createAuthService(deps: {
           await localData.clear();
         }
 
+        // SYNC-09a (#54): the cached site list belongs to whoever was connected before (after a
+        // Disconnect or a rejected session it is gone already): never show it to this account,
+        // not even until the first refresh succeeds.
+        if (owner !== incoming.userId) await storage.remove(DOMAINS_CACHE_KEY);
+
         // Before the session is written: its storage event starts a sync cycle, which must
         // already see the new epoch, or it would upload and then discard its own result (#113).
         deps.epoch?.bump();
@@ -197,15 +212,24 @@ export function createAuthService(deps: {
       return exclusive(markInvalid);
     },
 
-    /** AUTH-12: final sync, then sign out and clear local data. */
-    disconnect(options: { discardUnsynced?: boolean } = {}) {
+    /**
+     * AUTH-12: final sync, then sign out and clear local data. `includeQuarantined` (the popup,
+     * #65) also asks before deleting rejected intervals; the dashboard does not (they can
+     * never sync, so they would block its Disconnect for good).
+     */
+    async disconnect(options: { discardUnsynced?: boolean; includeQuarantined?: boolean } = {}) {
+      // SYNC-02b: let a cycle that is already uploading finish first (bounded), outside the
+      // lock, so the final sync below is not skipped and reports what really remains.
+      await localData.waitForUpload?.();
       return exclusive(async (): Promise<DisconnectResult> => {
         let done = false;
         try {
           await localData.stopTracking();
           const remaining = await localData.flush(accessTokenLocked);
-          if (remaining > 0 && !options.discardUnsynced)
-            return { ok: false, code: "UNSYNCED_DATA" };
+          const quarantined = (await localData.quarantinedCount?.()) ?? 0;
+          const toConfirm = remaining + (options.includeQuarantined ? quarantined : 0);
+          if (toConfirm > 0 && !options.discardUnsynced)
+            return { ok: false, code: "UNSYNCED_DATA", unsynced: remaining, quarantined };
           await backend.signOutLocal();
           await localData.clear();
           await storage.remove([DATA_OWNER_KEY, NEEDS_RECONNECT_KEY]);

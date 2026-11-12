@@ -49,10 +49,27 @@ export function createSupabaseAuthBackend(config: {
 }): AuthBackend & { client: SupabaseClient } {
   const { supabaseUrl, publishableKey } = config;
 
+  /**
+   * AUTH-10a (#58): while one of our refreshes runs, supabase-js's own removals of the session
+   * are held back. It deletes the session after any non-retryable refresh error once the access
+   * token has expired — including a rate limit (429) or a timeout (408), which are temporary.
+   * After the refresh, held removals are applied only when the failure really means the session
+   * is gone (`refreshFailureReason`).
+   */
+  let heldRemovals: string[] | null = null;
+  const sessionStorage = createSessionStorage(config.storage);
+  const guardedStorage = {
+    ...sessionStorage,
+    async removeItem(key: string) {
+      if (heldRemovals) heldRemovals.push(key);
+      else await sessionStorage.removeItem(key);
+    },
+  };
+
   // The persistent client: its session lives in chrome.storage.local.
   const client = createClient(supabaseUrl, publishableKey, {
     auth: {
-      storage: createSessionStorage(config.storage),
+      storage: guardedStorage,
       storageKey: SESSION_STORAGE_KEY,
       persistSession: true,
       // Timers die with the service worker; refresh happens on demand (AUTH-10).
@@ -123,17 +140,28 @@ export function createSupabaseAuthBackend(config: {
       );
       if (!stored) return { ok: false, reason: "invalid" };
       // An explicit refresh token makes supabase-js refresh directly and save the new session.
-      const { data, error } = await client.auth.refreshSession({
-        refresh_token: stored.refreshToken,
-      });
+      const held: string[] = [];
+      heldRemovals = held;
+      let data: Awaited<ReturnType<typeof client.auth.refreshSession>>["data"];
+      let error: unknown;
+      try {
+        ({ data, error } = await client.auth.refreshSession({
+          refresh_token: stored.refreshToken,
+        }));
+      } finally {
+        heldRemovals = null;
+      }
       if (data.session) return { ok: true, session: toAuthSession(data.session) };
-      // supabase-js itself deletes the stored session after a non-retryable error (e.g. 429)
-      // once the access token has expired: then it is gone, whatever the cause, and the user
-      // must see "Reconnect" (AUTH-11) rather than a silent "not connected".
+      const reason = refreshFailureReason(error);
+      // AUTH-10a: a temporary failure keeps the session, even if supabase-js dropped it;
+      // a real one lets its removals through (and AuthService shows "Reconnect", AUTH-11).
+      if (reason === "invalid") {
+        for (const key of held) await sessionStorage.removeItem(key);
+      }
       const stillStored = parseStoredSession(
         (await config.storage.get(SESSION_STORAGE_KEY))[SESSION_STORAGE_KEY],
       );
-      return { ok: false, reason: stillStored ? refreshFailureReason(error) : "invalid" };
+      return { ok: false, reason: stillStored ? reason : "invalid" };
     },
 
     async signOutLocal() {
@@ -161,8 +189,8 @@ export function createSupabaseAuthBackend(config: {
 /**
  * AUTH-11: only a client error from Supabase Auth (revoked, reused or unknown refresh token,
  * deleted user, missing session) means the session is gone. Rate limits (429), timeouts (408),
- * server errors and network failures are temporary while the session is still stored (a
- * proactive refresh before expiry): the extension stays connected and retries later.
+ * server errors and network failures are temporary, whether or not the access token has
+ * expired (AUTH-10a): the extension stays connected and retries later.
  */
 export function refreshFailureReason(error: unknown): "invalid" | "unavailable" {
   if (isAuthSessionMissingError(error)) return "invalid";
