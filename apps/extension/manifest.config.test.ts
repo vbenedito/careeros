@@ -141,7 +141,7 @@ describe("parseSupabaseConfig", () => {
 describe("Chrome Web Store package (STORE)", () => {
   const prod = buildManifest("production", {
     dashboardOrigin: "https://careeros.example",
-    version: "0.2.0",
+    version: "0.2.1",
   });
 
   it("STORE-01 the store manifest has no key; everything else is the production manifest", () => {

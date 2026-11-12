@@ -2,6 +2,7 @@
  * Settings against the real local stack: tracked-site CRUD (DASH-12), sign out of all devices
  * (AUTH-12a) and account deletion (DASH-14, DATA-12, AUTH-13, SEC-14).
  */
+import { DATA } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
 import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
 
@@ -71,10 +72,10 @@ describe("settings (integration)", () => {
     }
   });
 
-  it("DATA-01 the 51st site is refused with LIMIT_REACHED", async () => {
+  it("DATA-01 the 13th site is refused with LIMIT_REACHED", async () => {
     const { id, cookie } = await signedInUser("limit");
     sql(`insert into public.tracked_domains (user_id, domain)
-         select '${id}', 'site' || g || '.com' from generate_series(1, 50) g`);
+         select '${id}', 'site' || g || '.com' from generate_series(1, ${DATA.MAX_TRACKED_DOMAINS}) g`);
     const res = await addSite(cookie, "one-more.com");
     expect(res.status).toBe(422);
     expect(await res.json()).toEqual({ error: "LIMIT_REACHED" });

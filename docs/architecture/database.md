@@ -1,6 +1,6 @@
 # Database design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 Low-level design of the Supabase Postgres database in `supabase/`. The rules are in [DATA](../../specs/v0/04-data-model.md) and SEC-07; this page shows how the migrations implement them. The big picture is in the [overview](overview.md).
 
@@ -45,7 +45,7 @@ erDiagram
 | Object | Purpose | Rules in the database | Specs |
 |---|---|---|---|
 | Domain `public.hostname` | A normalized hostname | ≤ 253 chars, the `DOMAIN_PATTERN` regex, no leading `www.` | TRK-03 |
-| `public.tracked_domains` | Study sites per user | `unique (user_id, domain)`; trigger `tracked_domains_limit` allows at most 50 per user (advisory lock per user) | DATA-01, SYNC-09 |
+| `public.tracked_domains` | Study sites per user | `unique (user_id, domain)`; trigger `tracked_domains_limit` allows at most 12 per user (advisory lock per user; lists already over the limit are kept, deletes always allowed) | DATA-01, SYNC-09 |
 | `public.study_sessions` | One row per closed interval | `ended_at > started_at`; length ≤ 1830 s; immutable | DATA-02, DATA-03 |
 | `private.link_requests` | Rate-limit log for extension links | Rows older than 1 hour pruned on each call | AUTH-08 |
 
@@ -73,7 +73,7 @@ There is no `UPDATE` grant anywhere. `ingest_study_sessions` is the only write p
 | `get_daily_totals(p_from, p_to, p_tz)` | `invoker` (RLS applies) | `authenticated` | One zero-filled row per local day; range ≤ 92 days; checks the time zone (`INVALID_RANGE`, `INVALID_TIME_ZONE`) | DATA-10 |
 | `get_domain_totals(p_from, p_to, p_tz)` | `invoker` | `authenticated` | Seconds per domain, largest first | DATA-11 |
 | `consume_extension_link_quota() → boolean` | `definer` | `authenticated` | Records one request for `auth.uid()`; false above 5 per minute | AUTH-08 |
-| `private.enforce_tracked_domain_limit()` | `definer` | none (trigger) | 50-site limit | DATA-01 |
+| `private.enforce_tracked_domain_limit()` | `definer` | none (trigger) | 12-site limit | DATA-01 |
 
 Account deletion has no RPC: the dashboard calls `auth.admin.deleteUser` with the secret key and the foreign keys cascade to every application row (DATA-12, AUTH-13).
 
@@ -104,12 +104,13 @@ Append-only; never edit an applied migration (AGENTS.md).
 
 | File | Adds |
 |---|---|
-| `20261105100000_core_schema.sql` | `hostname` domain, both tables, 50-site trigger, forced RLS, revokes |
+| `20261105100000_core_schema.sql` | `hostname` domain, both tables, site-limit trigger (50, lowered to 12 by `20261112100000`), forced RLS, revokes |
 | `20261105110000_rls_policies.sql` | Grants, owner policies, default privileges |
 | `20261105120000_ingest_study_sessions.sql` | `parse_study_session`, `ingest_study_sessions`, `created_at` index |
 | `20261105130000_totals_rpcs.sql` | `get_daily_totals`, `get_domain_totals` |
 | `20261105140000_extension_link_rate_limit.sql` | `link_requests`, `consume_extension_link_quota` |
 | `20261110100000_security_hardening.sql` | Upload caps, payload size, overlap check and index, anonymous-refusing policies, bounded totals inputs (#110, #111) |
+| `20261112100000_tracked_domain_limit_12.sql` | Site limit 50 → 12; existing rows kept (#145) |
 
 How they reach production: [release process](../process/release.md#database-migrations).
 
@@ -127,6 +128,7 @@ How they reach production: [release process](../process/release.md#database-migr
 | `040_totals` | Totals, time zones, ranges (DATA-10/11, DASH-07) |
 | `050_link_quota` | Link rate limit (AUTH-08) |
 | `060_security` | Caps, overlaps, payload size, anonymous callers, catalog-wide exposure checks |
+| `070_domain_limit` | 12-site limit; lists over the limit can delete, not insert (DATA-01, #145) |
 
 ## Backups
 

@@ -2,6 +2,7 @@
  * Tracked sites in the dashboard (DASH-12): the API contract shared by the route and the browser,
  * and the messages the page shows. Pure.
  */
+import { DATA } from "@careeros/shared";
 import { z } from "zod";
 
 export const SiteSchema = z.object({ id: z.string().uuid(), domain: z.string() }).strict();
@@ -18,7 +19,7 @@ export function siteErrorMessage(code: string | undefined, status: number | null
     case "INVALID_DOMAIN":
       return "That doesn't look like a website address";
     case "LIMIT_REACHED":
-      return "You can track up to 50 sites. Remove one to add another.";
+      return `You can track up to ${DATA.MAX_TRACKED_DOMAINS} sites. Remove one to add another.`;
     case "NOT_AUTHENTICATED":
       return "Your session ended. Sign in again.";
     default:

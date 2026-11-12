@@ -348,7 +348,7 @@ export function renderLanding({
 <p class="small">Watching a video? A study tab playing sound keeps counting for up to 15 minutes without input.</p>
 </div>
 <div class="card">
-<div class="copy"><h2>Stop counting the scroll as study</h2><p>You decide what study means: up to 50 sites, subdomains included. Everything else is ignored.</p></div>
+<div class="copy"><h2>Stop counting the scroll as study</h2><p>You decide what study means: up to 12 sites, subdomains included. Everything else is ignored.</p></div>
 <div class="chips">
 <input type="checkbox" id="c-lc" class="sr" checked><label for="c-lc" class="chip">leetcode.com</label>
 <input type="checkbox" id="c-nc" class="sr" checked><label for="c-nc" class="chip">neetcode.io</label>

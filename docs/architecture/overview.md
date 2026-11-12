@@ -131,7 +131,7 @@ flowchart LR
 
 **Popup ↔ service worker:** the popup reads state from `chrome.storage.local` and has no Supabase client. Commands go to the worker only as `chrome.runtime.sendMessage` messages, validated with Zod (`lib/popup-messages.ts`): `AUTH_STATUS`, `DOMAINS_REFRESH`, `DOMAINS_ADD`, `DOMAINS_REMOVE`, `TRACKING_SET`, `DISCONNECT`, `FORGET_LOCAL_DATA`. While it is shown, the popup also holds a `chrome.runtime.connect` port (`careeros.popup`), so the worker counts Chrome as focused (TRK-18).
 
-Tracked sites are read and written by both apps through `tracked_domains` (RLS, 50-site trigger); the extension refreshes its cache on startup, each sync cycle, after connecting and when the popup opens (SYNC-09..11).
+Tracked sites are read and written by both apps through `tracked_domains` (RLS, 12-site trigger); the extension refreshes its cache on startup, each sync cycle, after connecting and when the popup opens (SYNC-09..11).
 
 ## Key flows
 

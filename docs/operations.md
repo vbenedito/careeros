@@ -22,7 +22,7 @@ Any sign-in, dashboard visit or extension sync counts as activity, so a project 
 
 ## 2. Capacity estimate
 
-One `study_sessions` row with its indexes is about 250 bytes. A heavy user (3 h of study a day, intervals of about 10 minutes) creates about 18 rows a day, about 6,600 rows a year: **≈ 1.6 MB per user per year**. With roughly 100 MB reserved for Postgres and Supabase internals, the free 500 MB holds about **250 user-years** of data. Tracked sites (≤ 50 per user) and auth rows are negligible.
+One `study_sessions` row with its indexes is about 250 bytes. A heavy user (3 h of study a day, intervals of about 10 minutes) creates about 18 rows a day, about 6,600 rows a year: **≈ 1.6 MB per user per year**. With roughly 100 MB reserved for Postgres and Supabase internals, the free 500 MB holds about **250 user-years** of data. Tracked sites (≤ 12 per user) and auth rows are negligible.
 
 Traffic is small: each extension syncs at most every 5 minutes while the browser is open, and the dashboard renders on demand. Monthly active users are bounded by the 50,000 auth limit long before Vercel's invocation limit matters.
 

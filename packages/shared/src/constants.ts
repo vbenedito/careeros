@@ -23,7 +23,7 @@ export const SYNC = {
 /** specs/v0/04-data-model.md */
 export const DATA = {
   /** DATA-01 */
-  MAX_TRACKED_DOMAINS: 50,
+  MAX_TRACKED_DOMAINS: 12,
   /** DATA-02: server accepts up to MAX_INTERVAL_S + this tolerance. */
   INTERVAL_TOLERANCE_S: 30,
   /** Hostname length limit (DNS), used by the `domain` CHECK. */

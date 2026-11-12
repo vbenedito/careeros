@@ -4,6 +4,8 @@ Status: **Approved (2026-11-04)** · Related ADRs: 0004 (idempotent ingest)
 
 Amended 2026-11-11 (#131): `public.hostname` domain type, indexes, column-level grant, anonymous-JWT refusal, DATA-10 `NOT_AUTHENTICATED`, to match the migrations.
 
+Amended 2026-11-12 (#145): limit 50 → 12; existing lists over the limit are kept; v1 premium may raise it.
+
 Supabase Postgres. All application tables live in `public`, have RLS **enabled and forced**, and reference `auth.users(id) ON DELETE CASCADE`. Schema changes ship only as versioned migrations in `supabase/migrations/`.
 
 ## 1. Tables
@@ -22,7 +24,7 @@ Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isVa
 | `created_at` | `timestamptz` not null | `default now()` |
 
 - `UNIQUE (user_id, domain)` (its index also serves `user_id` lookups and the FK cascade).
-- **DATA-01** A user may have at most **50** tracked domains (trigger-enforced).
+- **DATA-01** A user may have at most **12** tracked domains (trigger-enforced). Lists that were already over the limit are kept: the user can remove sites but cannot add one while at or over the limit.
 
 ### `study_sessions` (stores intervals)
 

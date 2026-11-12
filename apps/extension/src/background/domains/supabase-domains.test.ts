@@ -11,7 +11,7 @@ describe("domain API error mapping (AUTH-11, SYNC-10)", () => {
     expect(toError(err("PT401"), 401)?.code).toBe("UNAUTHORIZED");
   });
 
-  it("an expired JWT is temporary; the 50-site limit has its own error; the rest is unavailable", () => {
+  it("an expired JWT is temporary; the site limit has its own error; the rest is unavailable", () => {
     expect(toError(err("PGRST301"), 401)?.code).toBe("UNAVAILABLE");
     expect(toError(err("P0001", "DATA-01"), 400)?.code).toBe("LIMIT_REACHED");
     expect(toError(err("XX000"), 500)?.code).toBe("UNAVAILABLE");

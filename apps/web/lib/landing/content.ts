@@ -39,7 +39,7 @@ export const RULES = [
   { v: "60 s", d: "without input and tracking pauses" },
   { v: "15 min", d: "a playing video keeps counting without input" },
   { v: "5 s", d: "shortest session saved; shorter blips are dropped" },
-  { v: "50", d: "study sites per account, subdomains included" },
+  { v: "12", d: "study sites per account, subdomains included" },
 ] as const;
 
 export const FAQ = [
@@ -49,7 +49,7 @@ export const FAQ = [
   },
   {
     q: "Which sites can I track?",
-    a: "Any site you add, up to 50. Subdomains count too: adding python.org also covers docs.python.org.",
+    a: "Any site you add, up to 12. Subdomains count too: adding python.org also covers docs.python.org.",
   },
   {
     q: "What happens when I step away?",

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { DATA } from "@careeros/shared";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../engine/engine";
@@ -108,7 +109,9 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
     data.addSite = async () => ({ ok: false, error: "LIMIT_REACHED" });
     renderApp(data);
     fireEvent.click(await screen.findByRole("button", { name: "Add neetcode.io" }));
-    expect((await screen.findByRole("alert")).textContent).toBe("You can track up to 50 sites.");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      `You can track up to ${DATA.MAX_TRACKED_DOMAINS} sites.`,
+    );
   });
 
   it.each([
