@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   if (length > MAX_REPORT_BYTES) return fail(413, "TOO_LARGE");
   if (!allow()) return fail(429, "RATE_LIMITED");
 
-  const text = await request.text().catch(() => "");
-  if (text.length > MAX_REPORT_BYTES) return fail(413, "TOO_LARGE");
+  const text = await readCapped(request, MAX_REPORT_BYTES);
+  if (text === null) return fail(413, "TOO_LARGE");
   let body: unknown = null;
   try {
     body = JSON.parse(text);
@@ -37,4 +37,33 @@ export async function POST(request: Request) {
     digest: report.data.digest ?? null,
   });
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+}
+
+/** Reads the body as UTF-8, stopping (null) once it passes `max` bytes, with or without Content-Length. */
+async function readCapped(request: Request, max: number): Promise<string | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > max) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return "";
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return new TextDecoder().decode(all);
 }

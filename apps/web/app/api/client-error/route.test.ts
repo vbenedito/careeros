@@ -42,6 +42,29 @@ describe("POST /api/client-error (ENV-11)", () => {
     expect(logged).toHaveLength(0);
   });
 
+  it("ENV-11 caps the body in bytes, also without Content-Length (streamed)", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let i = 0; i < 4; i++) controller.enqueue(new Uint8Array(200).fill(0x61));
+        controller.close();
+      },
+    });
+    const res = await POST(
+      new Request("https://app.test/api/client-error", {
+        method: "POST",
+        body: stream,
+        // @ts-expect-error duplex is required for streamed bodies in Node's fetch
+        duplex: "half",
+      }),
+    );
+    expect(res.status).toBe(413);
+    // 200 two-byte characters = 400 bytes is fine; 300 = 600 bytes is not.
+    expect((await post(JSON.stringify({ source: "page", digest: "é".repeat(300) }))).status).toBe(
+      413,
+    );
+    expect(logged).toHaveLength(0);
+  });
+
   it("ENV-11 is rate limited", async () => {
     const body = JSON.stringify({ source: "global" });
     const statuses: number[] = [];
