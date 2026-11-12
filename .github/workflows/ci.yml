@@ -1,5 +1,5 @@
 # CI for CareerOS (ENV-08, ENV-09).
-# `checks`: lint, typecheck, unit tests, landing responsive layout (TEST-01) and builds on every PR
+# `checks`: lint, typecheck, spec-ID traceability, unit tests, landing responsive layout (TEST-01) and builds on every PR
 # and push to main.
 # `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E
 # (including the app pages' responsive layout, TEST-01).
@@ -53,6 +53,10 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      # Test names must cite requirement IDs that exist in specs/ (TEST-02); counts go to the summary.
+      - name: Spec-ID traceability (TEST-02)
+        run: pnpm check:spec-trace
 
       - name: Unit tests (with coverage thresholds, TEST §3)
         run: pnpm test:coverage

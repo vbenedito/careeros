@@ -3,7 +3,11 @@ import { defineConfig } from "vitest/config";
 // Each workspace package with a vitest.config.ts is a test project.
 export default defineConfig({
   test: {
-    projects: ["packages/*/vitest.config.ts", "apps/*/vitest.config.ts"],
+    projects: [
+      "packages/*/vitest.config.ts",
+      "apps/*/vitest.config.ts",
+      "scripts/vitest.config.ts",
+    ],
     coverage: {
       provider: "v8",
       // apps/web joins coverage with its test setup (#22).

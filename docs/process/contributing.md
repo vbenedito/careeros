@@ -53,6 +53,7 @@ flowchart LR
 - [ ] Acceptance criteria of the issue met, nothing out of scope added.
 - [ ] Tests named after spec IDs; `pnpm lint`, `pnpm typecheck` and `pnpm test` pass. `pnpm test` also runs the drift checks: spec constants (`constants.test.ts`), the database domain regex (`db-parity.test.ts`) and the README diagram ([`docs-parity.test.ts`](../../packages/shared/src/docs-parity.test.ts) against [overview](../architecture/overview.md)).
 - [ ] UI changes to the landing page or the dashboard pass the responsive layout checks ([TEST-01](../../specs/v0/08-testing.md#21-responsive-layout): no horizontal scroll, nothing outside the viewport, centred groups centred, 44 px touch targets up to 768 px), and the PR links the CI screenshots artifacts (`responsive-screenshots-landing`, `responsive-screenshots-app`) of its latest run.
+- [ ] `pnpm check:spec-trace` passes ([TEST-02](../../specs/v0/08-testing.md#22-spec-traceability)). A new spec ID needs a test that names it, or an entry with a one-line reason in [`specs/untested-ids.json`](../../specs/untested-ids.json) when it is not testable by design (process, decisions, external settings).
 - [ ] `pnpm db:test` passes when `supabase/` changed. CI green, including integration, E2E and the backup round trip.
 - [ ] Specs, ADRs and docs updated in the same PR. A changed spec gets a line `Amended <YYYY-MM-DD> (#issue): <what>` under its status line; existing ADRs are updated, not rewritten.
 - [ ] No secrets, tokens or personal data in code, logs, docs or test fixtures.

@@ -1,0 +1,14 @@
+{
+  "ENV-01": "Tooling decision (pnpm workspaces, no build orchestrator); nothing to assert.",
+  "ENV-04": "Decision: there is no staging environment in v0.",
+  "ENV-05a": "Release process (GitHub Release with the prod zip); verified by doing a release.",
+  "ENV-06": "Local development workflow, documented; not enforced by code.",
+  "ENV-07": "Decision: the dashboard is not containerized; nothing to assert.",
+  "ENV-08": "Describes the CI workflow itself; it is verified by every CI run.",
+  "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
+  "SEC-12": "Dependency policy (audit, Dependabot, justification in PRs); process, not code.",
+  "STORE-03": "Store listing document and review justification; verified in the store review.",
+  "STORE-04": "Store listing disclosures and privacy policy URL; verified in the store review.",
+  "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
+  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made."
+}

@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "test:responsive": "pnpm --filter @careeros/extension test:responsive",
     "build": "pnpm -r build",
+    "check:spec-trace": "node scripts/ci/spec-trace.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
