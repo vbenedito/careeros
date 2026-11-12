@@ -11,7 +11,8 @@
     "release:store": "pnpm build:prod && node scripts/zip.ts production --store",
     "typecheck": "tsc -p tsconfig.worker.json && tsc -p tsconfig.popup.json && tsc -p tsconfig.node.json",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:responsive": "vitest run --config vitest.responsive.config.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.4",
