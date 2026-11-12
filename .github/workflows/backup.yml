@@ -34,8 +34,6 @@ jobs:
     timeout-minutes: 15
     env:
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
-      AGE_VERSION: v1.2.1
-      AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
     steps:
       - name: Check configuration
         id: config
@@ -50,7 +48,7 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout (for the dump script)
+      - name: Checkout (for the dump scripts)
         if: steps.config.outputs.ready == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,29 +56,19 @@ jobs:
 
       - name: Install age (pinned, checksum verified)
         if: steps.config.outputs.ready == 'true'
-        run: |
-          curl -sSfL -o age.tgz \
-            "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz"
-          echo "${AGE_SHA256}  age.tgz" | sha256sum --check
-          tar xzf age.tgz
-          sudo install age/age /usr/local/bin/age
+        run: scripts/ops/install-age.sh
 
       - name: Dump and encrypt (plaintext never touches the disk)
         if: steps.config.outputs.ready == 'true'
         # The only step that receives the database URL.
         env:
           PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        # Shared with migrate.yml (#147): db-dump.sh | gzip -9 | age, data only.
         run: |
           set -euo pipefail
-          umask 077
           name="careeros-$(date -u +%Y-%m-%d)-run${GITHUB_RUN_ID}.sql.gz.age"
-          # Data only: the schema is the migrations (restore = migrations + this dump).
-          scripts/ops/db-dump.sh \
-            | gzip -9 \
-            | age --encrypt --recipient "$AGE_RECIPIENT" > "$name"
-          test -s "$name"
+          scripts/ops/backup-encrypted.sh "$name"
           echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
-          ls -l "$name"
 
       - name: Store the encrypted dump (90 days)
         if: steps.config.outputs.ready == 'true'

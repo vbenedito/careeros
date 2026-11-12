@@ -1,0 +1,181 @@
+# Applies database migrations to production (#147, ENV-08, docs/process/release.md).
+# On every push to `main` that touches `supabase/migrations/**`: encrypted backup (the same script
+# as backup.yml) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`,
+# with the dry run and the migration list in the job summary.
+# Run workflow (workflow_dispatch) offers `mode`: `dry-run` (default; no backup, nothing written)
+# or `apply` (the same as a push).
+# Needs, in the GitHub environment `production-backup` (deployment branches: `main` only), the
+# same configuration as backup.yml: secret SUPABASE_DB_URL (Session pooler URI) and variable
+# BACKUP_AGE_RECIPIENT. No new secrets. Unlike the backup, a missing value FAILS the run: a
+# skipped migration would leave production behind the deployed code without anyone noticing.
+# Security (#112): the environment's branch rule is the guard; the `if:` is a second layer. The
+# database URL is given only to the steps that need it, as an environment variable; no `set -x`;
+# the password is masked on its own and connection strings are redacted from CLI output. No
+# `pnpm install` in this job: only the pinned Supabase CLI is installed (#147 review).
+
+name: Database migrations (production)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run: show what would be applied. apply: back up, then apply."
+        type: choice
+        options:
+          - dry-run
+          - apply
+        default: dry-run
+
+permissions:
+  contents: read
+
+# One migration run at a time, never cancelled half-way (a queued run waits for the current one).
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate production database
+    if: github.ref == 'refs/heads/main'
+    environment: production-backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      # A push always applies; a manual run applies only when asked to.
+      MODE: ${{ github.event_name == 'push' && 'apply' || inputs.mode }}
+    steps:
+      - name: Check configuration
+        env:
+          # Only whether it is set, never the URL itself.
+          HAS_DB_URL: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          if [ "$HAS_DB_URL" != "true" ]; then
+            echo "::error::SUPABASE_DB_URL is not set in the production-backup environment."
+            exit 1
+          fi
+          if [ "$MODE" = "apply" ] && [ -z "$AGE_RECIPIENT" ]; then
+            echo "::error::BACKUP_AGE_RECIPIENT is not set: refusing to migrate without a backup."
+            exit 1
+          fi
+          echo "Mode: $MODE"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Only the Supabase CLI, not `pnpm install`: no dependency install scripts run in a job that
+      # holds the database URL. Same version as the devDependency in package.json (checked below).
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: 3.0.0
+
+      - name: Check the CLI version matches package.json
+        run: |
+          expected=$(jq -r '.devDependencies.supabase' package.json)
+          actual=$(supabase --version)
+          echo "Supabase CLI $actual (package.json: $expected)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Supabase CLI $actual differs from package.json ($expected): update setup-cli's version."
+            exit 1
+          fi
+
+      # GitHub masks the whole secret; also mask the password alone (and its decoded form), in
+      # case a tool prints the URL in parts. Uses the runner image's Node.js.
+      - name: Mask the database password
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          node -e '
+            const u = new URL(process.env.PGURL);
+            for (const v of new Set([u.password, decodeURIComponent(u.password)]))
+              if (v) console.log(`::add-mask::${v}`);
+          '
+
+      - name: Install age (pinned, checksum verified)
+        if: env.MODE == 'apply'
+        run: scripts/ops/install-age.sh
+
+      - name: Back up (dump and encrypt; plaintext never touches the disk)
+        if: env.MODE == 'apply'
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          name="careeros-$(date -u +%Y-%m-%d)-run${GITHUB_RUN_ID}-pre-migration.sql.gz.age"
+          scripts/ops/backup-encrypted.sh "$name"
+          echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
+
+      - name: Store the encrypted dump (90 days)
+        if: env.MODE == 'apply'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
+          if-no-files-found: error
+
+      # Supabase CLI 3: `--remote=<url>` (`--db-url` is deprecated); `--skip-vault` keeps
+      # config.toml out of production. Connection strings are redacted from the output.
+      - name: Dry run (supabase db push --dry-run)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --dry-run 2>&1 \
+            | sed -E 's#://[^@/[:space:]]*@#://***@#g' > dry-run.txt
+          status=$?
+          cat dry-run.txt
+          {
+            echo "## Dry run (mode: $MODE)"
+            echo '```text'
+            cat dry-run.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Apply (supabase db push)
+        id: apply
+        if: env.MODE == 'apply'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          # --yes: non-interactive (the CLI does not read piped answers).
+          supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --yes 2>&1 \
+            | sed -E 's#://[^@/[:space:]]*@#://***@#g' > apply.txt
+          status=$?
+          cat apply.txt
+          {
+            echo "## Apply"
+            echo '```text'
+            cat apply.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Migration history (supabase migration list)
+        # Also after a failed apply, to show what was and was not applied.
+        if: ${{ env.MODE == 'apply' && (success() || steps.apply.outcome == 'failure') }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          supabase migration list --remote="$SUPABASE_DB_URL" 2>&1 \
+            | sed -E 's#://[^@/[:space:]]*@#://***@#g' > list.txt
+          status=$?
+          cat list.txt
+          {
+            echo "## Migration history (local ↔ production)"
+            echo '```text'
+            cat list.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

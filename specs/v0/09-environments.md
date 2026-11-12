@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): repository layout, Node version, environment variable
 
 Amended 2026-11-12 (#142): ENV-08 runs the responsive layout checks (TEST-01) and uploads their screenshots.
 
+Amended 2026-11-12 (#147): ENV-08 applies production migrations with the workflow `migrate.yml` instead of from a laptop.
+
 ## 1. Repository layout
 
 ```
@@ -74,6 +76,8 @@ careeros/
   2. `backend` ("Database (Supabase in Docker)"): install → `supabase start -x studio,postgres-meta` → `pnpm db:reset` → `pnpm db:test` (pgTAP) → install Playwright's Chromium (cached) → `scripts/ci/integration.sh` (builds the dashboard and the extension, starts one dashboard server, runs the web integration, extension integration and E2E suites; E2E includes the app pages' responsive layout, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-app` (14 days, also when a test fails) → backup → restore round trip (`scripts/ops/backup-restore-test.sh`, `age` pinned by checksum) → on failure, print the dashboard server log → `supabase stop`.
 
   Workflow `.github/workflows/backup.yml` runs weekly (Mondays 06:17 UTC) and on demand, only on `main`, in the GitHub environment `production-backup`: it dumps the production database (`scripts/ops/db-dump.sh`), encrypts it with `age` and stores it as an artifact for 90 days. Without `SUPABASE_DB_URL` and `BACKUP_AGE_RECIPIENT` it skips.
+
+  Workflow `.github/workflows/migrate.yml` ("Database migrations (production)") runs on pushes to `main` that change `supabase/migrations/**` and on demand (`mode`: `dry-run`, the default, or `apply`), only on `main`, in the same environment `production-backup`, one run at a time and never cancelled (`concurrency: migrate-production`): Supabase CLI only (`supabase/setup-cli` pinned by SHA, same version as `package.json`; no `pnpm install` in a job that holds the database URL) → (apply) encrypted backup with the same script as `backup.yml` (`scripts/ops/backup-encrypted.sh`, artifact for 90 days) → `supabase db push --dry-run` → (apply) `supabase db push --yes` → `supabase migration list`, with the dry run and the migration list in the job summary. A missing `SUPABASE_DB_URL`, or `BACKUP_AGE_RECIPIENT` when applying, fails the run. The database URL is given only to the steps that need it, as an environment variable; the password is masked and connection strings are redacted from the output. Procedure: [release](../../docs/process/release.md#database-migrations), [operations §6](../../docs/operations.md#6-database-migrations).
 - **ENV-09** Actions pinned to commit SHAs; minimal `permissions`.
 
 ## 4. Observability (v0-appropriate)

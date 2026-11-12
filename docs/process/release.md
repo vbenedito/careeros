@@ -1,6 +1,6 @@
 # Release process
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 How each part of CareerOS reaches users. Steps marked **Proposed** have not been practised yet. Account-specific production settings are kept privately by the product owner and are not repeated here.
 
@@ -34,13 +34,27 @@ The first store submission is in progress. Until a store version has been publis
 
 ## Database migrations
 
+Migrations reach production through the workflow [Database migrations (production)](../../.github/workflows/migrate.yml) (#147), not from a laptop.
+
 | Step | How |
 |---|---|
-| Write | A new file in `supabase/migrations`; never edit an applied one. pgTAP tests in the same PR |
+| Write | A new file in `supabase/migrations`; never edit an applied one. pgTAP tests in the same PR. Backward compatible (see below) |
 | Test | `pnpm db:reset && pnpm db:test` locally; CI applies all migrations to a fresh stack and runs pgTAP, integration, E2E and the backup round trip |
-| Apply to production | After the PR is merged: `pnpm exec supabase link --project-ref <ref>`, then `pnpm exec supabase db push --remote`. Supabase CLI 3 targets the local stack unless `--remote` is given ([operations](../operations.md#restore-procedure), [test report](../history/delivery/v0-test-report.md)) |
-| Order | Apply the migration **before** deploying code that needs it. Migrations must keep the currently deployed dashboard and every released extension working (add, then use; never remove in the same release) |
-| Rollback | **Proposed:** a new forward migration that undoes the change. For data loss, restore from the backup ([operations §4](../operations.md#4-backups)) |
+| Preview against production | Optional, before or after merging: Actions → **Database migrations (production)** → **Run workflow** on `main`, mode **dry-run** (the default). It writes nothing and makes no backup; the job summary lists the migrations that would be applied |
+| Apply to production | **Automatic on merge:** a push to `main` that changes `supabase/migrations/**` runs the workflow in the `production-backup` environment: encrypted backup (same as the weekly backup, artifact `careeros-YYYY-MM-DD-run<id>-pre-migration.sql.gz.age`, 90 days) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`. One run at a time, never cancelled half-way. To re-run by hand: Run workflow with mode **apply** |
+| Check | Open the run's **Summary**: *Dry run* lists the pending migrations (or says the remote database is up to date), *Apply* shows the CLI output, *Migration history* shows each migration in the *Local* and *Remote* columns: after a good run every row has both. A red run is not silent: GitHub emails the person who merged. Then check the dashboard as in [Dashboard](#dashboard) |
+| Emergency fallback | If Actions is unavailable: the laptop procedure in [operations §6](../operations.md#6-database-migrations) |
+| Rollback | **Proposed:** a new forward migration that undoes the change. For data loss, restore from the pre-migration backup of that run ([operations §4](../operations.md#4-backups)) |
+
+### Write backward-compatible migrations: expand → deploy → contract
+
+The merge that brings a migration also deploys the dashboard (Vercel) at the same moment, and released extensions keep calling the old API for months. So for a while **old code runs against the new schema**, and possibly new code against the old one. Every migration must keep the currently deployed dashboard and every released extension working:
+
+1. **Expand** (one PR): add the new table, column (nullable or with a default), function or function overload. Do not rename, drop or tighten anything the current code uses.
+2. **Deploy code** (same or a later PR): the dashboard and the extension start using the new shape. If the code must not run before the migration, merge the migration alone first and wait for its run to be green.
+3. **Contract** (a later PR, once no deployed code or supported extension version uses the old shape): drop the old column, function or overload.
+
+A rename is add new → copy/backfill → switch code → drop old, spread over these steps.
 
 ## Compatibility rules
 

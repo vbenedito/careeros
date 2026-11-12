@@ -148,15 +148,8 @@ jobs:
       # Restore procedure of docs/operations.md, proven on every run (#31). Runs last: it resets
       # the local database.
       - name: Backup → restore round trip
-        env:
-          AGE_VERSION: v1.2.1
-          AGE_SHA256: 7df45a6cc87d4da11cc03a539a7470c15b1041ab2b396af088fe9990f7c79d50
         run: |
-          curl -sSfL -o "$RUNNER_TEMP/age.tgz" \
-            "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz"
-          echo "${AGE_SHA256}  $RUNNER_TEMP/age.tgz" | sha256sum --check
-          tar xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
-          sudo install "$RUNNER_TEMP/age/age" "$RUNNER_TEMP/age/age-keygen" /usr/local/bin/
+          scripts/ops/install-age.sh
           scripts/ops/backup-restore-test.sh
 
       - name: Dashboard server log (on failure)
