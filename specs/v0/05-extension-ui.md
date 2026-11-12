@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): loading-sites state, meaning of "Paused — inactive"
 
 Amended 2026-11-12 (#58, #65): "Syncing…" footer state and the clock hint (product owner decision), Disconnect confirmation counts and "Try syncing again", replies in builds without Supabase config (EXT-UI-05c). The worker and the view model expose the state; the popup renders it in a follow-up change.
 
+Amended 2026-11-12 (#60, #65): the popup renders these states with exact texts ("Syncing…", the clock hint, the Disconnect confirmation with **Try syncing again**), a note on broad sites under Add site, "today" rolling over at midnight while open, Add-site errors cleared when the status changes, visible errors for `NOT_CONFIGURED` and unanswered commands, and Zod without its JIT probe (CSP).
+
 ## 1. Direction
 
 Minimal, product-oriented, glanceable. Tracking is automatic: **no pause/resume button**. The dashboard owns analytics.
@@ -24,7 +26,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 | 6 | **Footer** | Sync status · extension version (`v<version>`) · "Open dashboard ↗" link (opens `/dashboard`) |
 
 - **EXT-UI-01** The today total is the most prominent element; its card uses a subtle tinted background and border, no heavy shadow.
-- **EXT-UI-02** Durations format as `0m`, `45m`, `1h 05m`; under one minute shows `<1m`. Live values update every second while the popup is open.
+- **EXT-UI-02** Durations format as `0m`, `45m`, `1h 05m`; under one minute shows `<1m`. Live values update every second while the popup is open. *(#60)* "Today" is recomputed from that clock tick with the engine's calendar (SYNC-12a): a popup left open across midnight starts the new day at once and reloads its data.
 - **EXT-UI-03** No charts, streaks, goals, badges or other analytics.
 - **EXT-UI-04** The "on this device" caption is always shown (SYNC-12).
 
@@ -43,9 +45,11 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 - "Paused — inactive" means: the active tab is on a tracked site but no interval is open — the user is idle or the screen is locked (TRK-05), the media ceiling was reached (TRK-06), or the engine has not resumed yet. It is decided in `lib/popup-view.ts` from storage, not from the idle state itself.
 - The states are checked in this order: Disconnected, Disabled, Sites loading, No tracked sites, Tracking, Paused, Not a study site.
 - **EXT-UI-05** "Add this site" is offered only for `http/https` pages and adds the page's normalized hostname (TRK-03; `www.` stripped, nothing else). Users who want a parent domain type it in Settings.
+- *(#60)* An error from "Add this site" belongs to the status it was shown for: it is cleared when the status changes.
 - **EXT-UI-05a** The popup holds **no Supabase client**. It reads state from `chrome.storage` and sends commands (add/remove site, toggle, disconnect) to the service worker via `chrome.runtime.sendMessage`; the worker is the single owner of auth and network (AUTH-10).
 - **EXT-UI-05b** The footer shows the extension version. "Update available" in the popup is deferred: only protocol 1 exists in v0, and the dashboard already says "Please update the extension" when the protocol is older (AUTH-07a).
-- **EXT-UI-05c** *(#65)* In a build without Supabase config, every popup command gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, Disconnect and Forget local data `FAILED`; the tracking switch still works (it is local). `TRACKING_SET` replies `{ ok: true, enabled }` with the value stored afterwards, which the switch shows instead of its old position while storage reloads.
+- **EXT-UI-05c** *(#65)* In a build without Supabase config, every popup command gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, Disconnect and Forget local data `FAILED`; the tracking switch still works (it is local). `TRACKING_SET` replies `{ ok: true, enabled }` with the value stored afterwards, which the switch shows instead of its old position while storage reloads. *(#60, #65)* The popup shows each failure: `NOT_CONFIGURED` reads "This build can't connect to CareerOS. Use a release build."; a command with no reply (or `TRACKING_SET` without `{ ok: true, enabled }`) reads "Something went wrong. Try again." and the switch returns to the stored value. The switch moves at once when clicked, then shows the replied value until storage has it.
+- **EXT-UI-05d** *(#60)* Zod runs with `z.config({ jitless: true })` in the popup and the worker (`lib/zod-config.ts`, imported first). Its JIT probe calls `new Function`, which the extension CSP blocks (SEC-04); the probe's error is caught, but Chrome still reported two `securitypolicyviolation` events (`script-src`, `eval`) when the popup opened. With the setting there are none.
 
 ### Sync footer states
 
@@ -53,13 +57,15 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 *(#58, product owner 2026-11-12)* `Syncing…` is shown while a cycle is uploading: `PopupView.syncing`, from `syncingSince` in the sync status (SYNC-02c). When the server rejects sessions because this computer's clock is fast (SYNC-05a), the popup shows a hint to correct the clock: `PopupView.clockAheadMinutes` (whole minutes, null when not applicable). Deferred sessions are part of the pending count (`PopupView.deferred` says how many of them wait for the clock).
 
+*(#60)* Texts: while syncing, the footer label is `Syncing…` (before any pending count; ` · 2 not synced` still follows). The clock hint shows when the clock is **5 minutes or more** ahead (`clockAheadMinutes` is null below that), as a small notice above the footer: "Your computer's clock is about 12 min ahead. Fix it so new study time syncs right away." and, when sessions are deferred, a second line "3 sessions waiting to sync." ("1 session waiting to sync.").
+
 - **EXT-UI-10** **Toolbar badge** on the extension icon: a small green dot while tracking, an amber `!` when not connected, nothing otherwise. The icon's tooltip states the same in words: "CareerOS — tracking leetcode.com", "CareerOS — not connected", "CareerOS — not tracking" (the manifest name, so "CareerOS (dev)" in dev builds). No live timer in the badge (#63). The rule is the pure `badgeFor` in `lib/badge.ts`; the worker (`background/badge.ts`) applies it with `chrome.action` whenever the stored engine state changes, and skips the calls when nothing changed. The dot is a one-space badge text on green `#16a34a`; the `!` is on amber `#b45309`.
 
 ## 3. Settings view (inside the popup, back arrow to main)
 
 - **EXT-UI-06** **Tracking** switch (on by default). Off ⇒ closes any open interval and tracks nothing until turned on. Stored per device.
-- **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10).
-- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**. A reply `SYNC_IN_PROGRESS` (an upload still running, AUTH-12b) shows "Still syncing your sessions. Try again in a moment." instead of the confirmation.
+- **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10). *(#60, product owner)* Under the input, one muted line: "Broad sites like youtube.com count every page on them." (no per-site warning).
+- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**. A reply `SYNC_IN_PROGRESS` (an upload still running, AUTH-12b) shows "Still syncing your sessions. Try again in a moment." instead of the confirmation. *(#60, #65)* Texts: heading "Delete unsynced sessions?", then "3 study sessions haven't synced yet and will be deleted." ("1 study session hasn't …"); buttons **Try syncing again** (takes focus; reads "Syncing…" while it runs), **Disconnect anyway** (destructive) and **Cancel** (or Escape). After a retry that still leaves sessions, the count is updated and "Still not synced." is announced; `SYNC_IN_PROGRESS` or `FAILED` during a retry keeps the confirmation open with the message under it.
 - **EXT-UI-08a** When not connected, Settings shows the Tracking switch, then "Connect your account to manage your tracked sites." with **Connect account** (opens the dashboard's `/connect`) instead of Tracked sites and Account. If the last account left local data, **Forget local data** (AUTH-11a) follows; afterwards the view says "Local data deleted."
 - No other settings in v0.
 

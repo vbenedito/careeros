@@ -55,7 +55,7 @@ export interface PopupView {
   syncing: boolean;
   /**
    * SYNC-05a (#58): whole minutes this device's clock is ahead of the server's while that makes
-   * the server reject intervals (popup hint "check your computer's clock"); null otherwise.
+   * the server reject intervals; null otherwise or under `CLOCK_HINT_MIN_MINUTES` (no hint).
    */
   clockAheadMinutes: number | null;
   /** SYNC-05a: of `pending`, how many wait for the server's clock to pass their end. */
@@ -96,12 +96,20 @@ export function buildPopupView(input: PopupInput): PopupView {
     syncLabel: syncLabel(input),
     quarantined: input.counts.quarantined,
     syncing: input.auth.connected && isSyncing(input.sync, now),
-    clockAheadMinutes:
-      input.auth.connected && input.sync.clockAheadMs !== null
-        ? Math.max(1, Math.round(input.sync.clockAheadMs / 60_000))
-        : null,
+    clockAheadMinutes: clockAheadMinutes(input),
     deferred: input.counts.deferred ?? 0,
   };
+}
+
+/** EXT-UI clock hint (#58): shown from 5 minutes ahead, the server's limit (DATA-07). */
+export const CLOCK_HINT_MIN_MINUTES = 5;
+
+function clockAheadMinutes(input: PopupInput): number | null {
+  const ahead = input.sync.clockAheadMs;
+  if (!input.auth.connected || ahead === null) return null;
+  // Threshold on the exact value, so 4.5 min never shows "about 5 min ahead".
+  if (ahead < CLOCK_HINT_MIN_MINUTES * 60_000) return null;
+  return Math.round(ahead / 60_000);
 }
 
 /** The current run: the open interval plus the contiguous intervals before it (30-min splits). */
@@ -145,6 +153,8 @@ function syncLabel(input: PopupInput): string {
   const { sync, now } = input;
   const pending = input.counts.pending;
   if (!input.auth.connected) return pending > 0 ? `${pending} pending` : "Not synced";
+  // SYNC-02c (#58, #60): a cycle is uploading now.
+  if (isSyncing(sync, now)) return "Syncing…";
   if (pending === 0)
     return sync.lastSyncedAt ? `Synced · ${ago(sync.lastSyncedAt, now)}` : "Not synced yet";
   if (sync.lastOutcome === "error") return `Sync error · ${pending} pending`;

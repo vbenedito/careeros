@@ -4,6 +4,8 @@
  *
  * Every listener is registered synchronously at startup so Chrome events can wake the worker.
  */
+// First: before any Zod schema runs (#60).
+import "../lib/zod-config";
 import { SYNC, TRACKING } from "@careeros/shared";
 import { localDayStartMs } from "../engine/engine";
 import { config, isSupabaseConfigured } from "../lib/config";

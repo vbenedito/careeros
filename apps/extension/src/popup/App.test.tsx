@@ -7,10 +7,11 @@ import type { PopupDisconnectResult } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { INITIAL_SYNC_STATE } from "../lib/sync-state";
 import { App } from "./App";
-import type { CommandResult, PopupData } from "./data";
+import type { CommandResult, PopupData, TrackingResult } from "./data";
 
 const TODAY = Date.UTC(2026, 10, 9, 3, 0, 0);
 const NOW = TODAY + 3600_000;
+const DAY = 24 * 3600_000;
 const tracking: EngineState = {
   ...INITIAL_ENGINE_STATE,
   open: {
@@ -21,7 +22,7 @@ const tracking: EngineState = {
 };
 
 function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
-  const loaded: Omit<PopupInput, "now"> = {
+  let loaded: Omit<PopupInput, "now"> = {
     startOfToday: TODAY,
     auth: { connected: true, email: "a@example.test" },
     trackingEnabled: true,
@@ -34,6 +35,7 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     ...over,
   };
   const calls: string[] = [];
+  const listeners: (() => void)[] = [];
   const added: string[] = [];
   const opened: (string | undefined)[] = [];
   const data: PopupData & {
@@ -42,15 +44,33 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     calls: string[];
     disconnectReply: PopupDisconnectResult[];
     addReply: CommandResult[];
+    trackingReply: TrackingResult[];
+    loads: number;
+    /** Simulates a storage change: new data, then the popup's change callback. */
+    update: (over: Partial<Omit<PopupInput, "now">>) => void;
   } = {
     added,
     opened,
     calls,
     disconnectReply: [],
     addReply: [],
+    trackingReply: [],
+    loads: 0,
     version: "0.1.0",
-    load: async () => loaded,
-    subscribe: () => () => {},
+    load: async () => {
+      data.loads++;
+      return loaded;
+    },
+    // The fixture's calendar: days of 24 h from TODAY.
+    dayStart: (t) => TODAY + Math.floor((t - TODAY) / DAY) * DAY,
+    subscribe: (onChange) => {
+      listeners.push(onChange);
+      return () => {};
+    },
+    update: (change) => {
+      loaded = { ...loaded, ...change };
+      for (const l of listeners) l();
+    },
     holdFocus: () => () => {},
     refreshSites: async () => {},
     addSite: async (input) => {
@@ -63,6 +83,7 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     },
     setTracking: async (enabled) => {
       calls.push(`tracking:${enabled}`);
+      return data.trackingReply.shift() ?? { ok: true, enabled };
     },
     disconnect: async (discard) => {
       calls.push(`disconnect:${discard}`);
@@ -164,6 +185,77 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
   });
 });
 
+describe("popup states for sync and clock (#58, #60)", () => {
+  it("SYNC-02c footer says Syncing… while a cycle uploads", async () => {
+    renderApp(
+      fixture({
+        engine: tracking,
+        sync: { ...INITIAL_SYNC_STATE, lastSyncedAt: NOW - 60_000, syncingSince: NOW - 3000 },
+        counts: { pending: 2, quarantined: 0 },
+      }),
+    );
+    expect((await screen.findByTestId("sync-label")).textContent).toBe("Syncing…");
+  });
+
+  it("SYNC-05a clock 5+ min ahead: a hint to fix the clock with the sessions waiting", async () => {
+    renderApp(
+      fixture({
+        sync: { ...INITIAL_SYNC_STATE, clockAheadMs: 12.2 * 60_000 },
+        counts: { pending: 3, quarantined: 0, deferred: 3 },
+      }),
+    );
+    const hint = await screen.findByRole("region", { name: "Clock" });
+    expect(hint.textContent).toBe(
+      "Your computer's clock is about 12 min ahead. Fix it so new study time syncs right away." +
+        "3 sessions waiting to sync.",
+    );
+  });
+
+  it("SYNC-05a no hint under 5 min ahead; no waiting line without deferred sessions", async () => {
+    renderApp(fixture({ sync: { ...INITIAL_SYNC_STATE, clockAheadMs: 4 * 60_000 } }));
+    await screen.findByTestId("status");
+    expect(screen.queryByRole("region", { name: "Clock" })).toBeNull();
+    cleanup();
+    renderApp(fixture({ sync: { ...INITIAL_SYNC_STATE, clockAheadMs: 6 * 60_000 } }));
+    expect((await screen.findByRole("region", { name: "Clock" })).textContent).not.toContain(
+      "waiting",
+    );
+  });
+
+  it("#60 a popup open across midnight starts the new day from the clock tick", async () => {
+    let t = TODAY + DAY - 2000; // 23:59:58
+    const data = fixture({
+      engine: {
+        ...INITIAL_ENGINE_STATE,
+        open: {
+          ...(tracking.open as NonNullable<EngineState["open"]>),
+          startedAt: (t - 3600_000) / 1000,
+        },
+      },
+    });
+    render(<App data={data} now={() => t} />);
+    expect((await screen.findByTestId("today-total")).textContent).toBe("1h 00m");
+    const loadsBefore = data.loads;
+    t = TODAY + DAY + 61_000; // 00:01:01 the next day
+    await waitFor(() => expect(screen.getByTestId("today-total").textContent).toBe("1m"), {
+      timeout: 2500,
+    });
+    // And the new day's data is read again.
+    await waitFor(() => expect(data.loads).toBeGreaterThan(loadsBefore));
+  });
+
+  it("#60 an Add site error is cleared when the status changes", async () => {
+    const data = fixture({ activeTabUrl: "https://neetcode.io/" });
+    data.addReply.push({ ok: false, error: "UNAVAILABLE" });
+    renderApp(data);
+    fireEvent.click(await screen.findByRole("button", { name: "Add neetcode.io" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Couldn't reach CareerOS");
+    data.update({ activeTabUrl: "https://example.org/" });
+    await screen.findByRole("button", { name: "Add example.org" });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
   const openSettings = async (data: PopupData) => {
     renderApp(data);
@@ -177,6 +269,57 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     fireEvent.click(toggle);
     await waitFor(() => expect(data.calls).toContain("tracking:false"));
+  });
+
+  it("EXT-UI-05c the switch shows the stored value from the reply before storage reloads", async () => {
+    const data = fixture();
+    // The worker stored "on" anyway (e.g. a racing write): the switch follows the reply.
+    data.trackingReply.push({ ok: true, enabled: true });
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const reply = data.setTracking;
+    data.setTracking = async (enabled) => {
+      await gate;
+      return reply(enabled);
+    };
+    await openSettings(data);
+    const toggle = screen.getByRole("switch", { name: /Tracking/ });
+    fireEvent.click(toggle);
+    // At once: the new position while the worker answers (storage has not changed yet).
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    release();
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+    expect(toggle.getAttribute("aria-disabled")).toBe("false");
+  });
+
+  it("EXT-UI-05c no reply from the worker: the switch goes back and says so", async () => {
+    const data = fixture();
+    data.trackingReply.push({ ok: false, error: "FAILED" });
+    await openSettings(data);
+    const toggle = screen.getByRole("switch", { name: /Tracking/ });
+    fireEvent.click(toggle);
+    expect((await screen.findByRole("alert")).textContent).toBe("Something went wrong. Try again.");
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("EXT-UI-05c NOT_CONFIGURED: adding a site shows a visible error", async () => {
+    const data = fixture();
+    data.addReply.push({ ok: false, error: "NOT_CONFIGURED" });
+    await openSettings(data);
+    fireEvent.change(screen.getByRole("textbox", { name: "Site to track" }), {
+      target: { value: "neetcode.io" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This build can't connect to CareerOS. Use a release build.",
+    );
+  });
+
+  it("#60 a short note under Add site explains broad sites", async () => {
+    await openSettings(fixture());
+    expect(screen.getByText("Broad sites like youtube.com count every page on them.")).toBeTruthy();
   });
 
   it("EXT-UI-07 lists the sites; remove and add go to the worker; errors are shown", async () => {
@@ -200,7 +343,7 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     );
   });
 
-  it("AUTH-12 disconnect asks before deleting unsynced sessions", async () => {
+  it("AUTH-12 AUTH-12b disconnect states the unsynced count; Cancel keeps the account", async () => {
     const data = fixture();
     const unsynced = { ok: false, code: "UNSYNCED_DATA", pending: 3 } as const;
     data.disconnectReply.push(unsynced, unsynced);
@@ -208,21 +351,76 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     expect(screen.getByTestId("account-email").textContent).toBe("a@example.test");
     fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
     const dialog = await screen.findByRole("alertdialog", { name: "Delete unsynced sessions?" });
-    expect(dialog.textContent).toContain("3 study sessions haven't been uploaded yet");
-    // EXT-UI-09: the confirmation takes focus (safe choice first) and gives it back on close.
-    await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep connected" })),
+    expect(dialog.textContent).toContain(
+      "3 study sessions haven't synced yet and will be deleted.",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Keep connected" }));
+    // EXT-UI-09: the confirmation takes focus (the safe offer first) and gives it back on close.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Try syncing again" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("button", { name: "Disconnect" })),
     );
     fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
     await screen.findByRole("alertdialog");
-    fireEvent.click(screen.getByRole("button", { name: "Disconnect and delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect anyway" }));
     await waitFor(() =>
       expect(data.calls).toEqual(["disconnect:false", "disconnect:false", "disconnect:true"]),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  });
+
+  it("AUTH-12b Try syncing again re-runs Disconnect without discarding and updates the count", async () => {
+    const data = fixture();
+    data.disconnectReply.push(
+      { ok: false, code: "UNSYNCED_DATA", pending: 3, unsynced: 2, quarantined: 1 },
+      { ok: false, code: "UNSYNCED_DATA", pending: 1, unsynced: 0, quarantined: 1 },
+      { ok: true },
+    );
+    await openSettings(data);
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    await screen.findByRole("alertdialog");
+    fireEvent.click(screen.getByRole("button", { name: "Try syncing again" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alertdialog").textContent).toContain(
+        "1 study session hasn't synced yet and will be deleted.",
+      ),
+    );
+    expect(screen.getByRole("status").textContent).toBe("Still not synced.");
+    fireEvent.click(screen.getByRole("button", { name: "Try syncing again" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(data.calls).toEqual(["disconnect:false", "disconnect:false", "disconnect:false"]);
+  });
+
+  it("AUTH-12b SYNC_IN_PROGRESS says to try again; FAILED says something went wrong", async () => {
+    const data = fixture();
+    data.disconnectReply.push(
+      { ok: false, code: "SYNC_IN_PROGRESS" },
+      { ok: false, code: "UNSYNCED_DATA", pending: 2 },
+      { ok: false, code: "SYNC_IN_PROGRESS" },
+      { ok: false, code: "FAILED" },
+    );
+    await openSettings(data);
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Still syncing your sessions. Try again in a moment.",
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    await screen.findByRole("alertdialog");
+    // From the confirmation: it stays open with the message.
+    fireEvent.click(screen.getByRole("button", { name: "Try syncing again" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Still syncing your sessions. Try again in a moment.",
+    );
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect anyway" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("Something went wrong. Try again."),
     );
   });
 

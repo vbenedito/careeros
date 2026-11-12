@@ -51,8 +51,8 @@ flowchart TB
 | `background/messaging/internal.ts` | Messages from the extension's own pages; answers also in builds without Supabase config | EXT-UI-05a, 05c, SEC-05 |
 | `background/api/data-client.ts` | supabase-js data client that asks `AuthService` for each token | AUTH-10 |
 | `background/badge.ts`, `lib/badge.ts` | Toolbar badge from the engine state | EXT-UI-10 |
-| `popup/` | React popup: `App.tsx`, `views/` (Main, Settings), `components/`, `ui/` primitives, `data.ts` (storage reads + commands) | EXT-UI-01..10 |
-| `lib/` | Code shared by worker and popup: `popup-messages.ts`, `popup-view.ts` (pure view model), `sync-state.ts`, `log.ts`, `config.ts`, `env.ts` | EXT-UI-05a, ENV-10 |
+| `popup/` | React popup: `App.tsx` (clock tick; "today" recomputed from it with `data.dayStart`), `views/` (Main, Settings), `components/` (incl. `ClockHint`, the Disconnect confirmation in `AccountSetting`), `ui/` primitives, `data.ts` (storage reads + commands) | EXT-UI-01..10 |
+| `lib/` | Code shared by worker and popup: `popup-messages.ts`, `popup-view.ts` (pure view model), `sync-state.ts`, `zod-config.ts` (Zod without JIT, imported first by both entries), `log.ts`, `config.ts`, `env.ts` | EXT-UI-05a, 05d, ENV-10 |
 
 The engine has no Chrome API, storage or timer; everything Chrome-specific stays in `background/` (functional core, imperative shell). The popup has no Supabase client (EXT-UI-05a).
 
@@ -142,7 +142,7 @@ A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest meas
 | `probeNext` | Next cycle sends one interval (SYNC-05b) |
 | `serverSkewMs` | Latest measured local − server clock (ms), or null (SYNC-05a) |
 
-`buildPopupView` (`lib/popup-view.ts`) turns these into `syncing`, `clockAheadMinutes` and `deferred` for the footer and the clock hint.
+`buildPopupView` (`lib/popup-view.ts`) turns these into `syncing` (footer label `Syncing…`), `clockAheadMinutes` (null under 5 min) and `deferred` for the footer and the clock hint (`popup/components/ClockHint.tsx`).
 
 ## Message protocol
 
@@ -156,11 +156,11 @@ Validated by `PopupRequestSchema` (`lib/popup-messages.ts`). Accepted only from 
 | `DOMAINS_REFRESH` | — | `{ ok: true, domains }` or `{ ok: false, error }` |
 | `DOMAINS_ADD` | `input` (≤ 2048 chars) | same |
 | `DOMAINS_REMOVE` | `domain` (≤ 253 chars) | same |
-| `TRACKING_SET` | `enabled` | `{ ok: true, enabled }` (the stored value afterwards) |
+| `TRACKING_SET` | `enabled` | `{ ok: true, enabled }` (the stored value afterwards; the switch shows it until storage reloads) |
 | `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending` (unsynced + quarantined), `unsynced`, `quarantined`, `SYNC_IN_PROGRESS`, or `FAILED` |
 | `FORGET_LOCAL_DATA` | — | `{ ok: true }`, `CONNECTED` or `FAILED` |
 
-Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`. In a build without Supabase config every command still gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, `DISCONNECT` and `FORGET_LOCAL_DATA` `FAILED` (EXT-UI-05c). While shown, the popup also holds the port `careeros.popup`, so the worker treats Chrome as focused (TRK-18).
+Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`. In a build without Supabase config every command still gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, `DISCONNECT` and `FORGET_LOCAL_DATA` `FAILED` (EXT-UI-05c). The popup turns every failure, and a missing reply, into a visible message (`popup/messages.ts`). On `UNSYNCED_DATA` it asks first; **Try syncing again** sends `DISCONNECT` with `discardUnsynced: false` again, **Disconnect anyway** with `true` (AUTH-12b). While shown, the popup also holds the port `careeros.popup`, so the worker treats Chrome as focused (TRK-18).
 
 ### Dashboard → service worker
 

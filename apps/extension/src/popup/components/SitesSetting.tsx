@@ -71,6 +71,10 @@ export function SitesSetting(props: {
           Add
         </Button>
       </form>
+      {/* #60 (product owner): a domain counts with all its subdomains and pages (TRK-03). */}
+      <p className="text-xs text-muted-foreground">
+        Broad sites like youtube.com count every page on them.
+      </p>
       {error ? (
         <p role="alert" className="text-xs text-warning">
           {error}

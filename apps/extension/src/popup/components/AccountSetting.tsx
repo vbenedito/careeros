@@ -3,34 +3,53 @@ import type { PopupDisconnectResult } from "../../lib/popup-messages";
 import { errorMessage } from "../messages";
 import { Button } from "../ui";
 
-/** EXT-UI-08 / AUTH-12: connected email and Disconnect, confirming before unsynced data is lost. */
+/**
+ * EXT-UI-08 / AUTH-12, AUTH-12b (#65): connected email and Disconnect. When sessions are not on
+ * the server (unsynced or rejected), the confirmation says how many and offers "Try syncing
+ * again" (Disconnect again without discarding: the final sync runs again) before "Disconnect
+ * anyway".
+ */
 export function AccountSetting(props: {
   email: string | null;
   onDisconnect: (discardUnsynced: boolean) => Promise<PopupDisconnectResult>;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"disconnect" | "retry" | "discard" | null>(null);
   const [pending, setPending] = useState<number | null>(null);
+  const [retried, setRetried] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const keepRef = useRef<HTMLButtonElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
   const disconnectRef = useRef<HTMLButtonElement>(null);
   const wasConfirming = useRef(false);
 
   // EXT-UI-09: the confirmation takes focus (so it is announced); closing it returns focus.
   useEffect(() => {
-    if (pending !== null) keepRef.current?.focus();
-    else if (wasConfirming.current) disconnectRef.current?.focus();
+    if (pending !== null && !wasConfirming.current) retryRef.current?.focus();
+    else if (pending === null && wasConfirming.current) disconnectRef.current?.focus();
     wasConfirming.current = pending !== null;
   }, [pending]);
 
-  async function disconnect(discardUnsynced: boolean) {
-    setBusy(true);
+  async function disconnect(kind: "disconnect" | "retry" | "discard") {
+    setBusy(kind);
     setError(null);
-    const result = await props.onDisconnect(discardUnsynced);
-    setBusy(false);
+    setRetried(false);
+    const result = await props.onDisconnect(kind === "discard");
+    setBusy(null);
     if (result.ok) return setPending(null);
-    if (result.code === "UNSYNCED_DATA") return setPending(result.pending);
+    if (result.code === "UNSYNCED_DATA") {
+      setRetried(kind === "retry");
+      return setPending(result.pending);
+    }
     setError(errorMessage(result.code));
   }
+
+  const close = () => {
+    if (busy) return;
+    setPending(null);
+    setRetried(false);
+    setError(null);
+  };
+  const sessions = (n: number) =>
+    n === 1 ? "1 study session hasn't" : `${n} study sessions haven't`;
 
   return (
     <section aria-labelledby="account-heading" className="flex flex-col gap-2">
@@ -38,19 +57,20 @@ export function AccountSetting(props: {
         Account
       </h2>
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="truncate" data-testid="account-email">
+        <span className="min-w-0 truncate" data-testid="account-email">
           {props.email ?? "Connected"}
         </span>
         {pending === null ? (
           <Button
             ref={disconnectRef}
             variant="outline"
-            aria-disabled={busy}
+            className="shrink-0"
+            aria-disabled={busy !== null}
             onClick={() => {
-              if (!busy) void disconnect(false);
+              if (!busy) void disconnect("disconnect");
             }}
           >
-            Disconnect
+            {busy === "disconnect" ? "Disconnecting…" : "Disconnect"}
           </Button>
         ) : null}
       </div>
@@ -58,26 +78,48 @@ export function AccountSetting(props: {
         <div
           role="alertdialog"
           aria-labelledby="unsynced-heading"
-          aria-describedby="unsynced-title"
+          aria-describedby="unsynced-text"
           onKeyDown={(e) => {
-            if (e.key === "Escape") setPending(null);
+            if (e.key === "Escape") close();
           }}
           className="flex flex-col gap-2 rounded-md border border-border p-3"
         >
           <p id="unsynced-heading" className="text-sm font-medium">
             Delete unsynced sessions?
           </p>
-          <p id="unsynced-title" className="text-xs">
-            {pending === 1 ? "1 study session hasn't" : `${pending} study sessions haven't`} been
-            uploaded yet. Disconnecting now deletes {pending === 1 ? "it" : "them"} from this
-            device.
+          <p id="unsynced-text" className="text-xs">
+            {sessions(pending)} synced yet and will be deleted.
           </p>
-          <div className="flex justify-end gap-2">
-            <Button ref={keepRef} variant="ghost" disabled={busy} onClick={() => setPending(null)}>
-              Keep connected
+          <p role="status" className="text-xs text-muted-foreground empty:sr-only">
+            {retried && busy === null ? "Still not synced." : ""}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              ref={retryRef}
+              variant="outline"
+              aria-disabled={busy !== null}
+              onClick={() => {
+                if (!busy) void disconnect("retry");
+              }}
+            >
+              {busy === "retry" ? "Syncing…" : "Try syncing again"}
             </Button>
-            <Button variant="destructive" disabled={busy} onClick={() => void disconnect(true)}>
-              Disconnect and delete
+            <Button
+              variant="destructive"
+              aria-disabled={busy !== null}
+              onClick={() => {
+                if (!busy) void disconnect("discard");
+              }}
+            >
+              Disconnect anyway
+            </Button>
+            <Button
+              variant="ghost"
+              className="col-span-2"
+              aria-disabled={busy !== null}
+              onClick={close}
+            >
+              Cancel
             </Button>
           </div>
         </div>

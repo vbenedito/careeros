@@ -34,6 +34,15 @@ export function App({ data, now = () => Date.now() }: { data: PopupData; now?: (
     };
   }, [data, reload]);
 
+  // #60: "today" follows the clock tick, so a popup left open across midnight starts a new day
+  // (and reloads, for the new day's intervals) without waiting for a storage change.
+  const startOfToday = data.dayStart(tick);
+  const loadedDay = useRef<number | null>(null);
+  useEffect(() => {
+    if (loadedDay.current !== null && loadedDay.current !== startOfToday) reload();
+    loadedDay.current = startOfToday;
+  }, [startOfToday, reload]);
+
   return (
     <main className="flex flex-col gap-3 p-4">
       <header className="flex items-center justify-between">
@@ -64,7 +73,7 @@ export function App({ data, now = () => Date.now() }: { data: PopupData; now?: (
         <SettingsView input={input} data={data} />
       ) : (
         <MainView
-          view={buildPopupView({ ...input, now: tick })}
+          view={buildPopupView({ ...input, startOfToday, now: tick })}
           data={data}
           onOpenSettings={() => setScreen("settings")}
         />
