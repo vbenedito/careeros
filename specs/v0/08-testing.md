@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): §2 layers, §3 coverage scope and §5 CI gates as im
 
 Amended 2026-11-12 (#142): responsive layout checks (TEST-01, §2.1), the Responsive layer in §2, §4 item 5 narrowed to colours and themes, §5 CI gates.
 
+Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
+
 ## 1. Principles
 
 - Test the rules where they live: pure logic gets fast unit tests; database rules get database tests; only critical journeys get E2E.
@@ -55,3 +57,9 @@ OAuth with real Google/GitHub is **not** automated (third-party consent screens)
 ## 5. CI gates (pull requests)
 
 Lint · typecheck · unit/component (with coverage thresholds) · landing responsive layout (TEST-01) · build (extension + dashboard) · database tests · integration and E2E (including the app pages' responsive layout) · backup → restore round trip. All must pass to merge. Jobs and steps: ENV-08.
+
+## 6. Test reliability
+
+- **Day boundaries.** A test that seeds "today", "this week" or "this month" and reads it back from the dashboard (rendered on the server, so a browser clock cannot be frozen) or the popup calls `clearOfMidnight()` (`apps/web/tests/integration/helpers.ts`) first: within a margin (3 min by default) of the next UTC or local midnight it waits until just after it. Weeks and months start at a UTC midnight, so this covers all three.
+- **Sync races.** The extension may sync an interval as soon as it is closed. A test reading the outbox accepts the interval either still queued or already in the database, and checks the database in the second case; it never expects an exact outbox length before triggering a sync itself.
+- **Auth rate limits.** The suites sign in many users from one IP. The local stack's `[auth.rate_limit]` in `supabase/config.toml` is raised for this (local only: production limits live in the Supabase dashboard, and `config.toml` is never pushed). The session helpers retry a 429 with backoff (`retryOn429`). The product's own 429 handling is AUTH-11.

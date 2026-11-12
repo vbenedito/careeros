@@ -6,9 +6,11 @@
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  clearOfMidnight,
   createOAuthUser,
   dashboardSession,
   env,
+  MIDNIGHT_MARGIN_MS,
   sql,
 } from "../../../web/tests/integration/helpers";
 
@@ -48,6 +50,9 @@ describe("dashboard journey (E2E)", () => {
   };
 
   beforeAll(async () => {
+    // #82: "This week" and "This month" are computed by the server at request time, so the
+    // seeding below and DASH-04 must not straddle Monday 00:00 UTC (or a month start).
+    await clearOfMidnight();
     userId = createOAuthUser(email);
     // This week and last week have data (UTC, the zone the tz cookie will carry).
     addSession(userId, mondayUtc(0), 30, "leetcode.com");
@@ -59,7 +64,7 @@ describe("dashboard journey (E2E)", () => {
       ...cookies.map((c) => ({ ...c, url: DASHBOARD_URL })),
       { name: "tz", value: "UTC", url: DASHBOARD_URL },
     ]);
-  });
+  }, MIDNIGHT_MARGIN_MS + 60_000);
 
   afterAll(async () => {
     await browser?.close();

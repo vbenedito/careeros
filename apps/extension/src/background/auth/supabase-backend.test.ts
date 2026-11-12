@@ -99,7 +99,14 @@ describe("refresh against a rate-limited server (AUTH-11)", () => {
   });
 
   it("AUTH-11 token expired: supabase-js drops the session on 429, so the user must reconnect", async () => {
-    const { result } = await refreshWith429(1);
-    expect(result).toEqual({ ok: false, reason: "invalid" });
+    // supabase-js logs the mocked 429 ("AuthApiError: slow down") with console.error. Kept out
+    // of the CI log (#82), where it read like a real rate-limit failure of the local stack.
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { result } = await refreshWith429(1);
+      expect(result).toEqual({ ok: false, reason: "invalid" });
+    } finally {
+      logged.mockRestore();
+    }
   });
 });

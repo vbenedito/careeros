@@ -3,7 +3,7 @@
  * sessions, the viewer's time zone from the `tz` cookie, and period navigation by URL.
  */
 import { describe, expect, it } from "vitest";
-import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
+import { clearOfMidnight, createOAuthUser, dashboardSession, env, sql } from "./helpers";
 
 const DASHBOARD_URL = env("DASHBOARD_URL");
 
@@ -79,6 +79,7 @@ describe("dashboard data (integration)", () => {
   });
 
   it("DASH-06 cards: today stays today; the period card and the top platform follow the period", async () => {
+    await clearOfMidnight(60_000); // #82: "today" is seeded, then read back from the server
     const { id, cookie } = await seededUser();
     const now = Date.now();
     const midnightUtc = now - (now % 86_400_000);
@@ -94,7 +95,7 @@ describe("dashboard data (integration)", () => {
     expect(html).toContain('data-testid="platform-legend"');
     expect(html).toMatch(/data-percent="75"[^>]*>.*?neetcode\.io/s);
     expect(html).toMatch(/data-percent="25"[^>]*>.*?leetcode\.com/s);
-  });
+  }, 90_000);
 
   it("DASH-06 top platform is — when the period has no data", async () => {
     const { cookie } = await seededUser();

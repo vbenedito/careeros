@@ -52,7 +52,9 @@ export async function dashboardSession(
 ) {
   const apiUrl = env("API_URL");
   const admin = createClient(apiUrl, env("SECRET_KEY"), { auth: { persistSession: false } });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+  const { data, error } = await retryOn429(() =>
+    admin.auth.admin.generateLink({ type: "magiclink", email }),
+  );
   if (error) throw error;
 
   const jar = new Map<string, string>();
@@ -64,10 +66,10 @@ export async function dashboardSession(
       },
     },
   });
-  const verified = await client.auth.verifyOtp({
-    token_hash: data.properties.hashed_token,
-    type: "magiclink",
-  });
+  // A token is consumed only by a successful verify, so a rate-limited one can be retried.
+  const verified = await retryOn429(() =>
+    client.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "magiclink" }),
+  );
   if (verified.error || !verified.data.session) throw verified.error ?? new Error("no session");
   let session = verified.data.session;
   if (options.oauth || options.signedInMinutesAgo !== undefined) {
@@ -80,7 +82,11 @@ export async function dashboardSession(
         : []),
     ];
     sql(`update auth.mfa_amr_claims set ${changes.join(", ")} where session_id = '${sessionId}'`);
-    const refreshed = await client.auth.refreshSession();
+    // The token is passed explicitly: supabase-js drops its stored session on a 429.
+    const refreshToken = session.refresh_token;
+    const refreshed = await retryOn429(() =>
+      client.auth.refreshSession({ refresh_token: refreshToken }),
+    );
     if (refreshed.error || !refreshed.data.session)
       throw refreshed.error ?? new Error("no session");
     session = refreshed.data.session;
@@ -96,4 +102,44 @@ export async function dashboardSession(
 function jwtPayload(token: string): { session_id: string; amr?: unknown } {
   const part = token.split(".")[1] ?? "";
   return JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+}
+
+/**
+ * #82: retries an auth call the local stack rate-limited (HTTP 429, "slow down") with backoff.
+ * The suites sign in many users from one IP within minutes; the local limits are raised in
+ * supabase/config.toml, and this keeps a burst from failing a run anyway. Test helpers only:
+ * the product's own 429 handling is AUTH-11.
+ */
+export async function retryOn429<T extends { error: { status?: number | undefined } | null }>(
+  call: () => Promise<T>,
+  delaysMs: readonly number[] = [1_000, 2_000, 4_000, 8_000],
+): Promise<T> {
+  let result = await call();
+  for (const delay of delaysMs) {
+    if (result.error?.status !== 429) break;
+    await new Promise((r) => setTimeout(r, delay));
+    result = await call();
+  }
+  return result;
+}
+
+/** Default margin of {@link clearOfMidnight}: longer than the journeys that read "today". */
+export const MIDNIGHT_MARGIN_MS = 3 * 60_000;
+
+/**
+ * #82: a test that seeds "today", "this week" or "this month" and then reads it back from the
+ * dashboard (server-rendered, so a browser clock cannot be frozen) or the popup fails if the run
+ * crosses a day boundary in between. When the next UTC or local midnight is less than `marginMs`
+ * away, this waits until just after it; every week and month starts at a UTC midnight (the E2E
+ * contexts use UTC), so one check covers all three. Call it before seeding; give the hook or
+ * test `marginMs` more timeout.
+ */
+export async function clearOfMidnight(marginMs = MIDNIGHT_MARGIN_MS): Promise<void> {
+  const now = Date.now();
+  const utc = new Date(now);
+  utc.setUTCHours(24, 0, 0, 0);
+  const local = new Date(now);
+  local.setHours(24, 0, 0, 0);
+  const wait = Math.min(utc.getTime(), local.getTime()) - now;
+  if (wait < marginMs) await new Promise((r) => setTimeout(r, wait + 1_000));
 }
