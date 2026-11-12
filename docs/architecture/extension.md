@@ -40,7 +40,7 @@ flowchart TB
 | `background/tracking/outbox.ts` | Outbox, deferred (clock ahead), quarantine, synced-today, prune and counts | SYNC-01, 05, 05a, 07, 07a, 08 |
 | `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events; `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12 |
 | `background/tracking/device.ts` | Random device id, UUID generator, local-midnight calendar (`engine.localDayStartMs` gives "today" from it) | TRK-09, 10, SYNC-12a |
-| `background/sync/sync-service.ts` | Upload cycle, backoff, 30 s ingest timeout, "syncing" mark and clock skew stored for the popup, bounded `waitIdle` for Disconnect | SYNC-02..08 |
+| `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, "syncing" mark and clock skew stored for the popup, bounded `waitIdle` for Disconnect | SYNC-02..08 |
 | `background/sync/supabase-ingest.ts` | Calls `ingest_study_sessions`; maps errors to classes; reads the server's time from the `Date` header | SYNC-05a, 06, DATA-06..09 |
 | `background/sync/triggers.ts` | Sync alarm → cycle + site list; session write → cycle, site list only when the user changed | SYNC-02, 09c |
 | `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect (waits for a running upload first), forget local data; one lock | AUTH-07b, 10..12b |
@@ -106,11 +106,11 @@ sequenceDiagram
     Y->>O: batch (due deferred first, then oldest; ≤ 200, or 1 after an empty confirmation)
     Y->>Y: first batch: write syncingSince (SYNC-02c)
     Y->>A: accessToken()
-    Y->>D: batch + JWT (aborted after 30 s → unavailable)
+    Y->>D: batch + JWT (aborted after 20 s → unavailable)
     alt nothing confirmed of several (not explained by the clock)
       Y->>Y: call error: wait 1 hour, probe 1 interval next (SYNC-05b)
     else confirmed ids
-      Y->>O: settle: confirmed → synced today; ended in the server's future → deferred; others → quarantine
+      Y->>O: settle: confirmed → synced today; ended in the server's future (− 5 s slack) → deferred; others → quarantine
     else expired (PGRST301/303)
       Y->>A: accessToken({ forceRefresh }) and retry once
     else auth (401, PT401, 23503)
@@ -126,7 +126,9 @@ sequenceDiagram
 
 If the account epoch changed during the cycle (connect, session rejected, local data cleared), the cycle writes nothing (SYNC-02a). Data is never discarded on failure. Every status the cycle writes clears `syncingSince`; a local store task that timed out (TRK-17a) ends the cycle as failed without settling.
 
-Disconnect (popup or dashboard) first calls `SyncService.waitIdle(35 s)` outside the auth lock, then takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12).
+Disconnect (popup or dashboard) first calls `SyncService.waitIdle(30 s)` outside the auth lock. If the cycle is still running, it replies `SYNC_IN_PROGRESS` (popup) / `UNSYNCED_DATA` (dashboard) and changes nothing; otherwise it takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12b).
+
+A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
 
 ### Sync status for the popup (`careeros.sync.state`)
 
@@ -138,6 +140,7 @@ Disconnect (popup or dashboard) first calls `SyncService.waitIdle(35 s)` outside
 | `syncingSince` | Epoch ms the running cycle started uploading, else null; `isSyncing(state, now)` ignores a mark older than 2 min (SYNC-02c) |
 | `clockAheadMs` | Device clock ahead of the server's while that causes rejections, else null (SYNC-05a) |
 | `probeNext` | Next cycle sends one interval (SYNC-05b) |
+| `serverSkewMs` | Latest measured local − server clock (ms), or null (SYNC-05a) |
 
 `buildPopupView` (`lib/popup-view.ts`) turns these into `syncing`, `clockAheadMinutes` and `deferred` for the footer and the clock hint.
 
@@ -154,7 +157,7 @@ Validated by `PopupRequestSchema` (`lib/popup-messages.ts`). Accepted only from 
 | `DOMAINS_ADD` | `input` (≤ 2048 chars) | same |
 | `DOMAINS_REMOVE` | `domain` (≤ 253 chars) | same |
 | `TRACKING_SET` | `enabled` | `{ ok: true, enabled }` (the stored value afterwards) |
-| `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending` (unsynced + quarantined), `unsynced`, `quarantined`, or `FAILED` |
+| `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending` (unsynced + quarantined), `unsynced`, `quarantined`, `SYNC_IN_PROGRESS`, or `FAILED` |
 | `FORGET_LOCAL_DATA` | — | `{ ok: true }`, `CONNECTED` or `FAILED` |
 
 Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`. In a build without Supabase config every command still gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, `DISCONNECT` and `FORGET_LOCAL_DATA` `FAILED` (EXT-UI-05c). While shown, the popup also holds the port `careeros.popup`, so the worker treats Chrome as focused (TRK-18).
@@ -208,8 +211,8 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | `careeros.sync` | `SYNC_PERIOD_MIN` (5 min) | Sync cycle (SYNC-02) |
 | Focus debounce | 500 ms (`FOCUS_DEBOUNCE_MS`) | Ignore short `WINDOW_ID_NONE` reports (TRK-18) |
 | Tracker slot timeout | 10 s (`SLOT_TIMEOUT_MS`) | A hung Chrome API or storage call cannot freeze the queue (events and `exclusive` tasks) |
-| Ingest timeout | 30 s (`INGEST_TIMEOUT_S`) | A stalled upload cannot hold the sync guard (SYNC-06a) |
-| Disconnect wait | ≤ 35 s (`DISCONNECT_WAIT_S`) | Let a running cycle finish before the final sync (SYNC-02b) |
+| Ingest timeout | 20 s (`INGEST_TIMEOUT_S`) | A stalled upload cannot hold the sync guard (SYNC-06a) |
+| Disconnect wait | ≤ 30 s (`DISCONNECT_WAIT_S`) | Let a running cycle finish before the final sync; still running → `SYNC_IN_PROGRESS` (SYNC-02b) |
 
 `chrome.idle.setDetectionInterval(60)` is set on every worker start (TRK-19).
 

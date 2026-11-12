@@ -59,7 +59,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 - **EXT-UI-06** **Tracking** switch (on by default). Off ⇒ closes any open interval and tracks nothing until turned on. Stored per device.
 - **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10).
-- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**.
+- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**. A reply `SYNC_IN_PROGRESS` (an upload still running, AUTH-12b) shows "Still syncing your sessions. Try again in a moment." instead of the confirmation.
 - **EXT-UI-08a** When not connected, Settings shows the Tracking switch, then "Connect your account to manage your tracked sites." with **Connect account** (opens the dashboard's `/connect`) instead of Tracked sites and Account. If the last account left local data, **Forget local data** (AUTH-11a) follows; afterwards the view says "Local data deleted."
 - No other settings in v0.
 

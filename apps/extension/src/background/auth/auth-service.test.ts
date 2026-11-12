@@ -257,6 +257,7 @@ describe("disconnect hardening (#58, #65)", () => {
     fb.setCurrent(session("alice"));
     ld.localData.waitForUpload = async () => {
       ld.state.calls.push("wait");
+      return true;
     };
     expect(await auth.disconnect()).toEqual({ ok: true });
     expect(ld.state.calls).toEqual(["wait", "stop", "flush"]);
@@ -270,6 +271,7 @@ describe("disconnect hardening (#58, #65)", () => {
       // The running cycle asks for a token while Disconnect waits for it.
       cycle = auth.accessToken();
       await cycle;
+      return true;
     };
     expect(await auth.disconnect()).toEqual({ ok: true });
     expect(await cycle).toBe("access-alice");
@@ -298,5 +300,27 @@ describe("disconnect hardening (#58, #65)", () => {
     const other = setup({ storage: { [DOMAINS_CACHE_KEY]: { domains: ["old.dev"] } } });
     expect(await other.auth.connect("token-alice")).toMatchObject({ ok: true });
     expect(other.storage.data.has(DOMAINS_CACHE_KEY)).toBe(false);
+  });
+});
+
+describe("Disconnect while an upload is still running (#150 review, AUTH-12b)", () => {
+  it("AUTH-12b still running after the wait: SYNC_IN_PROGRESS, nothing stopped or signed out", async () => {
+    const { auth, fb, ld } = setup({ pending: 3 });
+    fb.setCurrent(session("alice"));
+    ld.localData.waitForUpload = async () => false;
+    expect(await auth.disconnect({ includeQuarantined: true })).toEqual({
+      ok: false,
+      code: "SYNC_IN_PROGRESS",
+    });
+    expect(ld.state.calls).toEqual([]);
+    expect(fb.calls).not.toContain("signOut");
+  });
+
+  it("AUTH-12b a confirmed discard does not wait for the upload", async () => {
+    const { auth, fb, ld } = setup({ pending: 3 });
+    fb.setCurrent(session("alice"));
+    ld.localData.waitForUpload = async () => false;
+    expect(await auth.disconnect({ discardUnsynced: true })).toEqual({ ok: true });
+    expect(fb.calls).toContain("signOut");
   });
 });

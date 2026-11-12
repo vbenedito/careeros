@@ -37,6 +37,8 @@ export type PopupDisconnectResult =
       unsynced?: number;
       quarantined?: number;
     }
+  /** AUTH-12b: an upload is still running after DISCONNECT_WAIT_S; nothing changed, retry. */
+  | { ok: false; code: "SYNC_IN_PROGRESS" }
   | { ok: false; code: "FAILED" };
 
 /** Reply to TRACKING_SET: the switch's stored value afterwards (#65: the popup's source of truth). */

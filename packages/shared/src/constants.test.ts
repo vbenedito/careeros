@@ -38,6 +38,8 @@ describe("constants match the specs", () => {
     expect(spec.get("INGEST_TIMEOUT_S")).toEqual([SYNC.INGEST_TIMEOUT_S]);
     expect(spec.get("CLOCK_RETRY_MAX")).toEqual([SYNC.CLOCK_RETRY_MAX]);
     expect(spec.get("DISCONNECT_WAIT_S")).toEqual([SYNC.DISCONNECT_WAIT_S]);
+    expect(spec.get("CLOCK_SLACK_S")).toEqual([SYNC.CLOCK_SLACK_S]);
+    expect(spec.get("DEFERRED_RETRY_CAP_MIN")).toEqual([SYNC.DEFERRED_RETRY_CAP_MIN]);
   });
 
   it("01-tracking.md §2 has no constant missing from code", () => {

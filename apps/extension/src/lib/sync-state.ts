@@ -35,6 +35,12 @@ export interface SyncState {
    * quarantined and the queue moves on.
    */
   probeNext: boolean;
+  /**
+   * SYNC-05a (#150 review): latest measured difference local − server clock (ms) from an upload
+   * response, or null when the server's time has never been available. Deferred intervals are
+   * re-evaluated against it every cycle.
+   */
+  serverSkewMs: number | null;
 }
 
 export const INITIAL_SYNC_STATE: SyncState = {
@@ -45,6 +51,7 @@ export const INITIAL_SYNC_STATE: SyncState = {
   syncingSince: null,
   clockAheadMs: null,
   probeNext: false,
+  serverSkewMs: null,
 };
 
 /** A cycle older than this is from a worker that was killed: not "syncing" any more. */

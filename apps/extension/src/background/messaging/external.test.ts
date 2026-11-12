@@ -8,12 +8,14 @@ const DASHBOARD = "http://localhost:3000";
 const fromDashboard = { origin: DASHBOARD };
 const TOKEN = "t".repeat(56);
 
-function setup(pending = 0) {
+function setup(pending = 0, uploadStillRunning = false) {
   const fb = fakeBackend({ [TOKEN]: session("alice") });
+  const localData = fakeLocalData(pending).localData;
+  if (uploadStillRunning) localData.waitForUpload = async () => false;
   const auth = createAuthService({
     backend: fb.backend,
     storage: fakeStorage(),
-    localData: fakeLocalData(pending).localData,
+    localData,
     now: () => 0,
   });
   const handle = createExternalMessageHandler({
@@ -94,6 +96,14 @@ describe("external messages", () => {
       code: "UNSYNCED_DATA",
       protocolVersion: 1,
     });
+    expect(fb.calls).not.toContain("signOut");
+  });
+
+  it("AUTH-12b an upload still running maps to UNSYNCED_DATA for protocol 1 (no new code)", async () => {
+    const { handle, fb } = setup(0, true);
+    fb.setCurrent(session("alice"));
+    const reply = await handle({ type: "DISCONNECT", protocolVersion: 1 }, fromDashboard);
+    expect(ExtensionErrorSchema.parse(reply).code).toBe("UNSYNCED_DATA");
     expect(fb.calls).not.toContain("signOut");
   });
 

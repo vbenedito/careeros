@@ -46,13 +46,32 @@ export interface SettleResult {
 
 const startedMs = (i: Interval) => Date.parse(i.started_at);
 const FUTURE_TOLERANCE_MS = DATA.FUTURE_TOLERANCE_S * 1000;
+const CLOCK_SLACK_MS = SYNC.CLOCK_SLACK_S * 1000;
+const RETRY_CAP_MS = SYNC.DEFERRED_RETRY_CAP_MIN * 60_000;
+const MAX_AGE_MS = SYNC.LOCAL_QUEUE_MAX_AGE_D * 86_400_000;
 
 /**
  * SYNC-05a: whether a rejected interval was (most likely) refused by DATA-07 for ending more
- * than the tolerance after the server's clock. Without the server's time nothing is known.
+ * than the tolerance after the server's clock. `CLOCK_SLACK_S` is taken off the server's time
+ * so a rejection near the boundary (whole-second header, server compared slightly earlier) is
+ * retried rather than quarantined. Without the server's time nothing is known.
  */
 export function endedInServerFuture(i: Interval, serverNow: number | null): boolean {
-  return serverNow !== null && Date.parse(i.ended_at) > serverNow + FUTURE_TOLERANCE_MS;
+  return (
+    serverNow !== null && Date.parse(i.ended_at) > serverNow - CLOCK_SLACK_MS + FUTURE_TOLERANCE_MS
+  );
+}
+
+/**
+ * SYNC-05a: whether a deferred interval may be sent again. Its due time is server-relative: its
+ * `ended_at` must be in the past by the server's clock, estimated from the latest measured skew
+ * (`skewMs` = local − server, re-measured on every upload). Independently, it is due at its
+ * capped `retryAt` (≤ DEFERRED_RETRY_CAP_MIN after deferral) or as soon as `retryAt` lies
+ * further ahead than the cap (the local clock was moved back), so no correction strands it.
+ */
+export function deferredDue(d: DeferredInterval, now: number, skewMs: number | null): boolean {
+  if (now >= d.retryAt || d.retryAt - now > RETRY_CAP_MS) return true;
+  return skewMs !== null && now - skewMs >= Date.parse(d.interval.ended_at);
 }
 
 export function createOutbox(deps: {
@@ -96,11 +115,11 @@ export function createOutbox(deps: {
      * SYNC-03: the oldest intervals waiting for upload: deferred ones that are due (they are
      * older), then the outbox (kept in closing order).
      */
-    batch(max: number = SYNC.SYNC_BATCH_MAX): Promise<Interval[]> {
+    batch(max: number = SYNC.SYNC_BATCH_MAX, skewMs: number | null = null): Promise<Interval[]> {
       return exclusive(async () => {
         const s = await read();
         const now = deps.now();
-        const due = s.deferred.filter((d) => d.retryAt <= now).map((d) => d.interval);
+        const due = s.deferred.filter((d) => deferredDue(d, now, skewMs)).map((d) => d.interval);
         return [...due, ...s.outbox].slice(0, max);
       });
     },
@@ -138,10 +157,11 @@ export function createOutbox(deps: {
             endedInServerFuture(i, serverNow) &&
             tries <= SYNC.CLOCK_RETRY_MAX
           ) {
-            // Due when the server's clock reaches its end (local time, skew-independent).
+            // Fallback due time in local terms, capped; the skew rule usually fires first.
+            const wait = Math.max(0, Date.parse(i.ended_at) - serverNow);
             toDefer.push({
               interval: i,
-              retryAt: now + (Date.parse(i.ended_at) - serverNow),
+              retryAt: now + Math.min(wait, RETRY_CAP_MS),
               attempts: tries,
             });
           } else {
@@ -165,21 +185,26 @@ export function createOutbox(deps: {
     /**
      * SYNC-07/08: drop pending and deferred intervals older than LOCAL_QUEUE_MAX_AGE_D
      * (counted, like unreadable entries, SYNC-07a) and synced intervals from previous days.
+     * SYNC-05a: deferred and quarantined intervals starting more than LOCAL_QUEUE_MAX_AGE_D in
+     * the future (recorded with a clock that was far ahead, then corrected) can never be
+     * accepted within the retention window: dropped too.
      */
     prune(): Promise<void> {
       return exclusive(async (slot) => {
         const s = await read();
         const now = deps.now();
-        const oldest = now - SYNC.LOCAL_QUEUE_MAX_AGE_D * 86_400_000;
+        const oldest = now - MAX_AGE_MS;
+        const inWindow = (i: Interval) =>
+          startedMs(i) >= oldest && startedMs(i) <= now + MAX_AGE_MS;
         const today = deps.startOfLocalDay(now);
         const keep = s.outbox.filter((i) => startedMs(i) >= oldest);
-        const keepDeferred = s.deferred.filter((d) => startedMs(d.interval) >= oldest);
+        const keepDeferred = s.deferred.filter((d) => inWindow(d.interval));
         const tooOld = s.outbox.length - keep.length + (s.deferred.length - keepDeferred.length);
         await write(slot, {
           [OUTBOX_KEY]: keep,
           [DEFERRED_KEY]: keepDeferred,
           [SYNCED_TODAY_KEY]: s.syncedToday.filter((i) => startedMs(i) >= today),
-          [QUARANTINE_KEY]: s.quarantine.filter((i) => startedMs(i) >= oldest),
+          [QUARANTINE_KEY]: s.quarantine.filter(inWindow),
           [DROPPED_COUNT_KEY]: s.dropped + tooOld,
         });
       });

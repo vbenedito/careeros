@@ -60,7 +60,7 @@ export interface LocalData {
    * SYNC-02b (#58, #65): bounded wait for a sync cycle already running. Called by Disconnect
    * *before* it takes the lock (the cycle may need the lock for a token).
    */
-  waitForUpload?(): Promise<void>;
+  waitForUpload?(): Promise<boolean>;
   /** Deletes all local tracking data (outbox, quarantine, today cache, engine state). */
   clear(): Promise<void>;
   /**
@@ -78,7 +78,12 @@ export type ConnectResult =
 export type DisconnectResult =
   | { ok: true }
   /** #65: what the confirmation states: still unsynced (may upload) and rejected intervals. */
-  | { ok: false; code: "UNSYNCED_DATA"; unsynced: number; quarantined: number };
+  | { ok: false; code: "UNSYNCED_DATA"; unsynced: number; quarantined: number }
+  /**
+   * AUTH-12b (#150 review): a sync cycle is still uploading after DISCONNECT_WAIT_S: nothing was
+   * changed; the popup says "still syncing" and the user tries again shortly.
+   */
+  | { ok: false; code: "SYNC_IN_PROGRESS" };
 
 export interface TokenOptions {
   /** Refresh even if the token looks valid locally (the device clock may be behind). */
@@ -217,10 +222,14 @@ export function createAuthService(deps: {
      * #65) also asks before deleting rejected intervals; the dashboard does not (they can
      * never sync, so they would block its Disconnect for good).
      */
-    async disconnect(options: { discardUnsynced?: boolean; includeQuarantined?: boolean } = {}) {
+    async disconnect(
+      options: { discardUnsynced?: boolean; includeQuarantined?: boolean } = {},
+    ): Promise<DisconnectResult> {
       // SYNC-02b: let a cycle that is already uploading finish first (bounded), outside the
       // lock, so the final sync below is not skipped and reports what really remains.
-      await localData.waitForUpload?.();
+      const idle = (await localData.waitForUpload?.()) ?? true;
+      // Without a discard the result would count intervals that are being uploaded right now.
+      if (!idle && !options.discardUnsynced) return { ok: false, code: "SYNC_IN_PROGRESS" };
       return exclusive(async (): Promise<DisconnectResult> => {
         let done = false;
         try {

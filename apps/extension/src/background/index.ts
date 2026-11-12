@@ -95,6 +95,7 @@ const sync = backend
       storage,
       now: () => Date.now(),
       sessionRejected: () => auth?.sessionRejected() ?? Promise.resolve(),
+      log,
       epoch: accountEpoch,
       isConnected: hasSession,
     })
@@ -108,7 +109,7 @@ const localData = createTrackingLocalData({
   upload: (accessToken) =>
     sync?.run(accessToken, { force: true, ifIdle: true }) ?? Promise.resolve(),
   // SYNC-02b: before that, wait (bounded) for a cycle that is already uploading.
-  waitForUpload: () => sync?.waitIdle(SYNC.DISCONNECT_WAIT_S * 1000) ?? Promise.resolve(),
+  waitForUpload: () => sync?.waitIdle(SYNC.DISCONNECT_WAIT_S * 1000) ?? Promise.resolve(true),
   forgetDevice: () => engineEnv.forget(),
 });
 const auth = backend
@@ -194,6 +195,7 @@ const handleInternal = createInternalMessageHandler({
       // #65: the popup's confirmation also counts rejected ("not synced") intervals.
       const result = await auth.disconnect({ discardUnsynced, includeQuarantined: true });
       if (result.ok) return { ok: true };
+      if (result.code === "SYNC_IN_PROGRESS") return { ok: false, code: "SYNC_IN_PROGRESS" };
       return {
         ok: false,
         code: "UNSYNCED_DATA",

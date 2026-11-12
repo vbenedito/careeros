@@ -66,7 +66,7 @@ export function createTrackingLocalData(deps: {
   /** Final upload attempt with the given token provider (sync, #18). */
   upload?: (accessToken: () => Promise<string | null>) => Promise<unknown>;
   /** SYNC-02b: bounded wait for a sync cycle that is already running (before the auth lock). */
-  waitForUpload?: () => Promise<void>;
+  waitForUpload?: () => Promise<boolean>;
   /** #113: a new device id for the next account on this profile. */
   forgetDevice?: () => Promise<void>;
 }): LocalData & { isConnected: () => Promise<boolean> } {
@@ -83,9 +83,7 @@ export function createTrackingLocalData(deps: {
     },
     pendingCount: pending,
     quarantinedCount: async () => (await counts()).quarantined,
-    waitForUpload: async () => {
-      await deps.waitForUpload?.();
-    },
+    waitForUpload: async () => (await deps.waitForUpload?.()) ?? true,
     async clear() {
       stopped = false;
       await tracker.exclusive(async () => {

@@ -5,6 +5,7 @@
  * Failures back off and never discard data.
  */
 import { DATA, type Interval, SYNC } from "@careeros/shared";
+import type { Logger } from "../../lib/log";
 import { parseSyncState, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import type { AccountEpoch } from "../account-epoch";
 import type { TokenProvider } from "../auth/auth-service";
@@ -50,6 +51,7 @@ export function createSyncService(deps: {
   /** Whether a session is stored, without the auth lock or the network. */
   isConnected: () => Promise<boolean>;
   timers?: Pick<typeof globalThis, "setTimeout" | "clearTimeout">;
+  log?: Logger;
 }) {
   const { outbox, storage, now } = deps;
   const timers = deps.timers ?? globalThis;
@@ -89,11 +91,15 @@ export function createSyncService(deps: {
     };
     if (!force && now() < state.notBefore) return "skipped";
     let marked = false;
+    let missingTimeLogged = false;
     try {
       await outbox.prune(); // SYNC-07/08
 
       for (;;) {
-        const batch = await outbox.batch(state.probeNext ? 1 : SYNC.SYNC_BATCH_MAX);
+        const batch = await outbox.batch(
+          state.probeNext ? 1 : SYNC.SYNC_BATCH_MAX,
+          state.serverSkewMs,
+        );
         if (batch.length === 0) {
           // Nothing to upload is only "synced" for a connected account: a disconnected profile
           // must not grow a sync status of its own (#113, AUTH-11a). A storage read, not a
@@ -139,6 +145,12 @@ export function createSyncService(deps: {
         if (stale()) return "not-connected";
         if (result.ok) {
           const serverNow = result.serverNow ?? null;
+          if (serverNow === null && !missingTimeLogged) {
+            // SYNC-05a: without the server's time, future-dated rejections are quarantined.
+            deps.log?.warn("sync.server_time_unavailable", {});
+            missingTimeLogged = true;
+          }
+          if (serverNow !== null) state.serverSkewMs = now() - serverNow;
           const confirmed = new Set(result.confirmedIds);
           const rejected = batch.filter((i) => !confirmed.has(i.id));
           const future = rejected.filter((i) => endedInServerFuture(i, serverNow));
@@ -226,23 +238,25 @@ export function createSyncService(deps: {
       return running;
     },
     /**
-     * SYNC-02b (#58, #65): resolves when no cycle is running, or after `timeoutMs`. Disconnect
-     * waits here *before* taking the auth lock, so its final sync is not skipped because of a
-     * cycle that was already uploading.
+     * SYNC-02b (#58, #65): resolves `true` once no cycle is running, or `false` when one is
+     * still running after `timeoutMs` (a long multi-batch upload). Disconnect waits here
+     * *before* taking the auth lock, so its final sync is not skipped because of a cycle that
+     * was already uploading; still running → SYNC_IN_PROGRESS (AUTH-12b).
      */
-    async waitIdle(timeoutMs: number): Promise<void> {
-      if (!running) return;
+    async waitIdle(timeoutMs: number): Promise<boolean> {
+      if (!running) return true;
       let timer: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([
+      const idle = await Promise.race([
         running.then(
-          () => undefined,
-          () => undefined,
+          () => true,
+          () => true,
         ),
-        new Promise<void>((resolve) => {
-          timer = timers.setTimeout(resolve, timeoutMs);
+        new Promise<boolean>((resolve) => {
+          timer = timers.setTimeout(() => resolve(false), timeoutMs);
         }),
       ]);
       timers.clearTimeout(timer);
+      return idle;
     },
     status: readState,
   };

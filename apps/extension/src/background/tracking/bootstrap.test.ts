@@ -202,11 +202,12 @@ describe("local counts for Disconnect (#65, SYNC-05a)", () => {
       isConnected: async () => true,
       waitForUpload: async () => {
         waited++;
+        return false;
       },
     });
     expect(await ld.pendingCount()).toBe(2);
     expect(await ld.quarantinedCount?.()).toBe(1);
-    await ld.waitForUpload?.();
+    expect(await ld.waitForUpload?.()).toBe(false);
     expect(waited).toBe(1);
   });
 });

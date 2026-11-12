@@ -1,5 +1,6 @@
 import type { Interval } from "@careeros/shared";
 import { describe, expect, it, vi } from "vitest";
+import { createLogger } from "../../lib/log";
 import { SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
 import { createAccountEpoch } from "../account-epoch";
@@ -442,14 +443,16 @@ describe("sync hardening (#58, #83, #56)", () => {
       return "token";
     });
     let waited = false;
-    const wait = s.sync.waitIdle(10_000).then(() => {
+    const wait = s.sync.waitIdle(10_000).then((idle) => {
       waited = true;
+      return idle;
     });
     await new Promise((r) => setTimeout(r, 5));
     expect(waited).toBe(false);
     release();
-    await wait;
+    expect(await wait).toBe(true);
     expect(await first).toBe("done");
+    expect(await s.sync.waitIdle(10)).toBe(true); // nothing running
 
     vi.useFakeTimers();
     try {
@@ -457,7 +460,7 @@ describe("sync hardening (#58, #83, #56)", () => {
       void hung.sync.run(() => new Promise(() => {}));
       const bounded = hung.sync.waitIdle(1000);
       await vi.advanceTimersByTimeAsync(1000);
-      await expect(bounded).resolves.toBeUndefined();
+      await expect(bounded).resolves.toBe(false); // still running → SYNC_IN_PROGRESS
     } finally {
       vi.useRealTimers();
     }
@@ -467,5 +470,59 @@ describe("sync hardening (#58, #83, #56)", () => {
     expect(parseDateHeader("Thu, 12 Nov 2026 10:00:00 GMT")).toBe(Date.UTC(2026, 10, 12, 10));
     expect(parseDateHeader(null)).toBeNull();
     expect(parseDateHeader("garbage")).toBeNull();
+  });
+});
+
+describe("server time and skew (#150 review)", () => {
+  it("SYNC-05a the latest measured skew is stored and decides when deferred intervals are due", async () => {
+    const skew = 20 * 60_000;
+    const future = endingAt(NOW - 60_000);
+    const s = setup(
+      [
+        { ok: true, confirmedIds: [], serverNow: NOW - skew },
+        // The user fixed the clock: the next response measures no skew.
+        (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
+        (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
+      ],
+      [future],
+    );
+    await s.sync.run(token);
+    expect(s.state()?.serverSkewMs).toBe(skew);
+    // 10 min later (real time) the clock is corrected; a new interval uploads and re-measures
+    // the skew (0). The deferred one is not due yet: its end is still 9 min ahead.
+    s.clock.now = NOW - 10 * 60_000;
+    const fresh = endingAt(s.clock.now - 10_000);
+    s.storage.data.set(OUTBOX_KEY, [fresh]);
+    await s.sync.run(token);
+    expect(s.state()?.serverSkewMs).toBe(0);
+    expect(s.batches.at(-1)).toEqual([fresh]);
+    // retryAt (old clock frame) is still ~39 min away, but the skew says the end has passed
+    // on the server once local time reaches it.
+    s.clock.now = Date.parse(future.ended_at);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches.at(-1)).toEqual([future]);
+    expect(s.storage.data.get(DEFERRED_KEY)).toEqual([]);
+  });
+
+  it("SYNC-05a without the server's time it logs once per cycle (no details)", async () => {
+    const lines: string[] = [];
+    const storage = fakeStorage({ [OUTBOX_KEY]: Array.from({ length: 250 }, interval) });
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      isConnected: async () => true,
+      log: createLogger({ debug: false, sink: (_level, line) => lines.push(line) }),
+      ingest: async (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id) }),
+    });
+    expect(await sync.run(token)).toBe("done"); // two batches
+    expect(lines.filter((l) => l.includes("sync.server_time_unavailable"))).toHaveLength(1);
+    expect(lines.join("\n")).not.toMatch(/leetcode|token|@/);
   });
 });

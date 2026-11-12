@@ -8,7 +8,7 @@ import {
   QUARANTINE_KEY,
   SYNCED_TODAY_KEY,
 } from "./keys";
-import { createOutbox } from "./outbox";
+import { createOutbox, deferredDue, endedInServerFuture } from "./outbox";
 import { createSerialQueue } from "./queue";
 
 const DAY = 86_400_000;
@@ -233,5 +233,91 @@ describe("deferred intervals and unreadable entries (#58, #83, #56)", () => {
     });
     await outbox.clear();
     expect(area.data.has(DEFERRED_KEY)).toBe(false);
+  });
+});
+
+describe("deferred retry timing (#150 review)", () => {
+  const MIN = 60_000;
+  const deferred = (endMs: number, retryAt: number) => ({
+    interval: interval(endMs - 4 * MIN, 4),
+    retryAt,
+    attempts: 1,
+  });
+
+  it("SYNC-05a near the boundary (within CLOCK_SLACK_S) a rejection still counts as future-dated", () => {
+    const server = NOW;
+    const ending = (endMs: number) => interval(endMs - 4 * MIN, 4);
+    // Beyond the 5-minute tolerance: future-dated.
+    expect(endedInServerFuture(ending(server + 5 * MIN + 2_000), server)).toBe(true);
+    // 3 s inside the tolerance, but within the 5 s slack: still treated as future-dated.
+    expect(endedInServerFuture(ending(server + 5 * MIN - 3_000), server)).toBe(true);
+    // Clearly inside: a real rejection.
+    expect(endedInServerFuture(ending(server + 5 * MIN - 6_000), server)).toBe(false);
+    expect(endedInServerFuture(ending(server), server)).toBe(false);
+    const atBoundary = ending(server + 5 * MIN);
+    expect(endedInServerFuture(atBoundary, null)).toBe(false);
+  });
+
+  it("SYNC-05a retryAt is capped at DEFERRED_RETRY_CAP_MIN", async () => {
+    const far = interval(NOW - 4 * MIN, 4); // ends now locally
+    const { area, outbox } = setup({ [OUTBOX_KEY]: [far] });
+    await outbox.settle([far], [], NOW - 3 * 3600_000); // clock 3 h ahead
+    const [entry] = area.data.get(DEFERRED_KEY) as { retryAt: number }[];
+    expect(entry?.retryAt).toBe(NOW + 30 * MIN);
+  });
+
+  it("SYNC-05a due as soon as the latest measured skew says its end passed on the server", () => {
+    const d = deferred(NOW - MIN, NOW + 19 * MIN);
+    expect(deferredDue(d, NOW, 20 * MIN)).toBe(false); // server is at NOW − 20 min
+    expect(deferredDue(d, NOW, 0)).toBe(true); // clock corrected: server time = local time
+    expect(deferredDue(d, NOW, null)).toBe(false); // skew unknown: wait for retryAt
+    expect(deferredDue(d, NOW + 19 * MIN, null)).toBe(true);
+  });
+
+  it("SYNC-05a a clock moved back never strands a deferred interval", () => {
+    // Deferred under a clock 2 h ahead; the clock was then set back 2 h.
+    const d = deferred(NOW + 2 * 3600_000, NOW + 2 * 3600_000 + 30 * MIN);
+    expect(deferredDue(d, NOW, null)).toBe(true); // retryAt beyond the cap from now
+  });
+
+  it("SYNC-05a after a clock correction, intervals starting more than 30 days ahead are dropped", async () => {
+    const future = interval(NOW + 40 * DAY);
+    const soon = interval(NOW + 2 * 3600_000);
+    const { area, outbox } = setup({
+      [DEFERRED_KEY]: [
+        { interval: future, retryAt: NOW, attempts: 1 },
+        { interval: soon, retryAt: NOW, attempts: 1 },
+      ],
+      [QUARANTINE_KEY]: [future],
+    });
+    await outbox.prune();
+    expect(
+      (area.data.get(DEFERRED_KEY) as { interval: Interval }[]).map((d) => d.interval),
+    ).toEqual([soon]);
+    expect(area.data.get(QUARANTINE_KEY)).toEqual([]);
+    expect(area.data.get(DROPPED_COUNT_KEY)).toBe(1);
+  });
+
+  it("SYNC-05a a deferred interval that starts in the future is still retried (cap) and ends in quarantine after CLOCK_RETRY_MAX", async () => {
+    const soon = interval(NOW + 2 * 3600_000);
+    const { area, outbox } = setup({
+      [DEFERRED_KEY]: [{ interval: soon, retryAt: NOW + 30 * MIN, attempts: 1 }],
+    });
+    let now = NOW;
+    for (let round = 0; round < 3; round++) {
+      now += 30 * MIN;
+      const o = createOutbox({
+        area,
+        exclusive: (t) => t(),
+        now: () => now,
+        startOfLocalDay: (t) => t - (t % DAY),
+      });
+      const batch = await o.batch(200, 0);
+      if (batch.length === 0) break;
+      await o.settle(batch, [], now);
+    }
+    expect(area.data.get(QUARANTINE_KEY)).toEqual([soon]);
+    expect(area.data.get(DEFERRED_KEY)).toEqual([]);
+    void outbox;
   });
 });
