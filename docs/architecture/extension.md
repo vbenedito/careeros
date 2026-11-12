@@ -215,4 +215,4 @@ The version comes from `apps/extension/package.json`. Release steps: [release pr
 
 ## Tests
 
-Unit tests sit next to the code (`*.test.ts`). `tests/integration` runs against the local Supabase stack; `tests/e2e` loads the built extension in Chromium with Playwright. See [TEST](../../specs/v0/08-testing.md).
+Unit tests sit next to the code (`*.test.ts`). `tests/integration` runs against the local Supabase stack; `tests/e2e` loads the built extension in Chromium with Playwright and drives the dashboard, including its responsive layout checks; `tests/responsive` checks the landing page's layout without a backend; both use `tests/support/responsive.ts` (TEST-01). See [TEST](../../specs/v0/08-testing.md).

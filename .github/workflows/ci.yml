@@ -1,6 +1,9 @@
 # CI for CareerOS (ENV-08, ENV-09).
-# `checks`: lint, typecheck, unit tests and builds on every PR and push to main.
-# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E.
+# `checks`: lint, typecheck, unit tests, landing responsive layout (TEST-01) and builds on every PR
+# and push to main.
+# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E
+# (including the app pages' responsive layout, TEST-01).
+# Both jobs upload their responsive-layout screenshots as artifacts (14 days) for review.
 
 name: CI
 
@@ -53,6 +56,31 @@ jobs:
 
       - name: Unit tests (with coverage thresholds, TEST §3)
         run: pnpm test:coverage
+
+      # Same Chromium cache as the backend job (same key), so either job can fill it.
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('apps/extension/package.json') }}
+
+      - name: Install Chromium for Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @careeros/extension exec playwright install --no-shell chromium
+
+      # The landing page rendered from renderLanding() at 360–1440 px; no backend needed.
+      - name: Landing responsive layout (TEST-01)
+        run: pnpm --filter @careeros/extension test:responsive
+
+      - name: Upload landing screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: responsive-screenshots-landing
+          path: responsive-screenshots/
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Build
         run: pnpm build
@@ -107,6 +135,15 @@ jobs:
       # extension tests (including the /connect end-to-end flow).
       - name: Integration and E2E tests (dashboard + extension against local Supabase)
         run: scripts/ci/integration.sh
+
+      - name: Upload app page screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: responsive-screenshots-app
+          path: responsive-screenshots/
+          retention-days: 14
+          if-no-files-found: ignore
 
       # Restore procedure of docs/operations.md, proven on every run (#31). Runs last: it resets
       # the local database.

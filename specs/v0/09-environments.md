@@ -4,6 +4,8 @@ Status: **Approved (2026-11-04)** · Related ADRs: 0001 (monorepo), 0008 (Docker
 
 Amended 2026-11-11 (#131): repository layout, Node version, environment variables (ENV-05b), CI jobs (ENV-08) and the backup workflow, to match the repository.
 
+Amended 2026-11-12 (#142): ENV-08 runs the responsive layout checks (TEST-01) and uploads their screenshots.
+
 ## 1. Repository layout
 
 ```
@@ -68,8 +70,8 @@ careeros/
 ## 3. CI (GitHub Actions)
 
 - **ENV-08** Workflow `.github/workflows/ci.yml` on pull requests and pushes to `main` (Node from `.nvmrc`, pnpm from `packageManager`):
-  1. `checks` ("Lint, typecheck, test, build"): install (`--frozen-lockfile`, cached pnpm store) → `pnpm lint` (Biome) → `pnpm typecheck` → `pnpm test:coverage` (Vitest with the TEST §3 thresholds) → `pnpm build` (extension development build and dashboard).
-  2. `backend` ("Database (Supabase in Docker)"): install → `supabase start -x studio,postgres-meta` → `pnpm db:reset` → `pnpm db:test` (pgTAP) → install Playwright's Chromium (cached) → `scripts/ci/integration.sh` (builds the dashboard and the extension, starts one dashboard server, runs the web integration, extension integration and E2E suites) → backup → restore round trip (`scripts/ops/backup-restore-test.sh`, `age` pinned by checksum) → on failure, print the dashboard server log → `supabase stop`.
+  1. `checks` ("Lint, typecheck, test, build"): install (`--frozen-lockfile`, cached pnpm store) → `pnpm lint` (Biome) → `pnpm typecheck` → `pnpm test:coverage` (Vitest with the TEST §3 thresholds) → install Playwright's Chromium (cached, same key as `backend`) → landing responsive layout (`pnpm --filter @careeros/extension test:responsive`, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-landing` (14 days, also when the check fails) → `pnpm build` (extension development build and dashboard).
+  2. `backend` ("Database (Supabase in Docker)"): install → `supabase start -x studio,postgres-meta` → `pnpm db:reset` → `pnpm db:test` (pgTAP) → install Playwright's Chromium (cached) → `scripts/ci/integration.sh` (builds the dashboard and the extension, starts one dashboard server, runs the web integration, extension integration and E2E suites; E2E includes the app pages' responsive layout, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-app` (14 days, also when a test fails) → backup → restore round trip (`scripts/ops/backup-restore-test.sh`, `age` pinned by checksum) → on failure, print the dashboard server log → `supabase stop`.
 
   Workflow `.github/workflows/backup.yml` runs weekly (Mondays 06:17 UTC) and on demand, only on `main`, in the GitHub environment `production-backup`: it dumps the production database (`scripts/ops/db-dump.sh`), encrypts it with `age` and stores it as an artifact for 90 days. Without `SUPABASE_DB_URL` and `BACKUP_AGE_RECIPIENT` it skips.
 - **ENV-09** Actions pinned to commit SHAs; minimal `permissions`.

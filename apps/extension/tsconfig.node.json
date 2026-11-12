@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node", "chrome"],
-    "lib": ["ES2023", "DOM"]
+    "lib": ["ES2023", "DOM"],
+    // The landing responsive test imports the web app's renderer, which uses its `@/` alias.
+    "paths": { "@/*": ["../web/*"] }
   },
   "include": [
     "*.test.ts",
@@ -12,6 +14,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
-    "vitest.e2e.config.ts"
+    "vitest.e2e.config.ts",
+    "vitest.responsive.config.ts"
   ]
 }

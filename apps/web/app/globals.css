@@ -5,6 +5,9 @@
 /* next-themes toggles .dark / .light on <html> (tokens.css). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Touch widths (TEST-01): up to 768 px wide, controls are at least 44 px tall. */
+@custom-variant touch (@media (width <= 48rem));
+
 body {
   background: var(--background);
   color: var(--foreground);

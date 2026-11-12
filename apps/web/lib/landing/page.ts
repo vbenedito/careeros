@@ -202,6 +202,7 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 }
 #pause:checked~main *,#pause:checked~main *::after{animation-play-state:paused!important}
 .pausebar{display:flex;justify-content:flex-end;padding-top:12px;margin-bottom:-56px;position:relative;z-index:1}.pausebar .chip{font-size:13px;min-height:36px}
+@media (max-width:768px){.pausebar .chip{min-height:44px}}
 @media (prefers-reduced-motion:reduce){.pausebar{display:none}.belt-track{flex-wrap:wrap;width:auto;justify-content:center;gap:12px 32px;padding:0 24px}}
 @media (prefers-reduced-motion:reduce){.t1{background:var(--sel);color:var(--fg)}.s2,.s3{opacity:0}.clock,.tick{--m:26}}
 `;

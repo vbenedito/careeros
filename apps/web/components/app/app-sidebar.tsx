@@ -76,7 +76,7 @@ function UserMenu({ email }: { email: string }) {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className="flex h-10 w-full items-center gap-3 rounded-md px-1.5 text-left text-sm hover:bg-muted"
+        className="flex h-10 w-full touch:min-h-11 items-center gap-3 rounded-md px-1.5 text-left text-sm hover:bg-muted"
       >
         <span
           aria-hidden="true"
