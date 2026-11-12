@@ -10,7 +10,13 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { type BrowserContext, chromium, type Page, type Worker } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createOAuthUser, env, sql } from "../../../web/tests/integration/helpers";
+import {
+  clearOfMidnight,
+  createOAuthUser,
+  env,
+  MIDNIGHT_MARGIN_MS,
+  sql,
+} from "../../../web/tests/integration/helpers";
 import { MANIFEST_KEYS } from "../../manifest.config";
 
 const DASHBOARD_URL = env("DASHBOARD_URL");
@@ -20,6 +26,8 @@ const ENGINE = "careeros.tracking.engine";
 const OUTBOX = "careeros.tracking.outbox";
 /** A real-looking tracked domain, resolved to the local test server by Chromium. */
 const TRACKED = "example.org";
+/** Exactly one synced interval of at least 5 s (longer than MIN_INTERVAL_S). */
+const SYNCED_ONCE = /^1:([5-9]|\d{2,})$/;
 
 const admin = createClient(env("API_URL"), env("SECRET_KEY"), { auth: { persistSession: false } });
 
@@ -46,6 +54,11 @@ describe("extension smoke (E2E)", () => {
       T | undefined
     >;
 
+  /** "<rows>:<shortest duration_s>" of this user's tracked-domain sessions in the database. */
+  const synced = () =>
+    sql(`select count(*) || ':' || coalesce(min(duration_s), 0) from public.study_sessions
+         where user_id = '${userId}' and domain = '${TRACKED}'`);
+
   /** Polls the engine until `ok`; on timeout fails with the engine state, to see which signal is missing. */
   async function waitForEngine(ok: (s: EngineState | undefined) => boolean, what: string) {
     const deadline = Date.now() + 30_000;
@@ -59,6 +72,9 @@ describe("extension smoke (E2E)", () => {
   }
 
   beforeAll(async () => {
+    // #82: the popup totals "today" from local midnight; the interval tracked below and the
+    // popup check must fall on the same local day.
+    await clearOfMidnight();
     server = createServer((req, res) => {
       res.writeHead(200, { "content-type": "text/html" });
       res.end(`<!doctype html><title>${req.headers.host}</title><h1>Study page</h1>`);
@@ -101,7 +117,7 @@ describe("extension smoke (E2E)", () => {
     );
     expect(reply).toMatchObject({ ok: true });
     await dashboard.close();
-  });
+  }, MIDNIGHT_MARGIN_MS + 60_000);
 
   afterAll(async () => {
     await context?.close();
@@ -126,12 +142,20 @@ describe("extension smoke (E2E)", () => {
     const study = context.pages().find((p) => p.url().includes(TRACKED)) as Page;
     await study.goto(`http://localhost:${port}/not-tracked`);
     await waitForEngine((s) => s !== undefined && s.open === null, "closed the interval");
+    // #82: the closed interval may already have left the outbox — a sync can run as soon as it
+    // is written (e.g. one triggered by a session write) — so it is either still queued or
+    // already in the database, never lost and never both.
     const outbox = (await storage<OutboxItem[]>(OUTBOX)) ?? [];
-    expect(outbox).toHaveLength(1);
-    const [item] = outbox;
-    expect(item?.domain).toBe(TRACKED);
-    const seconds = (Date.parse(item?.ended_at ?? "") - Date.parse(item?.started_at ?? "")) / 1000;
-    expect(seconds).toBeGreaterThanOrEqual(5);
+    expect(outbox.length).toBeLessThanOrEqual(1);
+    if (outbox.length === 1) {
+      const [item] = outbox;
+      expect(item?.domain).toBe(TRACKED);
+      const seconds =
+        (Date.parse(item?.ended_at ?? "") - Date.parse(item?.started_at ?? "")) / 1000;
+      expect(seconds).toBeGreaterThanOrEqual(5);
+    } else {
+      expect(synced()).toMatch(SYNCED_ONCE);
+    }
     // SEC-01: only the tracked domain is kept — never the path or the untracked host.
     const everything = JSON.stringify(await worker.evaluate(() => chrome.storage.local.get(null)));
     expect(everything).not.toContain("practice.");
@@ -151,14 +175,7 @@ describe("extension smoke (E2E)", () => {
 
   it("SYNC-01 the outbox syncs to Supabase", async () => {
     await worker.evaluate(() => chrome.alarms.create("careeros.sync", { when: Date.now() + 50 }));
-    await expect
-      .poll(
-        () =>
-          sql(`select count(*) || ':' || min(duration_s) from public.study_sessions
-               where user_id = '${userId}' and domain = '${TRACKED}'`),
-        { timeout: 20_000 },
-      )
-      .toMatch(/^1:([5-9]|\d{2,})$/);
+    await expect.poll(synced, { timeout: 20_000 }).toMatch(SYNCED_ONCE);
     await expect.poll(async () => ((await storage<OutboxItem[]>(OUTBOX)) ?? []).length).toBe(0);
   });
 });
