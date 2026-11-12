@@ -27,6 +27,8 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Updated 2026-11-12 (#145): the site limit is now 12, so "up to 50" became "up to 12". **Update the description in the store dashboard together with the extension 0.2.1 package**, with both changes: this site limit and the analytics line above (#137).
 
+> Release 0.2.2 (2026-11-12): sync and sign-in reliability (#150), popup states (#151). Same permissions and description as 0.2.1; if 0.2.1 is still in review, 0.2.2 replaces it.
+
 ```
 CareerOS measures the time you spend studying for technical interviews, automatically, on the sites you choose.
 
