@@ -4,7 +4,7 @@ Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10
 
 > **Status 2026-11-11 (#131):** implemented and live at `/` (#125, #127). The binding content rules are LAND-03; the approved design and the shipped page may word sections differently from this plan.
 >
-> **Update 2026-11-11 (#140, product owner):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2b). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
+> **Update 2026-11-11 (#140, product owner):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2a′). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
 
 Every claim below is checked against the v0 specs (IDs in brackets). Anything not in v0 stays off the page: no goals, streaks, AI insights, mobile apps, user counts or testimonials.
 
