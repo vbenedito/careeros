@@ -26,3 +26,6 @@ Built as a static Next.js route handler at `/` returning the pre-rendered HTML w
 
 ## Update 2026-11-11 (#131)
 The implementation note supersedes parts of the Consequences: there is no build script (a static route handler instead), the landing page is dark only (it does not follow the system setting), and there is no web manifest or `llms.txt` yet. Mona Sans is self-hosted under `/fonts` (`font-src 'self'`), which is a public path.
+
+## Update 2026-11-11 (#137)
+The landing page is no longer always script-free: when Vercel Web Analytics is enabled (production deployments on Vercel), it loads `/_vercel/insights/script.js` and its CSP allows exactly that URL and the insights endpoint. It still runs no inline script and has no `'unsafe-inline'`. See [ADR-0010](0010-web-analytics.md) and LAND-06.

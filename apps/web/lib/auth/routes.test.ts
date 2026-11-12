@@ -12,6 +12,13 @@ describe("isPublicPath", () => {
     expect(isPublicPath(p)).toBe(true);
   });
 
+  it.each(["/_vercel/insights/script.js", "/_vercel/insights/view"])(
+    "SEC-15 %s (Vercel Web Analytics) is never redirected to sign-in",
+    (p) => {
+      expect(isPublicPath(p)).toBe(true);
+    },
+  );
+
   it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg"])(
     "LAND-01 LAND-07 %s is public (exact match only)",
     (p) => {
@@ -28,6 +35,7 @@ describe("isPublicPath", () => {
     "/api/extension/link",
     "/robots.txt/x",
     "/opengraph-image/x",
+    "/_vercelx",
   ])("AUTH-03 %s requires a session", (p) => {
     expect(isPublicPath(p)).toBe(false);
   });

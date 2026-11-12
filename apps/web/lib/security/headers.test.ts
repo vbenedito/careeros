@@ -27,6 +27,16 @@ describe("buildCsp", () => {
     expect(connect).not.toContain("supabase");
   });
 
+  it("SEC-09 SEC-15 Vercel Web Analytics needs no extra source: its script is inserted by a nonce'd bundle ('strict-dynamic') and posts to this origin", () => {
+    const csp = buildCsp({ nonce: "x", isDev: false, supabaseUrl, upgradeInsecureRequests: true });
+    const directives = csp.split("; ");
+    expect(directives.find((d) => d.startsWith("script-src"))).toContain("'strict-dynamic'");
+    // 'self' covers /_vercel/insights/script.js in browsers without 'strict-dynamic'.
+    expect(directives.find((d) => d.startsWith("script-src"))).toContain("'self'");
+    expect(directives).toContain("connect-src 'self'");
+    expect(csp).not.toContain("vercel");
+  });
+
   it("development allows eval for React debugging", () => {
     const csp = buildCsp({ nonce: "x", isDev: true, supabaseUrl, upgradeInsecureRequests: false });
     expect(csp).toContain("'unsafe-eval'");

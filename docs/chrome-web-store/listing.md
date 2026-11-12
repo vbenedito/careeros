@@ -23,6 +23,8 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 **Description:**
 
+> Updated 2026-11-11 (#137): the website now has cookieless page analytics (SEC-15), so the old line "No ads, no analytics, nothing sold" became "No ads, nothing sold. The extension sends no analytics." **Update the description in the store dashboard only after the first review is approved**, so the edit does not restart the review.
+
 ```
 CareerOS measures the time you spend studying for technical interviews, automatically, on the sites you choose.
 
@@ -38,7 +40,7 @@ HOW IT WORKS
 PRIVATE BY DESIGN
 • For your study it keeps only the site name, when you started and stopped, and a random ID for the computer.
 • It reads the active tab's address only to get the site name. It never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
-• No ads, no analytics, nothing sold. Delete your account and your data anytime (see the privacy policy).
+• No ads, nothing sold. The extension sends no analytics. Delete your account and your data anytime (see the privacy policy).
 
 Sign in on the dashboard with Google or GitHub, then connect the extension from there. Free, no paid plan.
 

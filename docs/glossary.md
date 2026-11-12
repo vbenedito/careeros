@@ -31,3 +31,4 @@ Terms used across the docs and the code. Each points to the requirement that def
 | Sync cycle | One upload run of the service worker: batches of ≤ 200 intervals until the outbox is empty or a call fails | [SYNC-02..03](../specs/v0/03-sync.md) |
 | Today (popup) | This device's total for today: synced today + outbox + open interval | [SYNC-12](../specs/v0/03-sync.md) |
 | Tracking target | The tracked domain being studied right now, or none when tracking is paused | [TRK-01..07](../specs/v0/01-tracking.md) |
+| Web Analytics | Vercel's cookieless page-view counting on the website (not the extension), only on production deployments on Vercel; sensitive URLs are stripped by `beforeSend`. Code: `lib/analytics/` | [SEC-15](../specs/v0/07-security-privacy.md), [ADR-0010](adr/0010-web-analytics.md) |

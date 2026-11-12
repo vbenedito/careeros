@@ -19,7 +19,7 @@ Every claim below is checked against the v0 specs (IDs in brackets). Anything no
 Supporting points:
 1. **Automatic:** no timer to start or stop. It counts while a chosen site is the tab you're looking at and you're active, pauses after 60 seconds without input, and keeps counting while the study tab plays sound (a video, unmuted), for up to 15 minutes without input (TRK-01..07).
 2. **Only your study sites:** you pick the sites (up to 50); everything else is ignored (TRK-03, DATA-01).
-3. **Private by design:** for your study, it stores only the site name and the start and end times. It reads the tab's address only to get the site name, and never stores or sends the address, page titles, page content or other sites; no incognito; no analytics on the dashboard; delete your account anytime (TRK-02, SEC-01, SEC-15, DASH-14).
+3. **Private by design:** for your study, it stores only the site name and the start and end times. It reads the tab's address only to get the site name, and never stores or sends the address, page titles, page content or other sites; no incognito; no ad trackers or cookies, only cookieless page analytics on the website (SEC-15, amended 2026-11-11, #137); delete your account anytime (TRK-02, SEC-01, SEC-15, DASH-14).
 4. **A clear picture:** time per day and per platform, week by week or month by month, in light or dark (DASH-04..10).
 5. **Built not to lose or double-count time:** works offline and uploads later; browser restarts and sleep don't double-count (SYNC-01..08, TRK-12..15). (Sessions the server refuses are kept and shown as not synced; disconnecting asks before discarding unsynced time.)
 
@@ -77,7 +77,7 @@ Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session 
 - **Text:** For your study, CareerOS records the name of a site you chose and when you started and stopped. That's all it keeps about your browsing.
 - **Two columns:**
   - **Stored:** the study sites you choose · start and end times · a random device id · your account (email and sign-in provider; Google or GitHub also send your name and avatar, which CareerOS doesn't use). Sign-in and hosting providers keep their own security logs: see the privacy policy.
-  - **Never:** full web addresses or search terms · page titles or content · keystrokes or screenshots · sites you didn't choose · incognito windows · analytics or ad trackers.
+  - **Never:** full web addresses or search terms · page titles or content · keystrokes or screenshots · sites you didn't choose · incognito windows · ad trackers or cookies.
 - **Controls (one line each):** Turn tracking off anytime. Remove a site and it stops counting. Delete your account and your data is removed right away (encrypted backups expire within 90 days).
 - **Link:** Read the privacy policy →
 
