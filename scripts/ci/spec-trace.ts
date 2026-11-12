@@ -17,14 +17,31 @@ import { join, relative, resolve } from "node:path";
 /** A requirement ID: prefix (one or more upper-case parts), number, optional lower-case suffix. */
 const ID_SOURCE = String.raw`[A-Z]+(?:-[A-Z]+)*-\d{2}[a-z]?`;
 
-/** IDs defined in a spec: the bold markers `**ID**`. */
+/**
+ * IDs defined in a spec: the bold markers `**ID**`, and the first cell of a table row
+ * (`| PRD-01 | ... |`, the product scope table).
+ */
 export function extractDefinedIds(markdown: string): string[] {
   const ids = new Set<string>();
-  for (const match of markdown.matchAll(new RegExp(String.raw`\*\*(${ID_SOURCE})\*\*`, "g"))) {
-    ids.add(match[1] as string);
-  }
+  const definition = new RegExp(String.raw`\*\*(${ID_SOURCE})\*\*|^\|\s*(${ID_SOURCE})\s*\|`, "gm");
+  for (const match of markdown.matchAll(definition)) ids.add((match[1] ?? match[2]) as string);
   return [...ids];
 }
+
+/** Tokens that look like IDs (GMT-14, UTF-8, ADR-0004) but are not requirements. */
+export const NOT_REQUIREMENT_PREFIXES: ReadonlySet<string> = new Set([
+  "GMT",
+  "UTC",
+  "UTF",
+  "ISO",
+  "SHA",
+  "ES",
+  "HTTP",
+  "TLS",
+  "RFC",
+  "ADR",
+  "X",
+]);
 
 /** The prefixes (TRK, EXT-UI, ...) of the defined IDs. */
 export function prefixesOf(ids: Iterable<string>): Set<string> {
@@ -38,6 +55,15 @@ export function prefixesOf(ids: Iterable<string>): Set<string> {
  */
 export function findIds(text: string, prefixes: ReadonlySet<string>): string[] {
   const found = new Set<string>();
+  // The convention (AGENTS.md §2) puts the IDs first in a test name. A leading ID-like token with
+  // a prefix no spec uses is a typo (TKR-05), unless it is a known non-requirement token.
+  const leading = /^(?:\s*[,/&+]?\s*)([A-Z]+(?:-[A-Z]+)*)-(\d+[A-Za-z]?)(?![\w-])/;
+  for (let rest = text; ; ) {
+    const match = leading.exec(rest);
+    if (!match) break;
+    if (!NOT_REQUIREMENT_PREFIXES.has(match[1] as string)) found.add(`${match[1]}-${match[2]}`);
+    rest = rest.slice(match[0].length);
+  }
   for (const match of text.matchAll(/\b([A-Z]+(?:-[A-Z]+)*)-(\d+[A-Za-z]?)(?![\w-])/g)) {
     if (prefixes.has(match[1] as string)) found.add(`${match[1]}-${match[2]}`);
   }
@@ -81,6 +107,19 @@ export function extractSqlDescriptions(source: string): string[] {
 
 export type Allowlist = Record<string, string>;
 
+/** Validates the parsed `specs/untested-ids.json`: a plain object of ID -> non-empty reason. */
+export function parseAllowlist(raw: unknown): Allowlist {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw new Error("specs/untested-ids.json must be an object of ID -> reason");
+  }
+  for (const [id, reason] of Object.entries(raw)) {
+    if (typeof reason !== "string" || reason.trim() === "") {
+      throw new Error(`specs/untested-ids.json: "${id}" needs a non-empty reason (a string)`);
+    }
+  }
+  return raw as Allowlist;
+}
+
 export interface TraceInput {
   defined: ReadonlySet<string>;
   /** ID -> files that reference it in a test title. */
@@ -89,6 +128,8 @@ export interface TraceInput {
 }
 
 export interface TraceResult {
+  /** No ID defined at all: the spec files were not found or the format changed. Fails. */
+  noDefinitions: boolean;
   /** Referenced by tests, defined nowhere. Fails the check. */
   unknown: { id: string; files: readonly string[] }[];
   /** Allow-listed but now tested. Fails the check. */
@@ -113,6 +154,7 @@ export function trace({ defined, referenced, allowlist }: TraceInput): TraceResu
   const listed = Object.keys(allowlist).sort(byId);
   const tested = [...defined].filter((id) => referenced.has(id)).sort(byId);
   return {
+    noDefinitions: defined.size === 0,
     unknown,
     allowlistedButTested: listed.filter((id) => referenced.has(id)),
     allowlistedUnknown: listed.filter((id) => !defined.has(id)),
@@ -125,6 +167,7 @@ export function trace({ defined, referenced, allowlist }: TraceInput): TraceResu
 
 export function hasFailures(r: TraceResult): boolean {
   return (
+    r.noDefinitions ||
     r.unknown.length > 0 ||
     r.allowlistedButTested.length > 0 ||
     r.allowlistedUnknown.length > 0 ||
@@ -148,6 +191,9 @@ export function renderSummary(r: TraceResult, defined: number): string {
 
 export function failureLines(r: TraceResult): string[] {
   return [
+    ...(r.noDefinitions
+      ? ["no requirement ID is defined in specs/ (files moved or format changed?)"]
+      : []),
     ...r.unknown.map(
       ({ id, files }) =>
         `${id} is referenced by tests (${files.join(", ")}) but defined in no spec`,
@@ -200,7 +246,9 @@ function main(): number {
     add(extractSqlDescriptions(readFileSync(file, "utf8")), rel(file));
   }
 
-  const allowlist = JSON.parse(readFileSync(join(root, "specs/untested-ids.json"), "utf8"));
+  const allowlist = parseAllowlist(
+    JSON.parse(readFileSync(join(root, "specs/untested-ids.json"), "utf8")),
+  );
   const result = trace({ defined, referenced, allowlist });
 
   /* biome-ignore lint/suspicious/noConsole: CLI output */

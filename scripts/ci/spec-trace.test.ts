@@ -5,6 +5,7 @@ import {
   extractTestTitles,
   findIds,
   hasFailures,
+  parseAllowlist,
   prefixesOf,
   renderSummary,
   trace,
@@ -122,5 +123,32 @@ describe("TEST-02 traceability result", () => {
     const summary = renderSummary(result, defined.size);
     expect(summary).toContain("| 4 | 1 | 1 | 2 |");
     expect(summary).toContain("Untested: TRK-02, TRK-03");
+  });
+});
+
+describe("TEST-02 guards", () => {
+  it("TEST-02 no defined IDs at all fails", () => {
+    const result = trace({ defined: new Set(), referenced: new Map(), allowlist: {} });
+    expect(result.noDefinitions).toBe(true);
+    expect(hasFailures(result)).toBe(true);
+  });
+
+  it("TEST-02 the allow-list must be an object of non-empty string reasons", () => {
+    expect(parseAllowlist({ "ENV-01": "decision" })).toEqual({ "ENV-01": "decision" });
+    for (const bad of [null, [], "x", { "ENV-01": "" }, { "ENV-01": 1 }, { "ENV-01": "  " }]) {
+      expect(() => parseAllowlist(bad)).toThrow(/untested-ids\.json/);
+    }
+  });
+
+  it("TEST-02 a leading ID-like token with an unknown prefix is kept so it is reported", () => {
+    expect(findIds("TKR-05 typo in the prefix", prefixes)).toEqual(["TKR-05"]);
+    expect(findIds("SYNC-04, TKR-01 and TKR-02 later", prefixes)).toEqual(["SYNC-04", "TKR-01"]);
+    expect(findIds("GMT-14 offsets are not requirements", prefixes)).toEqual([]);
+    expect(findIds("handles UTF-8 and GMT-14", prefixes)).toEqual([]);
+  });
+
+  it("TEST-02 table rows define IDs (the PRD scope table)", () => {
+    const md = "| ID | Item |\n|---|---|\n| PRD-01 | Tracking | 01 |\n| PRD-02 | Sign in | 02 |";
+    expect(extractDefinedIds(md)).toEqual(["PRD-01", "PRD-02"]);
   });
 });

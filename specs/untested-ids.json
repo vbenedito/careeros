@@ -6,9 +6,18 @@
   "ENV-07": "Decision: the dashboard is not containerized; nothing to assert.",
   "ENV-08": "Describes the CI workflow itself; it is verified by every CI run.",
   "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
-  "SEC-12": "Dependency policy (audit, Dependabot, justification in PRs); process, not code.",
   "STORE-03": "Store listing document and review justification; verified in the store review.",
-  "STORE-04": "Store listing disclosures and privacy policy URL; verified in the store review.",
   "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
-  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made."
+  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made.",
+  "PRD-01": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-02": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-03": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-04": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-05": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-06": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-07": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-08": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-09": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-10": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "PRD-11": "Product scope item; covered by the requirement IDs of the specs in its table row."
 }
