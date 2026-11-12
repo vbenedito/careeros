@@ -5,6 +5,7 @@
  * Every listener is registered synchronously at startup so Chrome events can wake the worker.
  */
 import { SYNC, TRACKING } from "@careeros/shared";
+import { localDayStartMs } from "../engine/engine";
 import { config, isSupabaseConfigured } from "../lib/config";
 import { IS_DEV_BUILD } from "../lib/env";
 import { createLogger } from "../lib/log";
@@ -20,6 +21,7 @@ import { createExternalMessageHandler } from "./messaging/external";
 import { createInternalMessageHandler } from "./messaging/internal";
 import { createSupabaseIngest } from "./sync/supabase-ingest";
 import { createSyncService } from "./sync/sync-service";
+import { createSyncTriggers } from "./sync/triggers";
 import {
   createStorageChangeHandler,
   createTrackingLocalData,
@@ -32,7 +34,7 @@ import {
 } from "./tracking/chrome-port";
 import { createEngineEnv } from "./tracking/device";
 import { ENGINE_STATE_KEY, TRACKING_ENABLED_KEY } from "./tracking/keys";
-import { createOutbox, startOfLocalDay } from "./tracking/outbox";
+import { createOutbox } from "./tracking/outbox";
 import { createTrackingStore, parseEngineState } from "./tracking/store";
 import { createTracker } from "./tracking/tracker";
 
@@ -80,7 +82,8 @@ const outbox = createOutbox({
   area: storage,
   exclusive: tracker.exclusive,
   now: () => Date.now(),
-  startOfLocalDay,
+  // SYNC-12a: the engine's own midnight, so "today" matches how intervals were split.
+  startOfLocalDay: (t) => localDayStartMs(t),
 });
 const sync = backend
   ? createSyncService({
@@ -104,6 +107,8 @@ const localData = createTrackingLocalData({
   // AUTH-12 final sync: ignores backoff, never waits for a cycle that may need the auth lock.
   upload: (accessToken) =>
     sync?.run(accessToken, { force: true, ifIdle: true }) ?? Promise.resolve(),
+  // SYNC-02b: before that, wait (bounded) for a cycle that is already uploading.
+  waitForUpload: () => sync?.waitIdle(SYNC.DISCONNECT_WAIT_S * 1000) ?? Promise.resolve(),
   forgetDevice: () => engineEnv.forget(),
 });
 const auth = backend
@@ -135,7 +140,7 @@ const domains = auth
     })
   : null;
 
-/** SYNC-09: refresh on startup, each sync cycle, after connecting and when the popup opens. */
+/** SYNC-09: refresh on startup, each sync cycle, when the user changes and on popup open. */
 const refreshDomains = async () => {
   const result = await domains?.refresh();
   if (result && !result.ok && result.error !== "NOT_CONNECTED") {
@@ -143,62 +148,73 @@ const refreshDomains = async () => {
   }
 };
 
-/** SYNC-02: one upload cycle (alarm, startup, after reconnecting). */
-const syncNow = async () => {
+/** SYNC-02: one upload cycle. */
+const runSync = async () => {
   if (!sync || !auth) return;
   const outcome = await sync.run(() => auth.accessToken());
   log.debug("sync.cycle", { outcome });
-  await refreshDomains();
 };
+const triggers = createSyncTriggers({ runSync, refreshDomains });
+const syncNow = () => triggers.onAlarm().catch(() => log.warn("sync.cycle_failed", {}));
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[SESSION_STORAGE_KEY]?.newValue !== undefined) {
-    void syncNow();
+  const change = changes[SESSION_STORAGE_KEY];
+  if (area === "local" && change) {
+    void triggers.onSessionChange(change).catch(() => log.warn("sync.cycle_failed", {}));
   }
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === SYNC_ALARM) void syncNow();
 });
 
-const handleInternal = domains
-  ? createInternalMessageHandler({
-      extensionId: chrome.runtime.id,
-      domains,
-      // Read without the auth lock (like hasSession): the popup must never wait for a token
-      // refresh in flight on a slow network.
-      authStatus: async () => {
-        const session = await backend?.currentSession();
-        const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
-        return {
-          connected: session != null,
-          email: session?.email ?? null,
-          needsReconnect: session == null && flag,
-        };
-      },
-      // The storage change becomes a SETTINGS event: the engine closes or reopens (EXT-UI-06).
-      setTracking: (enabled) => storage.set({ [TRACKING_ENABLED_KEY]: enabled }),
-      disconnect: async (discardUnsynced) => {
-        if (!auth) return { ok: false, code: "FAILED" };
-        try {
-          const result = await auth.disconnect({ discardUnsynced });
-          if (result.ok) return { ok: true };
-          return { ok: false, code: "UNSYNCED_DATA", pending: (await outbox.counts()).pending };
-        } catch {
-          return { ok: false, code: "FAILED" };
-        }
-      },
-      forgetLocalData: async () => {
-        if (!auth) return { ok: false, code: "FAILED" };
-        try {
-          return await auth.forgetLocalData();
-        } catch {
-          return { ok: false, code: "FAILED" };
-        }
-      },
-    })
-  : null;
+// Created in every build: without Supabase config (dev builds before `pnpm setup:env`) the
+// popup's commands get an error reply instead of none (#65, EXT-UI-05c).
+const handleInternal = createInternalMessageHandler({
+  extensionId: chrome.runtime.id,
+  domains,
+  // Read without the auth lock (like hasSession): the popup must never wait for a token
+  // refresh in flight on a slow network.
+  authStatus: async () => {
+    const session = await backend?.currentSession();
+    const flag = (await storage.get(NEEDS_RECONNECT_KEY))[NEEDS_RECONNECT_KEY] === true;
+    return {
+      connected: session != null,
+      email: session?.email ?? null,
+      needsReconnect: session == null && flag,
+    };
+  },
+  // The storage change becomes a SETTINGS event: the engine closes or reopens (EXT-UI-06).
+  setTracking: async (enabled) => {
+    await storage.set({ [TRACKING_ENABLED_KEY]: enabled });
+    return store.trackingEnabled();
+  },
+  disconnect: async (discardUnsynced) => {
+    if (!auth) return { ok: false, code: "FAILED" };
+    try {
+      // #65: the popup's confirmation also counts rejected ("not synced") intervals.
+      const result = await auth.disconnect({ discardUnsynced, includeQuarantined: true });
+      if (result.ok) return { ok: true };
+      return {
+        ok: false,
+        code: "UNSYNCED_DATA",
+        pending: result.unsynced + result.quarantined,
+        unsynced: result.unsynced,
+        quarantined: result.quarantined,
+      };
+    } catch {
+      return { ok: false, code: "FAILED" };
+    }
+  },
+  forgetLocalData: async () => {
+    if (!auth) return { ok: false, code: "FAILED" };
+    try {
+      return await auth.forgetLocalData();
+    } catch {
+      return { ok: false, code: "FAILED" };
+    }
+  },
+});
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!handleInternal) return false;
   handleInternal(message, { id: sender.id, url: sender.url }).then(
     (reply) => sendResponse(reply ?? undefined),
     () => sendResponse(undefined),

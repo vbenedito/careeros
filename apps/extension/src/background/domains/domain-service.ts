@@ -53,6 +53,15 @@ export function createDomainService(deps: {
     }
   }
 
+  async function cachedDomains(): Promise<string[] | null> {
+    const cache = (await storage.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY] as
+      | { domains?: unknown }
+      | undefined;
+    return Array.isArray(cache?.domains)
+      ? cache.domains.filter((d): d is string => typeof d === "string")
+      : null;
+  }
+
   async function refreshCache(): Promise<DomainsResult> {
     // #113: validate the server's list like any external input (a bad row such as "com" would
     // match every .com site in the popup).
@@ -60,6 +69,9 @@ export function createDomainService(deps: {
     const domains = [...(await api.list())].filter(isValidDomain).sort();
     if (deps.epoch && deps.epoch.current() !== started)
       return { ok: false, error: "NOT_CONNECTED" };
+    // SYNC-09b (#65): a Disconnect may have finished while the list was in flight (it clears
+    // the cache): never write the old list back for an account that is gone.
+    if (!(await deps.isConnected())) return { ok: false, error: "NOT_CONNECTED" };
     await storage.set({ [DOMAINS_CACHE_KEY]: { domains, fetchedAt: deps.now() } });
     return { ok: true, domains };
   }
@@ -73,7 +85,16 @@ export function createDomainService(deps: {
       const parsed = parseDomainInput(input);
       if (!parsed.ok) return Promise.resolve({ ok: false, error: "INVALID_DOMAIN" });
       return guard(async () => {
-        await api.insert(parsed.domain);
+        // SYNC-10a (#54): adding a site that is already tracked is a no-op, also at the limit
+        // (the server checks the limit before it finds the duplicate).
+        if (!(await cachedDomains())?.includes(parsed.domain)) {
+          try {
+            await api.insert(parsed.domain);
+          } catch (error) {
+            const limit = error instanceof DomainsApiError && error.code === "LIMIT_REACHED";
+            if (!limit || !(await api.list()).includes(parsed.domain)) throw error;
+          }
+        }
         return refreshCache();
       });
     },
