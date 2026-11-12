@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const UPDATED = "November 7, 2026";
+const UPDATED = "November 11, 2026";
 
 /** SEC-13: plain-language privacy notice (LGPD). Public: no sign-in needed. */
 export default function PrivacyPage() {
@@ -67,6 +67,9 @@ export default function PrivacyPage() {
               <Row data="Web request logs with IP address, kept by Vercel">
                 Running the dashboard; kept for a short time
               </Row>
+              <Row data="Page views on this website: the page visited, the referring site, country, device and browser type, counted by Vercel Web Analytics without cookies">
+                Knowing how many people visit the website and which pages they use
+              </Row>
               <Row data="The sites you choose to track (e.g. leetcode.com)">
                 Knowing where your study time counts
               </Row>
@@ -82,13 +85,24 @@ export default function PrivacyPage() {
             Nothing else. The extension never records full addresses (paths or search terms), page
             titles or content, keystrokes, form data, passwords or screenshots, and never stores or
             sends the names of sites you have not chosen. It does not read pages at all, and it
-            never tracks incognito windows. The dashboard has no analytics or advertising scripts.
+            never tracks incognito windows.
+          </p>
+          <p>
+            The website (this page, the home page, sign-in and the dashboard) uses Vercel Web
+            Analytics to count page views: which pages are visited, the referring site, the country,
+            and the device and browser type. It sets no cookies and uses no personal identifiers.
+            Sign-in callbacks and the extension connection page are not counted. On the sign-in
+            page, dashboard and settings, web addresses are sent without their details (only the
+            selected period and campaign tags are kept); the home page is counted as visited. The
+            extension sends no analytics. There are no advertising scripts.
           </p>
         </Section>
 
         <Section title="Legal basis">
           <p>
             We process this data to provide the service you signed up for (LGPD, article 7, item V).
+            Page-view counts serve our legitimate interest in knowing how the website is used
+            (article 7, item IX).
           </p>
         </Section>
 
@@ -99,7 +113,8 @@ export default function PrivacyPage() {
               in the {dataRegion ?? <NotConfigured what="data region" />} region.
             </li>
             <li>
-              <strong className="font-medium">Vercel</strong> hosts the dashboard.
+              <strong className="font-medium">Vercel</strong> hosts the website and dashboard and
+              counts page views (Web Analytics).
             </li>
             <li>
               <strong className="font-medium">Google</strong> and{" "}

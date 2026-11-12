@@ -61,12 +61,12 @@ Redirect targets use `SITE_URL`, never the `Host` header (SEC-08).
 | Directive | App pages (`lib/security/headers.ts`) | Landing `/` (`lib/landing/csp.ts`) |
 |---|---|---|
 | `default-src` | `'self'` | `'none'` |
-| `script-src` | `'self' 'nonce-…' 'strict-dynamic'` (+ `'unsafe-eval'` in dev) | `'none'` |
+| `script-src` | `'self' 'nonce-…' 'strict-dynamic'` (+ `'unsafe-eval'` in dev); covers the analytics script, inserted by a nonce'd bundle | `'none'`; with analytics: `<site>/_vercel/insights/script.js` only |
 | `style-src` | `'self' 'nonce-…'` (`'unsafe-inline'` in dev) | `'sha256-…'` of the one inline `<style>` |
 | `style-src-attr` | `'unsafe-inline'` | `'unsafe-inline'` |
 | `img-src` | `'self' blob: data:` | `'self' data:` |
 | `font-src` | `'self'` | `'self'` |
-| `connect-src` | `'self'` | (default `'none'`) |
+| `connect-src` | `'self'` (includes `/_vercel/insights/*`) | (default `'none'`); with analytics: `<site>/_vercel/insights/` |
 | `object-src` | `'none'` | (default `'none'`) |
 | `base-uri` | `'self'` | `'none'` |
 | `form-action` | `'self'`, the Supabase origin, Google, GitHub | `'none'` |
@@ -74,7 +74,7 @@ Redirect targets use `SITE_URL`, never the `Host` header (SEC-08).
 | `upgrade-insecure-requests` | when `SITE_URL` is https | when the site is https |
 | Rendering | Per request (nonce) | Built once (`force-static`) |
 
-Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). Mutating routes also check `Origin` against `SITE_URL` (`lib/security/origin.ts`, SEC-08); session cookies are `HttpOnly`, `SameSite=Lax`, `Secure` on https (`lib/supabase/cookies.ts`, AUTH-02).
+Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With analytics" means Vercel Web Analytics is enabled, which happens only on production deployments on Vercel (`isAnalyticsEnabled()` in `lib/analytics/config.ts`, SEC-15, [ADR-0010](../adr/0010-web-analytics.md)); the app CSP is the same either way. Mutating routes also check `Origin` against `SITE_URL` (`lib/security/origin.ts`, SEC-08); session cookies are `HttpOnly`, `SameSite=Lax`, `Secure` on https (`lib/supabase/cookies.ts`, AUTH-02).
 
 ## Data access
 
@@ -108,7 +108,18 @@ Browser-side code talks to the extension through `lib/extension/messenger.ts` (2
 
 ## Landing page rendering
 
-`app/route.ts` is a `force-static` GET handler. It calls `renderLanding()` (`lib/landing/page.ts`), which returns one HTML document with inline CSS and no JavaScript; interactions are native checkboxes and radios (LAND-08). The copy is in `lib/landing/content.ts` (LAND-03), links in `lib/landing/links.ts` (`EXTENSION_INSTALL_URL`, LAND-05), and the CSP hash is computed from the same CSS string (`lib/landing/csp.ts`). The origin comes from `buildSiteUrl()` (`SITE_URL`, then `VERCEL_PROJECT_PRODUCTION_URL`, then localhost), which is never used for security decisions.
+`app/route.ts` is a `force-static` GET handler. It calls `renderLanding()` (`lib/landing/page.ts`), which returns one HTML document with inline CSS and no JavaScript of its own (when analytics is enabled at build time, one `<script defer src="/_vercel/insights/script.js">`); interactions are native checkboxes and radios (LAND-08). The copy is in `lib/landing/content.ts` (LAND-03), links in `lib/landing/links.ts` (`EXTENSION_INSTALL_URL`, LAND-05), and the CSP hash is computed from the same CSS string (`lib/landing/csp.ts`). The origin comes from `buildSiteUrl()` (`SITE_URL`, then `VERCEL_PROJECT_PRODUCTION_URL`, then localhost), which is never used for security decisions.
+
+## Web analytics
+
+Vercel Web Analytics (SEC-15, [ADR-0010](../adr/0010-web-analytics.md)), only when `isAnalyticsEnabled()` (`VERCEL=1` and `VERCEL_ENV=production`):
+
+| Pages | How | Privacy filter |
+|---|---|---|
+| App pages (root layout: sign-in, privacy, dashboard, settings) | `components/app/web-analytics.tsx` renders `<Analytics />` from `@vercel/analytics/next`, which inserts `/_vercel/insights/script.js` | `beforeSend` = `filterAnalyticsEvent` (`lib/analytics/before-send.ts`): drops `/auth/*` and `/connect`, keeps only `view` and `utm_*` query parameters, drops fragments |
+| Landing `/` | `renderLanding({ analytics: true })` adds the script tag; `buildLandingCsp(…, site)` allows it | None (no script of our own); only `/` |
+
+`/_vercel` is a public path (`lib/auth/routes.ts`), so page views of signed-out visitors are never redirected to sign-in should the proxy see them. The extension has no analytics.
 
 ## Configuration
 

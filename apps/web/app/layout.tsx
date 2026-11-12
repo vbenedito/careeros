@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/app/theme-provider";
+import { WebAnalytics } from "@/components/app/web-analytics";
+import { isAnalyticsEnabled } from "@/lib/analytics/config";
 import { buildSiteUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -23,6 +25,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-svh antialiased">
         <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
+        {/* SEC-15: cookieless page analytics, production deployments on Vercel only. */}
+        {isAnalyticsEnabled() && <WebAnalytics />}
       </body>
     </html>
   );

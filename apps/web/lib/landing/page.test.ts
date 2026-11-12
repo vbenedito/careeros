@@ -49,9 +49,30 @@ describe("landing page (LAND)", () => {
     expect(html).not.toContain("javascript:");
   });
 
+  it("LAND-06 SEC-15 the analytics script appears only when enabled, and no inline script", () => {
+    const withAnalytics = renderLanding({
+      siteUrl: "https://careeros.example/",
+      installUrl: "https://chromewebstore.google.com/detail/x",
+      repositoryUrl: "https://github.com/vbenedito/careeros",
+      analytics: true,
+    });
+    expect(withAnalytics.match(/<script\b[^>]*>/g)).toEqual([
+      '<script type="application/ld+json">',
+      '<script defer src="/_vercel/insights/script.js">',
+    ]);
+    expect(withAnalytics).toContain('<script defer src="/_vercel/insights/script.js"></script>');
+    expect(html).not.toContain("_vercel");
+  });
+
+  it("LAND-06 SEC-15 the Never list no longer promises no analytics", () => {
+    expect(html).toContain("<li>Ad trackers or cookies</li>");
+    expect(html).not.toContain("Analytics or ad trackers");
+  });
+
   it("LAND-06 the CSP allows exactly the inline stylesheet, by hash, and no scripts", () => {
     const csp = buildLandingCsp(true);
     expect(csp).toContain("script-src 'none'");
+    expect(csp).not.toContain("connect-src");
     expect(csp).toContain(`style-src '${LANDING_STYLE_HASH}'`);
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("font-src 'self'");
@@ -105,5 +126,23 @@ describe("landing page (LAND)", () => {
     }
     for (const id of ["away", "c-lc", "v-month"]) expect(html).toContain(`<label for="${id}"`);
     expect(html).toContain("@media (prefers-reduced-motion:no-preference)");
+  });
+
+  it("LAND-06 SEC-15 with analytics: exactly the script URL and the insights endpoint", () => {
+    const csp = buildLandingCsp(true, "https://careeros.example/any/path");
+    const directives = csp.split("; ");
+    expect(directives).toContain("script-src https://careeros.example/_vercel/insights/script.js");
+    expect(directives).toContain("connect-src https://careeros.example/_vercel/insights/");
+    expect(directives).toContain("default-src 'none'");
+    expect(directives).toContain(`style-src '${LANDING_STYLE_HASH}'`);
+    const scriptSrc = directives.find((d) => d.startsWith("script-src")) ?? "";
+    expect(scriptSrc).not.toContain("unsafe");
+    expect(scriptSrc).not.toContain("'self'");
+    // Same policy otherwise.
+    expect(directives.filter((d) => !/^(script|connect)-src/.test(d))).toEqual(
+      buildLandingCsp(true)
+        .split("; ")
+        .filter((d) => !d.startsWith("script-src")),
+    );
   });
 });

@@ -10,6 +10,8 @@ export const PUBLIC_PATHS = [
   "/privacy",
   // Self-hosted landing fonts (LAND-07).
   "/fonts",
+  // Vercel Web Analytics script and endpoint (SEC-15): signed-out visitors send page views too.
+  "/_vercel",
 ] as const;
 
 /** Public by exact match only (LAND-01, LAND-07): the landing page and its search files. */

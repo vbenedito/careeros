@@ -1,5 +1,7 @@
 /**
- * /privacy (SEC-13) and the no-analytics rule (SEC-15) against the running dashboard.
+ * /privacy (SEC-13) and the first-party-only script rule (SEC-15) against the running dashboard.
+ * Web Analytics is off outside Vercel production, so here only Next.js bundles may appear; the
+ * analytics script, if ever present, must be the first-party Vercel path.
  */
 import { describe, expect, it } from "vitest";
 import { createOAuthUser, dashboardSession, env } from "./helpers";
@@ -49,7 +51,7 @@ describe("privacy (integration)", () => {
     ] as const) {
       const html = await (await fetch(`${DASHBOARD_URL}${path}`, { headers: { cookie } })).text();
       for (const src of scriptSources(html)) {
-        expect(src, `${path}: ${src}`).toMatch(/^\/_next\//);
+        expect(src, `${path}: ${src}`).toMatch(/^\/(_next\/|_vercel\/insights\/script\.js$)/);
       }
     }
   });

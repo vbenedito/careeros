@@ -19,7 +19,7 @@ describe("landing page (integration)", () => {
     expect(res.headers.get("x-frame-options")).toBe("DENY");
     const html = await res.text();
     expect(html).toContain("<h1>See where your study time really goes</h1>");
-    // No executable script: the only <script> is the JSON-LD data block.
+    // No executable script (Web Analytics is off outside Vercel production): only JSON-LD.
     expect(html.match(/<script\b[^>]*>/g)).toEqual(['<script type="application/ld+json">']);
   });
 

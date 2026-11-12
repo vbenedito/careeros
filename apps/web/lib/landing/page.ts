@@ -1,8 +1,11 @@
 /**
  * The public landing page (LAND-01..08, ADR-0009): one static HTML document with its CSS inline
- * and no JavaScript. Interactions are native checkboxes and radios styled with CSS; motion is
- * CSS only and stops under prefers-reduced-motion.
+ * and no JavaScript of its own; when enabled, the only script is Vercel Web Analytics (SEC-15).
+ * Interactions are native checkboxes and radios styled with CSS; motion is CSS only and stops
+ * under prefers-reduced-motion.
  */
+
+import { ANALYTICS_SCRIPT_PATH } from "@/lib/analytics/config";
 import {
   DESCRIPTION,
   ENGINE_LOG,
@@ -22,6 +25,8 @@ export interface LandingOptions {
   repositoryUrl: string;
   /** Google Search Console meta-tag token (LAND-09); omitted when not configured. */
   googleSiteVerification?: string | undefined;
+  /** Load the Vercel Web Analytics script (SEC-15, ADR-0010); the CSP must allow it. */
+  analytics?: boolean | undefined;
 }
 
 const esc = (s: string) =>
@@ -189,6 +194,7 @@ export function renderLanding({
   installUrl,
   repositoryUrl,
   googleSiteVerification,
+  analytics,
 }: LandingOptions): string {
   const site = new URL(siteUrl).origin;
   const max = Math.max(...SAMPLE_WEEK);
@@ -256,7 +262,7 @@ export function renderLanding({
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="CareerOS: see where your study time really goes">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">${jsonLd}</script>
+<script type="application/ld+json">${jsonLd}</script>${analytics ? `\n<script defer src="${ANALYTICS_SCRIPT_PATH}"></script>` : ""}
 <style>${LANDING_CSS}</style>
 </head>
 <body>
@@ -330,7 +336,7 @@ export function renderLanding({
 <div class="copy"><h2>Don't trade your privacy for a number</h2><p>The extension reads the active tab's address only to get the site name. For your study it keeps one small record: the site and when you started and stopped. The address, the page and every other site are never stored or sent.</p><a href="/privacy">Read the privacy policy</a></div>
 <div class="lists">
 <div class="list yes"><h3>Stored</h3><ul><li>Sites you choose</li><li>Start and end times</li><li>A random device id</li><li>Your account: email and sign-in provider</li></ul></div>
-<div class="list no"><h3>Never</h3><ul><li>Full addresses or searches</li><li>Page titles or content</li><li>Keystrokes or screenshots</li><li>Other sites, incognito</li><li>Analytics or ad trackers</li></ul></div>
+<div class="list no"><h3>Never</h3><ul><li>Full addresses or searches</li><li>Page titles or content</li><li>Keystrokes or screenshots</li><li>Other sites, incognito</li><li>Ad trackers or cookies</li></ul></div>
 </div>
 </div></section>
 
