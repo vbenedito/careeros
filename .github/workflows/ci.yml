@@ -108,8 +108,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Same stack as local development (ADR-0008); Studio is not needed in CI.
+      # #82: the stack's fixed host ports (54320–54329) lie in Linux's ephemeral range
+      # (32768–60999), so an outbound connection (e.g. an image pull) could hold one and the start
+      # failed with "failed to bind host port … address already in use". Ephemeral ports are
+      # moved above them first; one retry covers any other transient container start failure.
       - name: Start Supabase
-        run: pnpm exec supabase start -x studio,postgres-meta
+        run: |
+          sudo sysctl -w net.ipv4.ip_local_port_range="61000 65535"
+          pnpm exec supabase start -x studio,postgres-meta || {
+            echo "::warning::supabase start failed; retrying once"
+            pnpm exec supabase stop --no-backup || true
+            pnpm exec supabase start -x studio,postgres-meta
+          }
 
       - name: Reset database (migrations + seed)
         run: pnpm db:reset

@@ -6,9 +6,11 @@
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  clearOfMidnight,
   createOAuthUser,
   dashboardSession,
   env,
+  MIDNIGHT_MARGIN_MS,
   sql,
 } from "../../../web/tests/integration/helpers";
 import { assertResponsive, saveScreenshot, WIDTHS } from "../support/responsive";
@@ -58,6 +60,8 @@ describe("app pages responsive layout (TEST-01)", () => {
   };
 
   beforeAll(async () => {
+    // #82: the sample data is "this week" on the server; don't seed it just before Monday.
+    await clearOfMidnight();
     const userId = createOAuthUser(email);
     // Sample data: several days and sites this week, so both charts and the legend render.
     const monday = mondayUtc();
@@ -71,7 +75,7 @@ describe("app pages responsive layout (TEST-01)", () => {
     }
     browser = await chromium.launch({ channel: "chromium", headless: true });
     ({ cookies } = await dashboardSession(email));
-  });
+  }, MIDNIGHT_MARGIN_MS + 60_000);
 
   afterAll(async () => {
     for (const c of contexts) await c.close();
