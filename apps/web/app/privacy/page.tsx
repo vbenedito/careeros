@@ -90,10 +90,11 @@ export default function PrivacyPage() {
           <p>
             The website (this page, the home page, sign-in and the dashboard) uses Vercel Web
             Analytics to count page views: which pages are visited, the referring site, the country,
-            and the device and browser type. It sets no cookies and uses no personal identifiers;
-            sign-in pages and the extension connection page are not counted, and details in web
-            addresses are removed before sending. The extension sends no analytics. There are no
-            advertising scripts.
+            and the device and browser type. It sets no cookies and uses no personal identifiers.
+            Sign-in callbacks and the extension connection page are not counted. On the sign-in
+            page, dashboard and settings, web addresses are sent without their details (only the
+            selected period and campaign tags are kept); the home page is counted as visited. The
+            extension sends no analytics. There are no advertising scripts.
           </p>
         </Section>
 

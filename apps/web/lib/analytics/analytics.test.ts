@@ -32,6 +32,13 @@ describe("filterAnalyticsEvent (SEC-15)", () => {
     }
   });
 
+  it("SEC-15 drops encoded, mixed-case and double-slash variants of excluded paths", () => {
+    expect(view("https://x.example/%61uth/callback?code=1")).toBeNull();
+    expect(view("https://x.example/AUTH/callback")).toBeNull();
+    expect(view("https://x.example//connect?token=1")).toBeNull();
+    expect(view("https://x.example/%E0%A4%A")).toBeNull();
+  });
+
   it("SEC-15 keeps similar-looking paths that are not excluded", () => {
     expect(view("https://site.example/connected")).toBe("https://site.example/connected");
     expect(view("https://site.example/authors")).toBe("https://site.example/authors");

@@ -19,8 +19,16 @@ export function filterAnalyticsEvent<E extends { url: string }>(event: E): E | n
   } catch {
     return null;
   }
+  let path: string;
+  try {
+    path = decodeURIComponent(url.pathname)
+      .toLowerCase()
+      .replace(/\/{2,}/g, "/");
+  } catch {
+    return null;
+  }
   const excluded = EXCLUDED_ANALYTICS_PATHS.some(
-    (path) => url.pathname === path || url.pathname.startsWith(`${path}/`),
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
   if (excluded) return null;
   const kept = new URLSearchParams();
