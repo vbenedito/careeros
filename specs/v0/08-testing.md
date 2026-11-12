@@ -29,8 +29,8 @@ Amended 2026-11-12 (#142): responsive layout checks (TEST-01, §2.1), the Respon
 
 - **TEST-01** Every page is checked in Chromium at 360, 390, 768, 1024 and 1440 px wide (`deviceScaleFactor` 1): the landing page (`renderLanding`, served without a backend, plus every CSS-only toggle state at 390 px and reduced motion at 360 px), privacy, sign-in, dashboard (week and month, with sample data) and settings, and the mobile drawer closed and open at 390 px. `assertResponsive` fails, naming the rule, width, element and its box, when:
   1. the document scrolls horizontally (`scrollWidth` > viewport width);
-  2. a visible element extends beyond the viewport (elements inside an `overflow` other than `visible`, fixed elements and visually hidden `.sr` / `.sr-only` elements are ignored);
-  3. text is clipped (an element with its own text overflows a clipping box without an ellipsis);
+  2. a visible element extends beyond the viewport. Exempt only: content of a clipping box (`overflow` hidden/clip) or horizontal scroller (`overflow` auto/scroll) that itself fits the viewport, and visually hidden `.sr` / `.sr-only` elements. Fixed elements are always held to the viewport;
+  3. text is clipped, by its own box or by a clipping ancestor (an ellipsis on the text's own box and scrollers are allowed). The landing site belt is skipped while it scrolls (a marquee) and checked with reduced motion;
   4. a group meant to be centred is not: each line of its children is centred in its parent's content box ±2 px (landing: the final CTA pair and the privacy badge row);
   5. at widths ≤ 768 px, a button, `a.btn`, `[role=button]` or the label of a checkbox/radio toggle is under 44 px tall.
 

@@ -16,7 +16,10 @@ export const MIN_TOUCH_PX = 44;
 /** Tolerance for "horizontally centred", in CSS pixels. */
 export const CENTRE_TOLERANCE_PX = 2;
 
-/** Where the screenshots go (uploaded by CI as the `responsive-screenshots` artifact). */
+/**
+ * Where the screenshots go. CI uploads this folder as the artifact `responsive-screenshots-landing`
+ * (checks job) or `responsive-screenshots-app` (backend job).
+ */
 export const SCREENSHOT_DIR = fileURLToPath(
   new URL("../../../../responsive-screenshots/", import.meta.url),
 );
@@ -68,13 +71,24 @@ function collectViolations(args: Args): string[] {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };
-  /** True when an ancestor clips horizontal overflow, so the element cannot widen the page. */
-  const clipped = (el: Element) => {
+  const fits = (r: DOMRect) => r.left >= -0.5 && r.right <= vw + 0.5;
+  /** Ancestors (nearest first) that clip or scroll horizontally (overflow-x other than visible). */
+  const clippers = (el: Element) => {
+    const found: Element[] = [];
     for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
-      if (getComputedStyle(a).overflowX !== "visible") return true;
+      if (getComputedStyle(a).overflowX !== "visible") found.push(a);
     }
-    return false;
+    return found;
   };
+  /**
+   * True when the element can only be seen through a clipping ancestor that itself fits the
+   * viewport: overflow hidden/clip (e.g. a marquee) or a horizontal scroller (overflow auto/
+   * scroll, e.g. a wide table the user swipes). A clipping or scrolling box wider than the
+   * viewport exempts nothing; it is reported itself.
+   */
+  const containedByFittingClipper = (el: Element) =>
+    clippers(el).some((a) => fits(a.getBoundingClientRect()));
+  const scroller = (el: Element) => /^(auto|scroll)$/.test(getComputedStyle(el).overflowX);
 
   // 1. No horizontal scroll.
   if (doc.scrollWidth > vw) {
@@ -87,27 +101,42 @@ function collectViolations(args: Args): string[] {
   for (const el of all) {
     if (ignored(el) || hiddenText(el) || !visible(el)) continue;
     const style = getComputedStyle(el);
-    if (style.position !== "fixed" && !clipped(el)) {
+    // Fixed elements escape their ancestors' clipping, so they are always held to the viewport.
+    if (style.position === "fixed" || !containedByFittingClipper(el)) {
       const r = el.getBoundingClientRect();
-      if (r.right > vw + 0.5 || r.left < -0.5) {
+      if (!fits(r)) {
         offenders.add(el);
         if (!(el.parentElement && offenders.has(el.parentElement))) {
           out.push(`outside the viewport: ${path(el)} ${box(r)} (viewport ${vw}px)`);
         }
       }
     }
-    const ownText = [...el.childNodes].some(
+    // Text clipped by the element itself or by any clipping ancestor (a scroller can be
+    // scrolled to, and an ellipsis on the element itself is deliberate truncation).
+    const texts = [...el.childNodes].filter(
       (n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim() !== "",
     );
-    if (
-      ownText &&
-      style.overflowX !== "visible" &&
-      style.textOverflow !== "ellipsis" &&
-      el.scrollWidth > el.clientWidth + 1
-    ) {
-      out.push(
-        `clipped text: ${path(el)} needs ${el.scrollWidth}px, has ${el.clientWidth}px ${box(el.getBoundingClientRect())}`,
-      );
+    if (texts.length === 0) continue;
+    const boxes = [
+      ...(style.overflowX !== "visible" && style.textOverflow !== "ellipsis" ? [el] : []),
+      ...(style.position === "fixed" ? [] : clippers(el)),
+    ].filter((c) => !scroller(c));
+    for (const text of texts) {
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const t = range.getBoundingClientRect();
+      if (t.width === 0) continue;
+      const cut = boxes.find((c) => {
+        const cr = c.getBoundingClientRect();
+        const left = cr.left + c.clientLeft;
+        return t.left < left - 1 || t.right > left + c.clientWidth + 1;
+      });
+      if (cut) {
+        out.push(
+          `clipped text: ${path(el)} "${(text.textContent ?? "").trim().slice(0, 30)}" spans ${round(t.left)}–${round(t.right)}, clipped by ${path(cut)} ${box(cut.getBoundingClientRect())}`,
+        );
+        break;
+      }
     }
   }
 

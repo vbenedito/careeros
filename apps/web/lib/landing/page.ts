@@ -81,6 +81,7 @@ h3{margin:0}
 .demo{flex:1 1 460px;min-width:0;border-radius:16px;border:1px solid var(--line);background:var(--panel);overflow:hidden}
 .tabs{display:flex;gap:4px;padding:10px 10px 0;border-bottom:1px solid var(--line);font-size:13px;overflow:hidden}
 .tabs span{padding:8px 14px;border-radius:8px 8px 0 0;white-space:nowrap;color:var(--muted)}
+@media (max-width:420px){.tabs{font-size:12px}.tabs .lights{display:none}.tabs span{padding:8px 9px}}
 .demo-body{padding:24px;display:flex;flex-direction:column;gap:20px}
 .status{position:relative;height:24px;font-size:15px;font-weight:600}
 .status span{position:absolute;inset:0;display:flex;align-items:center;gap:8px}

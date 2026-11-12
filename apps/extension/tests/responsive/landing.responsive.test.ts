@@ -26,8 +26,13 @@ const FONT = readFileSync(
   new URL("../../../web/public/fonts/mona-sans-latin-wght.woff2", import.meta.url),
 );
 
-/** Final CTA pair and the privacy badge row under the hero stay centred (#140). */
-const CHECKS: ResponsiveOptions = { centred: [".final .ctas", ".badges"] };
+/**
+ * Final CTA pair and the privacy badge row under the hero stay centred (#140). The site belt is
+ * a marquee: its text scrolls through a clipped band on purpose, so it is skipped while it
+ * moves; with reduced motion it wraps and is checked.
+ */
+const STATIC_CHECKS: ResponsiveOptions = { centred: [".final .ctas", ".badges"] };
+const CHECKS: ResponsiveOptions = { ...STATIC_CHECKS, ignore: [".belt"] };
 
 /** CSS-only toggles: the input id and the label text a visitor taps. */
 const TOGGLES = [
@@ -88,18 +93,53 @@ describe("landing responsive layout (TEST-01)", () => {
     const page = await (
       await browser.newContext({ viewport: { width: 390, height: 600 } })
     ).newPage();
-    await page.setContent(`<body style="margin:0">
+    const check = async (body: string, options: ResponsiveOptions = {}) => {
+      await page.setContent(`<body style="margin:0">${body}</body>`);
+      return findResponsiveViolations(page, options);
+    };
+
+    let found = await check(
+      `
       <div style="width:500px">wide</div>
       <div style="display:flex;justify-content:flex-start;width:390px"><p class="g" style="margin:0"><a>one</a></p></div>
-      <button style="height:30px">tap</button>
-      <div style="overflow:hidden;width:100px"><div style="width:900px">clipped container is fine</div></div>
-    </body>`);
-    const found = await findResponsiveViolations(page, { centred: [".g"] });
+      <button style="height:30px">tap</button>`,
+      { centred: [".g"] },
+    );
     expect(found.join("\n")).toMatch(/horizontal scroll: document is 500px wide/);
     expect(found.join("\n")).toMatch(/outside the viewport: div \{x: 0, y: 0, w: 500/);
     expect(found.join("\n")).toMatch(/not centred: \.g/);
     expect(found.join("\n")).toMatch(/touch target under 44px: button "tap"/);
     expect(found).toHaveLength(4);
+
+    // Allowed: a wide box inside a clipping box and a horizontal scroller that fit the viewport.
+    found = await check(`
+      <div style="overflow:hidden;width:100px"><div style="width:900px;height:10px"></div></div>
+      <div style="overflow-x:auto;width:390px"><div style="width:900px">a wide table to swipe</div></div>`);
+    expect(found).toEqual([]);
+
+    // A clipping parent wider than the viewport exempts nothing.
+    found = await check(`
+      <div style="overflow:hidden;width:600px"><div style="width:900px;height:10px"></div></div>`);
+    expect(found.join("\n")).toMatch(/outside the viewport: div \{x: 0, y: 0, w: 600/);
+    // The same with a horizontal scroller wider than the viewport.
+    found = await check(
+      `<div style="overflow-x:auto;width:600px"><div style="width:900px;height:10px"></div></div>`,
+    );
+    expect(found.join("\n")).toMatch(/outside the viewport: div \{x: 0, y: 0, w: 600/);
+
+    // Text cut off by a clipping parent, or by the element itself without an ellipsis.
+    found = await check(`
+      <div style="overflow:hidden;width:100px"><span style="white-space:nowrap">a sentence far too long for its box</span></div>
+      <p style="overflow:hidden;white-space:nowrap;width:100px">another sentence far too long</p>
+      <p style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;width:100px">truncated on purpose with an ellipsis</p>`);
+    expect(found).toHaveLength(2);
+    expect(found[0]).toMatch(/clipped text: div > span "a sentence far too long/);
+    expect(found[1]).toMatch(/clipped text: p "another sentence/);
+
+    // Fixed elements are held to the viewport even inside a clipping box.
+    found = await check(`
+      <div style="overflow:hidden;width:100px"><div style="position:fixed;left:200px;top:0;width:300px;height:10px"></div></div>`);
+    expect(found.join("\n")).toMatch(/outside the viewport: div > div \{x: 200, y: 0, w: 300/);
     await page.context().close();
   });
 
@@ -129,6 +169,6 @@ describe("landing responsive layout (TEST-01)", () => {
   it("TEST-01 landing at 360px with reduced motion (static belt, no pause control)", async () => {
     const page = await open(360, "reduce");
     await saveScreenshot(page, "landing-360-reduced-motion");
-    await assertResponsive(page, { ...CHECKS, label: "landing, reduced motion" });
+    await assertResponsive(page, { ...STATIC_CHECKS, label: "landing, reduced motion" });
   });
 });
