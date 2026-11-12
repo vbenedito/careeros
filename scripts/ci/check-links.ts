@@ -7,7 +7,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { checkDocument, headingAnchors, isFile } from "./links-lib.ts";
+import { checkDocument, headingAnchors, isFile, scopeProblems } from "./links-lib.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -26,6 +26,12 @@ for (const top of ["README.md", "AGENTS.md", "SECURITY.md"]) {
   if (isFile(p)) files.push(p);
 }
 for (const dir of ["docs", "specs"]) walk(join(root, dir), files);
+
+const scope = scopeProblems(root, files);
+if (scope.length > 0) {
+  for (const p of scope) console.error(`link check scope: ${p}`);
+  process.exit(1);
+}
 
 const anchorCache = new Map<string, Set<string> | undefined>();
 function anchorsOf(p: string): Set<string> | undefined {

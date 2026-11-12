@@ -49,14 +49,25 @@ function headingText(raw: string): string {
 export function headingAnchors(markdown: string): Set<string> {
   const anchors = new Set<string>();
   const seen = new Map<string, number>();
-  for (const line of stripFences(markdown).split("\n")) {
-    const m = /^ {0,3}#{1,6}\s+(.*)$/.exec(line);
-    if (!m?.[1]) continue;
-    const base = slugify(headingText(m[1]));
+  const add = (raw: string) => {
+    const base = slugify(headingText(raw));
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     anchors.add(n === 0 ? base : `${base}-${n}`);
-  }
+  };
+  const lines = stripFences(markdown).split("\n");
+  lines.forEach((line, i) => {
+    const m = /^ {0,3}#{1,6}\s+(.*)$/.exec(line);
+    if (m?.[1]) {
+      add(m[1]);
+      return;
+    }
+    // Setext heading: a paragraph line underlined with === or ---.
+    if (/^ {0,3}(=+|-+)\s*$/.test(line) && i > 0) {
+      const prev = lines[i - 1] ?? "";
+      if (/^ {0,3}[^\s#>|*+-]/.test(prev) && !/^ {0,3}\d+[.)]\s/.test(prev)) add(prev.trim());
+    }
+  });
   // Explicit HTML anchors.
   for (const m of markdown.matchAll(/<a\s+(?:name|id)="([^"]+)"/g)) if (m[1]) anchors.add(m[1]);
   return anchors;
@@ -156,4 +167,21 @@ export function isFile(p: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Guard against a check that passes because it scanned nothing (moved folder, wrong cwd):
+ * the root documents and at least one file under docs/ and specs/ must be in the scanned set.
+ */
+export function scopeProblems(root: string, files: string[]): string[] {
+  const rel = new Set(files.map((f) => f.slice(root.length + 1)));
+  const problems: string[] = [];
+  if (files.length === 0) problems.push("no Markdown files were scanned");
+  for (const required of ["README.md", "AGENTS.md", "SECURITY.md"]) {
+    if (!rel.has(required)) problems.push(`${required} not found`);
+  }
+  for (const dir of ["docs/", "specs/"]) {
+    if (![...rel].some((f) => f.startsWith(dir))) problems.push(`no Markdown files under ${dir}`);
+  }
+  return problems;
 }

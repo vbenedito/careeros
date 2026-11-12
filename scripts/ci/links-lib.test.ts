@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { checkDocument, extractLinks, headingAnchors, isExternal, slugify } from "./links-lib.ts";
+import {
+  checkDocument,
+  extractLinks,
+  headingAnchors,
+  isExternal,
+  scopeProblems,
+  slugify,
+} from "./links-lib.ts";
 
 describe("#155 slugify (GitHub-style)", () => {
   it.each([
@@ -29,6 +36,10 @@ describe("#155 headingAnchors", () => {
   it("ignores headings inside code fences and indented 4+ spaces", () => {
     const a = headingAnchors("```sh\n# not a heading\n```\n    # code\n## Real\n");
     expect([...a]).toEqual(["real"]);
+  });
+  it("supports setext headings but not rules or list items", () => {
+    const a = headingAnchors("Title\n=====\n\nSub head\n---\n\ntext\n\n---\n\n- item\n---\n");
+    expect([...a]).toEqual(["title", "sub-head"]);
   });
   it("accepts explicit HTML anchors", () => {
     expect(headingAnchors('<a name="x"></a>\n').has("x")).toBe(true);
@@ -85,5 +96,29 @@ describe("#155 checkDocument", () => {
     const skip = { skipAnchorsUnder: ["/r/docs"] };
     expect(run("[x](b.md#nope)", skip)).toEqual([]);
     expect(run("[x](gone.md#nope)", skip)).toHaveLength(1);
+  });
+});
+
+describe("#155 scopeProblems (minimum-files guard)", () => {
+  const ok = ["README.md", "AGENTS.md", "SECURITY.md", "docs/a.md", "specs/b.md"].map(
+    (f) => `/r/${f}`,
+  );
+  it("passes the full set", () => expect(scopeProblems("/r", ok)).toEqual([]));
+  it("fails when nothing was scanned", () => {
+    expect(scopeProblems("/r", [])).toContain("no Markdown files were scanned");
+  });
+  it("fails when a root document or a folder is missing", () => {
+    expect(
+      scopeProblems(
+        "/r",
+        ok.filter((f) => !f.endsWith("SECURITY.md")),
+      ),
+    ).toEqual(["SECURITY.md not found"]);
+    expect(
+      scopeProblems(
+        "/r",
+        ok.filter((f) => !f.includes("/docs/")),
+      ),
+    ).toEqual(["no Markdown files under docs/"]);
   });
 });

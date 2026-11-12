@@ -15,6 +15,22 @@ export interface StoreExpectations {
   csp: string;
 }
 
+/** Top-level manifest fields the store package may have (buildManifest() minus `key`). */
+export const ALLOWED_TOP_LEVEL = [
+  "manifest_version",
+  "name",
+  "short_name",
+  "description",
+  "version",
+  "minimum_chrome_version",
+  "icons",
+  "action",
+  "background",
+  "permissions",
+  "externally_connectable",
+  "content_security_policy",
+];
+
 type Json = Record<string, unknown>;
 
 /** Returns one message per violation; an empty list means the manifest is publishable. */
@@ -29,13 +45,18 @@ export function manifestViolations(manifest: Json, expected: StoreExpectations):
       `permissions must be exactly [${EXPECTED_PERMISSIONS.join(", ")}], got ${JSON.stringify(perms)} (SEC-03)`,
     );
   }
-  for (const field of [
-    "host_permissions",
-    "optional_permissions",
-    "optional_host_permissions",
-    "content_scripts",
-  ]) {
-    if (field in manifest) v.push(`manifest must not declare ${field} (SEC-03)`);
+  // Exact allow-list: any other top-level field (host_permissions, content_scripts,
+  // web_accessible_resources, oauth2, commands, side_panel, …) is a spec change (SEC-03).
+  for (const field of Object.keys(manifest)) {
+    if (!ALLOWED_TOP_LEVEL.includes(field)) v.push(`manifest declares unexpected field ${field}`);
+  }
+  const bg = JSON.stringify(manifest.background);
+  if (bg !== JSON.stringify({ service_worker: "background.js", type: "module" })) {
+    v.push(`background must be exactly the module service worker background.js, got ${bg}`);
+  }
+  const actionKeys = Object.keys((manifest.action as Json | undefined) ?? {}).sort();
+  if (actionKeys.join() !== "default_icon,default_popup,default_title") {
+    v.push(`action must only declare default_icon, default_popup, default_title`);
   }
 
   const matches = (manifest.externally_connectable as Json | undefined)?.matches;

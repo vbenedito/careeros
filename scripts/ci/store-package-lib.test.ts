@@ -11,6 +11,8 @@ const good = () => ({
   manifest_version: 3,
   name: "CareerOS",
   version: "1.2.3",
+  action: { default_title: "CareerOS", default_popup: "popup.html", default_icon: {} },
+  background: { service_worker: "background.js", type: "module" },
   minimum_chrome_version: "120",
   permissions: ["storage", "alarms", "idle", "tabs"],
   externally_connectable: { matches: ["https://app.example.com/*"] },

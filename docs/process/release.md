@@ -22,7 +22,7 @@ The version is `version` in `apps/extension/package.json`; the manifest takes it
 |---|---|
 | 1. Bump | Raise `version` in `apps/extension/package.json` in a PR (e.g. `chore(extension): version 0.1.1 …`) |
 | 2. Build | With `apps/extension/.env.production` in place: `pnpm --filter @careeros/extension release` (unpacked zip with the `key`) and `pnpm --filter @careeros/extension release:store` (store zip without `key`, STORE-01) |
-| Automatic check | Every PR runs `pnpm check:store-package` (STORE-08): it builds the store zip with placeholder public values and fails on a `key`, a permission change, host permissions, a version that differs from `package.json`, a wrong `minimum_chrome_version`, source maps or `.env` files. Run it locally the same way; it overwrites `dist/production` and the store zip, so run step 2 afterwards |
+| Automatic check | Every PR runs `pnpm check:store-package` (STORE-08): it builds the store zip with placeholder public values and fails on a `key`, a permission change, host permissions, a version that differs from `package.json`, a wrong `minimum_chrome_version`, source maps or `.env` files. It builds in a temporary directory, so it can be run locally without touching a release build |
 | 3. GitHub Release | Tag `vX.Y.Z`, attach `careeros-extension-X.Y.Z.zip`, add install/update notes: load unpacked → replace the folder → reload (ENV-05a). Done for v0.1.0 and v0.1.1 |
 | 4. Chrome Web Store | Upload the `-store.zip` in the Developer Dashboard; the listing text, permission justifications and data disclosures are in [listing.md](../chrome-web-store/listing.md) (STORE-02..06). Submit for review |
 | 5. After publication | Set `EXTENSION_INSTALL_URL` to the listing URL and redeploy the dashboard (LAND-05) |
