@@ -127,6 +127,7 @@ details{border-bottom:1px solid var(--line);padding-bottom:14px}
 summary{cursor:pointer;font-size:17px;font-weight:600;padding:10px 0}
 details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .final{padding:80px 32px;border-radius:24px;border:1px solid oklch(0.32 0.04 265);background:radial-gradient(ellipse 60% 80% at 50% 0%,oklch(0.3 0.08 265),oklch(0.18 0.03 265));box-shadow:var(--edge);display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;margin-bottom:96px}
+.final .ctas{justify-content:center}
 .foot{border-top:1px solid var(--line)}
 .foot .wrap{display:flex;flex-wrap:wrap;gap:16px 24px;justify-content:space-between;font-size:14px;color:var(--muted);padding-top:24px;padding-bottom:24px}
 .foot nav{display:flex;gap:24px;flex-wrap:wrap}.foot a{color:inherit}
