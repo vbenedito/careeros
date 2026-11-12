@@ -21,7 +21,7 @@ Replaces the blanket "independent review by a different agent" rule (AGENTS.md Â
 
 | Change | Review |
 |---|---|
-| Docs, copy, version bumps, config with no behaviour change | CI + the tech lead's own check; no review agent |
+| Docs, copy, version bumps, config with no behaviour change | CI + the tech lead's own check; no review agent (spec changes to product behaviour: one Sonnet review) |
 | Normal code (UI, dashboard, tests, tooling) | One Sonnet review |
 | Sync, auth, security, database migrations, CI workflows that hold secrets | One Opus deep review |
 | Re-review after fixes | Same reviewer, **new diff only** |
@@ -36,13 +36,21 @@ Replaces the blanket "independent review by a different agent" rule (AGENTS.md Â
 6. **Batch small changes** into one PR instead of one PR each.
 7. **Ask before producing.** Product decisions go to the product owner in a short grilling round first (`docs/process/contributing.md`), so work isn't produced twice.
 
-## 4. Content work (videos, social posts)
+## 4. Quality never goes down
+
+Saving tokens must not lower quality. Three safeguards:
+
+1. **Automate what a reviewer would check mechanically.** Every check a review agent keeps repeating becomes a test or a CI step, which costs no tokens and runs on every PR. Today's automated checks: lint, typecheck, unit tests with coverage thresholds, docs-parity tests, chart-contrast test, responsive layout (TEST-01), pgTAP, integration and E2E, backup â†’ restore round trip. Next candidates are tracked as issues (markdown link check, store package check, spec-ID traceability).
+2. **Escalate on signals, never downgrade on them.** A task moves up one model (or gets a deeper review) when: CI fails after a review approved it; a review finds a correctness or data-loss bug; the change grows beyond its issue; or a fix needs a second round. Product-behaviour changes in specs always get a review agent, even when the PR is "docs only".
+3. **Learn from every escaped defect.** When something passes review and fails later (in CI, production or the product owner's check), the fix PR also adds the check that would have caught it, and this page is updated if the routing was wrong. Examples so far: docs-parity tests (#132), the responsive checks (#143), the integration test that caught the delete-account 401 (#152).
+
+## 5. Content work (videos, social posts)
 
 - Settle the brand profile and voice **once**; every content skill reads them instead of rediscovering them.
 - Drafts, hooks, captions and variants on Sonnet or Haiku. Opus only for positioning and launch strategy.
 - Visuals and video in their dedicated tools; iterate on the specific asset, don't regenerate everything.
 - Get decisions (angle, audience, format) before generating assets.
 
-## 5. Measuring
+## 6. Measuring
 
 Each sub-agent reports its token use when it finishes. The tech lead watches for outliers (an agent above ~200k tokens on a well-specified task is a sign the prompt lacked facts). In a session, `/explain-usage` shows where the tokens went.
