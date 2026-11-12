@@ -10,7 +10,8 @@
 # skipped migration would leave production behind the deployed code without anyone noticing.
 # Security (#112): the environment's branch rule is the guard; the `if:` is a second layer. The
 # database URL is given only to the steps that need it, as an environment variable; no `set -x`;
-# the password is masked on its own and connection strings are redacted from CLI output.
+# the password is masked on its own and connection strings are redacted from CLI output. No
+# `pnpm install` in this job: only the pinned Supabase CLI is installed (#147 review).
 
 name: Database migrations (production)
 
@@ -69,21 +70,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-
-      - name: Set up Node.js (from .nvmrc)
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      # Only the Supabase CLI, not `pnpm install`: no dependency install scripts run in a job that
+      # holds the database URL. Same version as the devDependency in package.json (checked below).
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
+          version: 3.0.0
 
-      # The Supabase CLI is a pinned devDependency (package.json).
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Check the CLI version matches package.json
+        run: |
+          expected=$(jq -r '.devDependencies.supabase' package.json)
+          actual=$(supabase --version)
+          echo "Supabase CLI $actual (package.json: $expected)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Supabase CLI $actual differs from package.json ($expected): update setup-cli's version."
+            exit 1
+          fi
 
       # GitHub masks the whole secret; also mask the password alone (and its decoded form), in
-      # case a tool prints the URL in parts.
+      # case a tool prints the URL in parts. Uses the runner image's Node.js.
       - name: Mask the database password
         env:
           PGURL: ${{ secrets.SUPABASE_DB_URL }}
@@ -124,7 +129,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -uo pipefail
-          pnpm exec supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --dry-run 2>&1 \
+          supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --dry-run 2>&1 \
             | sed -E 's#://[^@/[:space:]]*@#://***@#g' > dry-run.txt
           status=$?
           cat dry-run.txt
@@ -144,7 +149,7 @@ jobs:
         run: |
           set -uo pipefail
           # --yes: non-interactive (the CLI does not read piped answers).
-          pnpm exec supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --yes 2>&1 \
+          supabase db push --remote="$SUPABASE_DB_URL" --skip-vault --yes 2>&1 \
             | sed -E 's#://[^@/[:space:]]*@#://***@#g' > apply.txt
           status=$?
           cat apply.txt
@@ -163,7 +168,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -uo pipefail
-          pnpm exec supabase migration list --remote="$SUPABASE_DB_URL" 2>&1 \
+          supabase migration list --remote="$SUPABASE_DB_URL" 2>&1 \
             | sed -E 's#://[^@/[:space:]]*@#://***@#g' > list.txt
           status=$?
           cat list.txt
