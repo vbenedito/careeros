@@ -1,6 +1,6 @@
 # Web app design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 Low-level design of `apps/web`: the Next.js dashboard and the public landing page, deployed on Vercel. Rules are in [AUTH](../../specs/v0/02-auth.md), [DASH](../../specs/v0/06-dashboard.md), [SEC](../../specs/v0/07-security-privacy.md) and [LAND](../../specs/landing/00-landing.md). The big picture is in the [overview](overview.md).
 
@@ -22,7 +22,7 @@ The browser never calls Supabase. Every Supabase call runs on the server with th
 | `POST /api/extension/link` | Route handler | Session, same origin | Single-use token hash; 5/min quota; secret key | AUTH-08, 09 |
 | `POST /api/sites` | Route handler | Session, same origin | Adds a tracked site (normalized); duplicate = success | DASH-12, DATA-01 |
 | `DELETE /api/sites/[id]` | Route handler | Session, same origin | Removes a tracked site | DASH-12 |
-| `POST /api/account/delete` | Route handler (form) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies | DASH-14, AUTH-13, 14 |
+| `POST /api/account/delete` | Route handler (form, sent with `fetch` by Settings) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies; Settings follows its redirect, or goes to sign-in on the proxy's 401 (#78) | DASH-14, AUTH-13, 14 |
 | `/robots.txt`, `/sitemap.xml` | `app/robots.ts`, `app/sitemap.ts` | Public | Disallow `/api/`, `/auth/`; sitemap lists `/` and `/privacy` | LAND-07 |
 | `/opengraph-image`, `/icon.svg`, `/fonts/*` | Generated image, static files | Public | Share image, favicon, self-hosted fonts | LAND-04, 07 |
 
@@ -62,7 +62,7 @@ Redirect targets use `SITE_URL`, never the `Host` header (SEC-08).
 |---|---|---|
 | `default-src` | `'self'` | `'none'` |
 | `script-src` | `'self' 'nonce-…' 'strict-dynamic'` (+ `'unsafe-eval'` in dev); covers the analytics script, inserted by a nonce'd bundle | `'none'`; with analytics: `<site>/_vercel/insights/script.js` only |
-| `style-src` | `'self' 'nonce-…'` (`'unsafe-inline'` in dev) | `'sha256-…'` of the one inline `<style>` |
+| `style-src` | `'self' 'nonce-…'` (`'unsafe-inline'` in dev); Radix's scroll-lock `<style>` gets the nonce through `get-nonce`, set by `ThemeProvider` (#68) | `'sha256-…'` of the one inline `<style>` |
 | `style-src-attr` | `'unsafe-inline'` | `'unsafe-inline'` |
 | `img-src` | `'self' blob: data:` | `'self' data:` |
 | `font-src` | `'self'` | `'self'` |
@@ -93,7 +93,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |
 
-The viewer's time zone comes from the `tz` cookie set by `components/dashboard/time-zone-sync.tsx`; it is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
+The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives (the UTC page is sent too and revealed by CSS after 4 s, so a failed hydration never leaves the skeleton up) and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
 
 Browser-side code talks to the extension through `lib/extension/messenger.ts` (2 s timeout, 15 s for `DISCONNECT`) and reads replies with `lib/extension/protocol.ts`, which also detects an outdated extension or another account (AUTH-07a/07b). Browser calls to the app's own API go through `lib/http/request.ts`, which validates every body with Zod.
 
@@ -101,6 +101,7 @@ Browser-side code talks to the extension through `lib/extension/messenger.ts` (2
 
 | Layer | Behavior |
 |---|---|
+| Dashboard data | `loadDashboard` returns `invalid-time-zone` (retried in UTC), `temporary` or `permanent` (`lib/dashboard/load-error.ts`); the error state offers **Try again** only for `temporary` (DASH-11, #70) |
 | Route handlers | Reply `{ error: CODE }` with `Cache-Control: no-store` (`lib/http/json.ts`), e.g. `FORBIDDEN`, `NOT_AUTHENTICATED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `RATE_LIMITED`, `INTERNAL`. Form routes redirect back with `?error=` |
 | Server logs | `logServerError(event, fields)` (`lib/log.ts`): one JSON line in Vercel runtime logs with code, status and a capped message; never emails, tokens, cookies, URLs or user input (ENV-11, SEC-06) |
 | Pages | `app/error.tsx` and `app/global-error.tsx` show a friendly fallback; `app/not-found.tsx` for unknown routes |

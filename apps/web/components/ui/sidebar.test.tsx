@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LayoutDashboard } from "lucide-react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Sidebar, SidebarItem, SidebarProvider, SidebarTrigger } from "./sidebar";
 
@@ -59,5 +60,17 @@ describe("app sidebar (DASH-01, DASH-02)", () => {
     renderShell();
     fireEvent.click(await screen.findByRole("button", { name: "Open menu" }));
     expect(await screen.findByRole("dialog", { name: "Main navigation" })).toBeTruthy();
+  });
+
+  it("DASH-02 before hydration the trigger's label follows the breakpoint, never 'Collapse sidebar' on a phone (#68)", () => {
+    const html = renderToString(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    expect(html).not.toContain("aria-label=");
+    expect(html).not.toContain("aria-expanded");
+    expect(html).toMatch(/<span class="sr-only md:hidden">Open menu<\/span>/);
+    expect(html).toMatch(/<span class="sr-only max-md:hidden">Collapse sidebar<\/span>/);
   });
 });

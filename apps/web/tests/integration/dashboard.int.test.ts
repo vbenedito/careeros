@@ -63,6 +63,24 @@ describe("dashboard data (integration)", () => {
     const { status, html } = await page("/", cookie, "Mars/Olympus");
     expect(status).toBe(200);
     expect(text(html, "period-label")).toBe("This week");
+    expect(html).toContain(
+      "Days are shown in UTC because your time zone couldn&#x27;t be detected.",
+    );
+  });
+
+  it("DASH-07 first visit (no tz cookie): skeleton shown, UTC page and hint sent behind it for no-JS (#70)", async () => {
+    const { cookie } = await seededUser();
+    const { status, html } = await page("/dashboard", cookie);
+    expect(status).toBe(200);
+    const skeleton = html.indexOf('class="tz-pending-skeleton');
+    const content = html.indexOf('class="tz-pending-content');
+    expect(skeleton).toBeGreaterThan(-1);
+    expect(content).toBeGreaterThan(skeleton);
+    expect(html.slice(skeleton, content)).toContain("Loading your study time");
+    expect(html.slice(content)).toContain(
+      "Days are shown in UTC because your time zone couldn&#x27;t be detected.",
+    );
+    expect(text(html.slice(content), "card-period-value")).toBeDefined();
   });
 
   it("DASH-07 a zone Node accepts but Postgres does not know falls back to UTC (no broken page)", async () => {

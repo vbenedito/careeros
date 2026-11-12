@@ -31,6 +31,8 @@ interface SidebarState {
   /** Mobile drawer. */
   mobileOpen: boolean;
   isMobile: boolean;
+  /** False until the viewport is known (server render and hydration). */
+  viewportKnown: boolean;
   setMobileOpen: (open: boolean) => void;
   toggle: () => void;
 }
@@ -52,7 +54,10 @@ export function SidebarProvider({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // null until the effect reads the viewport: the server cannot know it (#68).
+  const [mobileQuery, setIsMobile] = useState<boolean | null>(null);
+  const isMobile = mobileQuery === true;
+  const viewportKnown = mobileQuery !== null;
 
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
@@ -72,8 +77,8 @@ export function SidebarProvider({
   }, [isMobile]);
 
   const value = useMemo(
-    () => ({ open, mobileOpen, isMobile, setMobileOpen, toggle }),
-    [open, mobileOpen, isMobile, toggle],
+    () => ({ open, mobileOpen, isMobile, viewportKnown, setMobileOpen, toggle }),
+    [open, mobileOpen, isMobile, viewportKnown, toggle],
   );
   return (
     <SidebarContext.Provider value={value}>
@@ -115,14 +120,26 @@ export function Sidebar({ children, label }: { children: ReactNode; label: strin
 }
 
 export function SidebarTrigger({ className }: { className?: string }) {
-  const { toggle, open, isMobile, mobileOpen } = useSidebar();
+  const { toggle, open, isMobile, viewportKnown, mobileOpen } = useSidebar();
+  const desktopLabel = open ? "Collapse sidebar" : "Expand sidebar";
+  if (!viewportKnown) {
+    // Before hydration (#68): the label follows the CSS breakpoint, so a phone never hears
+    // "Collapse sidebar". No aria-expanded yet: which panel it controls is not known.
+    return (
+      <Button variant="ghost" size="icon" className={className} onClick={toggle}>
+        <PanelLeft aria-hidden="true" />
+        <span className="sr-only md:hidden">Open menu</span>
+        <span className="sr-only max-md:hidden">{desktopLabel}</span>
+      </Button>
+    );
+  }
   return (
     <Button
       variant="ghost"
       size="icon"
       className={className}
       onClick={toggle}
-      aria-label={isMobile ? "Open menu" : open ? "Collapse sidebar" : "Expand sidebar"}
+      aria-label={isMobile ? "Open menu" : desktopLabel}
       aria-expanded={isMobile ? mobileOpen : open}
       {...(isMobile ? { "aria-controls": "mobile-sidebar" } : {})}
     >
