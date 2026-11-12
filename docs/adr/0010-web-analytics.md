@@ -1,6 +1,6 @@
 # ADR-0010 — Vercel Web Analytics on the website, cookieless, never in the extension
 
-Status: Proposed (Accepted on product-owner approval of the PR for #137) · Date: 2026-11-11 · Issue: #137 · Follow-up: #138 (GA4, deferred)
+Status: **Accepted** (product owner, 2026-11-11, PR #139) · Date: 2026-11-11 · Issue: #137 · Follow-up: #138 (GA4, deferred)
 
 ## Context
 We need simple traffic numbers for the website (page views, referrers, countries, devices) to measure the landing page and the launch. Constraints:
