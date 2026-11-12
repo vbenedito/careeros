@@ -42,7 +42,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
 - **When:** every Monday at 06:17 UTC, or on demand (Actions → Backup → Run workflow): [`.github/workflows/backup.yml`](../.github/workflows/backup.yml). **GitHub silently disables schedules in a public repository after 60 days without repository activity**: see the monthly check in §5.
 - **Protection:** the repository is public, so the dump is **encrypted with [age](https://age-encryption.org) inside the job, before it is stored**. The plaintext never reaches the disk or the artifact store. Only the private key can read it, and it never leaves the product owner's computer (keep a second copy in a password manager).
 - **Where:** an artifact of the workflow run, kept for 90 days (about 13 weekly copies).
-- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the job is skipped. Only the dump step receives the URL (#112).
+- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the backup job is skipped. In the Backup workflow only the dump step receives the URL (#112). The [migration workflow](#6-database-migrations) uses the same environment and values (#147).
 - **Setup checklist (one time, before merging a change to this workflow):**
   1. Settings → Environments → **New environment** `production-backup`; **Deployment branches and tags → Selected branches → `main`**.
   2. Add the secret `SUPABASE_DB_URL` and the variable `BACKUP_AGE_RECIPIENT` **to the environment**.
@@ -55,7 +55,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
 
 1. Download the artifact `careeros-YYYY-MM-DD-run….sql.gz.age` from the Backup workflow run (Actions → Backup → the run → Artifacts) and unzip the download.
 2. Prepare an empty database with the current schema:
-   - **New Supabase project:** create it, then `pnpm exec supabase link --project-ref <ref>` and `pnpm exec supabase db push --remote` (Supabase CLI 3 targets the local stack unless `--remote` is given).
+   - **New Supabase project:** create it, put its Session pooler string in the `SUPABASE_DB_URL` secret of the `production-backup` environment (step 4, §6 below), then Actions → **Database migrations (production)** → Run workflow, mode **apply** ([§6](#6-database-migrations)). The pre-migration backup of the empty project is harmless. Without Actions, use the laptop fallback in §6.
    - **Local check first (recommended):** `pnpm db:start`, then `pnpm exec supabase db reset`.
 3. Restore (one transaction: all or nothing). The connection string holds the database password, so type it at a hidden prompt instead of putting it in a command line or the shell history:
 
@@ -72,7 +72,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
    - §3 OAuth apps: change the callback URL of the Google and GitHub apps to the new `https://<new-ref>.supabase.co/auth/v1/callback`;
    - §4 Vercel environment (Supabase URL and both keys), then redeploy;
    - §5 a new extension release with the new URL and publishable key;
-   - §6 the `SUPABASE_DB_URL` secret **in the `production-backup` environment** (never at repository level).
+   - §6 the `SUPABASE_DB_URL` secret **in the `production-backup` environment** (never at repository level), if not already done in step 2.
 
    Restored accounts keep their ids, so each user finds their data after signing in again and reconnecting the extension (sessions are not in the backup).
 
@@ -84,6 +84,27 @@ Supabase Free has no automatic backups, so the repository makes its own:
 | Monthly | **Actions → Backup:** the workflow is still enabled (GitHub disables schedules after 60 days without repository activity; re-enable it there) and the last run is green. |
 | Monthly | Supabase usage (database size, egress) and Vercel usage pages: far below the limits above. |
 | After a dependency or Supabase upgrade | CI green, including the backup round trip. |
+| After merging a migration | **Actions → Database migrations (production):** the run is green and its summary's migration history shows every migration on both sides ([release](process/release.md#database-migrations)). |
+
+## 6. Database migrations
+
+Production migrations are applied by [`.github/workflows/migrate.yml`](../.github/workflows/migrate.yml) (#147), so they do not depend on anyone's laptop:
+
+- **Automatic:** every push to `main` that changes `supabase/migrations/**` backs up the database (same encrypted dump as §4, artifact `careeros-YYYY-MM-DD-run<id>-pre-migration.sql.gz.age`, 90 days), then runs `supabase db push --dry-run`, `supabase db push` and `supabase migration list`, with the results in the run's summary.
+- **On demand:** Actions → Database migrations (production) → Run workflow on `main`. Mode **dry-run** (default) only shows what would be applied; **apply** does the full run.
+- **Configuration:** the `production-backup` environment of §4 (`SUPABASE_DB_URL`, `BACKUP_AGE_RECIPIENT`); no other secrets. A missing value fails the run instead of skipping it, and `apply` refuses to run without the backup recipient. One run at a time (`concurrency: migrate-production`), never cancelled half-way.
+- **If a run fails:** read the summary and the step log. A failed backup stops the run before anything is applied. A failed `db push` stops at the failing migration: Postgres rolls back that migration's transaction, earlier ones in the same run stay applied; the migration history section shows which. Fix forward with a new migration (the [release process](process/release.md#database-migrations)); restore the pre-migration backup (§4) only for data loss.
+
+**Emergency fallback (Actions unavailable):** from a laptop with the repository at the merged `main` commit. First take a backup if at all possible (Backup workflow, or `scripts/ops/backup-encrypted.sh` with `PGURL` typed at a hidden prompt as in §4 and `AGE_RECIPIENT` set to the public key), then:
+
+```bash
+pnpm exec supabase link --project-ref <ref>
+pnpm exec supabase db push --remote --dry-run   # review
+pnpm exec supabase db push --remote
+pnpm exec supabase migration list --remote
+```
+
+Supabase CLI 3 targets the local stack unless `--remote` is given. Afterwards, run the workflow in **dry-run** mode once it is available again: it should report nothing to apply.
 
 ## Chrome Web Store
 

@@ -33,7 +33,8 @@ before=$(fingerprint)
 
 age-keygen -o "$work/key.txt" 2>/dev/null
 recipient=$(grep -o 'age1[0-9a-z]*' "$work/key.txt")
-scripts/ops/db-dump.sh | gzip -9 | age --encrypt --recipient "$recipient" > "$work/dump.age"
+# The same script as the backup and migration workflows (#147).
+AGE_RECIPIENT="$recipient" scripts/ops/backup-encrypted.sh "$work/dump.age" >/dev/null
 # The stored file must not be readable without the key.
 if gzip -dc < "$work/dump.age" >/dev/null 2>&1; then echo "dump is not encrypted" >&2; exit 1; fi
 

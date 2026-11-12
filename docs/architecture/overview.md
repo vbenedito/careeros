@@ -230,9 +230,9 @@ flowchart LR
 | Part | Where | How it gets there | Details |
 |---|---|---|---|
 | Dashboard and landing | Vercel (Hobby) | Built from `main` | [release](../process/release.md#dashboard), ENV-05b |
-| Database, Auth | Supabase (Free) | Migrations in `supabase/migrations` | [release](../process/release.md#database-migrations), [operations](../operations.md) |
+| Database, Auth | Supabase (Free) | Migrations in `supabase/migrations`, applied by `migrate.yml` on merge to `main` | [release](../process/release.md#database-migrations), [operations](../operations.md) |
 | Extension | Chrome Web Store; GitHub Releases for unpacked builds | `release:store` / `release` zips | [release](../process/release.md#extension), STORE-01..07, ENV-05a |
-| CI and backups | GitHub Actions (`ci.yml`, `backup.yml`) | On pull requests, pushes to `main`, weekly schedule | ENV-08, [operations §4](../operations.md#4-backups) |
+| CI, backups and migrations | GitHub Actions (`ci.yml`, `backup.yml`, `migrate.yml`) | On pull requests, pushes to `main`, weekly schedule, migration changes on `main` | ENV-08, [operations §4](../operations.md#4-backups), [§6](../operations.md#6-database-migrations) |
 
 ## Cross-cutting concerns
 
