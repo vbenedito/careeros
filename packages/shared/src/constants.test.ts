@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DATA, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
+import { AUTH, DATA, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
 
 const specsDir = resolve(import.meta.dirname, "../../../specs/v0");
 
@@ -40,6 +40,13 @@ describe("constants match the specs", () => {
     expect(spec.get("DISCONNECT_WAIT_S")).toEqual([SYNC.DISCONNECT_WAIT_S]);
     expect(spec.get("CLOCK_SLACK_S")).toEqual([SYNC.CLOCK_SLACK_S]);
     expect(spec.get("DEFERRED_RETRY_CAP_MIN")).toEqual([SYNC.DEFERRED_RETRY_CAP_MIN]);
+  });
+
+  it("AUTH-10b AUTH-10c 02-auth.md timeouts", () => {
+    const spec = specConstants("02-auth.md");
+    for (const [name, value] of Object.entries(AUTH)) {
+      expect(spec.get(name), name).toEqual([value]);
+    }
   });
 
   it("01-tracking.md §2 has no constant missing from code", () => {

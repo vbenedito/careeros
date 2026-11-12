@@ -41,6 +41,12 @@ export interface SyncState {
    * re-evaluated against it every cycle.
    */
   serverSkewMs: number | null;
+  /**
+   * SYNC-06b (grill H5): coarse kind of the unexpected error that ended the last cycle (class
+   * name and known code from `errorKind`, never a message), or null. Cleared when a cycle
+   * completes. For diagnostics ("Sync error" support); holds no personal data.
+   */
+  lastErrorKind: string | null;
 }
 
 export const INITIAL_SYNC_STATE: SyncState = {
@@ -52,6 +58,7 @@ export const INITIAL_SYNC_STATE: SyncState = {
   clockAheadMs: null,
   probeNext: false,
   serverSkewMs: null,
+  lastErrorKind: null,
 };
 
 /** A cycle older than this is from a worker that was killed: not "syncing" any more. */

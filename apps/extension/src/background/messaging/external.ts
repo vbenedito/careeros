@@ -9,7 +9,10 @@ import {
   ExtensionRequestSchema,
   type ExtensionStatusReply,
   PROTOCOL_VERSION,
+  ProtocolEnvelopeSchema,
 } from "@careeros/shared";
+import { errorKind } from "../../lib/error-kind";
+import type { Logger } from "../../lib/log";
 import type { AuthService } from "../auth/auth-service";
 
 /** Protocol versions this build understands (AUTH-07a). */
@@ -28,6 +31,7 @@ export function createExternalMessageHandler(deps: {
   auth: AuthService;
   dashboardOrigin: string;
   extensionVersion: string;
+  log?: Logger;
 }) {
   const { auth, dashboardOrigin, extensionVersion } = deps;
   const error = (code: ExtensionError["code"]): ExtensionError => ({
@@ -44,13 +48,18 @@ export function createExternalMessageHandler(deps: {
     // Only the dashboard page; never another extension (sender.id) or another origin.
     if (sender.id !== undefined || sender.origin !== dashboardOrigin) return null;
 
+    // AUTH-07c (grill A3): the version first. A message of another version (a newer dashboard,
+    // possibly with new types or fields) gets UNSUPPORTED_PROTOCOL instead of silence, so the
+    // dashboard can say "update" rather than "not installed".
+    const envelope = ProtocolEnvelopeSchema.safeParse(message);
+    if (!envelope.success) return null;
+    if (!SUPPORTED_PROTOCOL_VERSIONS.includes(envelope.data.protocolVersion)) {
+      return error("UNSUPPORTED_PROTOCOL");
+    }
+    // A message of a supported version must match it exactly (AUTH-07).
     const parsed = ExtensionRequestSchema.safeParse(message);
     if (!parsed.success) return null;
     const request = parsed.data;
-
-    if (!SUPPORTED_PROTOCOL_VERSIONS.includes(request.protocolVersion)) {
-      return error("UNSUPPORTED_PROTOCOL");
-    }
 
     try {
       switch (request.type) {
@@ -83,7 +92,9 @@ export function createExternalMessageHandler(deps: {
           return error(result.code === "SYNC_IN_PROGRESS" ? "UNSYNCED_DATA" : result.code);
         }
       }
-    } catch {
+    } catch (cause) {
+      // SYNC-06b (grill H5): the kind only (class name, known code), never the message.
+      deps.log?.warn("external.request_failed", { type: request.type, kind: errorKind(cause) });
       return error("INTERNAL");
     }
   };

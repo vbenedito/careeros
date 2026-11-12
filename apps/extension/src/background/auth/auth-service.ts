@@ -3,9 +3,10 @@
  * Pure application logic: Supabase and chrome.storage are injected, so every rule is unit-tested.
  */
 
+import { AUTH } from "@careeros/shared";
 import type { AccountEpoch } from "../account-epoch";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
-import { createMutex } from "./mutex";
+import { createMutex, LockTimeoutError, type MutexOptions } from "./mutex";
 import { DATA_OWNER_KEY, type KeyValueArea, NEEDS_RECONNECT_KEY } from "./storage";
 
 /** Refresh when the access token expires within this window (AUTH-10). */
@@ -47,11 +48,12 @@ export interface AuthBackend {
 /** Hooks into the sync and tracking modules (#16–#18). */
 export interface LocalData {
   /**
-   * Tries to upload pending intervals; returns how many remain unsynced.
+   * Tries to upload pending intervals; returns how many remain unsynced, and whether the upload
+   * was skipped because a sync cycle was already running (AUTH-12c).
    * Called while AuthService's (non-reentrant) lock is held, so it must never call back into
    * AuthService: it gets a token provider that works under that lock.
    */
-  flush(accessToken: TokenProvider): Promise<number>;
+  flush(accessToken: TokenProvider): Promise<FlushResult>;
   /** Number of intervals waiting to be uploaded (outbox and deferred). */
   pendingCount(): Promise<number>;
   /** #65: intervals the server rejected (quarantine): never synced, deleted by Disconnect. */
@@ -69,6 +71,13 @@ export interface LocalData {
    */
   stopTracking(): Promise<void>;
   resumeTracking(): Promise<void>;
+}
+
+export interface FlushResult {
+  /** Intervals still unsynced after the attempt. */
+  remaining: number;
+  /** The final upload did not run: a sync cycle had started meanwhile (AUTH-12c). */
+  skipped: boolean;
 }
 
 export type ConnectResult =
@@ -106,9 +115,12 @@ export function createAuthService(deps: {
   now: () => number;
   /** #113: bumped when the session is invalidated or a new one is adopted. */
   epoch?: AccountEpoch;
+  /** Tests only: the AUTH-10c lock timeout and its timers. */
+  lock?: MutexOptions;
 }) {
   const { backend, storage, localData, now } = deps;
-  const exclusive = createMutex();
+  // AUTH-10c (grill E1): a holder that never finishes cannot block every later caller.
+  const exclusive = createMutex(deps.lock ?? { acquireTimeoutMs: AUTH.LOCK_TIMEOUT_S * 1000 });
 
   async function dataOwner(): Promise<string | null> {
     const value = (await storage.get(DATA_OWNER_KEY))[DATA_OWNER_KEY];
@@ -208,8 +220,15 @@ export function createAuthService(deps: {
      * REFRESH_MARGIN_S. Returns null when not connected or temporarily unavailable.
      */
     /** `forceRefresh`: the server said the token expired although it looks valid here. */
-    accessToken(options: TokenOptions = {}) {
-      return exclusive(() => accessTokenLocked(options));
+    async accessToken(options: TokenOptions = {}): Promise<string | null> {
+      try {
+        return await exclusive(() => accessTokenLocked(options));
+      } catch (error) {
+        // AUTH-10c: the lock was not free in time: temporarily unavailable, like a refresh
+        // that failed for a temporary reason (the sync cycle backs off, AUTH-10a).
+        if (error instanceof LockTimeoutError) return null;
+        throw error;
+      }
     },
 
     /** AUTH-11: an API call proved the session or the user is gone (401, deleted user). */
@@ -230,11 +249,16 @@ export function createAuthService(deps: {
       const idle = (await localData.waitForUpload?.()) ?? true;
       // Without a discard the result would count intervals that are being uploaded right now.
       if (!idle && !options.discardUnsynced) return { ok: false, code: "SYNC_IN_PROGRESS" };
-      return exclusive(async (): Promise<DisconnectResult> => {
+      const locked = exclusive(async (): Promise<DisconnectResult> => {
         let done = false;
         try {
           await localData.stopTracking();
-          const remaining = await localData.flush(accessTokenLocked);
+          const { remaining, skipped } = await localData.flush(accessTokenLocked);
+          // AUTH-12c (grill E2): a cycle started between the wait above and the lock, so the
+          // final sync was skipped; that cycle is uploading these intervals right now (it waits
+          // for this lock to get a token). "Still syncing", not "unsynced".
+          if (skipped && remaining > 0 && !options.discardUnsynced)
+            return { ok: false, code: "SYNC_IN_PROGRESS" };
           const quarantined = (await localData.quarantinedCount?.()) ?? 0;
           const toConfirm = remaining + (options.includeQuarantined ? quarantined : 0);
           if (toConfirm > 0 && !options.discardUnsynced)
@@ -249,6 +273,13 @@ export function createAuthService(deps: {
           if (!done) await localData.resumeTracking();
         }
       });
+      try {
+        return await locked;
+      } catch (error) {
+        // AUTH-10c: the lock was not free in time; nothing was changed. Try again shortly.
+        if (error instanceof LockTimeoutError) return { ok: false, code: "SYNC_IN_PROGRESS" };
+        throw error;
+      }
     },
 
     /**

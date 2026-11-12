@@ -95,7 +95,7 @@ export function fakeLocalData(pending = 0, afterFlush = pending) {
     flush: async (_accessToken) => {
       state.calls.push("flush");
       state.pending = afterFlush;
-      return afterFlush;
+      return { remaining: afterFlush, skipped: false };
     },
     stopTracking: async () => {
       state.calls.push("stop");

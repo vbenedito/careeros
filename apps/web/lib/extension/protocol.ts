@@ -1,11 +1,17 @@
 /**
- * Interprets the extension's replies for the connect page (AUTH-07a/07b). Pure: unit-tested.
+ * Interprets the extension's replies for the connect page (AUTH-07a/07b/07c). Pure: unit-tested.
+ *
+ * AUTH-07c (grill A3): the protocol version is read first. A reply without one is "no extension";
+ * a reply of another version, or one of this version that cannot be read, comes from an
+ * extension that speaks something else: "outdated", never "not installed". Reply schemas ignore
+ * fields they do not know, so a newer extension may add some within protocol 1.
  */
 import {
   ExtensionAckReplySchema,
   ExtensionErrorSchema,
   ExtensionStatusReplySchema,
   PROTOCOL_VERSION,
+  ProtocolEnvelopeSchema,
 } from "@careeros/shared";
 
 /** Protocol versions this dashboard can talk to. */
@@ -17,6 +23,12 @@ export type ExtensionState =
   | { kind: "not-connected"; extensionVersion: string }
   | { kind: "connected"; extensionVersion: string; email: string | null };
 
+/** The extension version a reply states, if it states one we can show. */
+function versionIn(reply: unknown): string | null {
+  const value = (reply as { extensionVersion?: unknown }).extensionVersion;
+  return typeof value === "string" && /^[0-9][0-9A-Za-z.+-]{0,31}$/.test(value) ? value : null;
+}
+
 /**
  * Turns a PING/STATUS reply (or no reply at all) into what the page shows. When the extension
  * is connected to a different account than the dashboard's, the page must not report success.
@@ -25,7 +37,11 @@ export function interpretStatus(
   reply: unknown,
   dashboardEmail: string | null = null,
 ): ExtensionState | { kind: "other-account"; email: string | null } {
-  if (reply === undefined || reply === null) return { kind: "not-installed" };
+  const envelope = ProtocolEnvelopeSchema.safeParse(reply);
+  if (!envelope.success) return { kind: "not-installed" };
+  if (!DASHBOARD_PROTOCOL_VERSIONS.includes(envelope.data.protocolVersion)) {
+    return { kind: "outdated", extensionVersion: versionIn(reply) };
+  }
   const error = ExtensionErrorSchema.safeParse(reply);
   if (error.success) {
     return error.data.code === "UNSUPPORTED_PROTOCOL"
@@ -33,10 +49,7 @@ export function interpretStatus(
       : { kind: "not-installed" };
   }
   const status = ExtensionStatusReplySchema.safeParse(reply);
-  if (!status.success) return { kind: "not-installed" };
-  if (!DASHBOARD_PROTOCOL_VERSIONS.includes(status.data.protocolVersion)) {
-    return { kind: "outdated", extensionVersion: status.data.extensionVersion };
-  }
+  if (!status.success) return { kind: "outdated", extensionVersion: versionIn(reply) };
   if (!status.data.connected) {
     return { kind: "not-connected", extensionVersion: status.data.extensionVersion };
   }
@@ -56,10 +69,15 @@ export type ConnectOutcome =
 
 /** Turns a CONNECT reply into what the page shows. */
 export function interpretConnect(reply: unknown): ConnectOutcome {
+  const envelope = ProtocolEnvelopeSchema.safeParse(reply);
+  if (!envelope.success) return { kind: "failed" };
+  if (!DASHBOARD_PROTOCOL_VERSIONS.includes(envelope.data.protocolVersion)) {
+    return { kind: "outdated" };
+  }
   const ack = ExtensionAckReplySchema.safeParse(reply);
   if (ack.success) return { kind: "connected", email: ack.data.email ?? null };
   const error = ExtensionErrorSchema.safeParse(reply);
-  if (!error.success) return { kind: "failed" };
+  if (!error.success) return { kind: "outdated" };
   switch (error.data.code) {
     case "ALREADY_CONNECTED":
       return { kind: "already-connected" };

@@ -526,3 +526,36 @@ describe("server time and skew (#150 review)", () => {
     expect(lines.join("\n")).not.toMatch(/leetcode|token|@/);
   });
 });
+
+describe("unexpected errors (SYNC-06b, grill H5)", () => {
+  it("SYNC-06b a cycle ending in an unexpected error records and logs its kind only; success clears it", async () => {
+    const lines: string[] = [];
+    const storage = fakeStorage({ [OUTBOX_KEY]: [interval()] });
+    let fail = true;
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: async (t) => {
+          if (fail) throw new RangeError("a@example.test https://leetcode.com/token");
+          return t();
+        },
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      isConnected: async () => true,
+      log: createLogger({ debug: false, sink: (_level, line) => lines.push(line) }),
+      ingest: async (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id) }),
+    });
+    expect(await sync.run(token)).toBe("failed");
+    const state = () => storage.data.get(SYNC_STATE_KEY) as SyncState;
+    expect(state().lastErrorKind).toBe("RangeError");
+    expect(lines.join("\n")).toContain('"kind":"RangeError"');
+    expect(lines.join("\n")).not.toMatch(/leetcode|token|@/);
+    fail = false;
+    expect(await sync.run(token)).toBe("done");
+    expect(state().lastErrorKind).toBeNull();
+  });
+});

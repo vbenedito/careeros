@@ -39,6 +39,20 @@ export const SYNC = {
   DEFERRED_RETRY_CAP_MIN: 30,
 } as const;
 
+/** specs/v0/02-auth.md (AUTH-10b, AUTH-10c) */
+export const AUTH = {
+  /**
+   * AUTH-10b: a token refresh that has not answered by then counts as a temporary failure
+   * ("unavailable"); the session is kept.
+   */
+  REFRESH_TIMEOUT_S: 15,
+  /**
+   * AUTH-10c: how long a caller waits for the extension's auth lock before giving up with a
+   * temporary failure (longer than a refresh plus a bounded revoke plus one ingest call).
+   */
+  LOCK_TIMEOUT_S: 45,
+} as const;
+
 /** specs/v0/04-data-model.md */
 export const DATA = {
   /** DATA-01 */

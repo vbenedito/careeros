@@ -10,6 +10,7 @@ import { SYNC, TRACKING } from "@careeros/shared";
 import { localDayStartMs } from "../engine/engine";
 import { config, isSupabaseConfigured } from "../lib/config";
 import { IS_DEV_BUILD } from "../lib/env";
+import { errorKind } from "../lib/error-kind";
 import { createLogger } from "../lib/log";
 import { createAccountEpoch } from "./account-epoch";
 import { createDataClient } from "./api/data-client";
@@ -158,12 +159,13 @@ const runSync = async () => {
   log.debug("sync.cycle", { outcome });
 };
 const triggers = createSyncTriggers({ runSync, refreshDomains });
-const syncNow = () => triggers.onAlarm().catch(() => log.warn("sync.cycle_failed", {}));
+const cycleFailed = (error: unknown) => log.warn("sync.cycle_failed", { kind: errorKind(error) });
+const syncNow = () => triggers.onAlarm().catch(cycleFailed);
 
 chrome.storage.onChanged.addListener((changes, area) => {
   const change = changes[SESSION_STORAGE_KEY];
   if (area === "local" && change) {
-    void triggers.onSessionChange(change).catch(() => log.warn("sync.cycle_failed", {}));
+    void triggers.onSessionChange(change).catch(cycleFailed);
   }
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -205,7 +207,9 @@ const handleInternal = createInternalMessageHandler({
         unsynced: result.unsynced,
         quarantined: result.quarantined,
       };
-    } catch {
+    } catch (error) {
+      // SYNC-06b (grill H5): the kind only, never the message.
+      log.warn("auth.disconnect_failed", { kind: errorKind(error) });
       return { ok: false, code: "FAILED" };
     }
   },
@@ -213,7 +217,8 @@ const handleInternal = createInternalMessageHandler({
     if (!auth) return { ok: false, code: "FAILED" };
     try {
       return await auth.forgetLocalData();
-    } catch {
+    } catch (error) {
+      log.warn("auth.forget_failed", { kind: errorKind(error) });
       return { ok: false, code: "FAILED" };
     }
   },
@@ -231,6 +236,7 @@ const handleExternal = auth
       auth,
       dashboardOrigin: config.dashboardOrigin,
       extensionVersion: chrome.runtime.getManifest().version,
+      log,
     })
   : null;
 

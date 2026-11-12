@@ -5,6 +5,7 @@
  * Failures back off and never discard data.
  */
 import { DATA, type Interval, SYNC } from "@careeros/shared";
+import { errorKind } from "../../lib/error-kind";
 import type { Logger } from "../../lib/log";
 import { parseSyncState, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import type { AccountEpoch } from "../account-epoch";
@@ -114,6 +115,7 @@ export function createSyncService(deps: {
             notBefore: 0,
             lastOutcome: "ok",
             lastSyncedAt: now(),
+            lastErrorKind: null,
           });
           return "done";
         }
@@ -195,10 +197,16 @@ export function createSyncService(deps: {
         });
         return "failed";
       }
-    } catch {
+    } catch (error) {
       // A local store task that timed out (TRK-17a) or failed: nothing was settled; try again
-      // next cycle. Only the "syncing" marker is taken back.
-      if (marked) await writeState(state);
+      // next cycle. The "syncing" marker is taken back and the error's kind kept (SYNC-06b).
+      const kind = errorKind(error);
+      deps.log?.warn("sync.cycle_error", { kind });
+      try {
+        await writeState({ ...state, lastErrorKind: kind });
+      } catch {
+        // storage itself failed: nothing more to record
+      }
       return "failed";
     }
   }

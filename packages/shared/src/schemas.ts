@@ -46,7 +46,17 @@ export type Interval = z.infer<typeof IntervalSchema>;
 
 const ProtocolVersionSchema = z.number().int().min(1);
 
-/** Messages the extension accepts from the dashboard origin. Anything else is ignored. */
+/**
+ * AUTH-07c (grill A3): read first, before the rest of a message or reply. Only the version is
+ * checked; whatever else the object holds is left for the schema of that version. A message the
+ * receiver cannot read further can then still be told apart as "another protocol version".
+ */
+export const ProtocolEnvelopeSchema = z.object({ protocolVersion: ProtocolVersionSchema });
+
+/**
+ * Messages the extension accepts from the dashboard origin. Anything else is ignored. Requests of
+ * a supported version stay strict (AUTH-07): a v1 dashboard never sends more than this.
+ */
 export const ExtensionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PING"), protocolVersion: ProtocolVersionSchema }).strict(),
   z.object({ type: z.literal("STATUS"), protocolVersion: ProtocolVersionSchema }).strict(),
@@ -71,33 +81,31 @@ export const EXTENSION_ERROR_CODES = [
   "INTERNAL",
 ] as const;
 
-export const ExtensionErrorSchema = z
-  .object({
-    ok: z.literal(false),
-    code: z.enum(EXTENSION_ERROR_CODES),
-    protocolVersion: ProtocolVersionSchema,
-  })
-  .strict();
+/*
+ * Replies (AUTH-07c, grill A3): not strict. Fields a newer extension may add are ignored; the
+ * known fields are still validated. A receiver parses `ProtocolEnvelopeSchema` first.
+ */
+export const ExtensionErrorSchema = z.object({
+  ok: z.literal(false),
+  code: z.enum(EXTENSION_ERROR_CODES),
+  protocolVersion: ProtocolVersionSchema,
+});
 
 /** Reply to PING and STATUS (AUTH-07a). `email` only when connected. */
-export const ExtensionStatusReplySchema = z
-  .object({
-    ok: z.literal(true),
-    protocolVersion: ProtocolVersionSchema,
-    extensionVersion: z.string().min(1),
-    connected: z.boolean(),
-    email: z.email().optional(),
-  })
-  .strict();
+export const ExtensionStatusReplySchema = z.object({
+  ok: z.literal(true),
+  protocolVersion: ProtocolVersionSchema,
+  extensionVersion: z.string().min(1),
+  connected: z.boolean(),
+  email: z.email().optional(),
+});
 
 /** Reply to CONNECT and DISCONNECT. */
-export const ExtensionAckReplySchema = z
-  .object({
-    ok: z.literal(true),
-    protocolVersion: ProtocolVersionSchema,
-    email: z.email().optional(),
-  })
-  .strict();
+export const ExtensionAckReplySchema = z.object({
+  ok: z.literal(true),
+  protocolVersion: ProtocolVersionSchema,
+  email: z.email().optional(),
+});
 
 export type ExtensionError = z.infer<typeof ExtensionErrorSchema>;
 export type ExtensionStatusReply = z.infer<typeof ExtensionStatusReplySchema>;

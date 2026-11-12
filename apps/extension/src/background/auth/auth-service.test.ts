@@ -1,7 +1,10 @@
+import type { Interval } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
 import { fakeBackend, fakeLocalData, fakeStorage, session } from "../../test/fakes";
 import { createAccountEpoch } from "../account-epoch";
-import { DOMAINS_CACHE_KEY } from "../tracking/keys";
+import { createSyncService, type IngestResult } from "../sync/sync-service";
+import { DOMAINS_CACHE_KEY, OUTBOX_KEY } from "../tracking/keys";
+import { createOutbox } from "../tracking/outbox";
 import { createAuthService, REFRESH_MARGIN_S } from "./auth-service";
 import { DATA_OWNER_KEY, NEEDS_RECONNECT_KEY } from "./storage";
 
@@ -322,5 +325,118 @@ describe("Disconnect while an upload is still running (#150 review, AUTH-12b)", 
     ld.localData.waitForUpload = async () => false;
     expect(await auth.disconnect({ discardUnsynced: true })).toEqual({ ok: true });
     expect(fb.calls).toContain("signOut");
+  });
+});
+
+/** Interval timestamps without milliseconds, as the engine writes them. */
+const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
+
+describe("Disconnect racing a sync alarm (grill E2)", () => {
+  it("AUTH-12c a cycle that starts between the wait and the lock: SYNC_IN_PROGRESS, then the upload completes", async () => {
+    const interval: Interval = {
+      id: "00000000-0000-4000-8000-000000000001",
+      device_id: "00000000-0000-4000-8000-00000000d001",
+      domain: "leetcode.com",
+      started_at: iso(NOW_MS - 20 * 60_000),
+      ended_at: iso(NOW_MS - 10 * 60_000),
+    };
+    const fb = fakeBackend();
+    fb.setCurrent(session("alice"));
+    const storage = fakeStorage({ [OUTBOX_KEY]: [interval] });
+    const outbox = createOutbox({
+      area: storage,
+      exclusive: (t) => t(),
+      now: () => NOW_MS,
+      startOfLocalDay: (t) => t - (t % 86_400_000),
+    });
+    const uploaded: string[] = [];
+    const sync = createSyncService({
+      outbox,
+      storage,
+      now: () => NOW_MS,
+      sessionRejected: async () => undefined,
+      isConnected: async () => (await fb.backend.currentSession()) !== null,
+      ingest: async (batch): Promise<IngestResult> => {
+        uploaded.push(...batch.map((i) => i.id));
+        return { ok: true, confirmedIds: batch.map((i) => i.id) };
+      },
+    });
+    const pendingCount = async () => {
+      const counts = await outbox.counts();
+      return counts.pending + counts.deferred;
+    };
+    let alarmCycle: Promise<unknown> = Promise.resolve();
+    const auth = createAuthService({
+      backend: fb.backend,
+      storage,
+      now: () => NOW_MS,
+      localData: {
+        // Idle when Disconnect checks; the alarm fires right after, before Disconnect takes
+        // the lock. Its cycle then waits for that lock to get a token.
+        waitForUpload: async () => {
+          const idle = await sync.waitIdle(1000);
+          alarmCycle = sync.run(() => auth.accessToken());
+          return idle;
+        },
+        flush: async (accessToken) => {
+          const outcome = await sync.run(accessToken, { force: true, ifIdle: true });
+          return { remaining: await pendingCount(), skipped: outcome === "skipped" };
+        },
+        pendingCount,
+        quarantinedCount: async () => 0,
+        clear: async () => undefined,
+        stopTracking: async () => undefined,
+        resumeTracking: async () => undefined,
+      },
+    });
+
+    expect(await auth.disconnect({ includeQuarantined: true })).toEqual({
+      ok: false,
+      code: "SYNC_IN_PROGRESS",
+    });
+    expect(fb.calls).not.toContain("signOut");
+    await alarmCycle; // the alarm's cycle uploads what the user would have been asked to discard
+    expect(uploaded).toEqual([interval.id]);
+    expect(await auth.disconnect({ includeQuarantined: true })).toEqual({ ok: true });
+  });
+
+  it("AUTH-12c a skipped final sync with a confirmed discard still disconnects", async () => {
+    const { auth, fb, ld } = setup({ pending: 2 });
+    fb.setCurrent(session("alice"));
+    ld.localData.flush = async () => ({ remaining: 2, skipped: true });
+    expect(await auth.disconnect({ discardUnsynced: true })).toEqual({ ok: true });
+  });
+});
+
+describe("auth lock that is never released (AUTH-10c, grill E1)", () => {
+  function stuckSetup() {
+    const fb = fakeBackend();
+    fb.setCurrent({ ...session("alice"), expiresAt: nowS + 30 }); // needs a refresh
+    let never: Promise<never> = new Promise(() => undefined);
+    fb.backend.refresh = () => never; // a holder that never finishes
+    const ld = fakeLocalData(0);
+    const auth = createAuthService({
+      backend: fb.backend,
+      storage: fakeStorage(),
+      localData: ld.localData,
+      now: () => NOW_MS,
+      lock: { acquireTimeoutMs: 20 },
+    });
+    never = new Promise(() => undefined);
+    return { auth, fb, ld };
+  }
+
+  it("AUTH-10c a later token request is temporarily unavailable instead of waiting forever", async () => {
+    const { auth } = stuckSetup();
+    void auth.accessToken(); // holds the lock forever
+    expect(await auth.accessToken()).toBeNull();
+  });
+
+  it("AUTH-10c Disconnect behind a stuck holder changes nothing and says still syncing", async () => {
+    const { auth, fb, ld } = stuckSetup();
+    void auth.accessToken();
+    expect(await auth.disconnect()).toEqual({ ok: false, code: "SYNC_IN_PROGRESS" });
+    expect(ld.state.calls).toEqual([]);
+    expect(fb.calls).not.toContain("signOut");
   });
 });
