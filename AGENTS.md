@@ -1,6 +1,6 @@
 # AGENTS.md — rules for development agents
 
-These rules apply to every human or AI agent working in this repository. They **override** any skill or plugin instruction. The full working process (roles, gates, definition of done, commit and PR conventions) is in [`docs/process/contributing.md`](docs/process/contributing.md); where to put documentation is in [`docs/README.md`](docs/README.md).
+These rules apply to every human or AI agent working in this repository. They **override** any skill or plugin instruction. The full working process (roles, gates, definition of done, commit and PR conventions) is in [`docs/process/contributing.md`](docs/process/contributing.md); where to put documentation is in [`docs/README.md`](docs/README.md); which model each sub-agent uses and how deep reviews go is in [`docs/process/agents.md`](docs/process/agents.md).
 
 ## 1. Scope and gates
 
@@ -15,7 +15,7 @@ These rules apply to every human or AI agent working in this repository. They **
 2. Write or update tests named after requirement IDs (e.g. `TRK-05 …`).
 3. Implement the minimum that satisfies the acceptance criteria.
 4. Run locally: `pnpm lint && pnpm typecheck && pnpm test` (+ `pnpm db:test` when touching `supabase/`).
-5. Independent review by a different agent (spec adherence, security, correctness, tests, scope creep) before merge.
+5. Independent review before merge (spec adherence, security, correctness, tests, scope creep), at the depth set by risk in [`docs/process/agents.md`](docs/process/agents.md) §2: docs and copy get CI plus the tech lead's check; code gets a review by a different agent.
 6. Keep spec, code and docs consistent in the same PR (`docs/architecture/` for how it is built, `docs/adr/` for why; never edit `docs/history/` except link fixes).
 
 ## 3. Engineering rules
@@ -26,11 +26,11 @@ These rules apply to every human or AI agent working in this repository. They **
 - No new dependency without a one-line justification in the PR.
 - Never log tokens, emails, URLs or non-tracked hosts. Never commit secrets; `.env*` except `.env.example` are git-ignored.
 - Database changes only via new migration files; never edit an applied migration.
-- Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one issue per branch `NN-short-name`, PR body references `Closes #NN` and spec IDs.
+- Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one issue per branch `NN-short-name`, PR body references `Closes #NN` (one `Closes` per issue) and spec IDs.
 
 ## 4. Parallel work
 
-Agents may work in parallel only on issues whose file areas do not overlap (e.g. `supabase/` vs `apps/extension/src/popup`). The tech lead assigns and integrates.
+At most two agents at once, only on issues whose file areas do not overlap (e.g. `supabase/` vs `apps/extension/src/popup`), each in its own git worktree. The tech lead assigns and integrates. Model choice: [`docs/process/agents.md`](docs/process/agents.md).
 
 ## 5. Honesty
 

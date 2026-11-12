@@ -35,6 +35,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Chrome Web Store listing](chrome-web-store/listing.md) | living | product owner | Submission in progress | 2026-11-11 |
 | **Process and operations** | | | | |
 | [Contributing](process/contributing.md) | living | tech lead | Current | 2026-11-11 |
+| [Agents: model routing](process/agents.md) | living | tech lead | Current | 2026-11-12 |
 | [Release](process/release.md) | living | tech lead | Current; some steps proposed | 2026-11-12 |
 | [Operations](operations.md) | living | tech lead | Current | 2026-11-12 |
 | [Agent rules (AGENTS.md)](../AGENTS.md) | living | tech lead | Current | 2026-11-11 |
