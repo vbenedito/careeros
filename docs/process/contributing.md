@@ -45,7 +45,7 @@ flowchart LR
 3. Branch from `main`: `NN-short-name` (issue number first), e.g. `113-extension-local-data`.
 4. Write or update tests named after requirement IDs (e.g. `TRK-05 …`), then implement the minimum that meets the acceptance criteria.
 5. Run the checks locally (below) and open a pull request.
-6. A reviewer who did not write the code checks spec adherence, security, correctness, tests and scope creep.
+6. A reviewer who did not write the code checks spec adherence, security, correctness, tests and scope creep. The depth follows the risk of the change ([agents.md](agents.md) §2): docs and copy get CI plus the tech lead's check; code gets a Sonnet review; sync, auth, security, migrations and secret-holding workflows get an Opus deep review.
 7. The product owner says "approved". Then the tech lead squash-merges.
 
 ## Definition of done
