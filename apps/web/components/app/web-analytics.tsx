@@ -8,7 +8,9 @@
  *
  * Not rendered on `/connect`, `/settings` and `/auth/*` (the pages that mint extension sessions,
  * delete accounts and handle sign-in codes): the script is not loaded when one of them is the
- * first page, and the component is unmounted when the viewer navigates to one.
+ * first page, and the component is unmounted when the viewer navigates to one. Every in-app link to them is a plain `<a>` (a full
+ * document load, guarded by `lib/analytics/full-navigation.test.ts`), so a script loaded on an
+ * earlier page never survives into them.
  */
 import { Analytics } from "@vercel/analytics/next";
 import { usePathname } from "next/navigation";

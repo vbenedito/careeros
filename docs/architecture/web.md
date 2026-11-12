@@ -117,7 +117,7 @@ Vercel Web Analytics (SEC-15, [ADR-0010](../adr/0010-web-analytics.md)), only wh
 
 | Pages | How | Privacy filter |
 |---|---|---|
-| App pages (root layout: sign-in, privacy, dashboard) | `components/app/web-analytics.tsx` renders `<Analytics />` from `@vercel/analytics/next`, which inserts `/_vercel/insights/script.js`; it renders nothing on `/connect`, `/settings` and `/auth/*` (`isAnalyticsExcludedPath`, S2) | `beforeSend` = `filterAnalyticsEvent` (`lib/analytics/before-send.ts`): drops `/auth/*`, `/connect` and `/settings`, keeps only `view` and `utm_*` query parameters, drops fragments |
+| App pages (root layout: sign-in, privacy, dashboard) | `components/app/web-analytics.tsx` renders `<Analytics />` from `@vercel/analytics/next`, which inserts `/_vercel/insights/script.js`; it renders nothing on `/connect`, `/settings` and `/auth/*` (`isAnalyticsExcludedPath`, S2); links to those routes are plain `<a>` full loads, never `next/link` | `beforeSend` = `filterAnalyticsEvent` (`lib/analytics/before-send.ts`): drops `/auth/*`, `/connect` and `/settings`, keeps only `view` and `utm_*` query parameters, drops fragments |
 | Landing `/` | `renderLanding({ analytics: true })` adds the script tag; `buildLandingCsp(…, site)` allows it | None (no script of our own); the proxy redirects a signed-out `/?…` to `/` keeping only `utm_*` (`lib/landing/clean-url.ts`, 307), so the beacon sees clean URLs (S1); only `/` |
 
 `/_vercel` is a public path (`lib/auth/routes.ts`), so page views of signed-out visitors are never redirected to sign-in should the proxy see them. The extension has no analytics.
