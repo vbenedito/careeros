@@ -10,7 +10,10 @@ import { extensionId } from "@/lib/env";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
 
-/** DASH-12..14. Data is loaded with the user's session (DASH-15, RLS applies). */
+/**
+ * DASH-12..14. Data is loaded with the user's session (DASH-15, RLS applies).
+ * Heading outline (#78): h1 Settings → h2 per card → h3 inside a card (Delete account).
+ */
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -38,7 +41,9 @@ export default async function SettingsPage({
       <main className="flex max-w-3xl flex-col gap-4 p-4 md:p-6">
         <Card aria-labelledby="sites-title">
           <CardHeader>
-            <CardTitle id="sites-title">Tracked sites</CardTitle>
+            <CardTitle id="sites-title" variant="section">
+              Tracked sites
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {sites.error ? (
@@ -52,7 +57,9 @@ export default async function SettingsPage({
         </Card>
         <Card aria-labelledby="extension-title">
           <CardHeader>
-            <CardTitle id="extension-title">Extension</CardTitle>
+            <CardTitle id="extension-title" variant="section">
+              Extension
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ExtensionSettings extensionId={extensionId()} userEmail={email || null} />
@@ -60,7 +67,9 @@ export default async function SettingsPage({
         </Card>
         <Card aria-labelledby="account-title">
           <CardHeader>
-            <CardTitle id="account-title">Account</CardTitle>
+            <CardTitle id="account-title" variant="section">
+              Account
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <AccountSettings

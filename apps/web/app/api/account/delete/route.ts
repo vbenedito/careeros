@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
+import { FORM_API_RETURN_PATHS } from "@/lib/auth/routes";
 import { siteUrl } from "@/lib/env";
 import { fail } from "@/lib/http/json";
 import { errorFields, logServerError } from "@/lib/log";
@@ -15,6 +16,8 @@ import { isSameOrigin } from "@/lib/security/origin";
 import { DELETE_CONFIRMATION } from "@/lib/settings/account";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+
+const signInAgain = `/sign-in?next=${encodeURIComponent(FORM_API_RETURN_PATHS["/api/account/delete"] ?? "/settings")}`;
 
 const back = (error: "delete" | "reauth" = "delete") =>
   NextResponse.redirect(new URL(`/settings?error=${error}#delete-account`, siteUrl()), 303);
@@ -29,7 +32,8 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL("/sign-in", siteUrl()), 303);
+  // Session gone (#78): back to sign-in, then to this section, never a JSON page.
+  if (!user) return NextResponse.redirect(new URL(signInAgain, siteUrl()), 303);
 
   // AUTH-14: a stolen or long-lived session alone cannot delete the account. The claims come
   // from the same (just verified) session; `amr` keeps the time of the actual sign-in.

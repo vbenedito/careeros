@@ -5,6 +5,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { errorFields, logServerError } from "@/lib/log";
+import { classifyLoadError, type LoadErrorKind } from "./load-error";
 import type { Period } from "./period";
 
 export interface DayTotal {
@@ -28,8 +29,11 @@ export interface DashboardData {
 
 export type DashboardResult =
   | { ok: true; data: DashboardData }
-  /** `invalid-time-zone`: the database does not know the zone (its list can differ from Node's). */
-  | { ok: false; reason: "invalid-time-zone" | "failed" };
+  /**
+   * `invalid-time-zone`: the database does not know the zone (its list can differ from Node's).
+   * `temporary` / `permanent`: whether a retry can help (#70, `classifyLoadError`).
+   */
+  | { ok: false; reason: "invalid-time-zone" | LoadErrorKind };
 
 export async function loadDashboard(
   supabase: SupabaseClient,
@@ -44,15 +48,12 @@ export async function loadDashboard(
     // Today may be outside the selected period; ask for it separately (one tiny row).
     supabase.rpc("get_daily_totals", { p_from: today, p_to: today, p_tz: timeZone }),
   ]);
-  const error = daily.error ?? domains.error ?? todayRow.error;
-  if (error) {
-    if (error.message !== "INVALID_TIME_ZONE") {
-      logServerError("dashboard.load_failed", errorFields(error));
-    }
-    return {
-      ok: false,
-      reason: error.message === "INVALID_TIME_ZONE" ? "invalid-time-zone" : "failed",
-    };
+  const failed = [daily, domains, todayRow].find((r) => r.error);
+  if (failed?.error) {
+    const { error, status } = failed;
+    if (error.message === "INVALID_TIME_ZONE") return { ok: false, reason: "invalid-time-zone" };
+    logServerError("dashboard.load_failed", { ...errorFields(error), status });
+    return { ok: false, reason: classifyLoadError({ status, code: error.code }) };
   }
 
   const days = ((daily.data ?? []) as { day: string; seconds: number | string }[]).map((r) => ({

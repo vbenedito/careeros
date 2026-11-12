@@ -17,8 +17,29 @@ dashboard's shadcn components use them as they are.
 | `primary` / `primary-foreground` | Main actions, links, bars |
 | `destructive` | Deleting or discarding data (Delete account, Remove a site, Disconnect and delete unsynced time) |
 | `success`, `warning` | Status only ("Tracking", "Not connected") |
-| `chart-1` … `chart-6` | Categorical chart colours (donut slices; `chart-6` is "Other") |
+| `chart-1` … `chart-6` | Categorical chart colours (donut slices; `chart-6` is "Other"); ≥ 3:1 against `card`, never a status colour (below) |
 | `radius` | `rounded-sm` / `md` / `lg` derive from it |
+
+### Chart colour contrast (#76)
+
+Chart slices are graphical objects, so each colour must reach **3:1** against the card it is
+drawn on (WCAG 1.4.11) and stay apart from the status colours, so data never reads as status.
+`packages/shared/src/theme-contrast.test.ts` computes both from `tokens.css` (OKLCH → sRGB
+luminance; distance in OKLab, minimum 0.08 to `--success`, `--warning`, `--destructive`) and
+fails on drift. Values as of 2026-11-12:
+
+| Token | Light value | vs `--card` (light) | Dark value | vs `--card` (dark) |
+|---|---|---|---|---|
+| `chart-1` | `oklch(0.5 0.17 265)` | 5.70:1 | `oklch(0.72 0.14 265)` | 6.72:1 |
+| `chart-2` | `oklch(0.6 0.15 185)` | 3.16:1 | `oklch(0.75 0.12 185)` | 8.01:1 |
+| `chart-3` | `oklch(0.65 0.16 60)` | 3.10:1 | `oklch(0.68 0.13 55)` (was `0.8 0.14 75` = `--warning`) | 5.64:1 |
+| `chart-4` | `oklch(0.58 0.18 330)` | 4.32:1 | `oklch(0.72 0.16 330)` | 6.33:1 |
+| `chart-5` | `oklch(0.6 0.15 145)` | 3.40:1 | `oklch(0.85 0.16 125)` (was `0.75 0.14 145`, ≈ `--success`) | 11.08:1 |
+| `chart-6` ("Other") | `oklch(0.6 0.01 265)` (was `0.75`: 2.04:1) | 3.62:1 | `oklch(0.56 0.01 265)` (was `0.5`: 2.82:1) | 3.63:1 |
+
+Smallest OKLab distance to a status colour: light `chart-3`↔`warning` 0.100, `chart-5`↔`success`
+0.082; dark `chart-2`↔`success` 0.086, `chart-3`↔`destructive` 0.089, `chart-3`↔`warning` 0.129.
+The legend repeats every slice as text, so colour is never the only signal.
 
 Light and dark values live side by side. The dashboard switches with a `.dark` / `.light` class
 (next-themes); the popup follows the OS.
@@ -61,7 +82,11 @@ App shell (data, clock, routing)
 ## 4. Conventions
 
 - **Type:** `text-xs` (captions, footer) · `text-sm` (body) · `text-base` (titles) · `text-4xl` (the
-  one headline number). `tabular-nums` for every duration.
+  one headline number).
+- **Headings (#78):** one `h1` per page (the header title); each card's `CardTitle` is an `h2`:
+  `variant="label"` (default) is the quiet caption above a metric, `variant="section"` a page
+  section title (Settings); a heading inside a card is an `h3` in `text-sm font-medium`, never
+  larger than its `h2`. `tabular-nums` for every duration.
 - **Spacing:** multiples of the Tailwind scale; sections in a view use `gap-3`, items inside a
   block `gap-1.5`/`gap-2`.
 - **Durations:** always `formatDuration` from `@careeros/shared` (EXT-UI-02).

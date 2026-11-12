@@ -85,7 +85,7 @@ export function AccountSettings({
         id="delete-account"
         className="flex scroll-mt-20 flex-col items-start gap-2 border-t border-border pt-4"
       >
-        <h3 ref={deleteHeading} tabIndex={-1} className="font-medium outline-none">
+        <h3 ref={deleteHeading} tabIndex={-1} className="text-sm font-medium outline-none">
           Delete account
         </h3>
         <p className="text-muted-foreground">

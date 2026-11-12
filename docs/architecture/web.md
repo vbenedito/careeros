@@ -1,6 +1,6 @@
 # Web app design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 Low-level design of `apps/web`: the Next.js dashboard and the public landing page, deployed on Vercel. Rules are in [AUTH](../../specs/v0/02-auth.md), [DASH](../../specs/v0/06-dashboard.md), [SEC](../../specs/v0/07-security-privacy.md) and [LAND](../../specs/landing/00-landing.md). The big picture is in the [overview](overview.md).
 
@@ -37,11 +37,13 @@ flowchart TD
   R["Request"] --> N["Create nonce and app CSP"]
   N --> C["Supabase server client:<br/>getClaims() verifies the JWT, refreshes cookies"]
   C --> Q{"Signed in?"}
-  Q -- "no, /api/*" --> A401["401 NOT_AUTHENTICATED"]
+  Q -- "no, form post to<br/>/api/account/delete" --> RF["303 to /sign-in?next=/settings#delete-account"]
+  Q -- "no, other /api/*" --> A401["401 NOT_AUTHENTICATED"]
   Q -- "no, not public" --> RS["Redirect to /sign-in?next=…<br/>(307 for GET/HEAD, 303 otherwise)"]
   Q -- "yes, /sign-in" --> RD["Redirect to /dashboard"]
   Q -- "yes, /" --> RD2["Redirect to /dashboard + query"]
   Q -- "otherwise" --> NX["Continue: x-nonce + CSP<br/>forwarded to Server Components"]
+  RF --> H
   A401 --> H["Copy refreshed cookies and<br/>no-cache headers to the response"]
   RS --> H
   RD --> H
@@ -62,7 +64,7 @@ Redirect targets use `SITE_URL`, never the `Host` header (SEC-08).
 |---|---|---|
 | `default-src` | `'self'` | `'none'` |
 | `script-src` | `'self' 'nonce-…' 'strict-dynamic'` (+ `'unsafe-eval'` in dev); covers the analytics script, inserted by a nonce'd bundle | `'none'`; with analytics: `<site>/_vercel/insights/script.js` only |
-| `style-src` | `'self' 'nonce-…'` (`'unsafe-inline'` in dev) | `'sha256-…'` of the one inline `<style>` |
+| `style-src` | `'self' 'nonce-…'` (`'unsafe-inline'` in dev); Radix's scroll-lock `<style>` gets the nonce through `get-nonce`, set by `ThemeProvider` (#68) | `'sha256-…'` of the one inline `<style>` |
 | `style-src-attr` | `'unsafe-inline'` | `'unsafe-inline'` |
 | `img-src` | `'self' blob: data:` | `'self' data:` |
 | `font-src` | `'self'` | `'self'` |
@@ -93,7 +95,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |
 
-The viewer's time zone comes from the `tz` cookie set by `components/dashboard/time-zone-sync.tsx`; it is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
+The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
 
 Browser-side code talks to the extension through `lib/extension/messenger.ts` (2 s timeout, 15 s for `DISCONNECT`) and reads replies with `lib/extension/protocol.ts`, which also detects an outdated extension or another account (AUTH-07a/07b). Browser calls to the app's own API go through `lib/http/request.ts`, which validates every body with Zod.
 
@@ -101,6 +103,7 @@ Browser-side code talks to the extension through `lib/extension/messenger.ts` (2
 
 | Layer | Behavior |
 |---|---|
+| Dashboard data | `loadDashboard` returns `invalid-time-zone` (retried in UTC), `temporary` or `permanent` (`lib/dashboard/load-error.ts`); the error state offers **Try again** only for `temporary` (DASH-11, #70) |
 | Route handlers | Reply `{ error: CODE }` with `Cache-Control: no-store` (`lib/http/json.ts`), e.g. `FORBIDDEN`, `NOT_AUTHENTICATED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `RATE_LIMITED`, `INTERNAL`. Form routes redirect back with `?error=` |
 | Server logs | `logServerError(event, fields)` (`lib/log.ts`): one JSON line in Vercel runtime logs with code, status and a capped message; never emails, tokens, cookies, URLs or user input (ENV-11, SEC-06) |
 | Pages | `app/error.tsx` and `app/global-error.tsx` show a friendly fallback; `app/not-found.tsx` for unknown routes |

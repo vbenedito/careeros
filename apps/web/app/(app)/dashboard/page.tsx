@@ -2,19 +2,25 @@ import { cookies } from "next/headers";
 import { ExtensionStatus } from "@/components/app/extension-status";
 import { PageHeader } from "@/components/app/page-header";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { LoadError } from "@/components/dashboard/load-error";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { PlatformChart } from "@/components/dashboard/platform-chart";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
-import { TimeZoneSync } from "@/components/dashboard/time-zone-sync";
-import { Button } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
+import { TimeZoneGate, type TimeZoneStatus, UtcHint } from "@/components/dashboard/time-zone-sync";
 import { activityBars } from "@/lib/dashboard/activity";
 import { loadDashboard } from "@/lib/dashboard/data";
 import { periodHref, resolvePeriod } from "@/lib/dashboard/period";
 import { platformSlices } from "@/lib/dashboard/platforms";
 import { summarize } from "@/lib/dashboard/summary";
-import { FALLBACK_TZ, resolveTimeZone, TZ_COOKIE, todayIn } from "@/lib/dashboard/time-zone";
+import {
+  FALLBACK_TZ,
+  isValidTimeZone,
+  resolveTimeZone,
+  TZ_COOKIE,
+  todayIn,
+} from "@/lib/dashboard/time-zone";
 import { extensionId } from "@/lib/env";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -25,7 +31,11 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  let timeZone = resolveTimeZone((await cookies()).get(TZ_COOKIE)?.value);
+  const tzCookie = (await cookies()).get(TZ_COOKIE)?.value;
+  let timeZone = resolveTimeZone(tzCookie);
+  // No cookie yet = first visit (skeleton until the zone is known); an unusable one = UTC + hint.
+  let tzStatus: TimeZoneStatus =
+    tzCookie === undefined ? "unresolved" : isValidTimeZone(tzCookie) ? "viewer" : "fallback";
   let today = todayIn(timeZone);
   let period = resolvePeriod(params, today);
   let [user, result] = await Promise.all([
@@ -39,13 +49,15 @@ export default async function DashboardPage({
     today = todayIn(timeZone);
     period = resolvePeriod(params, today);
     result = await loadDashboard(supabase, period, today, timeZone);
+    tzStatus = "fallback";
   }
 
   return (
-    <>
-      <TimeZoneSync />
+    // DASH-07 (#70): a first visit shows the skeleton, not UTC days, until the zone is known.
+    <TimeZoneGate status={tzStatus} skeleton={<DashboardSkeleton />}>
       <PageHeader title="Dashboard" actions={<PeriodSelector period={period} today={today} />} />
       <main className="flex flex-col gap-4 p-4 md:p-6">
+        <UtcHint />
         {result.ok ? (
           <>
             <SummaryCards cards={summarize(result.data, period)} />
@@ -66,14 +78,12 @@ export default async function DashboardPage({
             )}
           </>
         ) : (
-          <Card role="alert">
-            <CardTitle>Couldn't load your study time</CardTitle>
-            <Button asChild variant="outline" size="sm" className="self-start">
-              <a href={periodHref(period.view, period.anchor)}>Try again</a>
-            </Button>
-          </Card>
+          <LoadError
+            kind={result.reason === "permanent" ? "permanent" : "temporary"}
+            retryHref={periodHref(period.view, period.anchor)}
+          />
         )}
       </main>
-    </>
+    </TimeZoneGate>
   );
 }

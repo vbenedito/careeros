@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isApiPath, isAuthProvider, isPublicPath, safeNextPath } from "./routes";
+import {
+  isApiPath,
+  isAuthProvider,
+  isPublicPath,
+  safeNextPath,
+  signedOutApiRedirect,
+} from "./routes";
 
 describe("isPublicPath", () => {
   it.each([
@@ -86,5 +92,28 @@ describe("isAuthProvider", () => {
     expect(isAuthProvider("github")).toBe(true);
     expect(isAuthProvider("email")).toBe(false);
     expect(isAuthProvider(undefined)).toBe(false);
+  });
+});
+
+describe("signedOutApiRedirect (#78)", () => {
+  const navigate = new Headers({ "sec-fetch-mode": "navigate" });
+
+  it("AUTH-03 the Delete account form goes back to sign-in, then to its section", () => {
+    const target = signedOutApiRedirect("/api/account/delete", navigate);
+    expect(target).toBe("/sign-in?next=%2Fsettings%23delete-account");
+    const next = new URL(target ?? "", "http://x").searchParams.get("next");
+    expect(safeNextPath(next)).toBe("/settings#delete-account");
+  });
+
+  it("AUTH-03 fetch callers keep the JSON 401", () => {
+    expect(signedOutApiRedirect("/api/account/delete", new Headers())).toBeNull();
+    expect(
+      signedOutApiRedirect("/api/account/delete", new Headers({ "sec-fetch-mode": "cors" })),
+    ).toBeNull();
+  });
+
+  it("AUTH-03 other API routes keep the JSON 401, even on navigation", () => {
+    expect(signedOutApiRedirect("/api/sites", navigate)).toBeNull();
+    expect(signedOutApiRedirect("/api/extension/link", navigate)).toBeNull();
   });
 });

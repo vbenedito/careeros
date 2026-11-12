@@ -102,6 +102,17 @@ describe("settings (integration)", () => {
     expect(anonymous.status).toBe(401);
   });
 
+  it("AUTH-03 an expired session submitting Delete account is sent to sign-in, not a JSON 401 (#78)", async () => {
+    const res = await call("/api/account/delete", "sb-expired=1", {
+      ...form({ confirm: "DELETE" }),
+      headers: { ...form({}).headers, "sec-fetch-mode": "navigate" },
+    });
+    expect(res.status).toBe(303);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/sign-in");
+    expect(location.searchParams.get("next")).toBe("/settings#delete-account");
+  });
+
   it("AUTH-12a sign out of all devices revokes every session of the user", async () => {
     const { id, email, cookie } = await signedInUser("global");
     await dashboardSession(email); // a second device (e.g. the extension)
