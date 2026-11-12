@@ -58,7 +58,9 @@ export function ConnectExtension({
       {view.kind === "not-connected" || view.kind === "failed" || view.kind === "rate-limited" ? (
         <Button onClick={connect}>Connect extension</Button>
       ) : null}
-      {view.kind === "not-installed" || view.kind === "outdated" ? (
+      {view.kind === "not-installed" ||
+      view.kind === "outdated" ||
+      view.kind === "unknown-reply" ? (
         <Button variant="outline" onClick={check}>
           Check again
         </Button>

@@ -81,11 +81,20 @@ describe("forward-compatible replies (AUTH-07c, grill A3)", () => {
       kind: "outdated",
       extensionVersion: "0.1.0",
     });
-    expect(interpretStatus(error("SOME_NEW_CODE"))).toEqual({
-      kind: "outdated",
-      extensionVersion: null,
+    expect(interpretConnect({ ok: false, protocolVersion: 1 })).toEqual({ kind: "outdated" });
+  });
+
+  it("AUTH-07c an error code this page does not know asks to reload and retry, not to update", () => {
+    expect(interpretStatus(error("SOME_NEW_CODE"))).toEqual({ kind: "unknown-reply" });
+    expect(interpretConnect(error("SOME_NEW_CODE"))).toEqual({ kind: "failed" });
+    expect(interpretDisconnect(error("SOME_NEW_CODE"))).toBe("failed");
+  });
+
+  it("AUTH-07c a status-shaped reply is never taken as a CONNECT or DISCONNECT acknowledgement", () => {
+    expect(interpretConnect(status({ connected: true, email: "a@example.com" }))).toEqual({
+      kind: "failed",
     });
-    expect(interpretConnect(error("SOME_NEW_CODE"))).toEqual({ kind: "outdated" });
+    expect(interpretDisconnect(status())).toBe("failed");
   });
 
   it("AUTH-07c a version string that is not a version is not shown", () => {

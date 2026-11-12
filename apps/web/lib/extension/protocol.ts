@@ -20,8 +20,25 @@ export const DASHBOARD_PROTOCOL_VERSIONS: readonly number[] = [PROTOCOL_VERSION]
 export type ExtensionState =
   | { kind: "not-installed" }
   | { kind: "outdated"; extensionVersion: string | null }
+  /**
+   * AUTH-07c (review of #163): a protocol-1 error code this dashboard does not know (a newer
+   * extension): not the extension's fault; reloading the page loads the current dashboard.
+   */
+  | { kind: "unknown-reply" }
   | { kind: "not-connected"; extensionVersion: string }
   | { kind: "connected"; extensionVersion: string; email: string | null };
+
+/** `{ ok: false, code: string }`: an error reply, whether or not its code is known here. */
+function isErrorShaped(reply: unknown): boolean {
+  const r = reply as { ok?: unknown; code?: unknown };
+  return r.ok === false && typeof r.code === "string";
+}
+
+/**
+ * A PING/STATUS reply. Ack replies have no field of their own, so a reply that reads as a status
+ * is never taken as the acknowledgement of CONNECT or DISCONNECT (review of #163).
+ */
+const isStatusShaped = (reply: unknown) => ExtensionStatusReplySchema.safeParse(reply).success;
 
 /** The extension version a reply states, if it states one we can show. */
 function versionIn(reply: unknown): string | null {
@@ -48,6 +65,7 @@ export function interpretStatus(
       ? { kind: "outdated", extensionVersion: null }
       : { kind: "not-installed" };
   }
+  if (isErrorShaped(reply)) return { kind: "unknown-reply" };
   const status = ExtensionStatusReplySchema.safeParse(reply);
   if (!status.success) return { kind: "outdated", extensionVersion: versionIn(reply) };
   if (!status.data.connected) {
@@ -74,10 +92,13 @@ export function interpretConnect(reply: unknown): ConnectOutcome {
   if (!DASHBOARD_PROTOCOL_VERSIONS.includes(envelope.data.protocolVersion)) {
     return { kind: "outdated" };
   }
+  if (isStatusShaped(reply)) return { kind: "failed" };
   const ack = ExtensionAckReplySchema.safeParse(reply);
   if (ack.success) return { kind: "connected", email: ack.data.email ?? null };
   const error = ExtensionErrorSchema.safeParse(reply);
-  if (!error.success) return { kind: "outdated" };
+  // An error code this page does not know: generic "try again" (reloading gets the current
+  // dashboard); any other unreadable reply of this version comes from an odd extension build.
+  if (!error.success) return isErrorShaped(reply) ? { kind: "failed" } : { kind: "outdated" };
   switch (error.data.code) {
     case "ALREADY_CONNECTED":
       return { kind: "already-connected" };
@@ -97,7 +118,9 @@ export type DisconnectOutcome = "disconnected" | "unsynced-data" | "failed";
  * study time is never discarded: the extension refuses and the user resolves it in the popup.
  */
 export function interpretDisconnect(reply: unknown): DisconnectOutcome {
-  if (ExtensionAckReplySchema.safeParse(reply).success) return "disconnected";
+  if (!isStatusShaped(reply) && ExtensionAckReplySchema.safeParse(reply).success) {
+    return "disconnected";
+  }
   const error = ExtensionErrorSchema.safeParse(reply);
   return error.success && error.data.code === "UNSYNCED_DATA" ? "unsynced-data" : "failed";
 }

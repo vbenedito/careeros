@@ -37,16 +37,6 @@ export const REVOKE_TIMEOUT_MS = 5000;
 /** AUTH-10b (grill E1): a refresh that has not answered by then is a temporary failure. */
 export const REFRESH_TIMEOUT_MS = AUTH.REFRESH_TIMEOUT_S * 1000;
 
-/** A refresh of ours that is still running (on time) or that we gave up on (late). */
-interface RefreshAttempt {
-  /** `sessionGeneration` when it started. */
-  generation: number;
-  /** The refresh token it was sent with. */
-  refreshToken: string;
-  /** supabase-js removals held back while it runs on time (AUTH-10a). */
-  held: string[];
-}
-
 function toAuthSession(session: Session): AuthSession {
   return {
     accessToken: session.access_token,
@@ -73,62 +63,30 @@ export function createSupabaseAuthBackend(config: {
     parseStoredSession((await config.storage.get(SESSION_STORAGE_KEY))[SESSION_STORAGE_KEY]);
 
   /**
-   * AUTH-10b: bumped whenever the stored session is replaced or removed by us (adopt, sign-out,
-   * clear). A refresh we gave up on may still answer later; its write is applied only if
-   * nothing changed the session since it started.
+   * AUTH-10b (grill E1, review of #163): bumped synchronously whenever the stored session is
+   * replaced or removed (adopt, sign-out, clear, a refresh's own write). A refresh writes its
+   * result only if the generation is still the one it started with (compare-and-set).
    */
   let sessionGeneration = 0;
-  /** Operations of ours running on time: their storage writes are theirs. */
-  let foreground = 0;
-  /** The refresh running on time, if any. */
-  let current: RefreshAttempt | null = null;
-  /** Refreshes we gave up on (AUTH-10b) whose request has not settled yet. */
-  const late = new Set<RefreshAttempt>();
+  /** Adopts in progress: the only time the persistent client may write the session. */
+  let adopting = 0;
 
   /**
-   * AUTH-10a (#58): while one of our refreshes runs, supabase-js's own removals of the session
-   * are held back. It deletes the session after any non-retryable refresh error once the access
-   * token has expired — including a rate limit (429) or a timeout (408), which are temporary.
-   * After the refresh, held removals are applied only when the failure really means the session
-   * is gone (`refreshFailureReason`).
-   *
-   * AUTH-10b (grill E1): a write that arrives while none of our operations is running can only
-   * come from a refresh we gave up on. It is applied only when the stored session is still the
-   * one that refresh started from (a rotated token is worth keeping); a late removal is dropped
-   * (the next refresh finds out whether the session is really gone).
+   * The persistent client is used only to adopt a session (AUTH-07b). Refreshes run on a
+   * non-persisting client and the worker stores their result itself (AUTH-10a/10b), so any
+   * other write or removal the persistent client attempts on its own (e.g. its startup
+   * recovery) is dropped: it can never overwrite or delete a session behind the worker's back.
    */
   const sessionStorage = createSessionStorage(config.storage);
-  const fromLateRefresh = () => foreground === 0 && late.size > 0;
   const guardedStorage = {
     ...sessionStorage,
     async setItem(key: string, value: string) {
-      if (fromLateRefresh()) {
-        const stored = await readStored();
-        const unchanged = [...late].some(
-          (attempt) =>
-            attempt.generation === sessionGeneration &&
-            stored?.refreshToken === attempt.refreshToken,
-        );
-        if (!unchanged) return;
-      }
-      await sessionStorage.setItem(key, value);
+      if (adopting > 0) await sessionStorage.setItem(key, value);
     },
     async removeItem(key: string) {
-      if (current) current.held.push(key);
-      else if (fromLateRefresh()) return;
-      else await sessionStorage.removeItem(key);
+      if (adopting > 0) await sessionStorage.removeItem(key);
     },
   };
-
-  /** Runs one of our own operations that writes the session through supabase-js. */
-  async function inForeground<T>(work: () => Promise<T>): Promise<T> {
-    foreground += 1;
-    try {
-      return await work();
-    } finally {
-      foreground -= 1;
-    }
-  }
 
   // The persistent client: its session lives in chrome.storage.local.
   const client = createClient(supabaseUrl, publishableKey, {
@@ -186,13 +144,16 @@ export function createSupabaseAuthBackend(config: {
 
     async adoptSession(session) {
       sessionGeneration += 1;
-      await inForeground(async () => {
+      adopting += 1;
+      try {
         const { error } = await client.auth.setSession({
           access_token: session.accessToken,
           refresh_token: session.refreshToken,
         });
         if (error) throw error;
-      });
+      } finally {
+        adopting -= 1;
+      }
     },
 
     async currentSession() {
@@ -204,17 +165,15 @@ export function createSupabaseAuthBackend(config: {
     async refresh(): Promise<RefreshResult> {
       const stored = await readStored();
       if (!stored) return { ok: false, reason: "invalid" };
-      const attempt: RefreshAttempt = {
-        generation: sessionGeneration,
-        refreshToken: stored.refreshToken,
-        held: [],
-      };
-      type Answer = Awaited<ReturnType<typeof client.auth.refreshSession>>;
-      // The attempt counts as ours until it answers or we give up on it.
-      foreground += 1;
-      current = attempt;
-      // An explicit refresh token makes supabase-js refresh directly and save the new session.
-      const request: Promise<Answer> = client.auth.refreshSession({
+      const generation = sessionGeneration;
+      /** Compare-and-set: still the session this refresh started from (checked synchronously). */
+      const unchanged = () => sessionGeneration === generation;
+
+      // AUTH-10a/10b: refresh on a client that persists nothing. supabase-js can then neither
+      // store a result we gave up on nor delete the session after a temporary error; the
+      // worker alone decides what is written.
+      type Answer = Awaited<ReturnType<SupabaseClient["auth"]["refreshSession"]>>;
+      const request: Promise<Answer> = ephemeral().auth.refreshSession({
         refresh_token: stored.refreshToken,
       });
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -226,30 +185,32 @@ export function createSupabaseAuthBackend(config: {
         answer = await Promise.race([request, timedOut]);
       } finally {
         timers.clearTimeout(timer);
-        foreground -= 1;
-        if (current === attempt) current = null;
       }
       if (answer === "timeout") {
-        // AUTH-10b (grill E1): temporary, the session is kept. Removals held so far are
-        // dropped; a late answer may store a rotated token only if nothing changed since.
-        late.add(attempt);
-        void request
-          .catch(() => undefined)
-          .finally(() => {
-            late.delete(attempt);
-          });
+        // AUTH-10b (grill E1): temporary, the session is kept. A late answer is never written
+        // (the server's parent-token rule recovers a rotation we did not store, AUTH-10).
+        void request.catch(() => undefined);
         return { ok: false, reason: "unavailable" };
       }
+
       const { data, error } = answer;
-      if (data.session) return { ok: true, session: toAuthSession(data.session) };
-      const reason = refreshFailureReason(error);
-      // AUTH-10a: a temporary failure keeps the session, even if supabase-js dropped it;
-      // a real one lets its removals through (and AuthService shows "Reconnect", AUTH-11).
-      if (reason === "invalid") {
-        for (const key of attempt.held) await sessionStorage.removeItem(key);
+      if (data.session) {
+        const next = data.session;
+        // Under the auth lock; the check and the write's start are in the same synchronous
+        // step, and every change of session bumps the generation synchronously first.
+        if (!unchanged() || next.user?.id !== stored.userId)
+          return { ok: false, reason: "unavailable" };
+        sessionGeneration += 1;
+        await sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(next));
+        return { ok: true, session: toAuthSession(next) };
       }
-      const stillStored = await readStored();
-      return { ok: false, reason: stillStored ? reason : "invalid" };
+      // The session was replaced meanwhile: this answer is about one we no longer hold.
+      if (!unchanged()) return { ok: false, reason: "unavailable" };
+      const reason = refreshFailureReason(error);
+      // AUTH-10a: a temporary failure keeps the session; a real one removes it (and
+      // AuthService shows "Reconnect", AUTH-11).
+      if (reason === "invalid") await removeStoredSession();
+      return { ok: false, reason };
     },
 
     async signOutLocal() {

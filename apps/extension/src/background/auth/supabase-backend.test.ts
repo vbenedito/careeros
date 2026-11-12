@@ -134,63 +134,70 @@ describe("refresh against a rate-limited server (AUTH-11)", () => {
   });
 });
 
-describe("refresh that never answers (AUTH-10b, grill E1)", () => {
+describe("refresh that never answers (AUTH-10b, grill E1, review of #163)", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  const USER = { id: "00000000-0000-4000-8000-000000000001", email: "a@example.test" };
+  const ALICE = { id: "00000000-0000-4000-8000-000000000001", email: "a@example.test" };
+  const BOB = { id: "00000000-0000-4000-8000-000000000002", email: "b@example.test" };
+  const inAnHour = () => Math.floor(Date.now() / 1000) + 3600;
   const stored = (refreshToken: string) =>
     JSON.stringify({
       access_token: "a",
       refresh_token: refreshToken,
       expires_at: Math.floor(Date.now() / 1000) + 600,
       token_type: "bearer",
-      user: USER,
+      user: ALICE,
     });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  /** An unsigned JWT: supabase-js only decodes it locally (the server is faked). */
+  const jwt = (user: typeof BOB) => {
+    const part = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, "");
+    return `${part({ alg: "HS256", typ: "JWT" })}.${part({ sub: user.id, email: user.email, exp: inAnHour() })}.sig`;
+  };
+  const rotated = (user: typeof ALICE) => ({
+    access_token: "a2",
+    refresh_token: "r2",
+    expires_in: 3600,
+    expires_at: inAnHour(),
+    token_type: "bearer",
+    user,
+  });
 
-  /** fetch that hangs until `answer()` is called, then returns a rotated session. */
-  function hangingFetch() {
+  /**
+   * Fake Supabase Auth: the refresh (`/token?grant_type=refresh_token`) hangs until `answer()`
+   * (or answers at once with `immediate`); `/user` returns Bob; anything else fails fast.
+   */
+  function fakeAuthServer(options: { immediate?: boolean } = {}) {
     let answer: () => void = () => undefined;
-    const fetch = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          answer = () =>
-            resolve(
-              new Response(
-                JSON.stringify({
-                  access_token: "a2",
-                  refresh_token: "r2",
-                  expires_in: 3600,
-                  expires_at: Math.floor(Date.now() / 1000) + 3600,
-                  token_type: "bearer",
-                  user: USER,
-                }),
-                { status: 200, headers: { "content-type": "application/json" } },
-              ),
-            );
-        }),
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("grant_type=refresh_token")) {
+          if (options.immediate) return json(rotated(ALICE));
+          return new Promise<Response>((resolve) => {
+            answer = () => resolve(json(rotated(ALICE)));
+          });
+        }
+        if (url.endsWith("/user")) return json(BOB);
+        return json({ code: "bad_jwt", msg: "no" }, 401);
+      }),
     );
-    vi.stubGlobal("fetch", fetch);
-    return { fetch, answer: () => answer() };
+    return { answer: () => answer() };
   }
 
-  function backendWith(storage: ReturnType<typeof fakeStorage>) {
-    return createSupabaseAuthBackend({
+  const backendWith = (storage: ReturnType<typeof fakeStorage>) =>
+    createSupabaseAuthBackend({
       supabaseUrl: "http://127.0.0.1:9",
       publishableKey: "sb_publishable_test",
       storage,
       refreshTimeoutMs: 30,
     });
-  }
-
-  const storedRefreshToken = (storage: ReturnType<typeof fakeStorage>) => {
-    const raw = storage.data.get(SESSION_STORAGE_KEY);
-    return typeof raw === "string"
-      ? (JSON.parse(raw) as { refresh_token: string }).refresh_token
-      : null;
-  };
+  const settle = () => new Promise((r) => setTimeout(r, 50));
 
   it("AUTH-10b a refresh that never answers is temporary after the timeout; the session is kept", async () => {
-    hangingFetch();
+    fakeAuthServer();
     const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
     const backend = backendWith(storage);
     expect(REFRESH_TIMEOUT_MS).toBe(15_000);
@@ -200,35 +207,52 @@ describe("refresh that never answers (AUTH-10b, grill E1)", () => {
     expect((await backend.currentSession())?.refreshToken).toBe("r1");
   });
 
-  it("AUTH-10b a late answer after the session was cleared does not bring it back", async () => {
-    const net = hangingFetch();
+  it("AUTH-10b a late answer after Disconnect and Connect of another account never overwrites it", async () => {
+    const net = fakeAuthServer();
     const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
     const backend = backendWith(storage);
     expect(await backend.refresh()).toEqual({ ok: false, reason: "unavailable" });
-    await backend.clearLocalSession(); // e.g. Disconnect or a rejected session, after the timeout
+    await backend.clearLocalSession(); // Disconnect
+    await backend.adoptSession({
+      accessToken: jwt(BOB),
+      refreshToken: "rb",
+      expiresAt: inAnHour(),
+      userId: BOB.id,
+      email: BOB.email,
+    }); // Connect as Bob
+    expect((await backend.currentSession())?.userId).toBe(BOB.id);
+    net.answer(); // Alice's refresh answers now
+    await settle();
+    expect(await backend.currentSession()).toMatchObject({ userId: BOB.id, refreshToken: "rb" });
+  });
+
+  it("AUTH-10b a late answer after signOutLocal never brings the session back", async () => {
+    const net = fakeAuthServer();
+    const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
+    const backend = backendWith(storage);
+    expect(await backend.refresh()).toEqual({ ok: false, reason: "unavailable" });
+    await backend.signOutLocal();
     net.answer();
-    await new Promise((r) => setTimeout(r, 50));
+    await settle();
     expect(storage.data.has(SESSION_STORAGE_KEY)).toBe(false);
-  });
+  }, 10_000);
 
-  it("AUTH-10b a late answer never overwrites a newer stored session", async () => {
-    const net = hangingFetch();
-    const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
-    const backend = backendWith(storage);
-    expect(await backend.refresh()).toEqual({ ok: false, reason: "unavailable" });
-    storage.data.set(SESSION_STORAGE_KEY, stored("newer")); // written after the timeout
-    net.answer();
-    await new Promise((r) => setTimeout(r, 50));
-    expect(storedRefreshToken(storage)).toBe("newer");
-  });
-
-  it("AUTH-10b a late answer with nothing changed meanwhile keeps the rotated token", async () => {
-    const net = hangingFetch();
+  it("AUTH-10b a late answer is never written, even with nothing changed meanwhile", async () => {
+    const net = fakeAuthServer();
     const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
     const backend = backendWith(storage);
     expect(await backend.refresh()).toEqual({ ok: false, reason: "unavailable" });
     net.answer();
-    await new Promise((r) => setTimeout(r, 50));
-    expect(storedRefreshToken(storage)).toBe("r2");
+    await settle();
+    expect((await backend.currentSession())?.refreshToken).toBe("r1");
+  });
+
+  it("AUTH-10 a refresh answering in time rotates and persists the session", async () => {
+    fakeAuthServer({ immediate: true });
+    const storage = fakeStorage({ [SESSION_STORAGE_KEY]: stored("r1") });
+    const backend = backendWith(storage);
+    const result = await backend.refresh();
+    expect(result).toMatchObject({ ok: true, session: { refreshToken: "r2", userId: ALICE.id } });
+    expect(await backend.currentSession()).toMatchObject({ refreshToken: "r2", accessToken: "a2" });
   });
 });

@@ -13,6 +13,7 @@ const STATUS_TEXT = {
   "not-connected": "Installed, not connected.",
   "other-account": "Connected to a different account.",
   outdated: "Installed, but it needs an update.",
+  "unknown-reply": "Installed, but its answer wasn't understood. Reload this page and try again.",
   "unsupported-device": "The extension runs in Chrome on a computer; manage it there.",
 } as const;
 
