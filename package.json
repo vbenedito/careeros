@@ -23,6 +23,8 @@
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
+    "check:links": "node scripts/ci/check-links.ts",
+    "check:store-package": "node scripts/ci/check-store-package.ts",
     "setup:env": "node scripts/setup-env.ts"
   },
   "devDependencies": {

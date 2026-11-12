@@ -3,6 +3,8 @@
  *   pnpm --filter @careeros/extension release   → careeros-extension-<version>.zip (production)
  *   pnpm --filter @careeros/extension release:store → careeros-extension-<version>-store.zip:
  *     the same build with no manifest `key`, for the Chrome Web Store (STORE-01)
+ * Options `--dist <dir>` and `--out <file>` read the build from, and write the zip to, other
+ * paths (used by scripts/ci/check-store-package.ts so it never touches a release build).
  * Uses the system `zip` (available on macOS and GitHub's Ubuntu runners).
  */
 import { execFileSync } from "node:child_process";
@@ -12,13 +14,17 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
-const mode = args.find((a) => !a.startsWith("--")) ?? "production";
+const option = (name: string) => {
+  const i = args.indexOf(name);
+  return i === -1 ? undefined : args[i + 1];
+};
+const mode = args[0] && !args[0].startsWith("--") ? args[0] : "production";
 const store = args.includes("--store");
 if (store && mode !== "production") {
   console.error("--store packages only the production build (STORE-01).");
   process.exit(1);
 }
-const dist = resolve(root, "dist", mode);
+const dist = option("--dist") ? resolve(option("--dist") as string) : resolve(root, "dist", mode);
 const manifestPath = resolve(dist, "manifest.json");
 
 if (!existsSync(manifestPath)) {
@@ -28,7 +34,9 @@ if (!existsSync(manifestPath)) {
 
 const { version } = JSON.parse(readFileSync(manifestPath, "utf8")) as { version: string };
 const suffix = (mode === "production" ? "" : `-${mode}`) + (store ? "-store" : "");
-const out = resolve(root, `careeros-extension-${version}${suffix}.zip`);
+const out = option("--out")
+  ? resolve(option("--out") as string)
+  : resolve(root, `careeros-extension-${version}${suffix}.zip`);
 rmSync(out, { force: true });
 let source = dist;
 if (store) {

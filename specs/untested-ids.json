@@ -5,10 +5,6 @@
   "ENV-06": "Local development workflow, documented; not enforced by code.",
   "ENV-07": "Decision: the dashboard is not containerized; nothing to assert.",
   "ENV-08": "Describes the CI workflow itself; it is verified by every CI run.",
-  "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
-  "STORE-03": "Store listing document and review justification; verified in the store review.",
-  "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
-  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made.",
   "PRD-01": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-02": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-03": "Product scope item; covered by the requirement IDs of the specs in its table row.",
@@ -19,5 +15,10 @@
   "PRD-08": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-09": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-10": "Product scope item; covered by the requirement IDs of the specs in its table row.",
-  "PRD-11": "Product scope item; covered by the requirement IDs of the specs in its table row."
+  "PRD-11": "Product scope item; covered by the requirement IDs of the specs in its table row.",
+  "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
+  "STORE-03": "Store listing document and review justification; verified in the store review.",
+  "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
+  "STORE-06": "Store images use sample data only; reviewed by a person when the images are made.",
+  "STORE-08": "Is the CI check itself (pnpm check:store-package); its assertions are unit-tested in store-package-lib.test.ts without naming the ID."
 }

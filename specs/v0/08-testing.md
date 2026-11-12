@@ -8,6 +8,8 @@ Amended 2026-11-12 (#142): responsive layout checks (TEST-01, §2.1), the Respon
 
 Amended 2026-11-12 (#157): spec-ID traceability check (TEST-02, §2.2) and the CI gate in §5.
 
+Amended 2026-11-12 (#155, #156): §5 CI gates add the Markdown link check and the store package check.
+
 Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
 
 ## 1. Principles
@@ -62,7 +64,7 @@ OAuth with real Google/GitHub is **not** automated (third-party consent screens)
 
 ## 5. CI gates (pull requests)
 
-Lint · typecheck · spec-ID traceability (TEST-02) · unit/component (with coverage thresholds) · landing responsive layout (TEST-01) · build (extension + dashboard) · database tests · integration and E2E (including the app pages' responsive layout) · backup → restore round trip. All must pass to merge. Jobs and steps: ENV-08.
+Lint · typecheck · spec-ID traceability (TEST-02) · unit/component (with coverage thresholds) · landing responsive layout (TEST-01) · Markdown link check (relative links and anchors in `docs/`, `specs/`, `README.md`, `AGENTS.md`, `SECURITY.md`) · build (extension + dashboard) · store package check (production store zip built with placeholder public values; manifest and file list asserted, STORE) · database tests · integration and E2E (including the app pages' responsive layout) · backup → restore round trip. All must pass to merge. Jobs and steps: ENV-08.
 
 ## 6. Test reliability
 
