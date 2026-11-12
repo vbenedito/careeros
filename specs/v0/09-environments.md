@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): repository layout, Node version, environment variable
 
 Amended 2026-11-12 (#142): ENV-08 runs the responsive layout checks (TEST-01) and uploads their screenshots.
 
+Amended 2026-11-12 (#157): ENV-08 `checks` runs `pnpm check:spec-trace` (TEST-02).
+
 Amended 2026-11-12 (#147): ENV-08 applies production migrations with the workflow `migrate.yml` instead of from a laptop.
 
 Amended 2026-11-12 (#155, #156): ENV-08 `checks` runs the Markdown link check and the store package check.
@@ -76,7 +78,7 @@ careeros/
 ## 3. CI (GitHub Actions)
 
 - **ENV-08** Workflow `.github/workflows/ci.yml` on pull requests and pushes to `main` (Node from `.nvmrc`, pnpm from `packageManager`):
-  1. `checks` ("Lint, typecheck, test, build"): install (`--frozen-lockfile`, cached pnpm store) → `pnpm lint` (Biome) → `pnpm typecheck` → `pnpm check:links` (relative links and anchors in the Markdown docs, no network) → `pnpm test:coverage` (Vitest with the TEST §3 thresholds) → install Playwright's Chromium (cached, same key as `backend`) → landing responsive layout (`pnpm --filter @careeros/extension test:responsive`, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-landing` (14 days, also when the check fails) → `pnpm build` (extension development build and dashboard) → `pnpm check:store-package` (builds the production store zip with placeholder public values, no secrets, and asserts on its `manifest.json` and file list: STORE).
+  1. `checks` ("Lint, typecheck, test, build"): install (`--frozen-lockfile`, cached pnpm store) → `pnpm lint` (Biome) → `pnpm typecheck` → `pnpm check:spec-trace` (spec-ID traceability, TEST-02; counts in the job summary) → `pnpm check:links` (relative links and anchors in the Markdown docs, no network) → `pnpm test:coverage` (Vitest with the TEST §3 thresholds) → install Playwright's Chromium (cached, same key as `backend`) → landing responsive layout (`pnpm --filter @careeros/extension test:responsive`, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-landing` (14 days, also when the check fails) → `pnpm build` (extension development build and dashboard) → `pnpm check:store-package` (builds the production store zip with placeholder public values, no secrets, and asserts on its `manifest.json` and file list: STORE).
   2. `backend` ("Database (Supabase in Docker)"): install → `supabase start -x studio,postgres-meta` (after moving the runner's ephemeral port range to 61000–65535, above the stack's fixed ports 54320–54329; one retry after `supabase stop`) → `pnpm db:reset` → `pnpm db:test` (pgTAP) → install Playwright's Chromium (cached) → `scripts/ci/integration.sh` (builds the dashboard and the extension, starts one dashboard server, runs the web integration, extension integration and E2E suites; E2E includes the app pages' responsive layout, TEST-01) → upload `responsive-screenshots/` as the artifact `responsive-screenshots-app` (14 days, also when a test fails) → backup → restore round trip (`scripts/ops/backup-restore-test.sh`, `age` pinned by checksum) → on failure, print the dashboard server log → `supabase stop`.
 
   Workflow `.github/workflows/backup.yml` runs weekly (Mondays 06:17 UTC) and on demand, only on `main`, in the GitHub environment `production-backup`: it dumps the production database (`scripts/ops/db-dump.sh`), encrypts it with `age` and stores it as an artifact for 90 days. Without `SUPABASE_DB_URL` and `BACKUP_AGE_RECIPIENT` it skips.

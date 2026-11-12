@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): §2 layers, §3 coverage scope and §5 CI gates as im
 
 Amended 2026-11-12 (#142): responsive layout checks (TEST-01, §2.1), the Responsive layer in §2, §4 item 5 narrowed to colours and themes, §5 CI gates.
 
+Amended 2026-11-12 (#157): spec-ID traceability check (TEST-02, §2.2) and the CI gate in §5.
+
 Amended 2026-11-12 (#155, #156): §5 CI gates add the Markdown link check and the store package check.
 
 Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
@@ -40,6 +42,10 @@ Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races
 
   Each check saves full-page PNGs to `responsive-screenshots/`; CI uploads them as the artifacts `responsive-screenshots-landing` and `responsive-screenshots-app` (14 days).
 
+### 2.2 Spec traceability
+
+- **TEST-02** `pnpm check:spec-trace` (`scripts/ci/spec-trace.ts`) lists the requirement IDs defined in `specs/**` (the bold `**ID**` markers and the `PRD-nn` table rows of the product scope) and the IDs in test titles (Vitest `it`/`test`/`describe` titles in unit, component, integration and E2E tests, and pgTAP descriptions). It **fails** when a test names an ID that no spec defines (a typo or a renamed requirement; an ID-like token at the start of a test name with a prefix no spec uses is flagged too, except known non-requirement tokens such as `GMT-14`, `UTF-8` or `ADR-0004`) and **warns**, with a count, for defined IDs that no test names. IDs that are not testable by design (decisions, process, settings outside the repository) are listed with a one-line reason in `specs/untested-ids.json`; the check fails when a listed ID has gained a test or no longer exists, when the file is not an object of ID → non-empty reason, or when no ID is found at all. Prefix typos in the middle of a test name are not detected. A new ID needs a test or an entry in that file. CI runs it in `checks` and writes the counts (defined, tested, allow-listed, untested) to the job summary.
+
 OAuth with real Google/GitHub is **not** automated (third-party consent screens); tests create users with the Supabase admin API in the local stack. Real providers are checked manually in the production setup (issue #31).
 
 ## 3. Coverage targets
@@ -58,7 +64,7 @@ OAuth with real Google/GitHub is **not** automated (third-party consent screens)
 
 ## 5. CI gates (pull requests)
 
-Lint · typecheck · unit/component (with coverage thresholds) · landing responsive layout (TEST-01) · Markdown link check (relative links and anchors in `docs/`, `specs/`, `README.md`, `AGENTS.md`, `SECURITY.md`) · build (extension + dashboard) · store package check (production store zip built with placeholder public values; manifest and file list asserted, STORE) · database tests · integration and E2E (including the app pages' responsive layout) · backup → restore round trip. All must pass to merge. Jobs and steps: ENV-08.
+Lint · typecheck · spec-ID traceability (TEST-02) · unit/component (with coverage thresholds) · landing responsive layout (TEST-01) · Markdown link check (relative links and anchors in `docs/`, `specs/`, `README.md`, `AGENTS.md`, `SECURITY.md`) · build (extension + dashboard) · store package check (production store zip built with placeholder public values; manifest and file list asserted, STORE) · database tests · integration and E2E (including the app pages' responsive layout) · backup → restore round trip. All must pass to merge. Jobs and steps: ENV-08.
 
 ## 6. Test reliability
 
