@@ -3,9 +3,15 @@ import { type EngineEnv, INITIAL_ENGINE_STATE } from "../../engine/engine";
 import type { IdleState, TabSnapshot } from "../../engine/signals";
 import { createLogger } from "../../lib/log";
 import { fakeStorage } from "../../test/fakes";
-import { DOMAINS_CACHE_KEY, ENGINE_STATE_KEY, OUTBOX_KEY, TRACKING_ENABLED_KEY } from "./keys";
+import {
+  DOMAINS_CACHE_KEY,
+  DROPPED_COUNT_KEY,
+  ENGINE_STATE_KEY,
+  OUTBOX_KEY,
+  TRACKING_ENABLED_KEY,
+} from "./keys";
 import { createTrackingStore, parseEngineState, parseOutbox } from "./store";
-import { createTracker, SLOT_TIMEOUT_MS } from "./tracker";
+import { createTracker, SLOT_TIMEOUT_MS, SlotTimeoutError } from "./tracker";
 
 const T0 = Date.UTC(2026, 10, 9, 13, 0, 0);
 const LEETCODE: TabSnapshot = { url: "https://www.leetcode.com/problems/two-sum/", audible: false };
@@ -236,5 +242,65 @@ describe("tracking store (TRK-12, SEC-02)", () => {
     }
     const dump = JSON.stringify([...s.storage.data.entries()]);
     expect(dump).not.toMatch(/problems|two-sum|news\.example|article|mail\.|inbox|www\./);
+  });
+});
+
+describe("tracker generation counter and exclusive timeout (#56)", () => {
+  it("TRK-17a an exclusive task is released after SLOT_TIMEOUT_MS and its late write is dropped", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      let release: () => void = () => {};
+      const gate = new Promise<void>((r) => (release = r));
+      const hung = s.tracker.exclusive(async (slot) => {
+        await gate;
+        // A late read-modify-write with an old copy: must not land.
+        if (!slot?.stale()) await s.storage.set({ [OUTBOX_KEY]: ["old copy"] });
+        return "late";
+      });
+      const rejection = expect(hung).rejects.toBeInstanceOf(SlotTimeoutError);
+      const next = s.tracker.exclusive(async (slot) => {
+        expect(slot?.stale()).toBe(false);
+        await s.storage.set({ [OUTBOX_KEY]: [] });
+        return "next";
+      });
+      await vi.advanceTimersByTimeAsync(SLOT_TIMEOUT_MS);
+      await rejection;
+      expect(await next).toBe("next");
+      release();
+      await vi.advanceTimersByTimeAsync(10);
+      expect(s.storage.data.get(OUTBOX_KEY)).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("TRK-17a a slot that timed out stays stale even after later slots ran", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      let captured: { stale(): boolean } | undefined;
+      const hung = s.tracker.exclusive(async (slot) => {
+        captured = slot;
+        await new Promise(() => {});
+      });
+      hung.catch(() => {});
+      await vi.advanceTimersByTimeAsync(SLOT_TIMEOUT_MS);
+      await s.tracker.exclusive(async () => undefined);
+      await s.tracker.dispatch({ type: "START" });
+      expect(captured?.stale()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("SYNC-07a unreadable outbox entries dropped by a step are counted", async () => {
+    const s = setup({ [OUTBOX_KEY]: [{ broken: true }], [DROPPED_COUNT_KEY]: 2 });
+    await connectAndTrack(s);
+    s.browser.tab = NEWS;
+    s.clock.now += 120_000;
+    await s.tracker.dispatch({ type: "TAB", tab: NEWS }); // closes the interval: outbox written
+    expect(parseOutbox(s.storage.data.get(OUTBOX_KEY))).toHaveLength(1);
+    expect(s.storage.data.get(DROPPED_COUNT_KEY)).toBe(3);
   });
 });

@@ -14,6 +14,11 @@ export const DOMAINS_CACHE_KEY = "careeros.domains.cache";
  * data — #113), so it never links two accounts' data.
  */
 export const DEVICE_ID_KEY = "careeros.device.id";
+/**
+ * SYNC-05a (#58, #83): intervals the server rejected only because they ended in the future by
+ * its clock (device clock ahead, DATA-07). Retried once their end has passed on the server.
+ */
+export const DEFERRED_KEY = "careeros.tracking.deferred";
 /** Intervals the server rejected (SYNC-05): kept, never retried, counted in the popup. */
 export const QUARANTINE_KEY = "careeros.tracking.quarantine";
 /** Intervals of today already confirmed by the server (SYNC-08), for the popup's totals. */
