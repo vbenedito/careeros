@@ -34,7 +34,7 @@ Flow (validated by spike #10, see `docs/history/spikes/0003-auth-handoff.md`):
 ```
 User ── clicks "Connect extension" ──▶ Dashboard page (/connect)
 Dashboard page ── PING (chrome.runtime.sendMessage(EXT_ID)) ──▶ Extension
-   └─ no reply ⇒ show install instructions (unpacked build)
+   └─ no reply ⇒ show install instructions (Chrome Web Store link, EXTENSION_INSTALL_URL; amended 2026-11-12, #133)
 Dashboard page ── POST /api/extension/link (cookie session) ──▶ Dashboard server
 Dashboard server ── auth.admin.generateLink(magiclink, user.email) [service role] ──▶ Supabase
    └─ returns single-use hashed token (never e-mailed)

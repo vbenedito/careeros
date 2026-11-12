@@ -84,6 +84,8 @@ Free · Public · all regions.
 
 ## After the first upload (before publishing)
 
+Status (2026-11-12): steps 1–4 done; **published** at https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek. Remaining: step 5, and the description update below.
+
 1. The dashboard shows the item's **ID** (32 letters) as soon as the draft exists. Under **Package → View public key**, copy the item's **public key** (public by design, safe to share).
 2. Send both to the tech lead: they go into `MANIFEST_KEYS.production` (`apps/extension/manifest.config.ts`), so the unpacked production build and the store item share **one ID** (STORE-05). The docs that name the old ID are updated in the same PR. **Done 2026-11-11** (#130): ID `pddbflgidjmnhidineoejneeipaicgek`.
 3. In Vercel (Production): set `NEXT_PUBLIC_EXTENSION_ID` to the store ID and redeploy, so the dashboard talks to the store extension (AUTH-06).

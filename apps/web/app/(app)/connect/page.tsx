@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { extensionId } from "@/lib/env";
+import { extensionInstallUrl } from "@/lib/landing/links";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { ConnectExtension } from "./connect-extension";
 
@@ -22,7 +23,11 @@ export default async function ConnectPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <ConnectExtension extensionId={extensionId()} userEmail={user.email ?? null} />
+            <ConnectExtension
+              extensionId={extensionId()}
+              userEmail={user.email ?? null}
+              installUrl={extensionInstallUrl()}
+            />
           </CardContent>
         </Card>
       </main>

@@ -43,7 +43,10 @@ describe("/connect page (real Chromium + real extension)", () => {
     await page.goto(`${DASHBOARD_URL}/connect`);
     const state = page.getByTestId("connect-state");
     await expect.poll(() => state.getAttribute("data-state")).toBe("not-installed");
-    expect(await state.textContent()).toContain("Load unpacked");
+    expect(await state.textContent()).toContain("Chrome Web Store");
+    expect(
+      await state.getByRole("link", { name: "Chrome Web Store" }).getAttribute("href"),
+    ).toMatch(/^https:\/\/chromewebstore\.google\.com\//);
     await page.goto(`${DASHBOARD_URL}/dashboard`);
     await expect
       .poll(() => page.getByTestId("extension-status").getAttribute("data-state"))
