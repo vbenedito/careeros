@@ -23,6 +23,13 @@ export function StatusSection({
 }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // #60: an "Add site" error belongs to the status it was shown for; clear it when that changes.
+  const statusKey = JSON.stringify(status);
+  const [errorFor, setErrorFor] = useState(statusKey);
+  if (errorFor !== statusKey) {
+    setErrorFor(statusKey);
+    setError(null);
+  }
 
   async function add(host: string) {
     setAdding(true);

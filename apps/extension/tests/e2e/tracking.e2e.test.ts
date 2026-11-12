@@ -18,6 +18,7 @@ import {
   sql,
 } from "../../../web/tests/integration/helpers";
 import { MANIFEST_KEYS } from "../../manifest.config";
+import { findResponsiveViolations } from "../support/responsive";
 
 const DASHBOARD_URL = env("DASHBOARD_URL");
 const EXTENSION_DIR = resolve(import.meta.dirname, "../../dist/development");
@@ -170,6 +171,12 @@ describe("extension smoke (E2E)", () => {
     await expect
       .poll(() => popup.getByRole("region", { name: "Top sites today" }).textContent())
       .toContain(TRACKED);
+    // TEST-01 (#60): the popup is a fixed 360 px page; nothing overflows it. A desktop popup is
+    // clicked with a mouse, so the touch-target rule does not apply.
+    await popup.setViewportSize({ width: 360, height: 600 });
+    expect(
+      (await findResponsiveViolations(popup)).filter((line) => !line.includes("touch target")),
+    ).toEqual([]);
     await popup.close();
   });
 

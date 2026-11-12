@@ -146,6 +146,21 @@ describe("popup state for sync hardening (#58, #83)", () => {
     ).toBe(false);
   });
 
+  it("SYNC-02c the footer says Syncing… while a cycle uploads, over the pending count", () => {
+    const sync = {
+      ...INITIAL_SYNC_STATE,
+      syncingSince: NOW - 2000,
+      lastOutcome: "offline" as const,
+    };
+    expect(buildPopupView(input({ sync, counts: { pending: 3, quarantined: 0 } })).syncLabel).toBe(
+      "Syncing…",
+    );
+    const stale = { ...sync, syncingSince: NOW - 10 * 60_000 };
+    expect(
+      buildPopupView(input({ sync: stale, counts: { pending: 3, quarantined: 0 } })).syncLabel,
+    ).toBe("Offline · 3 pending");
+  });
+
   it("SYNC-05a the clock hint gives whole minutes ahead; deferred intervals are counted", () => {
     const view = buildPopupView(
       input({
@@ -157,6 +172,17 @@ describe("popup state for sync hardening (#58, #83)", () => {
     expect(view.deferred).toBe(2);
     expect(view.syncLabel).toBe("3 pending");
     expect(buildPopupView(input()).clockAheadMinutes).toBeNull();
+    // EXT-UI clock hint: only from 5 minutes ahead, and only while connected.
+    const ahead = (minutes: number, connected = true) =>
+      buildPopupView(
+        input({
+          auth: { connected, email: null },
+          sync: { ...INITIAL_SYNC_STATE, clockAheadMs: minutes * 60_000 },
+        }),
+      ).clockAheadMinutes;
+    expect(ahead(4.4)).toBeNull();
+    expect(ahead(5)).toBe(5);
+    expect(ahead(30, false)).toBeNull();
   });
 });
 

@@ -9,6 +9,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   FAILED: "Something went wrong. Try again.",
   CONNECTED: "An account is connected now. Use Disconnect instead.",
   SYNC_IN_PROGRESS: "Still syncing your sessions. Try again in a moment.",
+  // EXT-UI-05c (#65): a build without Supabase config (development only).
+  NOT_CONFIGURED: "This build can't connect to CareerOS. Use a release build.",
 };
 
 export const errorMessage = (code: string): string =>

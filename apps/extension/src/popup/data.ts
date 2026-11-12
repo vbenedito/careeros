@@ -21,6 +21,7 @@ import {
   type PopupDisconnectResult,
   type PopupForgetResult,
   type PopupRequest,
+  type PopupTrackingResult,
 } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
@@ -36,16 +37,23 @@ const KEYS = {
 } as const;
 
 export type CommandResult = { ok: true } | { ok: false; error: string };
+/** EXT-UI-05c (#65): the switch shows the worker's stored value; no reply is an error. */
+export type TrackingResult = { ok: true; enabled: boolean } | { ok: false; error: string };
 
 export interface PopupData {
   /** Everything except `now`, which the view adds every second. */
   load(): Promise<Omit<PopupInput, "now">>;
+  /**
+   * Epoch ms of the local midnight that starts the day of `now` (SYNC-12a: the engine's
+   * calendar). The popup recomputes it every tick, so it rolls over at midnight (#60).
+   */
+  dayStart(now: number): number;
   /** Calls back whenever the worker changes what the popup shows. */
   subscribe(onChange: () => void): () => void;
   addSite(input: string): Promise<CommandResult>;
   removeSite(domain: string): Promise<CommandResult>;
-  /** EXT-UI-06: per-device tracking switch. */
-  setTracking(enabled: boolean): Promise<void>;
+  /** EXT-UI-06: per-device tracking switch; replies with the value stored afterwards. */
+  setTracking(enabled: boolean): Promise<TrackingResult>;
   /** AUTH-12: refused with UNSYNCED_DATA unless `discardUnsynced`. */
   disconnect(discardUnsynced: boolean): Promise<PopupDisconnectResult>;
   /** AUTH-11 explicit discard while no account is connected (#113). */
@@ -118,8 +126,13 @@ export function createChromePopupData(): PopupData {
       return reply?.ok ? { ok: true } : { ok: false, error: reply?.error ?? "UNAVAILABLE" };
     },
 
+    dayStart: localDayStartMs,
+
     async setTracking(enabled) {
-      await send({ type: "TRACKING_SET", enabled });
+      const reply = await send<PopupTrackingResult>({ type: "TRACKING_SET", enabled });
+      return reply?.ok === true && typeof reply.enabled === "boolean"
+        ? { ok: true, enabled: reply.enabled }
+        : { ok: false, error: "FAILED" };
     },
 
     async forgetLocalData() {
