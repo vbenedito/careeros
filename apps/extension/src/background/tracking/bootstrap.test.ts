@@ -5,7 +5,14 @@ import { fakeStorage } from "../../test/fakes";
 import { createAccountEpoch } from "../account-epoch";
 import { SESSION_STORAGE_KEY } from "../auth/storage";
 import { createStorageChangeHandler, createTrackingLocalData, startTracking } from "./bootstrap";
-import { DOMAINS_CACHE_KEY, ENGINE_STATE_KEY, OUTBOX_KEY, TRACKING_ENABLED_KEY } from "./keys";
+import {
+  DEFERRED_KEY,
+  DOMAINS_CACHE_KEY,
+  ENGINE_STATE_KEY,
+  OUTBOX_KEY,
+  QUARANTINE_KEY,
+  TRACKING_ENABLED_KEY,
+} from "./keys";
 import { createTrackingStore } from "./store";
 import type { EventSource, Tracker } from "./tracker";
 
@@ -126,7 +133,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     const tracker = {
       dispatch: async () => false,
       exclusive: async <T>(t: () => Promise<T>) => t(),
-    } as Tracker;
+    } as unknown as Tracker;
     const ld = createTrackingLocalData({
       tracker,
       store: createTrackingStore(fakeStorage()),
@@ -171,5 +178,36 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     expect(storage.data.has(ENGINE_STATE_KEY)).toBe(false);
     expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false); // the list belongs to the user
     expect(rec.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS"]);
+  });
+});
+
+describe("local counts for Disconnect (#65, SYNC-05a)", () => {
+  it("AUTH-11 AUTH-12 deferred intervals are unsynced too; quarantined ones are counted apart", async () => {
+    const rec = recordingTracker();
+    const storage = fakeStorage({
+      [OUTBOX_KEY]: [interval],
+      [DEFERRED_KEY]: [
+        {
+          interval: { ...interval, id: "00000000-0000-4000-8000-0000000000d2" },
+          retryAt: 1,
+          attempts: 1,
+        },
+      ],
+      [QUARANTINE_KEY]: [{ ...interval, id: "00000000-0000-4000-8000-0000000000d3" }],
+    });
+    let waited = 0;
+    const ld = createTrackingLocalData({
+      tracker: rec.tracker,
+      store: createTrackingStore(storage),
+      isConnected: async () => true,
+      waitForUpload: async () => {
+        waited++;
+        return false;
+      },
+    });
+    expect(await ld.pendingCount()).toBe(2);
+    expect(await ld.quarantinedCount?.()).toBe(1);
+    expect(await ld.waitForUpload?.()).toBe(false);
+    expect(waited).toBe(1);
   });
 });

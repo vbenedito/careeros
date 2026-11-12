@@ -12,6 +12,7 @@ import {
   type EngineState,
   GAP_S,
   INITIAL_ENGINE_STATE,
+  localDayStartMs,
   localMidnightAfter,
   step,
 } from "./engine";
@@ -616,5 +617,24 @@ describe("Engine B — randomized invariants (TRK-08..11)", () => {
         }
       }
     }
+  });
+});
+
+describe("local day start (SYNC-12a, #56)", () => {
+  it("SYNC-12a is the last engine midnight at or before the time", () => {
+    const t = new Date(2026, 10, 12, 15, 30).getTime();
+    expect(localDayStartMs(t)).toBe(new Date(2026, 10, 12, 0, 0).getTime());
+    const midnight = new Date(2026, 10, 12, 0, 0).getTime();
+    expect(localDayStartMs(midnight)).toBe(midnight);
+    expect(localDayStartMs(midnight - 1000)).toBe(new Date(2026, 10, 11, 0, 0).getTime());
+  });
+
+  it("SYNC-12a follows the engine's calendar, even where it differs from setHours(0)", () => {
+    // A calendar whose day boundaries fall at 01:00 UTC (like a zone whose midnight is skipped).
+    const HOUR = 3600;
+    const next = (s: number) => Math.floor((s - HOUR) / 86_400) * 86_400 + 86_400 + HOUR;
+    const at = Date.UTC(2026, 10, 12, 0, 30) / 1000;
+    expect(localDayStartMs(at * 1000, next)).toBe(Date.UTC(2026, 10, 11, 1, 0));
+    expect(localDayStartMs(Date.UTC(2026, 10, 12, 1, 0), next)).toBe(Date.UTC(2026, 10, 12, 1, 0));
   });
 });

@@ -77,6 +77,23 @@ export function localMidnightAfter(t: number): number {
   return Math.floor(d.getTime() / 1000);
 }
 
+/**
+ * SYNC-12a (#56): epoch ms of the start of the local day containing `ms`, i.e. the last
+ * boundary `localMidnightAfter` produced at or before it. The popup's "today" and the local
+ * store use this, so in time zones whose midnight is skipped or repeated by a DST change an
+ * interval split by the engine always belongs to the same day everywhere.
+ */
+export function localDayStartMs(ms: number, nextMidnight = localMidnightAfter): number {
+  const t = Math.floor(ms / 1000);
+  // Two days back is before the previous boundary in every time zone (days are 23–25 h).
+  let boundary = nextMidnight(t - 2 * 86_400);
+  for (;;) {
+    const next = nextMidnight(boundary);
+    if (next > t || next <= boundary) return boundary * 1000;
+    boundary = next;
+  }
+}
+
 /** Heartbeat silence after which the engine assumes it was not running (TRK-14). */
 export const GAP_S = 2 * TRACKING.HEARTBEAT_PERIOD_MIN * 60;
 

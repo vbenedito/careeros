@@ -199,7 +199,12 @@ describe("disconnect", () => {
     const { auth, fb } = setupResult;
     fb.setCurrent(session("alice"));
     const ld = setupResult.ld;
-    expect(await auth.disconnect()).toEqual({ ok: false, code: "UNSYNCED_DATA" });
+    expect(await auth.disconnect()).toEqual({
+      ok: false,
+      code: "UNSYNCED_DATA",
+      unsynced: 1,
+      quarantined: 0,
+    });
     expect(fb.calls).not.toContain("signOut");
     // Tracking was stopped before the final sync and resumed after the refusal.
     expect(ld.state.calls).toEqual(["stop", "flush", "resume"]);
@@ -243,5 +248,79 @@ describe("disconnect", () => {
     expect(await auth.disconnect({ discardUnsynced: true })).toEqual({ ok: true });
     expect(fb.calls).toContain("signOut");
     expect(ld.state.cleared).toBe(1);
+  });
+});
+
+describe("disconnect hardening (#58, #65)", () => {
+  it("SYNC-02b waits for a running upload before taking the lock, then runs the final sync", async () => {
+    const { auth, fb, ld } = setup({ pending: 0 });
+    fb.setCurrent(session("alice"));
+    ld.localData.waitForUpload = async () => {
+      ld.state.calls.push("wait");
+      return true;
+    };
+    expect(await auth.disconnect()).toEqual({ ok: true });
+    expect(ld.state.calls).toEqual(["wait", "stop", "flush"]);
+  });
+
+  it("SYNC-02b the wait happens outside the lock: a cycle waiting for a token can finish", async () => {
+    const { auth, fb, ld } = setup({ pending: 0 });
+    fb.setCurrent(session("alice"));
+    let cycle: Promise<string | null> = Promise.resolve(null);
+    ld.localData.waitForUpload = async () => {
+      // The running cycle asks for a token while Disconnect waits for it.
+      cycle = auth.accessToken();
+      await cycle;
+      return true;
+    };
+    expect(await auth.disconnect()).toEqual({ ok: true });
+    expect(await cycle).toBe("access-alice");
+  });
+
+  it("#65 the popup's Disconnect also asks before deleting quarantined intervals; the dashboard's does not", async () => {
+    const { auth, fb, ld } = setup({ pending: 0 });
+    fb.setCurrent(session("alice"));
+    ld.localData.quarantinedCount = async () => 2;
+    expect(await auth.disconnect({ includeQuarantined: true })).toEqual({
+      ok: false,
+      code: "UNSYNCED_DATA",
+      unsynced: 0,
+      quarantined: 2,
+    });
+    expect(await auth.disconnect()).toEqual({ ok: true });
+  });
+
+  it("SYNC-09a another user connecting never sees the previous user's cached sites", async () => {
+    const { auth, storage } = setup({
+      storage: { [DATA_OWNER_KEY]: "alice", [DOMAINS_CACHE_KEY]: { domains: ["alice.dev"] } },
+    });
+    expect(await auth.connect("token-bob")).toMatchObject({ ok: true });
+    expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false);
+    // Also without a recorded owner (e.g. an older install).
+    const other = setup({ storage: { [DOMAINS_CACHE_KEY]: { domains: ["old.dev"] } } });
+    expect(await other.auth.connect("token-alice")).toMatchObject({ ok: true });
+    expect(other.storage.data.has(DOMAINS_CACHE_KEY)).toBe(false);
+  });
+});
+
+describe("Disconnect while an upload is still running (#150 review, AUTH-12b)", () => {
+  it("AUTH-12b still running after the wait: SYNC_IN_PROGRESS, nothing stopped or signed out", async () => {
+    const { auth, fb, ld } = setup({ pending: 3 });
+    fb.setCurrent(session("alice"));
+    ld.localData.waitForUpload = async () => false;
+    expect(await auth.disconnect({ includeQuarantined: true })).toEqual({
+      ok: false,
+      code: "SYNC_IN_PROGRESS",
+    });
+    expect(ld.state.calls).toEqual([]);
+    expect(fb.calls).not.toContain("signOut");
+  });
+
+  it("AUTH-12b a confirmed discard does not wait for the upload", async () => {
+    const { auth, fb, ld } = setup({ pending: 3 });
+    fb.setCurrent(session("alice"));
+    ld.localData.waitForUpload = async () => false;
+    expect(await auth.disconnect({ discardUnsynced: true })).toEqual({ ok: true });
+    expect(fb.calls).toContain("signOut");
   });
 });

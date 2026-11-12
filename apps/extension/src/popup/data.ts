@@ -4,6 +4,7 @@
  */
 import { isValidDomain } from "@careeros/shared";
 import {
+  DEFERRED_KEY,
   DOMAINS_CACHE_KEY,
   ENGINE_STATE_KEY,
   OUTBOX_KEY,
@@ -11,7 +12,8 @@ import {
   SYNCED_TODAY_KEY,
   TRACKING_ENABLED_KEY,
 } from "../background/tracking/keys";
-import { parseEngineState, parseOutbox } from "../background/tracking/store";
+import { parseDeferred, parseEngineState, parseOutbox } from "../background/tracking/store";
+import { localDayStartMs } from "../engine/engine";
 import { config } from "../lib/config";
 import {
   POPUP_PORT,
@@ -26,6 +28,7 @@ import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
 const KEYS = {
   engine: ENGINE_STATE_KEY,
   outbox: OUTBOX_KEY,
+  deferred: DEFERRED_KEY,
   quarantine: QUARANTINE_KEY,
   syncedToday: SYNCED_TODAY_KEY,
   trackingEnabled: TRACKING_ENABLED_KEY,
@@ -54,12 +57,6 @@ export interface PopupData {
   version: string;
 }
 
-function startOfToday(now: number): number {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
 function send<T>(message: PopupRequest): Promise<T | undefined> {
   return chrome.runtime.sendMessage(message).catch(() => undefined) as Promise<T | undefined>;
 }
@@ -74,8 +71,11 @@ export function createChromePopupData(): PopupData {
         send<PopupAuthStatus>({ type: "AUTH_STATUS" }),
         chrome.tabs.query({ active: true, currentWindow: true }),
       ]);
-      const today = startOfToday(Date.now());
+      // SYNC-12a: the engine's own midnight, so "today" matches how intervals were split.
+      const today = localDayStartMs(Date.now());
       const outbox = parseOutbox(stored[KEYS.outbox]);
+      // SYNC-05a: waiting for the server's clock; still pending upload, still today's time.
+      const deferred = parseDeferred(stored[KEYS.deferred]).items.map((d) => d.interval);
       const synced = parseOutbox(stored[KEYS.syncedToday]);
       const domains = stored[KEYS.domains] as { domains?: unknown } | undefined;
       return {
@@ -87,10 +87,13 @@ export function createChromePopupData(): PopupData {
           ? domains.domains.filter((d): d is string => typeof d === "string" && isValidDomain(d))
           : null,
         engine: parseEngineState(stored[KEYS.engine]),
-        todayIntervals: [...synced, ...outbox].filter((i) => Date.parse(i.started_at) >= today),
+        todayIntervals: [...synced, ...outbox, ...deferred].filter(
+          (i) => Date.parse(i.started_at) >= today,
+        ),
         sync: parseSyncState(stored[SYNC_STATE_KEY]),
         counts: {
-          pending: outbox.length,
+          pending: outbox.length + deferred.length,
+          deferred: deferred.length,
           quarantined: parseOutbox(stored[KEYS.quarantine]).length,
         },
         activeTabUrl: tab?.url,

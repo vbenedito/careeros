@@ -29,6 +29,23 @@ const MAX_EFFECT_ROUNDS = 4;
 /** A slot that has not settled by then releases the queue (a hung Chrome API must not freeze it). */
 export const SLOT_TIMEOUT_MS = 10_000;
 
+/** Thrown to the caller of `exclusive` when its task hit SLOT_TIMEOUT_MS (TRK-17a). */
+export class SlotTimeoutError extends Error {
+  constructor() {
+    super("tracker slot timed out");
+    this.name = "SlotTimeoutError";
+  }
+}
+
+/**
+ * TRK-17a (#56): handed to every queue task. `stale()` turns true once the slot timed out and
+ * the queue moved on; a task must check it right before each write, so its late work is
+ * dropped instead of overwriting what later slots stored.
+ */
+export interface SlotGuard {
+  stale(): boolean;
+}
+
 export function createTracker(deps: {
   store: TrackingStore;
   browser: BrowserPort;
@@ -39,26 +56,46 @@ export function createTracker(deps: {
 }) {
   const { store, browser, now, log } = deps;
   const enqueue = createSerialQueue();
+  /**
+   * TRK-17a (#56): generation counter. Each slot records the generation it runs in; a timeout
+   * moves the counter on, so every write the timed-out slot still attempts is dropped.
+   */
+  let generation = 0;
 
-  /** Set when a slot timed out: its late work must never touch storage again (TRK-17). */
-  interface Slot {
-    aborted: boolean;
+  /** Runs `task` in the queue with a guard; rejects with SlotTimeoutError after the timeout. */
+  function runSlot<T>(task: (slot: SlotGuard) => Promise<T>): Promise<T> {
+    return enqueue(async () => {
+      const mine = generation;
+      const slot: SlotGuard = { stale: () => generation !== mine };
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          generation += 1;
+          reject(new SlotTimeoutError());
+        }, SLOT_TIMEOUT_MS);
+      });
+      try {
+        return await Promise.race([task(slot), timeout]);
+      } finally {
+        clearTimeout(timer);
+      }
+    });
   }
 
   async function stepAndCommit(
     event: EngineEvent,
     env: EngineEnv,
-    slot: Slot,
+    slot: SlotGuard,
   ): Promise<EngineEffect[]> {
-    if (slot.aborted) return [];
-    const { state, outbox } = await store.load();
+    if (slot.stale()) return [];
+    const { state, outbox, droppedCount } = await store.load();
     const result = step(state, event, now(), env);
     const emitted: Interval[] = result.effects.flatMap((e) =>
       e.type === "EMIT_INTERVAL" ? [e.interval] : [],
     );
     // A slot that timed out while loading must not overwrite what later slots stored.
-    if (slot.aborted) return [];
-    await store.commit(result.state, outbox, emitted);
+    if (slot.stale()) return [];
+    await store.commit(result.state, outbox, emitted, droppedCount);
     log.debug("tracking.step", {
       event: event.type,
       open: result.state.open?.domain ?? null,
@@ -67,7 +104,7 @@ export function createTracker(deps: {
     return result.effects;
   }
 
-  async function process(source: EventSource, slot: Slot): Promise<void> {
+  async function process(source: EventSource, slot: SlotGuard): Promise<void> {
     const env = await deps.env();
     const event = typeof source === "function" ? await source() : source;
     let effects = await stepAndCommit(event, env, slot);
@@ -93,36 +130,28 @@ export function createTracker(deps: {
      * stored, `false` when it failed or timed out (logged, never thrown).
      */
     dispatch(source: EventSource): Promise<boolean> {
-      return enqueue(async () => {
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const slot: Slot = { aborted: false };
-        const timeout = new Promise<"timeout">((resolve) => {
-          timer = setTimeout(() => resolve("timeout"), SLOT_TIMEOUT_MS);
-        });
-        try {
-          const outcome = await Promise.race([
-            process(source, slot).then(() => "ok" as const),
-            timeout,
-          ]);
-          if (outcome === "timeout") {
-            slot.aborted = true;
+      return runSlot((slot) => process(source, slot)).then(
+        () => true,
+        (error: unknown) => {
+          if (error instanceof SlotTimeoutError) {
             log.error("tracking.step_timeout", {});
+          } else {
+            // Never log the error message itself: it could contain a URL (SEC-06).
+            log.error("tracking.step_failed", {
+              error: error instanceof Error ? error.name : "unknown",
+            });
           }
-          return outcome === "ok";
-        } catch (error) {
-          // Never log the error message itself: it could contain a URL (SEC-06).
-          log.error("tracking.step_failed", {
-            error: error instanceof Error ? error.name : "unknown",
-          });
           return false;
-        } finally {
-          clearTimeout(timer);
-        }
-      });
+        },
+      );
     },
-    /** Runs `task` exclusively in the queue (e.g. clearing local data between events). */
-    exclusive<T>(task: () => Promise<T>): Promise<T> {
-      return enqueue(task);
+    /**
+     * Runs `task` exclusively in the queue (e.g. the local store's read-modify-writes). Like an
+     * event, it is released after SLOT_TIMEOUT_MS (rejects with SlotTimeoutError); the task
+     * must check `slot.stale()` before writing (TRK-17a).
+     */
+    exclusive<T>(task: (slot?: SlotGuard) => Promise<T>): Promise<T> {
+      return runSlot(task);
     },
   };
 }

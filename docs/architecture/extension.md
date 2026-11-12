@@ -1,6 +1,6 @@
 # Extension design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 Low-level design of the Chrome MV3 extension in `apps/extension`. Rules are in [TRK](../../specs/v0/01-tracking.md), [AUTH](../../specs/v0/02-auth.md), [SYNC](../../specs/v0/03-sync.md), [EXT-UI](../../specs/v0/05-extension-ui.md) and [STORE](../../specs/store/00-chrome-web-store.md). The big picture is in the [overview](overview.md).
 
@@ -35,19 +35,20 @@ flowchart TB
 | `engine/engine.ts` | Engine B: `step(state, event, now, env) → { state, effects }`; opens, splits and closes intervals | TRK-08..16 |
 | `background/index.ts` | Service worker entry: wires every module and registers all listeners synchronously | TRK-19, SYNC-02 |
 | `background/tracking/chrome-port.ts` | Chrome adapter: tab, focus (500 ms debounce), idle, heartbeat alarm, popup port | TRK-02, 04, 06, 13, 18, 19 |
-| `background/tracking/tracker.ts`, `queue.ts` | One serialized queue; each slot loads state, steps the engine, commits, answers re-query effects; 10 s slot timeout | TRK-12, 13, 17 |
+| `background/tracking/tracker.ts`, `queue.ts` | One serialized queue; each slot loads state, steps the engine, commits, answers re-query effects; 10 s timeout for events and `exclusive` tasks; a generation counter drops the writes of timed-out slots | TRK-12, 13, 17, 17a |
 | `background/tracking/store.ts`, `keys.ts` | Storage schemas and keys; engine state and outbox written together | TRK-12, SYNC-01 |
-| `background/tracking/outbox.ts` | Outbox, quarantine, synced-today, prune and counts | SYNC-01, 05, 07, 08 |
+| `background/tracking/outbox.ts` | Outbox, deferred (clock ahead), quarantine, synced-today, prune and counts | SYNC-01, 05, 05a, 07, 07a, 08 |
 | `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events; `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12 |
-| `background/tracking/device.ts` | Random device id, UUID generator, local-midnight calendar | TRK-09, 10 |
-| `background/sync/sync-service.ts` | Upload cycle, backoff, outcome stored for the popup | SYNC-02..08 |
-| `background/sync/supabase-ingest.ts` | Calls `ingest_study_sessions`; maps errors to classes | SYNC-06, DATA-06..09 |
-| `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect, forget local data; one lock | AUTH-07b, 10..12 |
-| `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local`; in-memory lock | AUTH-10, ADR-0002 |
+| `background/tracking/device.ts` | Random device id, UUID generator, local-midnight calendar (`engine.localDayStartMs` gives "today" from it) | TRK-09, 10, SYNC-12a |
+| `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, "syncing" mark and clock skew stored for the popup, bounded `waitIdle` for Disconnect | SYNC-02..08 |
+| `background/sync/supabase-ingest.ts` | Calls `ingest_study_sessions`; maps errors to classes; reads the server's time from the `Date` header | SYNC-05a, 06, DATA-06..09 |
+| `background/sync/triggers.ts` | Sync alarm → cycle + site list; session write → cycle, site list only when the user changed | SYNC-02, 09c |
+| `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect (waits for a running upload first), forget local data; one lock | AUTH-07b, 10..12b |
+| `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local` (its own removals held back during a refresh); in-memory lock | AUTH-10, 10a, ADR-0002 |
 | `background/account-epoch.ts` | In-memory counter of account changes; stale work writes nothing | SYNC-02a, AUTH-11 |
-| `background/domains/` | Tracked-site cache and server edits | SYNC-09..11 |
+| `background/domains/` | Tracked-site cache and server edits | SYNC-09..11, 09b, 10a |
 | `background/messaging/external.ts` | Messages from the dashboard origin | AUTH-06..07b, SEC-05 |
-| `background/messaging/internal.ts` | Messages from the extension's own pages | EXT-UI-05a, SEC-05 |
+| `background/messaging/internal.ts` | Messages from the extension's own pages; answers also in builds without Supabase config | EXT-UI-05a, 05c, SEC-05 |
 | `background/api/data-client.ts` | supabase-js data client that asks `AuthService` for each token | AUTH-10 |
 | `background/badge.ts`, `lib/badge.ts` | Toolbar badge from the engine state | EXT-UI-10 |
 | `popup/` | React popup: `App.tsx`, `views/` (Main, Settings), `components/`, `ui/` primitives, `data.ts` (storage reads + commands) | EXT-UI-01..10 |
@@ -83,12 +84,15 @@ stateDiagram-v2
   Outbox --> Synced: server confirms id
   Outbox --> Quarantine: server rejects id
   Outbox --> [*]: older than 30 days (dropped, counted)
+  Outbox --> Deferred: server rejects id, ended_at in its future (clock ahead)
+  Deferred --> Synced: retried once ended_at passed on the server
+  Deferred --> Quarantine: rejected otherwise, or 3 times in the future
   Synced --> [*]: pruned after today
 ```
 
 ## Sync cycle
 
-`SyncService.run` allows one cycle at a time. It starts from the `careeros.sync` alarm, on every worker start and when a session is written (SYNC-02).
+`SyncService.run` allows one cycle at a time. It starts from the `careeros.sync` alarm, on every worker start and when a session is written (SYNC-02). The alarm and the worker start also refresh the site list; a session write does so only when its user changed (SYNC-09c, `sync/triggers.ts`).
 
 ```mermaid
 sequenceDiagram
@@ -99,16 +103,19 @@ sequenceDiagram
   Y->>Y: read sync state, skip if backing off (unless forced)
   Y->>O: prune (SYNC-07/08)
   loop while the outbox has intervals
-    Y->>O: batch (oldest ≤ 200)
+    Y->>O: batch (due deferred first, then oldest; ≤ 200, or 1 after an empty confirmation)
+    Y->>Y: first batch: write syncingSince (SYNC-02c)
     Y->>A: accessToken()
-    Y->>D: batch + JWT
-    alt confirmed ids
-      Y->>O: settle: confirmed → synced today, others → quarantine
+    Y->>D: batch + JWT (aborted after 20 s → unavailable)
+    alt nothing confirmed of several (not explained by the clock)
+      Y->>Y: call error: wait 1 hour, probe 1 interval next (SYNC-05b)
+    else confirmed ids
+      Y->>O: settle: confirmed → synced today; ended in the server's future (− 5 s slack) → deferred; others → quarantine
     else expired (PGRST301/303)
       Y->>A: accessToken({ forceRefresh }) and retry once
     else auth (401, PT401, 23503)
       Y->>A: sessionRejected() → "Reconnect"
-    else unavailable (network, 429, 5xx)
+    else unavailable (network, 429, 5xx, timeout, no token while the session is stored)
       Y->>Y: backoff 1, 2, 4, 8, 16, 30 min
     else abuse limit or client error
       Y->>Y: wait 1 hour
@@ -117,7 +124,25 @@ sequenceDiagram
   Y->>Y: store outcome for the popup footer
 ```
 
-If the account epoch changed during the cycle (connect, session rejected, local data cleared), the cycle writes nothing (SYNC-02a). Data is never discarded on failure.
+If the account epoch changed during the cycle (connect, session rejected, local data cleared), the cycle writes nothing (SYNC-02a). Data is never discarded on failure. Every status the cycle writes clears `syncingSince`; a local store task that timed out (TRK-17a) ends the cycle as failed without settling.
+
+Disconnect (popup or dashboard) first calls `SyncService.waitIdle(30 s)` outside the auth lock. If the cycle is still running, it replies `SYNC_IN_PROGRESS` (popup) / `UNSYNCED_DATA` (dashboard) and changes nothing; otherwise it takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12b).
+
+A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. Only skew-due retries (or any, while no skew is known) count toward `CLOCK_RETRY_MAX`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
+
+### Sync status for the popup (`careeros.sync.state`)
+
+| Field | Meaning |
+|---|---|
+| `failures`, `notBefore` | Backoff (SYNC-06) |
+| `lastOutcome` | `ok`, `offline`, `abuse`, `error`, `not-connected`, or null |
+| `lastSyncedAt` | Epoch ms of the last cycle that emptied the outbox |
+| `syncingSince` | Epoch ms the running cycle started uploading, else null; `isSyncing(state, now)` ignores a mark older than 2 min (SYNC-02c) |
+| `clockAheadMs` | Device clock ahead of the server's while that causes rejections, else null (SYNC-05a) |
+| `probeNext` | Next cycle sends one interval (SYNC-05b) |
+| `serverSkewMs` | Latest measured local − server clock (ms), or null (SYNC-05a) |
+
+`buildPopupView` (`lib/popup-view.ts`) turns these into `syncing`, `clockAheadMinutes` and `deferred` for the footer and the clock hint.
 
 ## Message protocol
 
@@ -131,11 +156,11 @@ Validated by `PopupRequestSchema` (`lib/popup-messages.ts`). Accepted only from 
 | `DOMAINS_REFRESH` | — | `{ ok: true, domains }` or `{ ok: false, error }` |
 | `DOMAINS_ADD` | `input` (≤ 2048 chars) | same |
 | `DOMAINS_REMOVE` | `domain` (≤ 253 chars) | same |
-| `TRACKING_SET` | `enabled` | `{ ok: true }` |
-| `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending`, or `FAILED` |
+| `TRACKING_SET` | `enabled` | `{ ok: true, enabled }` (the stored value afterwards) |
+| `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending` (unsynced + quarantined), `unsynced`, `quarantined`, `SYNC_IN_PROGRESS`, or `FAILED` |
 | `FORGET_LOCAL_DATA` | — | `{ ok: true }`, `CONNECTED` or `FAILED` |
 
-Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`. While shown, the popup also holds the port `careeros.popup`, so the worker treats Chrome as focused (TRK-18).
+Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`. In a build without Supabase config every command still gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, `DISCONNECT` and `FORGET_LOCAL_DATA` `FAILED` (EXT-UI-05c). While shown, the popup also holds the port `careeros.popup`, so the worker treats Chrome as focused (TRK-18).
 
 ### Dashboard → service worker
 
@@ -169,11 +194,12 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | `careeros.auth.needsReconnect` | Session became invalid; popup shows "Reconnect" | yes |
 | `careeros.tracking.engine` | Engine state (signals, open interval, checkpoints) | yes |
 | `careeros.tracking.outbox` | Closed intervals waiting for upload | yes |
+| `careeros.tracking.deferred` | Intervals rejected as ending in the server's future: `{ interval, retryAt, attempts }` (SYNC-05a) | yes |
 | `careeros.tracking.quarantine` | Intervals the server rejected | yes |
 | `careeros.tracking.syncedToday` | Today's confirmed intervals, for popup totals | yes |
-| `careeros.tracking.droppedCount` | Intervals dropped as too old | yes |
+| `careeros.tracking.droppedCount` | Intervals dropped as too old or unreadable | yes |
 | `careeros.domains.cache` | Tracked-domain list | yes (also when the session becomes invalid) |
-| `careeros.sync.state` | Backoff, last outcome, last sync time | yes |
+| `careeros.sync.state` | Backoff, last outcome, last sync time, syncing mark, clock skew (see above) | yes |
 | `careeros.device.id` | Random device id | replaced when local data is cleared |
 | `careeros.settings.trackingEnabled` | Per-device switch; missing means on | no |
 
@@ -184,7 +210,9 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | `careeros.heartbeat` | `HEARTBEAT_PERIOD_MIN` (1 min) | Re-check tab, focus, idle and media; detects gaps (TRK-13/14) |
 | `careeros.sync` | `SYNC_PERIOD_MIN` (5 min) | Sync cycle (SYNC-02) |
 | Focus debounce | 500 ms (`FOCUS_DEBOUNCE_MS`) | Ignore short `WINDOW_ID_NONE` reports (TRK-18) |
-| Tracker slot timeout | 10 s (`SLOT_TIMEOUT_MS`) | A hung Chrome API cannot freeze the queue |
+| Tracker slot timeout | 10 s (`SLOT_TIMEOUT_MS`) | A hung Chrome API or storage call cannot freeze the queue (events and `exclusive` tasks) |
+| Ingest timeout | 20 s (`INGEST_TIMEOUT_S`) | A stalled upload cannot hold the sync guard (SYNC-06a) |
+| Disconnect wait | ≤ 30 s (`DISCONNECT_WAIT_S`) | Let a running cycle finish before the final sync; still running → `SYNC_IN_PROGRESS` (SYNC-02b) |
 
 `chrome.idle.setDetectionInterval(60)` is set on every worker start (TRK-19).
 

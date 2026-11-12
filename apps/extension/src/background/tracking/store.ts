@@ -13,6 +13,7 @@ import { SYNC_STATE_KEY } from "../../lib/sync-state";
 import type { AccountEpoch } from "../account-epoch";
 import type { KeyValueArea } from "../auth/storage";
 import {
+  DEFERRED_KEY,
   DOMAINS_CACHE_KEY,
   DROPPED_COUNT_KEY,
   ENGINE_STATE_KEY,
@@ -50,32 +51,97 @@ export function parseEngineState(value: unknown): EngineState {
 
 /** Valid intervals only: a corrupted entry must never block the queue. */
 export function parseOutbox(value: unknown): Interval[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
+  return parseOutboxCounted(value).items;
+}
+
+/** SYNC-07a (#56): like `parseOutbox`, also counting the entries it had to drop. */
+export function parseOutboxCounted(value: unknown): { items: Interval[]; invalid: number } {
+  if (!Array.isArray(value)) return { items: [], invalid: 0 };
+  const items = value.flatMap((item) => {
     const parsed = IntervalSchema.safeParse(item);
     return parsed.success ? [parsed.data] : [];
   });
+  return { items, invalid: value.length - items.length };
+}
+
+/** SYNC-05a: an interval waiting for the server's clock to pass its end. */
+export interface DeferredInterval {
+  interval: Interval;
+  /** Local epoch ms from which it may be sent again. */
+  retryAt: number;
+  /** How many times the server rejected it as ending in the future (≤ CLOCK_RETRY_MAX). */
+  attempts: number;
+}
+
+const DeferredSchema = z.object({
+  interval: IntervalSchema,
+  retryAt: epoch,
+  attempts: z.number().int().positive(),
+});
+
+/** Valid deferred entries only, with the number dropped (SYNC-07a). */
+export function parseDeferred(value: unknown): { items: DeferredInterval[]; invalid: number } {
+  if (!Array.isArray(value)) return { items: [], invalid: 0 };
+  const items = value.flatMap((item) => {
+    const parsed = DeferredSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+  return { items, invalid: value.length - items.length };
+}
+
+/** The stored dropped counter (SYNC-07). */
+export function parseDroppedCount(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
 export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
   return {
-    async load(): Promise<{ state: EngineState; outbox: Interval[] }> {
-      const stored = await area.get([ENGINE_STATE_KEY, OUTBOX_KEY]);
+    /**
+     * `droppedCount` is set when stored outbox entries were invalid: the new value of the
+     * dropped counter, written with the next outbox write (SYNC-07a).
+     */
+    async load(): Promise<{ state: EngineState; outbox: Interval[]; droppedCount?: number }> {
+      const stored = await area.get([ENGINE_STATE_KEY, OUTBOX_KEY, DROPPED_COUNT_KEY]);
+      const outbox = parseOutboxCounted(stored[OUTBOX_KEY]);
       return {
         state: parseEngineState(stored[ENGINE_STATE_KEY]),
-        outbox: parseOutbox(stored[OUTBOX_KEY]),
+        outbox: outbox.items,
+        ...(outbox.invalid > 0
+          ? { droppedCount: parseDroppedCount(stored[DROPPED_COUNT_KEY]) + outbox.invalid }
+          : {}),
       };
     },
 
     /** One write: the new state plus the outbox with the step's intervals appended. */
-    async commit(state: EngineState, outbox: Interval[], emitted: Interval[]): Promise<void> {
+    async commit(
+      state: EngineState,
+      outbox: Interval[],
+      emitted: Interval[],
+      droppedCount?: number,
+    ): Promise<void> {
       const items: Record<string, unknown> = { [ENGINE_STATE_KEY]: state };
-      if (emitted.length > 0) items[OUTBOX_KEY] = [...outbox, ...emitted];
+      if (emitted.length > 0) {
+        items[OUTBOX_KEY] = [...outbox, ...emitted];
+        if (droppedCount !== undefined) items[DROPPED_COUNT_KEY] = droppedCount;
+      }
       await area.set(items);
     },
 
     async outbox(): Promise<Interval[]> {
       return parseOutbox((await area.get(OUTBOX_KEY))[OUTBOX_KEY]);
+    },
+
+    /**
+     * AUTH-11/12 (#65): intervals not on the server yet — `unsynced` (outbox + deferred, they
+     * may still upload) and `quarantined` (rejected, never retried).
+     */
+    async localCounts(): Promise<{ unsynced: number; quarantined: number }> {
+      const stored = await area.get([OUTBOX_KEY, DEFERRED_KEY, QUARANTINE_KEY]);
+      return {
+        unsynced:
+          parseOutbox(stored[OUTBOX_KEY]).length + parseDeferred(stored[DEFERRED_KEY]).items.length,
+        quarantined: parseOutbox(stored[QUARANTINE_KEY]).length,
+      };
     },
 
     /** EXT-UI-06: on unless explicitly turned off. */
@@ -106,6 +172,7 @@ export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
       await area.remove([
         ENGINE_STATE_KEY,
         OUTBOX_KEY,
+        DEFERRED_KEY,
         QUARANTINE_KEY,
         SYNCED_TODAY_KEY,
         DROPPED_COUNT_KEY,

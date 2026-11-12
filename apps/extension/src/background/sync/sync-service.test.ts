@@ -1,12 +1,13 @@
 import type { Interval } from "@careeros/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createLogger } from "../../lib/log";
 import { SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
 import { createAccountEpoch } from "../account-epoch";
-import { OUTBOX_KEY, QUARANTINE_KEY } from "../tracking/keys";
+import { DEFERRED_KEY, OUTBOX_KEY, QUARANTINE_KEY } from "../tracking/keys";
 import { createOutbox } from "../tracking/outbox";
-import { classify } from "./supabase-ingest";
-import { createSyncService, type IngestResult } from "./sync-service";
+import { classify, parseDateHeader } from "./supabase-ingest";
+import { createSyncService, INGEST_TIMEOUT_MS, type IngestResult } from "./sync-service";
 
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0);
 let n = 0;
@@ -19,8 +20,9 @@ const interval = (): Interval => ({
 });
 
 function setup(
-  responses: (IngestResult | ((batch: Interval[]) => IngestResult))[],
+  responses: (IngestResult | ((batch: Interval[]) => IngestResult | Promise<IngestResult>))[],
   pending: Interval[],
+  options: { connected?: boolean } = {},
 ) {
   const storage = fakeStorage({ [OUTBOX_KEY]: pending });
   const clock = { now: NOW };
@@ -39,7 +41,7 @@ function setup(
     sessionRejected: async () => {
       rejected++;
     },
-    isConnected: async () => true,
+    isConnected: async () => options.connected ?? true,
     ingest: async (batch) => {
       batches.push(batch);
       const next = responses.shift() ?? { ok: true, confirmedIds: batch.map((i) => i.id) };
@@ -206,7 +208,7 @@ describe("sync cycle (SYNC-02..06)", () => {
   });
 
   it("not connected: nothing is sent", async () => {
-    const s = setup([], [interval()]);
+    const s = setup([], [interval()], { connected: false });
     expect(await s.sync.run(async () => null)).toBe("not-connected");
     expect(s.batches).toEqual([]);
   });
@@ -239,5 +241,288 @@ describe("sync cycle (SYNC-02..06)", () => {
     expect(classify(503, undefined, undefined)).toBe("unavailable");
     expect(classify(429, undefined, undefined)).toBe("unavailable");
     expect(classify(400, "22023", "INVALID_BATCH")).toBe("client");
+  });
+});
+
+/** An interval ending `endMs` (epoch ms), 10 minutes long. */
+const endingAt = (endMs: number): Interval => {
+  const iso = (t: number) => `${new Date(t).toISOString().slice(0, 19)}Z`;
+  return { ...interval(), started_at: iso(endMs - 600_000), ended_at: iso(endMs) };
+};
+
+describe("sync hardening (#58, #83, #56)", () => {
+  it("SYNC-02c the cycle marks when it starts uploading and clears the mark when it ends", async () => {
+    const seen: (number | null)[] = [];
+    const s = setup([], [interval()]);
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: s.storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage: s.storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      isConnected: async () => true,
+      ingest: async (batch) => {
+        seen.push((s.storage.data.get(SYNC_STATE_KEY) as SyncState).syncingSince);
+        return { ok: true, confirmedIds: batch.map((i) => i.id) };
+      },
+    });
+    expect(await sync.run(token)).toBe("done");
+    expect(seen).toEqual([NOW]);
+    expect(s.state()?.syncingSince).toBeNull();
+  });
+
+  it("SYNC-02c nothing to upload: no syncing mark is written", async () => {
+    const s = setup([], []);
+    const writes: unknown[] = [];
+    const set = s.storage.set.bind(s.storage);
+    s.storage.set = async (items) => {
+      if (SYNC_STATE_KEY in items) writes.push(items[SYNC_STATE_KEY]);
+      await set(items);
+    };
+    await s.sync.run(token);
+    expect(writes).toHaveLength(1);
+    expect((writes[0] as SyncState).syncingSince).toBeNull();
+  });
+
+  it("SYNC-06a a stalled ingest call is abandoned after the timeout and backs off like a network error", async () => {
+    vi.useFakeTimers();
+    try {
+      let aborted = false;
+      const s = setup(
+        [
+          (_batch) =>
+            new Promise<IngestResult>(() => {
+              /* never answers */
+            }),
+        ],
+        [interval()],
+      );
+      const storage = s.storage;
+      const sync = createSyncService({
+        outbox: createOutbox({
+          area: storage,
+          exclusive: (t) => t(),
+          now: () => NOW,
+          startOfLocalDay: (t) => t - (t % 86_400_000),
+        }),
+        storage,
+        now: () => NOW,
+        sessionRejected: async () => {},
+        isConnected: async () => true,
+        ingest: (_batch, _token, signal) =>
+          new Promise<IngestResult>(() => {
+            signal?.addEventListener("abort", () => {
+              aborted = true;
+            });
+          }),
+      });
+      const run = sync.run(token);
+      await vi.advanceTimersByTimeAsync(INGEST_TIMEOUT_MS);
+      expect(await run).toBe("failed");
+      expect(aborted).toBe(true);
+      expect(s.state()).toMatchObject({ lastOutcome: "offline", failures: 1, syncingSince: null });
+      // The guard is free again: the final sync of a Disconnect is not skipped.
+      const again = sync.run(token, { force: true, ifIdle: true });
+      await vi.advanceTimersByTimeAsync(INGEST_TIMEOUT_MS);
+      expect(await again).toBe("failed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("AUTH-10a no token while the session is still stored (refresh rate-limited): back off, still connected", async () => {
+    const s = setup([], [interval()]);
+    expect(await s.sync.run(async () => null)).toBe("failed");
+    expect(s.state()).toMatchObject({ lastOutcome: "offline", failures: 1 });
+    expect(s.rejected()).toBe(0);
+  });
+
+  it("SYNC-05a rejected for ending in the future: deferred until the server's clock passes the end, then retried", async () => {
+    const skew = 20 * 60_000; // device clock 20 min ahead
+    const serverNow = NOW - skew;
+    const future = endingAt(NOW - 60_000); // ended 1 min ago locally, 19 min ahead of the server
+    const fine = endingAt(NOW - 3 * 3600_000);
+    const s = setup(
+      [
+        { ok: true, confirmedIds: [fine.id], serverNow },
+        (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: NOW }),
+      ],
+      [fine, future],
+    );
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([]);
+    expect(s.storage.data.get(DEFERRED_KEY)).toEqual([
+      { interval: future, retryAt: NOW + (Date.parse(future.ended_at) - serverNow), attempts: 1 },
+    ]);
+    expect(s.state()?.clockAheadMs).toBe(skew);
+    // Not due yet: nothing is sent.
+    s.clock.now = NOW + 5 * 60_000;
+    await s.sync.run(token);
+    expect(s.batches).toHaveLength(1);
+    // Due: sent again, accepted, and the hint goes away.
+    s.clock.now = NOW + 20 * 60_000;
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches[1]).toEqual([future]);
+    expect(s.storage.data.get(DEFERRED_KEY)).toEqual([]);
+    expect(s.state()?.clockAheadMs).toBeNull();
+  });
+
+  it("SYNC-05a without the server's time, a rejection is quarantined as before", async () => {
+    const future = endingAt(NOW - 60_000);
+    const s = setup([{ ok: true, confirmedIds: [] }], [future]);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([future]);
+  });
+
+  it("SYNC-05b a multi-interval batch with nothing confirmed is a call error: nothing quarantined, then one-interval probe", async () => {
+    const [a, b, c] = [interval(), interval(), interval()];
+    const s = setup(
+      [
+        { ok: true, confirmedIds: [] },
+        { ok: true, confirmedIds: [] }, // the probe: a really is rejected
+      ],
+      [a, b, c],
+    );
+    expect(await s.sync.run(token)).toBe("failed");
+    expect(s.state()).toMatchObject({
+      lastOutcome: "error",
+      probeNext: true,
+      notBefore: NOW + 3600_000,
+    });
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([]);
+    expect(s.storage.data.get(OUTBOX_KEY)).toEqual([a, b, c]);
+    s.clock.now = NOW + 3600_000;
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches.map((x) => x.length)).toEqual([3, 1, 2]);
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([a]);
+    expect(s.state()).toMatchObject({ lastOutcome: "ok", probeNext: false });
+  });
+
+  it("SYNC-05b a lone interval with nothing confirmed is a per-row rejection (quarantined)", async () => {
+    const a = interval();
+    const s = setup([{ ok: true, confirmedIds: [] }], [a]);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([a]);
+  });
+
+  it("TRK-17a a local store task that timed out ends the cycle without settling and clears the mark", async () => {
+    const s = setup([], [interval()]);
+    let calls = 0;
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: s.storage,
+        exclusive: async (t) => {
+          calls += 1;
+          if (calls === 3) throw new Error("tracker slot timed out"); // settle
+          return t();
+        },
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage: s.storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      isConnected: async () => true,
+      ingest: async (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id) }),
+    });
+    expect(await sync.run(token)).toBe("failed");
+    expect(s.state()?.syncingSince).toBeNull();
+    expect((s.storage.data.get(OUTBOX_KEY) as Interval[]).length).toBe(1);
+  });
+
+  it("SYNC-02b waitIdle waits for the running cycle, but no longer than the bound", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const s = setup([], [interval()]);
+    const first = s.sync.run(async () => {
+      await gate;
+      return "token";
+    });
+    let waited = false;
+    const wait = s.sync.waitIdle(10_000).then((idle) => {
+      waited = true;
+      return idle;
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(waited).toBe(false);
+    release();
+    expect(await wait).toBe(true);
+    expect(await first).toBe("done");
+    expect(await s.sync.waitIdle(10)).toBe(true); // nothing running
+
+    vi.useFakeTimers();
+    try {
+      const hung = setup([], [interval()]);
+      void hung.sync.run(() => new Promise(() => {}));
+      const bounded = hung.sync.waitIdle(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+      await expect(bounded).resolves.toBe(false); // still running → SYNC_IN_PROGRESS
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("SYNC-05a the server's time comes from the HTTP Date header", () => {
+    expect(parseDateHeader("Thu, 12 Nov 2026 10:00:00 GMT")).toBe(Date.UTC(2026, 10, 12, 10));
+    expect(parseDateHeader(null)).toBeNull();
+    expect(parseDateHeader("garbage")).toBeNull();
+  });
+});
+
+describe("server time and skew (#150 review)", () => {
+  it("SYNC-05a the latest measured skew is stored and decides when deferred intervals are due", async () => {
+    const skew = 20 * 60_000;
+    const future = endingAt(NOW - 60_000);
+    const s = setup(
+      [
+        { ok: true, confirmedIds: [], serverNow: NOW - skew },
+        // The user fixed the clock: the next response measures no skew.
+        (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
+        (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
+      ],
+      [future],
+    );
+    await s.sync.run(token);
+    expect(s.state()?.serverSkewMs).toBe(skew);
+    // 10 min later (real time) the clock is corrected; a new interval uploads and re-measures
+    // the skew (0). The deferred one is not due yet: its end is still 9 min ahead.
+    s.clock.now = NOW - 10 * 60_000;
+    const fresh = endingAt(s.clock.now - 10_000);
+    s.storage.data.set(OUTBOX_KEY, [fresh]);
+    await s.sync.run(token);
+    expect(s.state()?.serverSkewMs).toBe(0);
+    expect(s.batches.at(-1)).toEqual([fresh]);
+    // retryAt (old clock frame) is still ~39 min away, but the skew says the end has passed
+    // on the server once local time reaches it.
+    s.clock.now = Date.parse(future.ended_at);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches.at(-1)).toEqual([future]);
+    expect(s.storage.data.get(DEFERRED_KEY)).toEqual([]);
+  });
+
+  it("SYNC-05a without the server's time it logs once per cycle (no details)", async () => {
+    const lines: string[] = [];
+    const storage = fakeStorage({ [OUTBOX_KEY]: Array.from({ length: 250 }, interval) });
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      isConnected: async () => true,
+      log: createLogger({ debug: false, sink: (_level, line) => lines.push(line) }),
+      ingest: async (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id) }),
+    });
+    expect(await sync.run(token)).toBe("done"); // two batches
+    expect(lines.filter((l) => l.includes("sync.server_time_unavailable"))).toHaveLength(1);
+    expect(lines.join("\n")).not.toMatch(/leetcode|token|@/);
   });
 });

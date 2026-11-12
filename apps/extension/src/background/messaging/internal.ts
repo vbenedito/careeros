@@ -6,7 +6,9 @@ import {
   type PopupAuthStatus,
   type PopupDisconnectResult,
   type PopupForgetResult,
+  type PopupNotConfigured,
   PopupRequestSchema,
+  type PopupTrackingResult,
 } from "../../lib/popup-messages";
 import type { DomainService, DomainsResult } from "../domains/domain-service";
 
@@ -18,10 +20,11 @@ export interface InternalSender {
 
 export function createInternalMessageHandler(deps: {
   extensionId: string;
-  domains: DomainService;
+  /** Null in a build without Supabase config: site commands get NOT_CONFIGURED (#65). */
+  domains: DomainService | null;
   authStatus: () => Promise<PopupAuthStatus>;
-  /** EXT-UI-06: per-device switch. */
-  setTracking: (enabled: boolean) => Promise<void>;
+  /** EXT-UI-06: per-device switch; resolves to the stored value afterwards. */
+  setTracking: (enabled: boolean) => Promise<boolean>;
   /** AUTH-12 from the popup. */
   disconnect: (discardUnsynced: boolean) => Promise<PopupDisconnectResult>;
   /** AUTH-11 explicit discard while not connected (#113). */
@@ -35,7 +38,8 @@ export function createInternalMessageHandler(deps: {
     | PopupAuthStatus
     | PopupDisconnectResult
     | PopupForgetResult
-    | { ok: true }
+    | PopupTrackingResult
+    | PopupNotConfigured
     | null
   > {
     // Only the extension's own pages (popup, or popup.html opened in a tab). A content script
@@ -45,18 +49,23 @@ export function createInternalMessageHandler(deps: {
     const parsed = PopupRequestSchema.safeParse(message);
     if (!parsed.success) return null;
     const request = parsed.data;
+    // EXT-UI-05c (#65): a build without Supabase config answers instead of staying silent.
+    const notConfigured: PopupNotConfigured = {
+      ok: false,
+      error: "NOT_CONFIGURED",
+      code: "FAILED",
+    };
     switch (request.type) {
       case "AUTH_STATUS":
         return deps.authStatus();
       case "DOMAINS_REFRESH":
-        return deps.domains.refresh();
+        return deps.domains ? deps.domains.refresh() : notConfigured;
       case "DOMAINS_ADD":
-        return deps.domains.add(request.input);
+        return deps.domains ? deps.domains.add(request.input) : notConfigured;
       case "DOMAINS_REMOVE":
-        return deps.domains.remove(request.domain);
+        return deps.domains ? deps.domains.remove(request.domain) : notConfigured;
       case "TRACKING_SET":
-        await deps.setTracking(request.enabled);
-        return { ok: true };
+        return { ok: true, enabled: await deps.setTracking(request.enabled) };
       case "DISCONNECT":
         return deps.disconnect(request.discardUnsynced);
       case "FORGET_LOCAL_DATA":

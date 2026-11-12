@@ -4,7 +4,7 @@
  */
 import { hostnameFromUrl, type Interval, matchTrackedDomain } from "@careeros/shared";
 import type { EngineState } from "../engine/engine";
-import type { SyncState } from "./sync-state";
+import { isSyncing, type SyncState } from "./sync-state";
 
 export interface PopupInput {
   /** Epoch ms. */
@@ -18,7 +18,11 @@ export interface PopupInput {
   /** This device's intervals of today: synced + pending (SYNC-12). */
   todayIntervals: readonly Interval[];
   sync: SyncState;
-  counts: { pending: number; quarantined: number };
+  /**
+   * `pending` includes `deferred`: intervals waiting for the server's clock (SYNC-05a), which
+   * are still uploaded later.
+   */
+  counts: { pending: number; quarantined: number; deferred?: number };
   /** URL of the active tab, read only to show/offer its hostname (never stored). */
   activeTabUrl: string | undefined;
 }
@@ -47,6 +51,15 @@ export interface PopupView {
   top: DomainTime[];
   syncLabel: string;
   quarantined: number;
+  /** SYNC-02c (#58): a cycle is uploading now (footer "Syncing…"). */
+  syncing: boolean;
+  /**
+   * SYNC-05a (#58): whole minutes this device's clock is ahead of the server's while that makes
+   * the server reject intervals (popup hint "check your computer's clock"); null otherwise.
+   */
+  clockAheadMinutes: number | null;
+  /** SYNC-05a: of `pending`, how many wait for the server's clock to pass their end. */
+  deferred: number;
 }
 
 const ms = (iso: string) => Date.parse(iso);
@@ -82,6 +95,12 @@ export function buildPopupView(input: PopupInput): PopupView {
     top,
     syncLabel: syncLabel(input),
     quarantined: input.counts.quarantined,
+    syncing: input.auth.connected && isSyncing(input.sync, now),
+    clockAheadMinutes:
+      input.auth.connected && input.sync.clockAheadMs !== null
+        ? Math.max(1, Math.round(input.sync.clockAheadMs / 60_000))
+        : null,
+    deferred: input.counts.deferred ?? 0,
   };
 }
 

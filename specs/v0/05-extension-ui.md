@@ -4,6 +4,8 @@ Status: **Approved (2026-11-04)** · Source: *V0 UI/UX Design and Implementation
 
 Amended 2026-11-11 (#131): loading-sites state, meaning of "Paused — inactive", all footer texts, disconnected Settings view, dashboard link default, badge details, to match the code.
 
+Amended 2026-11-12 (#58, #65): "Syncing…" footer state and the clock hint (product owner decision), Disconnect confirmation counts and "Try syncing again", replies in builds without Supabase config (EXT-UI-05c). The worker and the view model expose the state; the popup renders it in a follow-up change.
+
 ## 1. Direction
 
 Minimal, product-oriented, glanceable. Tracking is automatic: **no pause/resume button**. The dashboard owns analytics.
@@ -43,10 +45,13 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 - **EXT-UI-05** "Add this site" is offered only for `http/https` pages and adds the page's normalized hostname (TRK-03; `www.` stripped, nothing else). Users who want a parent domain type it in Settings.
 - **EXT-UI-05a** The popup holds **no Supabase client**. It reads state from `chrome.storage` and sends commands (add/remove site, toggle, disconnect) to the service worker via `chrome.runtime.sendMessage`; the worker is the single owner of auth and network (AUTH-10).
 - **EXT-UI-05b** The footer shows the extension version. "Update available" in the popup is deferred: only protocol 1 exists in v0, and the dashboard already says "Please update the extension" when the protocol is older (AUTH-07a).
+- **EXT-UI-05c** *(#65)* In a build without Supabase config, every popup command gets a reply: site commands `{ ok: false, error: "NOT_CONFIGURED" }`, Disconnect and Forget local data `FAILED`; the tracking switch still works (it is local). `TRACKING_SET` replies `{ ok: true, enabled }` with the value stored afterwards, which the switch shows instead of its old position while storage reloads.
 
 ### Sync footer states
 
-`Synced · 2m ago` (also `just now`, `1h ago`) · `Not synced yet` (connected, nothing pending, never synced) · `3 pending` · `3 pending · retrying in 4m` (offline or abuse backoff still running) · `Offline · 3 pending` (backoff over) · `Sync error · 3 pending` · when not connected: `3 pending` or `Not synced`. Quarantined intervals add ` · 2 not synced` (SYNC-05) with the tooltip "These intervals were rejected by the server and are kept on this device." `Syncing…` is deferred (a cycle takes under a second; #58). The labels are built in `lib/popup-view.ts`.
+`Synced · 2m ago` (also `just now`, `1h ago`) · `Not synced yet` (connected, nothing pending, never synced) · `3 pending` · `3 pending · retrying in 4m` (offline or abuse backoff still running) · `Offline · 3 pending` (backoff over) · `Sync error · 3 pending` · when not connected: `3 pending` or `Not synced`. Quarantined intervals add ` · 2 not synced` (SYNC-05) with the tooltip "These intervals were rejected by the server and are kept on this device." The labels are built in `lib/popup-view.ts`.
+
+*(#58, product owner 2026-11-12)* `Syncing…` is shown while a cycle is uploading: `PopupView.syncing`, from `syncingSince` in the sync status (SYNC-02c). When the server rejects sessions because this computer's clock is fast (SYNC-05a), the popup shows a hint to correct the clock: `PopupView.clockAheadMinutes` (whole minutes, null when not applicable). Deferred sessions are part of the pending count (`PopupView.deferred` says how many of them wait for the clock).
 
 - **EXT-UI-10** **Toolbar badge** on the extension icon: a small green dot while tracking, an amber `!` when not connected, nothing otherwise. The icon's tooltip states the same in words: "CareerOS — tracking leetcode.com", "CareerOS — not connected", "CareerOS — not tracking" (the manifest name, so "CareerOS (dev)" in dev builds). No live timer in the badge (#63). The rule is the pure `badgeFor` in `lib/badge.ts`; the worker (`background/badge.ts`) applies it with `chrome.action` whenever the stored engine state changes, and skips the calls when nothing changed. The dot is a one-space badge text on green `#16a34a`; the `!` is on amber `#b45309`.
 
@@ -54,7 +59,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 - **EXT-UI-06** **Tracking** switch (on by default). Off ⇒ closes any open interval and tracks nothing until turned on. Stored per device.
 - **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10).
-- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12).
+- **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**. A reply `SYNC_IN_PROGRESS` (an upload still running, AUTH-12b) shows "Still syncing your sessions. Try again in a moment." instead of the confirmation.
 - **EXT-UI-08a** When not connected, Settings shows the Tracking switch, then "Connect your account to manage your tracked sites." with **Connect account** (opens the dashboard's `/connect`) instead of Tracked sites and Account. If the last account left local data, **Forget local data** (AUTH-11a) follows; afterwards the view says "Local data deleted."
 - No other settings in v0.
 

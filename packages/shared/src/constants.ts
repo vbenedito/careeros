@@ -18,6 +18,25 @@ export const SYNC = {
   SYNC_BATCH_MAX: 200,
   BACKOFF_MIN: [1, 2, 4, 8, 16, 30],
   LOCAL_QUEUE_MAX_AGE_D: 30,
+  /**
+   * SYNC-06a: an ingest call that has not answered by then counts as a network error (well
+   * under the 30 s after which Chrome may stop an idle MV3 service worker).
+   */
+  INGEST_TIMEOUT_S: 20,
+  /** SYNC-05a: future-dated rejections retried at most this many times, then quarantined. */
+  CLOCK_RETRY_MAX: 3,
+  /**
+   * SYNC-02b: how long Disconnect waits for a running cycle before its final sync; still
+   * running then → SYNC_IN_PROGRESS (AUTH-12b).
+   */
+  DISCONNECT_WAIT_S: 30,
+  /**
+   * SYNC-05a: slack subtracted from the server's time when classifying a rejection as "ended in
+   * the future" (the Date header has whole seconds; the server compared at its own `now()`).
+   */
+  CLOCK_SLACK_S: 5,
+  /** SYNC-05a: a deferred interval is retried at the latest this long after it was deferred. */
+  DEFERRED_RETRY_CAP_MIN: 30,
 } as const;
 
 /** specs/v0/04-data-model.md */
@@ -26,6 +45,8 @@ export const DATA = {
   MAX_TRACKED_DOMAINS: 12,
   /** DATA-02: server accepts up to MAX_INTERVAL_S + this tolerance. */
   INTERVAL_TOLERANCE_S: 30,
+  /** DATA-07: the server accepts `ended_at` up to this far ahead of its own clock. */
+  FUTURE_TOLERANCE_S: 300,
   /** Hostname length limit (DNS), used by the `domain` CHECK. */
   MAX_DOMAIN_LENGTH: 253,
 } as const;

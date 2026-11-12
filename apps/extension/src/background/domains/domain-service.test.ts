@@ -4,7 +4,9 @@ import { createAccountEpoch } from "../account-epoch";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createDomainService, type DomainsApi, DomainsApiError } from "./domain-service";
 
-function setup(options: { connected?: boolean; server?: string[] } = {}) {
+function setup(
+  options: { connected?: boolean | (() => boolean); server?: string[]; limit?: number } = {},
+) {
   const server = new Set(options.server ?? ["leetcode.com"]);
   let failWith: DomainsApiError | null = null;
   const api: DomainsApi = {
@@ -14,6 +16,10 @@ function setup(options: { connected?: boolean; server?: string[] } = {}) {
     },
     insert: async (d) => {
       if (failWith) throw failWith;
+      // Like the DATA-01 trigger: the limit is checked before the unique constraint.
+      if (options.limit !== undefined && server.size >= options.limit) {
+        throw new DomainsApiError("LIMIT_REACHED");
+      }
       server.add(d);
     },
     delete: async (d) => {
@@ -26,7 +32,8 @@ function setup(options: { connected?: boolean; server?: string[] } = {}) {
   const service = createDomainService({
     api,
     storage,
-    isConnected: async () => options.connected ?? true,
+    isConnected: async () =>
+      typeof options.connected === "function" ? options.connected() : (options.connected ?? true),
     sessionRejected: async () => {
       rejected++;
     },
@@ -123,5 +130,30 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
     const s = setup({ connected: false });
     expect(await s.service.refresh()).toEqual({ ok: false, error: "NOT_CONNECTED" });
     expect(s.cache()).toBeUndefined();
+  });
+});
+
+describe("domain sync hardening (#54, #65)", () => {
+  it("SYNC-09b a Disconnect finished while the list was in flight: the old list is not written back", async () => {
+    let connected = true;
+    const s = setup({ connected: () => connected });
+    const realList = s.service.refresh;
+    // Disconnect lands between the server answer and the cache write.
+    const listing = realList();
+    connected = false;
+    expect(await listing).toEqual({ ok: false, error: "NOT_CONNECTED" });
+    expect(s.cache()).toBeUndefined();
+  });
+
+  it("SYNC-10a re-adding a tracked site at the limit is a no-op, not LIMIT_REACHED", async () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => `site${i}.com`);
+    const s = setup({ server: twelve, limit: 12 });
+    await s.service.refresh();
+    expect(await s.service.add("https://www.site3.com/x")).toMatchObject({ ok: true });
+    // Stale cache (another device added it): the server's limit error is checked against its list.
+    s.storage.data.delete(DOMAINS_CACHE_KEY);
+    expect(await s.service.add("site4.com")).toMatchObject({ ok: true });
+    // A genuinely new site at the limit is still refused.
+    expect(await s.service.add("new.com")).toEqual({ ok: false, error: "LIMIT_REACHED" });
   });
 });

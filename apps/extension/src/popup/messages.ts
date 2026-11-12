@@ -8,6 +8,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   UNAVAILABLE: "Couldn't reach CareerOS. Try again in a moment.",
   FAILED: "Something went wrong. Try again.",
   CONNECTED: "An account is connected now. Use Disconnect instead.",
+  SYNC_IN_PROGRESS: "Still syncing your sessions. Try again in a moment.",
 };
 
 export const errorMessage = (code: string): string =>

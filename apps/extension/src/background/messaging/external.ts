@@ -77,7 +77,10 @@ export function createExternalMessageHandler(deps: {
         case "DISCONNECT": {
           // From the dashboard, unsynced data is never discarded silently (AUTH-12).
           const result = await auth.disconnect();
-          return result.ok ? { ok: true, protocolVersion: PROTOCOL_VERSION } : error(result.code);
+          if (result.ok) return { ok: true, protocolVersion: PROTOCOL_VERSION };
+          // Protocol 1 has no "still syncing" code: the dashboard shows its unsynced-data
+          // message, and trying again works once the upload is done (AUTH-12b).
+          return error(result.code === "SYNC_IN_PROGRESS" ? "UNSYNCED_DATA" : result.code);
         }
       }
     } catch {
