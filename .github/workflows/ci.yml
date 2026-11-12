@@ -1,5 +1,5 @@
 # CI for CareerOS (ENV-08, ENV-09).
-# `checks`: lint, typecheck, unit tests, landing responsive layout (TEST-01) and builds on every PR
+# `checks`: lint, typecheck, Markdown links, unit tests, landing responsive layout (TEST-01) and builds, store package check on every PR
 # and push to main.
 # `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E
 # (including the app pages' responsive layout, TEST-01).
@@ -54,6 +54,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Relative links and anchors in the Markdown docs (#155); no network.
+      - name: Markdown links
+        run: pnpm check:links
+
       - name: Unit tests (with coverage thresholds, TEST §3)
         run: pnpm test:coverage
 
@@ -84,6 +88,11 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # Builds the production store zip with placeholder public values (no secrets) and checks
+      # its manifest and file list (#156, STORE-01..07).
+      - name: Store package
+        run: pnpm check:store-package
 
   backend:
     name: Database (Supabase in Docker)
