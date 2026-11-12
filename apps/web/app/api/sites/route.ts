@@ -2,7 +2,7 @@
  * POST /api/sites { domain } → { id, domain }
  * Adds a tracked site for the signed-in user (DASH-12). Accepts what the user typed (a host or
  * a URL) and stores the normalized domain; adding a site that is already tracked succeeds.
- * Runs with the user's session, so RLS and the 50-site limit (DATA-01) apply.
+ * Runs with the user's session, so RLS and the site limit (DATA-01) apply.
  */
 import { parseDomainInput } from "@careeros/shared";
 import { fail, json } from "@/lib/http/json";

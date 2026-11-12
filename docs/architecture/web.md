@@ -88,7 +88,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 |---|---|---|
 | `get_daily_totals` (period and today), `get_domain_totals` | `lib/dashboard/data.ts` | RPCs, `security invoker` |
 | `tracked_domains` select | `/settings` | Table, RLS |
-| `tracked_domains` insert / delete | `/api/sites`, `/api/sites/[id]` | Table, RLS, 50-site trigger |
+| `tracked_domains` insert / delete | `/api/sites`, `/api/sites/[id]` | Table, RLS, 12-site trigger |
 | `consume_extension_link_quota` | `/api/extension/link` | RPC, `security definer` |
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |

@@ -1,6 +1,6 @@
 # Glossary
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-11
+Type: living · Owner: tech lead · Last reviewed: 2026-11-12
 
 Terms used across the docs and the code. Each points to the requirement that defines it.
 
@@ -27,7 +27,7 @@ Terms used across the docs and the code. Each points to the requirement that def
 | SDD / spec-driven | Specification-Driven Development: a behavior is specified and approved in `specs/` before it is built; tests are named after requirement IDs | [specs/README.md](../specs/README.md) |
 | Session (study) | Used in the table name `study_sessions`: one row is one interval | [DATA-02](../specs/v0/04-data-model.md) |
 | Session (auth) | A Supabase sign-in (access + refresh token). The dashboard keeps one in cookies, the extension its own in storage; they never share one | [AUTH-02](../specs/v0/02-auth.md), [AUTH-10](../specs/v0/02-auth.md) |
-| Study site / tracked domain | A hostname the user chose to track, e.g. `leetcode.com`; subdomains match. Up to 50 per user, stored in `tracked_domains` | [TRK-03](../specs/v0/01-tracking.md), [DATA-01](../specs/v0/04-data-model.md) |
+| Study site / tracked domain | A hostname the user chose to track, e.g. `leetcode.com`; subdomains match. Up to 12 per user, stored in `tracked_domains` | [TRK-03](../specs/v0/01-tracking.md), [DATA-01](../specs/v0/04-data-model.md) |
 | Sync cycle | One upload run of the service worker: batches of ≤ 200 intervals until the outbox is empty or a call fails | [SYNC-02..03](../specs/v0/03-sync.md) |
 | Today (popup) | This device's total for today: synced today + outbox + open interval | [SYNC-12](../specs/v0/03-sync.md) |
 | Tracking target | The tracked domain being studied right now, or none when tracking is paused | [TRK-01..07](../specs/v0/01-tracking.md) |

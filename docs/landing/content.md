@@ -20,7 +20,7 @@ Every claim below is checked against the v0 specs (IDs in brackets). Anything no
 
 Supporting points:
 1. **Automatic:** no timer to start or stop. It counts while a chosen site is the tab you're looking at and you're active, pauses after 60 seconds without input, and keeps counting while the study tab plays sound (a video, unmuted), for up to 15 minutes without input (TRK-01..07).
-2. **Only your study sites:** you pick the sites (up to 50); everything else is ignored (TRK-03, DATA-01).
+2. **Only your study sites:** you pick the sites (up to 12); everything else is ignored (TRK-03, DATA-01).
 3. **Private by design:** for your study, it stores only the site name and the start and end times. It reads the tab's address only to get the site name, and never stores or sends the address, page titles, page content or other sites; no incognito; no ad trackers, only cookieless page analytics on the website (SEC-15, amended 2026-11-11, #137; the dashboard uses session cookies for sign-in, so the page never says "no cookies"); delete your account anytime (TRK-02, SEC-01, SEC-15, DASH-14).
 4. **A clear picture:** time per day and per platform, week by week or month by month, in light or dark (DASH-04..10).
 5. **Built not to lose or double-count time:** works offline and uploads later; browser restarts and sleep don't double-count (SYNC-01..08, TRK-12..15). (Sessions the server refuses are kept and shown as not synced; disconnecting asks before discarding unsynced time.)
@@ -98,7 +98,7 @@ Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session 
 
 ### 4.7 FAQ
 1. **Does CareerOS read the pages I visit?** No. It reads the active tab's address only to get the site name (for example `leetcode.com`) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. (Because of this, Chrome describes the permission as reading your browsing history.)
-2. **Which sites can I track?** Any site you add, up to 50. Subdomains count too: adding `python.org` also covers `docs.python.org`.
+2. **Which sites can I track?** Any site you add, up to 12. Subdomains count too: adding `python.org` also covers `docs.python.org`.
 3. **What happens when I step away?** After 60 seconds without keyboard or mouse input, tracking pauses. If the study tab in front of you is playing sound (a video, not muted), it keeps counting for up to 15 minutes without input.
 4. **Does it work offline?** Yes. Time is saved on your computer and uploaded when you're back online.
 5. **Can I use it on more than one computer?** Yes. Install the extension on each and connect it to the same account. The dashboard adds them up.

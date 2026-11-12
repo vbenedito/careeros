@@ -108,11 +108,11 @@ select throws_ok(
 );
 
 -- ---------------------------------------------------------------------------------------------
--- tracked_domains: uniqueness and the 50-domain limit (DATA-01)
+-- tracked_domains: uniqueness and the 12-domain limit (DATA-01, amended #145)
 -- ---------------------------------------------------------------------------------------------
 insert into public.tracked_domains (user_id, domain)
 select '00000000-0000-4000-8000-0000000000a1', 'site' || n || '.test'
-from generate_series(1, 49) as n;
+from generate_series(1, 11) as n;
 
 select throws_ok(
   $$ insert into public.tracked_domains (user_id, domain)
@@ -121,13 +121,13 @@ select throws_ok(
 );
 select lives_ok(
   $$ insert into public.tracked_domains (user_id, domain)
-     values ('00000000-0000-4000-8000-0000000000a1', 'site50.test') $$,
-  'DATA-01 the 50th domain is accepted'
+     values ('00000000-0000-4000-8000-0000000000a1', 'site12.test') $$,
+  'DATA-01 the 12th domain is accepted'
 );
 select throws_ok(
   $$ insert into public.tracked_domains (user_id, domain)
-     values ('00000000-0000-4000-8000-0000000000a1', 'site51.test') $$,
-  'P0001', 'A user can track at most 50 domains', 'DATA-01 the 51st domain is rejected'
+     values ('00000000-0000-4000-8000-0000000000a1', 'site13.test') $$,
+  'P0001', 'A user can track at most 12 domains', 'DATA-01 the 13th domain is rejected'
 );
 select lives_ok(
   $$ insert into public.tracked_domains (user_id, domain)

@@ -132,13 +132,13 @@ select throws_ok($$ truncate public.study_sessions $$, '42501', null,
 -- =============================================================================================
 select lives_ok(
   $$ insert into public.tracked_domains (domain)
-     select 'site' || n || '.test' from generate_series(1, 49) as n $$,
-  'alice fills up to 50 domains'
+     select 'site' || n || '.test' from generate_series(1, 11) as n $$,
+  'alice fills up to 12 domains'
 );
 select throws_ok(
   $$ insert into public.tracked_domains (domain) values ('one-too-many.test') $$,
-  'P0001', 'A user can track at most 50 domains',
-  'DATA-01 the 51st domain is rejected for authenticated users too'
+  'P0001', 'A user can track at most 12 domains',
+  'DATA-01 the 13th domain is rejected for authenticated users too'
 );
 
 select tests.clear_authentication();

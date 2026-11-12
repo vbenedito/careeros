@@ -25,13 +25,15 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Updated 2026-11-11 (#137): the website now has cookieless page analytics (SEC-15), so the old line "No ads, no analytics, nothing sold" became "No ads, nothing sold. The extension sends no analytics." **Update the description in the store dashboard only after the first review is approved**, so the edit does not restart the review.
 
+> Updated 2026-11-12 (#145): the site limit is now 12, so "up to 50" became "up to 12". **Update the description in the store dashboard together with the extension 0.2.1 package**, with both changes: this site limit and the analytics line above (#137).
+
 ```
 CareerOS measures the time you spend studying for technical interviews, automatically, on the sites you choose.
 
 Interview prep is spread across LeetCode, NeetCode, docs and videos. Timers get forgotten and screen-time apps mix study with everything else. CareerOS counts only what you call study.
 
 HOW IT WORKS
-• Pick your study sites (up to 50; subdomains included), for example leetcode.com or neetcode.io.
+• Pick your study sites (up to 12; subdomains included), for example leetcode.com or neetcode.io.
 • Study as usual. Time counts only while a study site is the active tab and you are at the keyboard.
 • Step away and it pauses after 60 seconds. A study tab playing sound (a video, not muted) keeps counting for up to 15 minutes without input.
 • Sessions are saved on your computer first and uploaded every few minutes; offline, they wait up to 30 days.
