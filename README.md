@@ -4,7 +4,7 @@
 
 Track and understand your technical-interview study time — automatically and privately.
 
-> **Status:** v0 is delivered and approved (Gate 4). The landing page is live at `/`; the dashboard is at `/dashboard`. The Chrome Web Store submission is in progress ([STORE spec](specs/store/00-chrome-web-store.md)).
+> **Status:** v0 is delivered and approved (Gate 4). The landing page is live at `/`; the dashboard is at `/dashboard`. The extension is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek) ([STORE spec](specs/store/00-chrome-web-store.md)).
 
 ## What v0 does
 
@@ -73,7 +73,7 @@ Specification-Driven Development with explicit approval gates:
 2. v0 specs & backlog — *approved* → [`specs/`](specs/), [`docs/history/backlog/v0.md`](docs/history/backlog/v0.md)
 3. v0 implementation — *done*: one issue per branch, tests named after requirement IDs, an independent review before every merge
 4. v0 delivery — *approved*
-5. Further iterations only on request — so far the landing page ([LAND](specs/landing/00-landing.md), live) and the Chrome Web Store publication ([STORE](specs/store/00-chrome-web-store.md), submission in progress); [`docs/roadmap.md`](docs/roadmap.md) lists other candidates, none authorized
+5. Further iterations only on request — so far the landing page ([LAND](specs/landing/00-landing.md), live) and the Chrome Web Store publication ([STORE](specs/store/00-chrome-web-store.md), published 2026-11-12); [`docs/roadmap.md`](docs/roadmap.md) lists other candidates, none authorized
 
 ## Documentation
 
@@ -115,7 +115,9 @@ Then run **`pnpm setup:env`**: it writes the local Supabase URL and keys into `a
 
 The first `db:start` pulls several Docker images (a few GB) and can take a few minutes. Realtime, Storage, Edge Functions and Analytics are disabled in `supabase/config.toml` because v0 doesn't use them.
 
-### Chrome extension (unpacked)
+### Chrome extension
+
+Users install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek). For development, build and load it unpacked:
 
 ```bash
 pnpm --filter @careeros/extension build        # dev build  → apps/extension/dist/development

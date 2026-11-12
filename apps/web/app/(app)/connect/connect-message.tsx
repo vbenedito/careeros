@@ -11,7 +11,7 @@ export type ConnectView =
   | { kind: "unsupported-device" };
 
 /** What the /connect page says in each state of the flow. */
-export function ConnectMessage({ view }: { view: ConnectView }) {
+export function ConnectMessage({ view, installUrl }: { view: ConnectView; installUrl: string }) {
   switch (view.kind) {
     case "unsupported-device":
       return (
@@ -26,13 +26,17 @@ export function ConnectMessage({ view }: { view: ConnectView }) {
         <div>
           <p>The CareerOS extension isn't installed in this browser (or it's turned off).</p>
           <ol className="ml-5 list-decimal space-y-1">
-            <li>Download and unzip the latest extension build.</li>
             <li>
-              Open <code className="rounded bg-muted px-1">chrome://extensions</code> and turn on{" "}
-              <strong>Developer mode</strong>.
-            </li>
-            <li>
-              Click <strong>Load unpacked</strong> and choose the unzipped folder.
+              Install it from the{" "}
+              <a
+                className="font-medium underline underline-offset-4"
+                href={installUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Chrome Web Store
+              </a>
+              .
             </li>
             <li>Come back here and click “Check again”.</li>
           </ol>

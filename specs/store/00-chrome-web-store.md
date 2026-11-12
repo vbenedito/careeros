@@ -1,6 +1,6 @@
 # Chrome Web Store publication (STORE)
 
-Status: **Approved** (product owner, 2026-11-11) · Issue #128 · Listing: [`docs/chrome-web-store/listing.md`](../../docs/chrome-web-store/listing.md)
+Status: **Approved** (product owner, 2026-11-11) · **Published 2026-11-12**: https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek · Issue #128 · Listing: [`docs/chrome-web-store/listing.md`](../../docs/chrome-web-store/listing.md)
 
 Amended 2026-11-11 (#131): STORE-01 and STORE-05 reworded so they read together; minimum Chrome version and build names added (STORE-07).
 
