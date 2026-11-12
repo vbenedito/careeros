@@ -2,7 +2,7 @@ import type { Interval } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../engine/engine";
 import { buildPopupView, type PopupInput } from "./popup-view";
-import { INITIAL_SYNC_STATE } from "./sync-state";
+import { INITIAL_SYNC_STATE, isSyncing, parseSyncState, SYNCING_STALE_MS } from "./sync-state";
 
 const TODAY = Date.UTC(2026, 10, 9, 3, 0, 0); // local midnight in UTC−3
 const NOW = TODAY + 10 * 3600_000; // 10:00 local
@@ -123,5 +123,60 @@ describe("popup view (EXT-UI-01..05, SYNC-12)", () => {
       }),
     ).toBe("Sync error · 2 pending");
     expect(buildPopupView(input({ counts: { pending: 0, quarantined: 2 } })).quarantined).toBe(2);
+  });
+});
+
+describe("popup state for sync hardening (#58, #83)", () => {
+  it("SYNC-02c syncing while a recent cycle mark is set; a stale mark (killed worker) is ignored", () => {
+    expect(
+      buildPopupView(input({ sync: { ...INITIAL_SYNC_STATE, syncingSince: NOW - 2000 } })).syncing,
+    ).toBe(true);
+    expect(
+      buildPopupView(input({ sync: { ...INITIAL_SYNC_STATE, syncingSince: NOW - 10 * 60_000 } }))
+        .syncing,
+    ).toBe(false);
+    expect(buildPopupView(input()).syncing).toBe(false);
+    expect(
+      buildPopupView(
+        input({
+          auth: { connected: false, email: null },
+          sync: { ...INITIAL_SYNC_STATE, syncingSince: NOW },
+        }),
+      ).syncing,
+    ).toBe(false);
+  });
+
+  it("SYNC-05a the clock hint gives whole minutes ahead; deferred intervals are counted", () => {
+    const view = buildPopupView(
+      input({
+        sync: { ...INITIAL_SYNC_STATE, clockAheadMs: 19.6 * 60_000 },
+        counts: { pending: 3, quarantined: 0, deferred: 2 },
+      }),
+    );
+    expect(view.clockAheadMinutes).toBe(20);
+    expect(view.deferred).toBe(2);
+    expect(view.syncLabel).toBe("3 pending");
+    expect(buildPopupView(input()).clockAheadMinutes).toBeNull();
+  });
+});
+
+describe("isSyncing (SYNC-02c)", () => {
+  it("is false without a mark and after SYNCING_STALE_MS", () => {
+    expect(isSyncing(INITIAL_SYNC_STATE, NOW)).toBe(false);
+    expect(isSyncing({ ...INITIAL_SYNC_STATE, syncingSince: NOW }, NOW + SYNCING_STALE_MS)).toBe(
+      false,
+    );
+    expect(isSyncing({ ...INITIAL_SYNC_STATE, syncingSince: NOW }, NOW + 1000)).toBe(true);
+  });
+
+  it("an old stored state without the new fields parses with defaults", () => {
+    expect(
+      parseSyncState({ failures: 2, notBefore: 5, lastOutcome: "offline", lastSyncedAt: null }),
+    ).toEqual({
+      ...INITIAL_SYNC_STATE,
+      failures: 2,
+      notBefore: 5,
+      lastOutcome: "offline",
+    });
   });
 });

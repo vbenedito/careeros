@@ -35,6 +35,9 @@ describe("constants match the specs", () => {
     expect(spec.get("SYNC_BATCH_MAX")).toEqual([SYNC.SYNC_BATCH_MAX]);
     expect(spec.get("BACKOFF_MIN")).toEqual([...SYNC.BACKOFF_MIN]);
     expect(spec.get("LOCAL_QUEUE_MAX_AGE_D")).toEqual([SYNC.LOCAL_QUEUE_MAX_AGE_D]);
+    expect(spec.get("INGEST_TIMEOUT_S")).toEqual([SYNC.INGEST_TIMEOUT_S]);
+    expect(spec.get("CLOCK_RETRY_MAX")).toEqual([SYNC.CLOCK_RETRY_MAX]);
+    expect(spec.get("DISCONNECT_WAIT_S")).toEqual([SYNC.DISCONNECT_WAIT_S]);
   });
 
   it("01-tracking.md §2 has no constant missing from code", () => {
@@ -49,6 +52,8 @@ describe("constants match the specs", () => {
     const maxAccepted = TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S;
     expect(spec).toContain(`interval '${maxAccepted} seconds'`);
     expect(spec).toContain(`length ≤ ${DATA.MAX_DOMAIN_LENGTH}`);
+    expect(DATA.FUTURE_TOLERANCE_S).toBe(300);
+    expect(spec).toContain("`ended_at <= now() + interval '5 minutes'`");
   });
 
   it("AUTH-07a protocol version starts at 1", () => {

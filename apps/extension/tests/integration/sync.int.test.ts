@@ -16,6 +16,7 @@ const EXTENSION_DIR = resolve(import.meta.dirname, "../../dist/development");
 const EXTENSION_ID = MANIFEST_KEYS.development.id;
 const OUTBOX = "careeros.tracking.outbox";
 const QUARANTINE = "careeros.tracking.quarantine";
+const DEFERRED = "careeros.tracking.deferred";
 const admin = createClient(env("API_URL"), env("SECRET_KEY"), { auth: { persistSession: false } });
 
 const iso = (t: number) => `${new Date(t).toISOString().slice(0, 19)}Z`;
@@ -107,17 +108,38 @@ describe("interval sync (real Chromium)", () => {
     expect(rows()).toBe(3);
   });
 
-  it("SYNC-05 an interval the server rejects goes to quarantine; the rest still syncs", async () => {
-    // Valid locally, but the server refuses intervals ending > 5 min in the future (DATA-07).
+  it("SYNC-05 SYNC-05a a rejected interval goes to quarantine, a future-dated one is deferred; the rest still syncs", async () => {
+    // Overlaps the first uploaded interval of this device (DATA-09a): a real rejection.
+    const overlap = interval(deviceId, 58, { ended_at: iso(Date.now() - 56 * 60_000) });
+    // Valid locally, but the server refuses intervals ending > 5 min in the future (DATA-07):
+    // deferred until the server's clock (from its Date header, through CORS) passes its end.
     const future = interval(deviceId, -20);
-    await putOutbox([future, interval(deviceId, 30)]);
+    await putOutbox([overlap, future, interval(deviceId, 30)]);
     await triggerSync();
     await expect.poll(() => rows(), { timeout: 15_000 }).toBe(4);
     await expect.poll(async () => (await storage<unknown[]>(QUARANTINE))?.length).toBe(1);
+    const deferred = await storage<{ interval: { id: string }; retryAt: number }[]>(DEFERRED);
+    expect(deferred?.map((d) => d.interval.id)).toEqual([future.id]);
+    // Due once the server's clock reaches its end: ~25 minutes from now.
+    expect(deferred?.[0]?.retryAt).toBeGreaterThan(Date.now() + 20 * 60_000);
+  });
+
+  it("SYNC-02c the sync status carries the new fields for the popup", async () => {
+    const state = await storage<Record<string, unknown>>("careeros.sync.state");
+    expect(state).toMatchObject({ syncingSince: null, lastOutcome: "ok" });
+    // The device clock is right: no clock hint for the deferred interval.
+    expect(state?.clockAheadMs).toBeNull();
   });
 
   it("AUTH-12 DISCONNECT runs the final sync, then signs out", async () => {
+    // The deferred interval cannot sync for ~25 minutes: from the dashboard it blocks Disconnect.
     await putOutbox([interval(deviceId, 20)]);
+    expect(await send({ type: "DISCONNECT", protocolVersion: 1 })).toMatchObject({
+      ok: false,
+      code: "UNSYNCED_DATA",
+    });
+    expect(rows()).toBe(5);
+    await worker.evaluate((k) => chrome.storage.local.remove(k), DEFERRED);
     expect(await send({ type: "DISCONNECT", protocolVersion: 1 })).toEqual({
       ok: true,
       protocolVersion: 1,

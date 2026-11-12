@@ -6,16 +6,35 @@ export function createSupabaseIngest(config: {
   supabaseUrl: string;
   publishableKey: string;
 }): Ingest {
-  return async (batch, accessToken) => {
+  return async (batch, accessToken, signal) => {
+    // SYNC-05a: the server's clock, from the response's `Date` header (exposed to CORS
+    // callers by PostgREST), tells a "future" rejection (device clock ahead) from others.
+    let serverNow: number | null = null;
+    const fetchWithDate: typeof fetch = async (input, init) => {
+      const response = await fetch(input, init);
+      serverNow = parseDateHeader(response.headers.get("date"));
+      return response;
+    };
     // A short-lived client per call: the token comes from AuthService (AUTH-10).
     const client = createClient(config.supabaseUrl, config.publishableKey, {
       accessToken: async () => accessToken,
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { fetch: fetchWithDate },
     });
-    const { data, error, status } = await client.rpc("ingest_study_sessions", { sessions: batch });
-    if (!error && Array.isArray(data)) return { ok: true, confirmedIds: data as string[] };
+    const call = client.rpc("ingest_study_sessions", { sessions: batch });
+    // SYNC-06a: a stalled connection is aborted by the caller's timeout.
+    const { data, error, status } = await (signal ? call.abortSignal(signal) : call);
+    if (!error && Array.isArray(data))
+      return { ok: true, confirmedIds: data as string[], serverNow };
     return { ok: false, kind: classify(status, error?.code, error?.message) };
   };
+}
+
+/** Epoch ms of an HTTP `Date` header, or null. */
+export function parseDateHeader(value: string | null): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
 }
 
 export function classify(
