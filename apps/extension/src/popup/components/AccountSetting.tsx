@@ -31,6 +31,7 @@ export function AccountSetting(props: {
   async function disconnect(kind: "disconnect" | "retry" | "discard") {
     setBusy(kind);
     setError(null);
+    setRetried(false);
     const result = await props.onDisconnect(kind === "discard");
     setBusy(null);
     if (result.ok) return setPending(null);

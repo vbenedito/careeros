@@ -107,8 +107,9 @@ export const CLOCK_HINT_MIN_MINUTES = 5;
 function clockAheadMinutes(input: PopupInput): number | null {
   const ahead = input.sync.clockAheadMs;
   if (!input.auth.connected || ahead === null) return null;
-  const minutes = Math.round(ahead / 60_000);
-  return minutes >= CLOCK_HINT_MIN_MINUTES ? minutes : null;
+  // Threshold on the exact value, so 4.5 min never shows "about 5 min ahead".
+  if (ahead < CLOCK_HINT_MIN_MINUTES * 60_000) return null;
+  return Math.round(ahead / 60_000);
 }
 
 /** The current run: the open interval plus the contiguous intervals before it (30-min splits). */
