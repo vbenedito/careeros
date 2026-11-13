@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { fail, json } from "@/lib/http/json";
+import { errorFields, logServerError } from "@/lib/log";
 import { isSameOrigin } from "@/lib/security/origin";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -19,5 +20,9 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ id: stri
 
   const supabase = await createClient();
   const { error } = await supabase.from("tracked_domains").delete().eq("id", id.data);
-  return error ? fail(500, "INTERNAL") : json({ id: id.data });
+  if (error) {
+    logServerError("sites.delete.failed", errorFields(error));
+    return fail(500, "INTERNAL");
+  }
+  return json({ id: id.data });
 }

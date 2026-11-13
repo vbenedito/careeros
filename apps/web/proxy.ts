@@ -4,12 +4,14 @@
  *  2. refreshes the Supabase session cookies (AUTH-02)
  *  3. protects routes: pages redirect to /sign-in, API routes answer 401 (AUTH-03)
  *  4. at `/`: signed in → /dashboard; signed out → the static landing page, which carries its
- *     own CSP (LAND-01/02/06, ADR-0009)
+ *     own CSP (LAND-01/02/06, ADR-0009); a signed-out `/?…` first loses every non-utm_* query
+ *     parameter (SEC-15)
  */
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { DASHBOARD_PATH, isApiPath, isPublicPath } from "@/lib/auth/routes";
 import { publicEnv, siteUrl } from "@/lib/env";
+import { cleanLandingSearch } from "@/lib/landing/clean-url";
 import { buildCsp, createNonce } from "@/lib/security/headers";
 import { sessionCookieOptions } from "@/lib/supabase/cookies";
 
@@ -57,7 +59,15 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   let result: NextResponse = response;
-  if (!signedIn && isApiPath(pathname)) {
+  // SEC-15: the static landing page cannot filter what the analytics beacon reports, so a
+  // signed-out visitor only ever sees a URL without personal query parameters (utm_* kept).
+  const cleanSearch =
+    !signedIn && pathname === "/" && (request.method === "GET" || request.method === "HEAD")
+      ? cleanLandingSearch(search)
+      : null;
+  if (cleanSearch !== null) {
+    result = NextResponse.redirect(new URL(`/${cleanSearch}`, siteUrl()), 307);
+  } else if (!signedIn && isApiPath(pathname) && !isPublicPath(pathname)) {
     result = NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
   } else if (!signedIn && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();

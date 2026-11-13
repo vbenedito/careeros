@@ -1,15 +1,10 @@
 import type { NextConfig } from "next";
+import { assertProductionEnv } from "./lib/env-check";
 import { HSTS_HEADER, STATIC_SECURITY_HEADERS } from "./lib/security/headers";
 
-// SEC-13: production must not publish /privacy with "[… not configured]" placeholders.
-if (process.env.VERCEL_ENV === "production") {
-  const missing = ["PRIVACY_CONTROLLER", "PRIVACY_CONTACT_EMAIL", "DATA_REGION"].filter(
-    (name) => !process.env[name]?.trim(),
-  );
-  if (missing.length > 0) {
-    throw new Error(`Missing production environment variables: ${missing.join(", ")}`);
-  }
-}
+// ENV-05b, SEC-13: a production build fails on missing or wrong settings instead of silently
+// falling back to localhost, the Vercel domain or the store search. Other builds are unaffected.
+if (process.env.VERCEL_ENV === "production") assertProductionEnv(process.env);
 
 const nextConfig: NextConfig = {
   // @careeros/shared is consumed as TypeScript source (ADR-0001).

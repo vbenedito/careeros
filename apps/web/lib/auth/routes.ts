@@ -21,6 +21,8 @@ export const PUBLIC_EXACT_PATHS = [
   "/sitemap.xml",
   "/opengraph-image",
   "/icon.svg",
+  // Error reports from the error pages, which also show to signed-out visitors (ENV-11).
+  "/api/client-error",
 ] as const;
 
 /** Where signed-in visitors land (LAND-02). */

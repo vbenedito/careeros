@@ -101,3 +101,17 @@ describe("Delete account with an expired session (#78)", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Check your connection");
   });
 });
+
+describe("account settings: delete errors (DASH-14, H6)", () => {
+  it("DASH-14 a wrong confirmation and a backend failure show different messages", () => {
+    const { unmount } = render(
+      <AccountSettings email="a@example.test" provider="Google" recentSignIn deleteMismatch />,
+    );
+    expect(screen.getByRole("alert").textContent).toContain("confirmation didn't match");
+    unmount();
+    render(<AccountSettings email="a@example.test" provider="Google" recentSignIn deleteFailed />);
+    expect(screen.getByRole("alert").textContent).toBe(
+      "We couldn't delete your account right now. Try again in a few minutes.",
+    );
+  });
+});
