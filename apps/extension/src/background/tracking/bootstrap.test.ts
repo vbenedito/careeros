@@ -100,7 +100,8 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       isConnected: async () => true,
     });
     expect(await ld.pendingCount()).toBe(1);
-    expect(await ld.flush(async () => null)).toBe(1); // nothing uploaded: still pending
+    // nothing uploaded: still pending
+    expect(await ld.flush(async () => null)).toEqual({ remaining: 1, skipped: false });
     await ld.stopTracking();
     // While stopped, nothing (e.g. the worker's own start sequence) reports "connected".
     expect(await ld.isConnected()).toBe(false);
@@ -125,7 +126,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
         storage.data.set(OUTBOX_KEY, []);
       },
     });
-    expect(await ld.flush(async () => "t")).toBe(0);
+    expect(await ld.flush(async () => "t")).toEqual({ remaining: 0, skipped: false });
     expect(tokens).toEqual(["t"]);
   });
 

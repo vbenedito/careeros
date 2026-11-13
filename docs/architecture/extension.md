@@ -43,8 +43,9 @@ flowchart TB
 | `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, "syncing" mark and clock skew stored for the popup, bounded `waitIdle` for Disconnect | SYNC-02..08 |
 | `background/sync/supabase-ingest.ts` | Calls `ingest_study_sessions`; maps errors to classes; reads the server's time from the `Date` header | SYNC-05a, 06, DATA-06..09 |
 | `background/sync/triggers.ts` | Sync alarm → cycle + site list; session write → cycle, site list only when the user changed | SYNC-02, 09c |
-| `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect (waits for a running upload first), forget local data; one lock | AUTH-07b, 10..12b |
-| `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local` (its own removals held back during a refresh); in-memory lock | AUTH-10, 10a, ADR-0002 |
+| `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect (waits for a running upload first; a skipped final sync is "still syncing"), forget local data; one lock with a 45 s acquire timeout | AUTH-07b, 10..12c |
+| `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local` (written by the persistent client only while adopting); refreshes on a non-persisting client, result stored by compare-and-set, 15 s timeout, late answers never written; in-memory lock that gives up after `LOCK_TIMEOUT_S` | AUTH-10, 10a, 10b, 10c, ADR-0002 |
+| `lib/error-kind.ts` | Coarse, PII-free error label (class name, known code) for logs and the sync status | SYNC-06b |
 | `background/account-epoch.ts` | In-memory counter of account changes; stale work writes nothing | SYNC-02a, AUTH-11 |
 | `background/domains/` | Tracked-site cache and server edits | SYNC-09..11, 09b, 10a |
 | `background/messaging/external.ts` | Messages from the dashboard origin | AUTH-06..07b, SEC-05 |
@@ -126,7 +127,16 @@ sequenceDiagram
 
 If the account epoch changed during the cycle (connect, session rejected, local data cleared), the cycle writes nothing (SYNC-02a). Data is never discarded on failure. Every status the cycle writes clears `syncingSince`; a local store task that timed out (TRK-17a) ends the cycle as failed without settling.
 
-Disconnect (popup or dashboard) first calls `SyncService.waitIdle(30 s)` outside the auth lock. If the cycle is still running, it replies `SYNC_IN_PROGRESS` (popup) / `UNSYNCED_DATA` (dashboard) and changes nothing; otherwise it takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12b).
+Disconnect (popup or dashboard) first calls `SyncService.waitIdle(30 s)` outside the auth lock. If the cycle is still running, it replies `SYNC_IN_PROGRESS` (popup) / `UNSYNCED_DATA` (dashboard) and changes nothing; otherwise it takes the lock, closes the open interval and runs the final sync with `ifIdle` (SYNC-02b, AUTH-12b). An alarm can start a cycle between the wait and the lock; the final sync then returns `skipped` (`LocalData.flush` reports `{ remaining, skipped }`) and Disconnect replies the same "still syncing" instead of the unsynced-data warning (AUTH-12c). That cycle gets its token once Disconnect has released the lock.
+
+### Token refresh and the auth lock
+
+Every token request, Connect, Disconnect, status and session rejection runs under one in-memory lock (`auth/mutex.ts`, AUTH-10). Two bounds keep a stalled network from freezing it:
+
+- `SupabaseAuthBackend.refresh` races `refreshSession` against `REFRESH_TIMEOUT_S` (15 s); on timeout it returns `unavailable` and keeps the session (AUTH-10b). The refresh runs on a non-persisting supabase-js client; the backend writes the result itself, under the lock, only if a generation counter (bumped synchronously by adopt, sign-out, clear and its own writes) is unchanged and the user is the same. A late answer is never written. The persistent client writes or removes the session only while adopting one.
+- A caller waits at most `LOCK_TIMEOUT_S` (45 s) for the lock, then fails with `LockTimeoutError` without running (AUTH-10c): `accessToken()` returns null (the cycle backs off as offline), `disconnect()` replies `SYNC_IN_PROGRESS`, the rest throw and become `INTERNAL`/`FAILED`. A caller that gave up does not delay the ones behind it.
+
+Unexpected errors in the catch-alls (sync cycle, popup Disconnect and Forget local data, dashboard messages, alarm and session-change triggers) are logged as `{ kind }` from `errorKind` — class name plus a known code, never the message (SYNC-06b).
 
 A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. Only skew-due retries (or any, while no skew is known) count toward `CLOCK_RETRY_MAX`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
 
@@ -141,6 +151,7 @@ A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest meas
 | `clockAheadMs` | Device clock ahead of the server's while that causes rejections, else null (SYNC-05a) |
 | `probeNext` | Next cycle sends one interval (SYNC-05b) |
 | `serverSkewMs` | Latest measured local − server clock (ms), or null (SYNC-05a) |
+| `lastErrorKind` | Kind of the unexpected error that ended the last cycle (`errorKind`), cleared when a cycle completes; diagnostics only, no personal data (SYNC-06b) |
 
 `buildPopupView` (`lib/popup-view.ts`) turns these into `syncing` (footer label `Syncing…`), `clockAheadMinutes` (null under 5 min) and `deferred` for the footer and the clock hint (`popup/components/ClockHint.tsx`).
 
@@ -166,6 +177,8 @@ Domain errors: `NOT_CONNECTED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `UNAVAILABLE`
 
 Validated by `ExtensionRequestSchema` (`packages/shared/src/schemas.ts`). Chrome delivers only messages from the `externally_connectable` origin; the handler checks `sender.origin` again and ignores other extensions (AUTH-06/07). Every message carries `protocolVersion`; this build supports `1` (`PROTOCOL_VERSION`).
 
+The version is parsed first (`ProtocolEnvelopeSchema`, AUTH-07c): a message of another version gets `UNSUPPORTED_PROTOCOL` whatever its type or fields; a message of version 1 must match its strict request schema. Reply schemas are not strict, so the dashboard (`apps/web/lib/extension/protocol.ts`) ignores fields it does not know and still validates the known ones. On the dashboard a reply without a version is "not installed"; another version, or a version-1 reply it cannot read, is "outdated"; an error code it does not know is "reload and try again" (`unknown-reply`); a status-shaped reply is never a CONNECT/DISCONNECT ack. Protocol 1 replies keep exactly the fields below, so released 0.2.x builds on either side keep working.
+
 | Type | Payload | Success reply |
 |---|---|---|
 | `PING` | — | `{ ok, protocolVersion, extensionVersion, connected, email? }` |
@@ -181,7 +194,7 @@ Validated by `ExtensionRequestSchema` (`packages/shared/src/schemas.ts`). Chrome
 | `UNSYNCED_DATA` | Another user's unsynced intervals are on this device, or `DISCONNECT` left intervals unsynced (AUTH-11/12) |
 | `INTERNAL` | Unexpected failure; no details |
 
-Invalid messages get no reply at all. From the dashboard, `DISCONNECT` never discards unsynced data.
+Invalid messages of a supported version, and messages without a valid version, get no reply at all. From the dashboard, `DISCONNECT` never discards unsynced data.
 
 ## Storage keys
 
@@ -213,6 +226,8 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | Tracker slot timeout | 10 s (`SLOT_TIMEOUT_MS`) | A hung Chrome API or storage call cannot freeze the queue (events and `exclusive` tasks) |
 | Ingest timeout | 20 s (`INGEST_TIMEOUT_S`) | A stalled upload cannot hold the sync guard (SYNC-06a) |
 | Disconnect wait | ≤ 30 s (`DISCONNECT_WAIT_S`) | Let a running cycle finish before the final sync; still running → `SYNC_IN_PROGRESS` (SYNC-02b) |
+| Refresh timeout | 15 s (`REFRESH_TIMEOUT_S`) | A stalled token refresh cannot hold the auth lock (AUTH-10b) |
+| Auth lock wait | ≤ 45 s (`LOCK_TIMEOUT_S`) | A stuck lock holder cannot block sync, Connect or Disconnect (AUTH-10c) |
 
 `chrome.idle.setDetectionInterval(60)` is set on every worker start (TRK-19).
 

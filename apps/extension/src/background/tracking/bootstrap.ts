@@ -78,8 +78,9 @@ export function createTrackingLocalData(deps: {
   const pending = async () => (await counts()).unsynced;
   return {
     async flush(accessToken) {
-      await deps.upload?.(accessToken);
-      return pending();
+      const outcome = await deps.upload?.(accessToken);
+      // AUTH-12c: "skipped" = a cycle was already running, so the final sync did not run.
+      return { remaining: await pending(), skipped: outcome === "skipped" };
     },
     pendingCount: pending,
     quarantinedCount: async () => (await counts()).quarantined,

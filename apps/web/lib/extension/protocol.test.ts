@@ -18,9 +18,9 @@ describe("interpretStatus (AUTH-07a)", () => {
     expect(interpretStatus(null)).toEqual({ kind: "not-installed" });
   });
 
-  it("treats a malformed reply as not installed", () => {
+  it("treats a reply without a protocol version as not installed", () => {
     expect(interpretStatus({ hello: "world" })).toEqual({ kind: "not-installed" });
-    expect(interpretStatus(status({ extra: 1 }))).toEqual({ kind: "not-installed" });
+    expect(interpretStatus("pong")).toEqual({ kind: "not-installed" });
   });
 
   it("reports not connected and connected", () => {
@@ -50,6 +50,66 @@ describe("interpretStatus (AUTH-07a)", () => {
       kind: "outdated",
       extensionVersion: null,
     });
+  });
+});
+
+describe("forward-compatible replies (AUTH-07c, grill A3)", () => {
+  it("AUTH-07c fields a newer extension adds are ignored", () => {
+    expect(interpretStatus(status({ plan: "pro", limits: { domains: 12 } }))).toEqual({
+      kind: "not-connected",
+      extensionVersion: "0.1.0",
+    });
+    expect(
+      interpretConnect({ ok: true, protocolVersion: 1, email: "a@example.com", plan: "pro" }),
+    ).toEqual({ kind: "connected", email: "a@example.com" });
+    expect(interpretDisconnect({ ok: true, protocolVersion: 1, extra: true })).toBe("disconnected");
+  });
+
+  it("AUTH-07c a newer protocol version is outdated, whatever else the reply holds", () => {
+    expect(
+      interpretStatus({ protocolVersion: 2, extensionVersion: "1.0.0", shape: "new" }),
+    ).toEqual({ kind: "outdated", extensionVersion: "1.0.0" });
+    expect(interpretStatus({ protocolVersion: 2 })).toEqual({
+      kind: "outdated",
+      extensionVersion: null,
+    });
+    expect(interpretConnect({ ok: true, protocolVersion: 2 })).toEqual({ kind: "outdated" });
+  });
+
+  it("AUTH-07c a versioned reply that cannot be read is outdated, not not-installed", () => {
+    expect(interpretStatus(status({ connected: "yes" }))).toEqual({
+      kind: "outdated",
+      extensionVersion: "0.1.0",
+    });
+    expect(interpretConnect({ ok: false, protocolVersion: 1 })).toEqual({ kind: "outdated" });
+  });
+
+  it("AUTH-07c an error code this page does not know asks to reload and retry, not to update", () => {
+    expect(interpretStatus(error("SOME_NEW_CODE"))).toEqual({ kind: "unknown-reply" });
+    expect(interpretConnect(error("SOME_NEW_CODE"))).toEqual({ kind: "failed" });
+    expect(interpretDisconnect(error("SOME_NEW_CODE"))).toBe("failed");
+  });
+
+  it("AUTH-07c a status-shaped reply is never taken as a CONNECT or DISCONNECT acknowledgement", () => {
+    expect(interpretConnect(status({ connected: true, email: "a@example.com" }))).toEqual({
+      kind: "failed",
+    });
+    expect(interpretDisconnect(status())).toBe("failed");
+  });
+
+  it("AUTH-07c a version string that is not a version is not shown", () => {
+    expect(
+      interpretStatus({ protocolVersion: 2, extensionVersion: "<b>a@example.com</b>" }),
+    ).toEqual({ kind: "outdated", extensionVersion: null });
+  });
+
+  it("AUTH-07c released 0.2.x replies (protocol 1, exact fields) read as before", () => {
+    expect(interpretStatus(status({ extensionVersion: "0.2.3" }))).toEqual({
+      kind: "not-connected",
+      extensionVersion: "0.2.3",
+    });
+    expect(interpretConnect(error("ALREADY_CONNECTED"))).toEqual({ kind: "already-connected" });
+    expect(interpretDisconnect(error("UNSYNCED_DATA"))).toBe("unsynced-data");
   });
 });
 

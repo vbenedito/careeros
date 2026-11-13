@@ -46,6 +46,7 @@ const MESSAGES: Record<Exclude<State["kind"], "checking" | "connected">, string>
   "not-connected": "The extension is installed but not connected to your account.",
   "other-account": "The extension in this browser is connected to a different account.",
   outdated: "Please update the extension.",
+  "unknown-reply": "The extension sent an answer this page doesn't understand. Reload the page.",
   "unsupported-device":
     "Tracking runs in the CareerOS extension for Chrome on a computer. Time studied there shows up here.",
 };

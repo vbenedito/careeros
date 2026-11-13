@@ -7,6 +7,7 @@ import {
   ExtensionRequestSchema,
   ExtensionStatusReplySchema,
   IntervalSchema,
+  ProtocolEnvelopeSchema,
 } from "./schemas";
 
 const valid = {
@@ -113,5 +114,34 @@ describe("extension replies", () => {
 
   it("ack reply", () => {
     expect(ExtensionAckReplySchema.safeParse({ ok: true, protocolVersion: 1 }).success).toBe(true);
+  });
+
+  it("AUTH-07c replies ignore fields a newer extension adds, but still check the known ones", () => {
+    const status = { ok: true, protocolVersion: 1, extensionVersion: "0.3.0", connected: false };
+    const parsed = ExtensionStatusReplySchema.safeParse({ ...status, plan: "pro", limits: {} });
+    expect(parsed.success && parsed.data).toEqual(status);
+    expect(ExtensionStatusReplySchema.safeParse({ ...status, connected: "yes" }).success).toBe(
+      false,
+    );
+    expect(
+      ExtensionAckReplySchema.safeParse({ ok: true, protocolVersion: 1, extra: 1 }).success,
+    ).toBe(true);
+    expect(
+      ExtensionErrorSchema.safeParse({
+        ok: false,
+        code: "UNSYNCED_DATA",
+        protocolVersion: 1,
+        limit: 12,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("AUTH-07c the protocol version is read on its own, whatever else the object holds", () => {
+    expect(ProtocolEnvelopeSchema.safeParse({ protocolVersion: 2, anything: [1] }).success).toBe(
+      true,
+    );
+    expect(ProtocolEnvelopeSchema.safeParse({ protocolVersion: "1" }).success).toBe(false);
+    expect(ProtocolEnvelopeSchema.safeParse({}).success).toBe(false);
+    expect(ProtocolEnvelopeSchema.safeParse("PING").success).toBe(false);
   });
 });

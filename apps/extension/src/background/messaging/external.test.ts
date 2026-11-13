@@ -1,5 +1,6 @@
 import { ExtensionErrorSchema, ExtensionStatusReplySchema } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
+import { createLogger } from "../../lib/log";
 import { fakeBackend, fakeLocalData, fakeStorage, session } from "../../test/fakes";
 import { createAuthService } from "../auth/auth-service";
 import { createExternalMessageHandler } from "./external";
@@ -52,6 +53,61 @@ describe("external messages", () => {
   it("AUTH-07a rejects a protocol version this build does not support", async () => {
     const reply = await setup().handle({ type: "PING", protocolVersion: 2 }, fromDashboard);
     expect(reply).toEqual({ ok: false, code: "UNSUPPORTED_PROTOCOL", protocolVersion: 1 });
+  });
+
+  it.each([
+    ["a new message type", { type: "ENTITLEMENTS", protocolVersion: 2 }],
+    ["new fields", { type: "PING", protocolVersion: 2, client: { plan: "pro" } }],
+  ])(
+    "AUTH-07c a newer protocol with %s is answered UNSUPPORTED_PROTOCOL, not ignored",
+    async (_n, m) => {
+      const { handle, fb } = setup();
+      expect(await handle(m, fromDashboard)).toEqual({
+        ok: false,
+        code: "UNSUPPORTED_PROTOCOL",
+        protocolVersion: 1,
+      });
+      expect(fb.calls).toEqual([]);
+    },
+  );
+
+  it("AUTH-07c replies keep exactly the protocol-1 fields (released 0.2.x dashboards parse them)", async () => {
+    const { handle } = setup();
+    const reply = await handle({ type: "PING", protocolVersion: 1 }, fromDashboard);
+    expect(Object.keys(reply ?? {}).sort()).toEqual([
+      "connected",
+      "extensionVersion",
+      "ok",
+      "protocolVersion",
+    ]);
+  });
+
+  it("SYNC-06b an unexpected error is logged by kind only and answered INTERNAL", async () => {
+    const lines: string[] = [];
+    const fb = fakeBackend();
+    fb.backend.currentSession = async () => {
+      throw new TypeError("a@example.test");
+    };
+    const auth = createAuthService({
+      backend: fb.backend,
+      storage: fakeStorage(),
+      localData: fakeLocalData().localData,
+      now: () => 0,
+    });
+    const handle = createExternalMessageHandler({
+      auth,
+      dashboardOrigin: DASHBOARD,
+      extensionVersion: "0.1.0",
+      log: createLogger({ debug: false, sink: (_l, line) => lines.push(line) }),
+    });
+    expect(await handle({ type: "STATUS", protocolVersion: 1 }, fromDashboard)).toEqual({
+      ok: false,
+      code: "INTERNAL",
+      protocolVersion: 1,
+    });
+    expect(lines).toEqual([
+      '[careeros] warn external.request_failed {"type":"STATUS","kind":"TypeError"}',
+    ]);
   });
 
   it("AUTH-07a PING/STATUS report versions and connection state", async () => {

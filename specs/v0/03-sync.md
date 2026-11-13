@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): SYNC-02 triggers, SYNC-06 error classes, SYNC-07 quar
 
 Amended 2026-11-12 (#58, #83, #56, #65, #54; review of #150): Disconnect waits for a running cycle (SYNC-02b); "syncing" marker (SYNC-02c); future-dated rejections are retried (SYNC-05a, product owner decision A); empty confirmation is a call error (SYNC-05b); ingest timeout (SYNC-06a); unreadable entries counted (SYNC-07a); site-list refresh rules (SYNC-09a..c, SYNC-10a); popup "today" from the engine's calendar (SYNC-12a).
 
+Amended 2026-11-12 (grill E1/E2/H5/A3): a skipped final sync replies "still syncing" (SYNC-02a, AUTH-12c); unexpected errors record a coarse error kind (SYNC-06b); a token request blocked by the auth lock backs off (AUTH-10c).
+
 ## 1. Objective
 
 Move closed intervals from the extension to the backend reliably — no loss, no duplicates — and keep the tracked-domain list consistent between extension and dashboard.
@@ -46,11 +48,12 @@ Move closed intervals from the extension to the backend reliably — no loss, no
 
 Per-row rejections are not call errors; they go to quarantine (SYNC-05), except SYNC-05a/05b.
 - **SYNC-06a** *(#58)* An ingest call that has not answered after `INGEST_TIMEOUT_S` (under the 30 s after which Chrome may stop an idle MV3 worker) is aborted and handled as a network error (backoff), so a stalled connection cannot hold the one-cycle guard (SYNC-02) — and with it the final sync of a Disconnect. When no access token can be had while the session is still stored (a temporary refresh failure, AUTH-10a), the cycle also backs off as "offline"; it records "not connected" only when the session is gone.
+- **SYNC-06b** *(grill H5)* A cycle, a Disconnect, a Forget local data or a dashboard message that ends in an unexpected error logs a coarse error kind: the error's class name and, when it has one, its machine code (`lib/error-kind.ts`) — never its message, stack or data (SEC-06). A cycle also stores it as `lastErrorKind` in the sync status (cleared by the next completed cycle), so a "Sync error" can be diagnosed from the popup's storage without personal data.
 - **SYNC-02a** Cycle rules:
   - A cycle first checks the backoff, then prunes (SYNC-07/08), then uploads.
   - When the outbox is empty, the status "ok" is written only if a session is still stored; a disconnected profile gets no sync status.
   - Each cycle records the account epoch when it starts. If the account changed meanwhile (connect, session rejected, local data cleared), the cycle writes nothing (no status, no settled batch). The epoch is held in memory and resets when the service worker restarts, which also ends any cycle in flight.
-  - The final sync on disconnect (AUTH-12) ignores the backoff, and is skipped if a cycle is still running once the wait of SYNC-02b is over (inside the auth lock it never waits for a cycle, which may need that lock).
+  - The final sync on disconnect (AUTH-12) ignores the backoff, and is skipped if a cycle is still running once the wait of SYNC-02b is over (inside the auth lock it never waits for a cycle, which may need that lock). A skipped final sync with intervals left makes Disconnect reply `SYNC_IN_PROGRESS`, not `UNSYNCED_DATA` (AUTH-12c).
 - **SYNC-02b** *(#58, #65)* Disconnect first waits, **outside** the auth lock, for a cycle that is already running, at most `DISCONNECT_WAIT_S` (longer than one stalled ingest call, SYNC-06a, and enough for a usual multi-batch cycle). If the cycle has finished, it takes the lock and runs its final sync. If it is still running (a long backlog), Disconnect changes nothing and replies `SYNC_IN_PROGRESS` (AUTH-12b) — unless the user already confirmed discarding unsynced data.
 - **SYNC-02c** *(#58)* When a cycle starts uploading (its first batch is not empty), it writes `syncingSince` (epoch ms) into the sync status; every status the cycle writes afterwards clears it. A worker killed mid-cycle leaves it set, so readers treat a mark older than 2 minutes as stale (`isSyncing` in `lib/sync-state.ts`). The popup shows "Syncing…" from it (EXT-UI footer).
 - **SYNC-07** Outbox intervals older than `LOCAL_QUEUE_MAX_AGE_D` that still could not be synced are dropped and counted (the server would reject them anyway, DATA-07). Quarantined intervals older than `LOCAL_QUEUE_MAX_AGE_D` are deleted without being counted.

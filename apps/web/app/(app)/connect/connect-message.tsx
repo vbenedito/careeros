@@ -42,6 +42,12 @@ export function ConnectMessage({ view, installUrl }: { view: ConnectView; instal
           </ol>
         </div>
       );
+    case "unknown-reply":
+      return (
+        <p role="alert" className="text-warning">
+          The extension sent an answer this page doesn't understand. Reload the page and try again.
+        </p>
+      );
     case "outdated":
       return <p>Please update the extension: this version can't talk to the dashboard.</p>;
     case "not-connected":
