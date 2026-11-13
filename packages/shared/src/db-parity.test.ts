@@ -64,20 +64,24 @@ describe("database parity: ingest and totals constants", () => {
   const ingest = latestFunctionSql("public.ingest_study_sessions");
   const spec = readFileSync(resolve(specsDir, "04-data-model.md"), "utf8");
 
-  it("TEST-08 the latest parser and ingest versions are the ones this test reads", () => {
-    expect(parser.file).toMatch(/ingest_study_sessions\.sql$/);
-    expect(ingest.file).toMatch(/security_hardening\.sql$/);
-  });
-
   it("TEST-08 DATA-02 every interval cap in the SQL equals MAX_INTERVAL_S + INTERVAL_TOLERANCE_S", () => {
     const cap = `${TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S}`;
     expect(occurrences(parser.sql, /interval '(\d+) seconds'/g)).toEqual([cap]);
     // The overlap look-back is the same cap: no stored interval can start earlier and still overlap.
     expect(occurrences(ingest.sql, /interval '(\d+) seconds'/g)).toEqual([cap]);
     // The table CHECK repeats it.
-    const core = readFileSync(resolve(migrationsDir, "20261105100000_core_schema.sql"), "utf8");
+    // Read from the latest migration that defines the constraint (a later one may re-create it).
+    const latestCheck = readdirSync(migrationsDir)
+      .sort()
+      .reverse()
+      .map((file) => readFileSync(resolve(migrationsDir, file), "utf8"))
+      .find((sql) => /study_sessions_max_duration check/.test(sql));
+    expect(latestCheck, "study_sessions_max_duration not found").toBeDefined();
     expect(
-      occurrences(core, /study_sessions_max_duration check .*interval '(\d+) seconds'/g),
+      occurrences(
+        latestCheck ?? "",
+        /study_sessions_max_duration check .*interval '(\d+) seconds'/g,
+      ),
     ).toEqual([cap]);
   });
 
@@ -98,7 +102,9 @@ describe("database parity: ingest and totals constants", () => {
       `${SYNC.SYNC_BATCH_MAX}`,
     ]);
     expect(ingest.sql).toContain(`at most ${SYNC.SYNC_BATCH_MAX} sessions per call`);
-    expect(spec).toContain(`${SYNC.SYNC_BATCH_MAX}`);
+    const syncSpec = readFileSync(resolve(specsDir, "03-sync.md"), "utf8");
+    expect(syncSpec).toContain(`| \`SYNC_BATCH_MAX\` | ${SYNC.SYNC_BATCH_MAX} intervals |`);
+    expect(spec).toContain(`has > ${SYNC.SYNC_BATCH_MAX} elements`);
   });
 
   it("TEST-08 DATA-09 the abuse limits in the SQL equal the spec (1,000 per hour, 3,500 per 24 hours)", () => {

@@ -17,7 +17,7 @@ export default defineConfig({
       thresholds: {
         "packages/shared/src/**": { lines: 90, branches: 90, functions: 90, statements: 90 },
         "apps/extension/src/engine/**": { lines: 90, branches: 90, functions: 90, statements: 90 },
-        // Grill T3: floors at the values measured on 2026-11-13, rounded down. Raise, never lower.
+        // Grill T3: floors at the values measured on 2026-11-13, rounded down (auth: one more point of slack against flakiness). Raise, never lower.
         "apps/extension/src/background/sync/**": {
           lines: 88,
           branches: 89,

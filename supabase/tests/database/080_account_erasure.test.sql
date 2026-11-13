@@ -3,7 +3,7 @@
 -- user in any table with a user_id column. The tables are discovered from information_schema,
 -- so a table added later is covered automatically: if it forgets `on delete cascade`, this fails.
 begin;
-select plan(5);
+select plan(6);
 
 select tests.create_user('erased');
 select tests.create_user('kept');
@@ -22,15 +22,24 @@ values
 insert into private.link_requests (user_id)
 values (tests.user_id('erased')), (tests.user_id('kept'));
 
--- Every base table in the application schemas that has a user_id column.
+-- Every base table in the application schemas with a user_id column OR a column that references
+-- auth.users(id) by foreign key, whatever its name (pg_constraint).
 create temp table user_tables on commit drop as
-select c.table_schema::text as schema_name, c.table_name::text as table_name
-from information_schema.columns c
-join information_schema.tables t
-  on t.table_schema = c.table_schema and t.table_name = c.table_name
-where c.column_name = 'user_id'
-  and c.table_schema in ('public', 'private')
-  and t.table_type = 'BASE TABLE';
+select distinct schema_name, table_name, column_name from (
+  select c.table_schema::text as schema_name, c.table_name::text as table_name, c.column_name::text as column_name
+  from information_schema.columns c
+  join information_schema.tables t
+    on t.table_schema = c.table_schema and t.table_name = c.table_name
+  where c.column_name = 'user_id' and t.table_type = 'BASE TABLE'
+  union
+  select n.nspname::text, cl.relname::text, a.attname::text
+  from pg_constraint k
+  join pg_class cl on cl.oid = k.conrelid and cl.relkind = 'r'
+  join pg_namespace n on n.oid = cl.relnamespace
+  join pg_attribute a on a.attrelid = k.conrelid and a.attnum = k.conkey[1]
+  where k.contype = 'f' and k.confrelid = 'auth.users'::regclass and cardinality(k.conkey) = 1
+) found
+where schema_name in ('public', 'private');
 
 -- "schema.table" names that hold at least one row of `uid`.
 create function pg_temp.tables_holding(uid uuid)
@@ -43,7 +52,7 @@ declare
   n bigint;
 begin
   for t in select * from user_tables order by 1, 2 loop
-    execute format('select count(*) from %I.%I where user_id = $1', t.schema_name, t.table_name)
+    execute format('select count(*) from %I.%I where %I = $1', t.schema_name, t.table_name, t.column_name)
       into n using uid;
     if n > 0 then
       held := held || (t.schema_name || '.' || t.table_name);
@@ -53,15 +62,25 @@ begin
 end;
 $$;
 
+-- No trivial pass: every discovered table must be seeded above. A new table fails here until a
+-- seed row for both users is added to this file.
+select is(
+  (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables
+   where schema_name || '.' || table_name <> all (array[
+     'private.link_requests', 'public.study_sessions', 'public.tracked_domains'])),
+  null::text[],
+  'TEST-04 DATA-12 every user-owned table found has a seed row in this test (add one for a new table)'
+);
+
 select ok(
-  (select array_agg(schema_name || '.' || table_name order by 1) from user_tables)
+  (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables)
     @> array['private.link_requests', 'public.study_sessions', 'public.tracked_domains'],
   'TEST-04 DATA-12 discovery finds the known user-owned tables'
 );
 select ok(
   pg_temp.tables_holding(tests.user_id('erased'))
-    @> array['private.link_requests', 'public.study_sessions', 'public.tracked_domains'],
-  'TEST-04 DATA-12 the user owns rows in the known tables before deletion'
+    = (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables),
+  'TEST-04 DATA-12 the user owns rows in every discovered table before deletion'
 );
 
 -- The delete path: Supabase Auth's admin deleteUser removes the auth.users row.
