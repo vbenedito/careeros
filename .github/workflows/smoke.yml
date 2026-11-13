@@ -1,0 +1,63 @@
+# Production smoke check (ENV-12, grill T2): read-only requests against the live site and the
+# hosted Supabase project, to catch what CI cannot see: build-time values baked into the static
+# pages (canonical, store link), the CSP header, robots/sitemap, the sign-in redirect, and the
+# hosted CORS configuration the extension depends on (`Date` exposed to the extension's origin,
+# SYNC-05a).
+# Runs after every successful Production deployment (Vercel's GitHub integration reports it as a
+# `deployment_status` event), daily, and on demand. NO secrets: the values below are public
+# repository variables (the Supabase publishable key is public by design). A red run emails
+# whoever last changed the schedule (docs/operations.md §7).
+# Needs the repository variables SMOKE_SITE_URL, SMOKE_STORE_URL, SMOKE_SUPABASE_URL and
+# SMOKE_SUPABASE_PUBLISHABLE_KEY; a missing one FAILS the run (a skipped check is silent).
+
+name: Production smoke
+
+on:
+  deployment_status:
+  schedule:
+    - cron: "43 9 * * *" # daily 09:43 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke check (production)
+    # A deployment_status event fires for every deployment and state: only a successful
+    # Production one runs (previews and failures do not).
+    if: >-
+      github.repository == 'vbenedito/careeros' && (
+        github.event_name != 'deployment_status' || (
+          github.event.deployment_status.state == 'success' &&
+          github.event.deployment.environment == 'Production'
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SMOKE_SITE_URL: ${{ vars.SMOKE_SITE_URL }}
+      SMOKE_STORE_URL: ${{ vars.SMOKE_STORE_URL }}
+      SMOKE_SUPABASE_URL: ${{ vars.SMOKE_SUPABASE_URL }}
+      SMOKE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SMOKE_SUPABASE_PUBLISHABLE_KEY }}
+      # After a deployment the production alias may need a moment: retry a few times.
+      SMOKE_ATTEMPTS: ${{ github.event_name == 'deployment_status' && '4' || '1' }}
+      SMOKE_RETRY_DELAY_S: "30"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js (from .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      # No `pnpm install`: the script uses only Node's built-ins.
+      - name: Smoke check
+        run: node scripts/ci/smoke.ts

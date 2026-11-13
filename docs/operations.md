@@ -42,7 +42,7 @@ Supabase Free has no automatic backups, so the repository makes its own:
 - **When:** every Monday at 06:17 UTC, or on demand (Actions → Backup → Run workflow): [`.github/workflows/backup.yml`](../.github/workflows/backup.yml). **GitHub silently disables schedules in a public repository after 60 days without repository activity**: see the monthly check in §5.
 - **Protection:** the repository is public, so the dump is **encrypted with [age](https://age-encryption.org) inside the job, before it is stored**. The plaintext never reaches the disk or the artifact store. Only the private key can read it, and it never leaves the product owner's computer (keep a second copy in a password manager).
 - **Where:** an artifact of the workflow run, kept for 90 days (about 13 weekly copies).
-- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the backup job is skipped. In the Backup workflow only the dump step receives the URL (#112). The [migration workflow](#6-database-migrations) uses the same environment and values (#147).
+- **Configuration:** in the GitHub **environment `production-backup`**, restricted to the `main` branch: secret `SUPABASE_DB_URL` (the **Session pooler** connection string ending in `?sslmode=require`; GitHub runners have no IPv6 for the direct connection) and variable `BACKUP_AGE_RECIPIENT` (the age public key). Without them the backup job **fails** (a skipped backup would be silent), and so does the [freshness check](#7-scheduled-checks-and-what-an-email-means). In the Backup workflow only the dump step receives the URL (#112). The [migration workflow](#6-database-migrations) uses the same environment and values (#147).
 - **Setup checklist (one time, before merging a change to this workflow):**
   1. Settings → Environments → **New environment** `production-backup`; **Deployment branches and tags → Selected branches → `main`**.
   2. Add the secret `SUPABASE_DB_URL` and the variable `BACKUP_AGE_RECIPIENT` **to the environment**.
@@ -80,8 +80,8 @@ Supabase Free has no automatic backups, so the repository makes its own:
 
 | When | What |
 |---|---|
-| Weekly (automatic) | Backup workflow runs. A failed scheduled run emails whoever last changed the workflow's schedule. |
-| Monthly | **Actions → Backup:** the workflow is still enabled (GitHub disables schedules after 60 days without repository activity; re-enable it there) and the last run is green. |
+| Automatic | The scheduled checks of [§7](#7-scheduled-checks-and-what-an-email-means) (daily smoke, daily health, weekly backup, backup freshness). A failed run emails whoever last changed the workflow's schedule. |
+| Monthly | **Actions:** Backup, Production health and Production smoke are still enabled (GitHub disables schedules after 60 days without repository activity; re-enable them there; the freshness check emails you if Backup stops) and their last runs are green. |
 | Monthly | Supabase usage (database size, egress) and Vercel usage pages: far below the limits above. |
 | After a dependency or Supabase upgrade | CI green, including the backup round trip. |
 | After merging a migration | **Actions → Database migrations (production):** the run is green and its summary's migration history shows every migration on both sides ([release](process/release.md#database-migrations)). |
@@ -106,6 +106,35 @@ pnpm exec supabase migration list --remote
 ```
 
 Supabase CLI 3 targets the local stack unless `--remote` is given. Afterwards, run the workflow in **dry-run** mode once it is available again: it should report nothing to apply.
+
+## 7. Scheduled checks and what an email means
+
+There is no error-tracking vendor and no client telemetry (ENV-11): the alert is **GitHub's email for a failed workflow run**, sent to whoever last changed the workflow's schedule. All checks are read-only. If you stop receiving them, check **Settings → Notifications → Actions** and that the workflows are enabled.
+
+| Workflow (when) | What it checks | Needs |
+|---|---|---|
+| [Production smoke](../.github/workflows/smoke.yml) (after each successful Production deployment, daily 09:43 UTC, on demand) ENV-12 | The live site and the hosted Supabase project: landing canonical equals the site, "Add to Chrome" links to the store listing, CSP header present, `/robots.txt`, `/sitemap.xml`, `/privacy`, signed-out `/dashboard` redirects to sign-in, Supabase CORS preflight and `Date` exposed to the store extension's origin | Repository **variables** (no secrets): `SMOKE_SITE_URL`, `SMOKE_STORE_URL`, `SMOKE_SUPABASE_URL`, `SMOKE_SUPABASE_PUBLISHABLE_KEY` |
+| [Production health](../.github/workflows/health.yml), job *Sync activity* (daily 07:27 UTC, on demand) ENV-13 | Counts of uploaded sessions and active users in a READ ONLY database transaction. Fails when **no session was uploaded in 24 h although someone uploaded in the 7 days before**, or uploads fall **below 25% of the prior daily average** (only once that average is 20 a day or more) | The `production-backup` environment (same `SUPABASE_DB_URL` as the backup) |
+| Production health, job *Backup freshness* (same run) ENV-14 | The newest scheduled backup artifact is **under 8 days old** | Nothing |
+| [Backup](../.github/workflows/backup.yml) (Mondays 06:17 UTC) | Fails when its configuration is missing, instead of skipping | §4 |
+| [Database migrations](../.github/workflows/migrate.yml) (merge to `main` touching migrations) | After the push, a read-only check that every public table has row level security and the `private` schema is closed; in apply mode, that production has all the repository's migrations | §6 |
+
+**Repository variables to create once** (Settings → Secrets and variables → Actions → Variables; none is secret): `SMOKE_SITE_URL` (the production origin, e.g. `https://careeros-taupe.vercel.app`), `SMOKE_STORE_URL` (`https://chromewebstore.google.com/detail/<slug>/<extension ID>`), `SMOKE_SUPABASE_URL` (the project URL) and `SMOKE_SUPABASE_PUBLISHABLE_KEY` (the `sb_publishable_…` key). Until they exist the smoke workflow fails on purpose, naming the missing one.
+
+### First steps for each email
+
+Open the run (the link in the email) and read the red step and the job summary. The summary of the health check holds counts only.
+
+| Email from | Likely causes | First steps |
+|---|---|---|
+| Smoke: canonical or "Add to Chrome" | A build-time value is wrong or was changed without redeploying (`SITE_URL`, `EXTENSION_INSTALL_URL`) | Fix it in Vercel (Production scope), **redeploy**, run the workflow again ([release](process/release.md#dashboard)) |
+| Smoke: CSP, robots, sitemap, privacy, dashboard redirect | A bad deployment, or the proxy/route changed | Open the page; promote the previous Production deployment in Vercel if it is broken |
+| Smoke: CORS preflight or `Date` | The Supabase project, its API gateway or CORS settings changed, or the project moved. The extension cannot read the server clock, so devices with a fast clock quarantine intervals (SYNC-05a) | Check the project is not paused (§1) and the URL variable is right; look at Supabase status; consider a hotfix of SYNC-05a's fallback |
+| Health: no sessions in 24 h / sharp drop | Uploads are failing: paused or unreachable project, a migration or release broke the ingest function, an extension release is rejecting data, or (with very few users) nobody studied that day | Check §1 (paused project), the latest **Database migrations** and Vercel deployments, and `ingest_study_sessions` in the Supabase dashboard (logs, API errors). With only a handful of users a quiet day is possible: re-run the next day before digging |
+| Health: cannot run | `SUPABASE_DB_URL` missing or rotated, project paused, or the pooler string is wrong | Fix the environment secret (§4 setup checklist) and run the workflow again |
+| Backup freshness | Backup is disabled (60 days of inactivity), failing, or never configured | Actions → Backup: enable it and **Run workflow**; read the failing step (§4) |
+| Backup: configuration missing | `SUPABASE_DB_URL` or `BACKUP_AGE_RECIPIENT` is not in the environment | §4 setup checklist |
+| Migrations: post-migration check | A public table without row level security, or `private` exposed: a security regression | Treat as an incident: review the last migration, fix forward with a new migration at once ([release](process/release.md#database-migrations)) |
 
 ## Chrome Web Store
 
