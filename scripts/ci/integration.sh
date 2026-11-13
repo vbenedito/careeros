@@ -21,7 +21,8 @@ VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY \
 pnpm --filter @careeros/web start -p 3000 > web-integration-server.log 2>&1 &
 server=$!
 trap 'kill $server 2>/dev/null || true' EXIT
-for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/sign-in && break; sleep 1; done
+# Fails the run (with the server log) when the server never answers or dies; no test runs then.
+scripts/ci/wait-for-server.sh http://localhost:3000/sign-in "$server" web-integration-server.log
 
 export DASHBOARD_URL=$SITE_URL API_URL PUBLISHABLE_KEY SECRET_KEY DB_CONTAINER=supabase_db_careeros
 pnpm --filter @careeros/web test:integration

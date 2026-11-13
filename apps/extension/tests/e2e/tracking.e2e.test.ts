@@ -34,7 +34,7 @@ const admin = createClient(env("API_URL"), env("SECRET_KEY"), { auth: { persistS
 
 interface EngineState {
   signals: Record<string, unknown>;
-  open: { domain: string } | null;
+  open: { domain: string; startedAt: number } | null;
 }
 interface OutboxItem {
   domain: string;
@@ -139,7 +139,11 @@ describe("extension smoke (E2E)", () => {
   });
 
   it("TRK-08 TRK-10 leaving the tracked site closes the interval into the outbox", async () => {
-    await new Promise((r) => setTimeout(r, 7_000)); // longer than MIN_INTERVAL_S
+    // Grill T6: poll until the open interval is older than MIN_INTERVAL_S (5 s) instead of a fixed sleep.
+    await waitForEngine(
+      (s) => s?.open?.domain === TRACKED && Date.now() / 1000 - s.open.startedAt > 6,
+      "kept the interval open for longer than MIN_INTERVAL_S",
+    );
     const study = context.pages().find((p) => p.url().includes(TRACKED)) as Page;
     await study.goto(`http://localhost:${port}/not-tracked`);
     await waitForEngine((s) => s !== undefined && s.open === null, "closed the interval");
