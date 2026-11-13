@@ -6,6 +6,7 @@
  */
 import { parseDomainInput } from "@careeros/shared";
 import { fail, json } from "@/lib/http/json";
+import { errorFields, logServerError } from "@/lib/log";
 import { isSameOrigin } from "@/lib/security/origin";
 import { AddSiteRequestSchema } from "@/lib/settings/sites";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -26,16 +27,20 @@ export async function POST(request: Request) {
     .select("id, domain")
     .single();
   if (!error) return json(data, 201);
-  if (error.code === "23505") {
+  // Re-adding a site that is already tracked succeeds (DASH-12). The unique violation (23505)
+  // and, at the limit, the BEFORE INSERT limit trigger (hint DATA-01, which fires before the
+  // unique check) both mean "maybe it is already there": look the domain up.
+  if (error.code === "23505" || error.hint === "DATA-01") {
     const existing = await supabase
       .from("tracked_domains")
       .select("id, domain")
       .eq("domain", parsed.domain)
-      .single();
+      .maybeSingle();
     if (existing.data) return json(existing.data);
   }
   if (error.hint === "DATA-01") return fail(422, "LIMIT_REACHED");
   // The account was deleted while this session's access token was still valid (AUTH-13).
   if (error.code === "23503") return fail(401, "NOT_AUTHENTICATED");
+  logServerError("sites.add.failed", errorFields(error));
   return fail(500, "INTERNAL");
 }

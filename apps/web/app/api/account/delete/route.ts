@@ -16,7 +16,8 @@ import { DELETE_CONFIRMATION, DELETE_SIGN_IN_PATH } from "@/lib/settings/account
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const back = (error: "delete" | "reauth" = "delete") =>
+// "delete": the typed confirmation was wrong; "failed": the backend could not delete (H6).
+const back = (error: "delete" | "reauth" | "failed" = "delete") =>
   NextResponse.redirect(new URL(`/settings?error=${error}#delete-account`, siteUrl()), 303);
 
 export async function POST(request: Request) {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
   const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
   if (error) {
     logServerError("account_delete.failed", errorFields(error));
-    return back();
+    return back("failed");
   }
 
   // The session no longer exists on the server; this only clears the cookies.

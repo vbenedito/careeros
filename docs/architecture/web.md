@@ -102,10 +102,10 @@ Browser-side code talks to the extension through `lib/extension/messenger.ts` (2
 | Layer | Behavior |
 |---|---|
 | Dashboard data | `loadDashboard` returns `invalid-time-zone` (retried in UTC), `temporary` or `permanent` (`lib/dashboard/load-error.ts`); the error state offers **Try again** only for `temporary` (DASH-11, #70) |
-| Route handlers | Reply `{ error: CODE }` with `Cache-Control: no-store` (`lib/http/json.ts`), e.g. `FORBIDDEN`, `NOT_AUTHENTICATED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `RATE_LIMITED`, `INTERNAL`. Form routes redirect back with `?error=` |
+| Route handlers | Reply `{ error: CODE }` with `Cache-Control: no-store` (`lib/http/json.ts`), e.g. `FORBIDDEN`, `NOT_AUTHENTICATED`, `INVALID_DOMAIN`, `LIMIT_REACHED`, `RATE_LIMITED`, `INTERNAL` (logged first for `/api/sites`). Form routes redirect back with `?error=` (`/settings`: `delete` wrong confirmation, `failed` server error, `reauth`) |
 | Server logs | `logServerError(event, fields)` (`lib/log.ts`): one JSON line in Vercel runtime logs with code, status and a capped message; never emails, tokens, cookies, URLs or user input (ENV-11, SEC-06) |
-| Pages | `app/error.tsx` and `app/global-error.tsx` show a friendly fallback; `app/not-found.tsx` for unknown routes |
-| Configuration | `lib/env.ts` fails fast on a missing variable; `next.config.ts` fails a production build without the `PRIVACY_*` variables (SEC-13) |
+| Pages | `app/error.tsx` and `app/global-error.tsx` show a friendly fallback and report the error class name and digest (never the message) through `lib/report-client-error.ts` to `POST /api/client-error` (public, same-origin, ≤ 512 bytes, schema-checked, 30/min per instance), which logs one coarse line; `instrumentation.ts` `onRequestError` logs route pattern, class name and digest for server errors (`lib/error-report.ts`). Same CSP: `connect-src 'self'`. No error-tracking vendor; read these lines in Vercel runtime logs (ENV-11, grill H1). `app/not-found.tsx` for unknown routes |
+| Configuration | `lib/env.ts` fails fast on a missing variable; `next.config.ts` fails a `VERCEL_ENV=production` build on missing or wrong `SITE_URL`, `NEXT_PUBLIC_EXTENSION_ID`, `NEXT_PUBLIC_SUPABASE_*`, `EXTENSION_INSTALL_URL` or `PRIVACY_*` values (`lib/env-check.ts`, ENV-05b, SEC-13) |
 
 ## Landing page rendering
 
@@ -117,8 +117,8 @@ Vercel Web Analytics (SEC-15, [ADR-0010](../adr/0010-web-analytics.md)), only wh
 
 | Pages | How | Privacy filter |
 |---|---|---|
-| App pages (root layout: sign-in, privacy, dashboard, settings) | `components/app/web-analytics.tsx` renders `<Analytics />` from `@vercel/analytics/next`, which inserts `/_vercel/insights/script.js` | `beforeSend` = `filterAnalyticsEvent` (`lib/analytics/before-send.ts`): drops `/auth/*` and `/connect`, keeps only `view` and `utm_*` query parameters, drops fragments |
-| Landing `/` | `renderLanding({ analytics: true })` adds the script tag; `buildLandingCsp(…, site)` allows it | None (no script of our own); only `/` |
+| App pages (root layout: sign-in, privacy, dashboard) | `components/app/web-analytics.tsx` renders `<Analytics />` from `@vercel/analytics/next`, which inserts `/_vercel/insights/script.js`; it renders nothing on `/connect`, `/settings` and `/auth/*` (`isAnalyticsExcludedPath`, S2); links to those routes are plain `<a>` full loads, never `next/link` | `beforeSend` = `filterAnalyticsEvent` (`lib/analytics/before-send.ts`): drops `/auth/*`, `/connect` and `/settings`, keeps only `view` and `utm_*` query parameters, drops fragments |
+| Landing `/` | `renderLanding({ analytics: true })` adds the script tag; `buildLandingCsp(…, site)` allows it | None (no script of our own); the proxy redirects a signed-out `/?…` to `/` keeping only `utm_*` (`lib/landing/clean-url.ts`, 307), so the beacon sees clean URLs (S1); only `/` |
 
 `/_vercel` is a public path (`lib/auth/routes.ts`), so page views of signed-out visitors are never redirected to sign-in should the proxy see them. The extension has no analytics.
 

@@ -22,6 +22,7 @@ const PROVIDER_NAMES: Record<AuthProvider, string> = { google: "Google", github:
 export function AccountSettings({
   email,
   provider,
+  deleteMismatch = false,
   deleteFailed = false,
   recentSignIn = false,
   reauthProviders = ["google", "github"],
@@ -29,6 +30,9 @@ export function AccountSettings({
 }: {
   email: string;
   provider: string | null;
+  /** The typed confirmation did not match (`?error=delete`). */
+  deleteMismatch?: boolean;
+  /** The server could not delete the account (`?error=failed`, H6). */
   deleteFailed?: boolean;
   /** AUTH-14: signed in within the last 10 minutes, so the account can be deleted now. */
   recentSignIn?: boolean;
@@ -108,9 +112,15 @@ export function AccountSettings({
         <p className="text-muted-foreground">
           Permanently deletes your account, your tracked sites and all recorded study time.
         </p>
+        {deleteMismatch ? (
+          <p role="alert" className="text-destructive">
+            Your account wasn't deleted: the confirmation didn't match. Type {DELETE_CONFIRMATION}{" "}
+            exactly.
+          </p>
+        ) : null}
         {deleteFailed ? (
           <p role="alert" className="text-destructive">
-            Your account wasn't deleted. Try again in a moment.
+            We couldn't delete your account right now. Try again in a few minutes.
           </p>
         ) : null}
         {recentSignIn ? (
