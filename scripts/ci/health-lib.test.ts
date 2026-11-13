@@ -17,6 +17,7 @@ const base: HealthCounts = {
   users24h: 5,
   users7d: 8,
   usersPrior7d: 8,
+  daysActivePrior7d: 7,
   usersSilent24h: 3,
   usersTotal: 20,
   signups24h: 1,
@@ -26,17 +27,19 @@ const base: HealthCounts = {
 
 describe("ENV-13 health: parsing the query output", () => {
   const header =
-    "sessions_24h,sessions_prior_7d,users_24h,users_7d,users_prior_7d,users_silent_24h,users_total,signups_24h,link_requests_1h,link_limited_users_1h";
+    "sessions_24h,sessions_prior_7d,users_24h,users_7d,users_prior_7d,days_active_prior_7d,users_silent_24h,users_total,signups_24h,link_requests_1h,link_limited_users_1h";
 
   it("ENV-13 parses one header and one row of counts", () => {
-    expect(parseHealthCsv(`${header}\n40,280,5,8,8,3,20,1,2,0\n`)).toEqual(base);
+    expect(parseHealthCsv(`${header}\n40,280,5,8,8,7,3,20,1,2,0\n`)).toEqual(base);
   });
 
   it("ENV-13 refuses output that is not one row of integers", () => {
     expect(() => parseHealthCsv("")).toThrow(/header and one row/);
     expect(() => parseHealthCsv(`${header}\n1,2,3\n`)).toThrow(/no valid count/);
-    expect(() => parseHealthCsv(`${header}\n40,280,5,8,8,3,20,1,2,x\n`)).toThrow(/link_limited/);
-    expect(() => parseHealthCsv(`${header}\n40,280,5,8,8,3,20,1,2,-1\n`)).toThrow(/no valid count/);
+    expect(() => parseHealthCsv(`${header}\n40,280,5,8,8,7,3,20,1,2,x\n`)).toThrow(/link_limited/);
+    expect(() => parseHealthCsv(`${header}\n40,280,5,8,8,7,3,20,1,2,-1\n`)).toThrow(
+      /no valid count/,
+    );
   });
 });
 
@@ -51,6 +54,18 @@ describe("ENV-13 health: what fails the run", () => {
     expect(a.failures[0]).toContain("No study sessions were uploaded in the last 24 hours");
   });
 
+  it("ENV-13 low traffic does not alert: needs 3 users on 3 days in the prior 7 days", () => {
+    const zero = { ...base, sessions24h: 0, users24h: 0 };
+    expect(assessHealth({ ...zero, usersPrior7d: 2 }).failures).toEqual([]);
+    expect(assessHealth({ ...zero, usersPrior7d: 2 }).notes.join()).toContain("alert is off");
+    expect(assessHealth({ ...zero, daysActivePrior7d: 2 }).failures).toEqual([]);
+    expect(assessHealth({ ...zero, usersPrior7d: 3, daysActivePrior7d: 3 }).failures).toHaveLength(
+      1,
+    );
+    // The drop rule is gated the same way.
+    expect(assessHealth({ ...base, sessions24h: 1, daysActivePrior7d: 2 }).failures).toEqual([]);
+  });
+
   it("ENV-13 zero uploads with nobody active before is not an anomaly", () => {
     const quiet: HealthCounts = {
       ...base,
@@ -59,6 +74,7 @@ describe("ENV-13 health: what fails the run", () => {
       users24h: 0,
       users7d: 0,
       usersPrior7d: 0,
+      daysActivePrior7d: 0,
       usersSilent24h: 0,
     };
     expect(assessHealth(quiet).failures).toEqual([]);

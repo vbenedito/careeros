@@ -23,6 +23,10 @@ select
   (select count(distinct user_id) from public.study_sessions
     where created_at >= now() - interval '8 days'
       and created_at < now() - interval '24 hours') as users_prior_7d,
+  -- Days (UTC) with at least one upload in the same prior window: the activity gate of the alerts.
+  (select count(distinct date_trunc('day', created_at)) from public.study_sessions
+    where created_at >= now() - interval '8 days'
+      and created_at < now() - interval '24 hours') as days_active_prior_7d,
   -- Users active in the last 7 days with no upload in the last 24 hours.
   (select count(*) from (
       select user_id from public.study_sessions

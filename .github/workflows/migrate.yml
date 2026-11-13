@@ -200,6 +200,10 @@ jobs:
           fi
           tables=$(awk -F, 'NR==2 {print $1}' check.csv)
           applied=$(awk -F, 'NR==2 {print $2}' check.csv)
+          if ! [[ "$tables" =~ ^[0-9]+$ && "$applied" =~ ^[0-9]+$ ]]; then
+            echo "::error::The post-migration check returned no valid counts."
+            exit 1
+          fi
           expected=$(find supabase/migrations -maxdepth 1 -name '*.sql' | wc -l)
           {
             echo "## Post-migration check (read-only)"

@@ -21,20 +21,24 @@ on:
 permissions:
   contents: read
 
+# One group per deployment (or per event kind for schedule/manual runs), never cancelled: a
+# skipped preview-deployment event must not cancel or replace a Production smoke run.
 concurrency:
-  group: smoke
-  cancel-in-progress: true
+  group: smoke-${{ github.event.deployment.id || github.event_name }}
+  cancel-in-progress: false
 
 jobs:
   smoke:
     name: Smoke check (production)
     # A deployment_status event fires for every deployment and state: only a successful
-    # Production one runs (previews and failures do not).
+    # Production one runs (previews and failures do not). Vercel names the environment
+    # "Production" or, in a monorepo with several projects, "Production – <project>", so the
+    # match is a case-insensitive prefix.
     if: >-
       github.repository == 'vbenedito/careeros' && (
         github.event_name != 'deployment_status' || (
           github.event.deployment_status.state == 'success' &&
-          github.event.deployment.environment == 'Production'
+          startsWith(github.event.deployment.environment, 'Production')
         )
       )
     runs-on: ubuntu-24.04

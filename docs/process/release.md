@@ -40,7 +40,7 @@ Migrations reach production through the workflow [Database migrations (productio
 | Step | How |
 |---|---|
 | Write | A new file in `supabase/migrations`; never edit an applied one. pgTAP tests in the same PR. Backward compatible (see below) |
-| Test | `pnpm db:reset && pnpm db:test` locally; CI applies all migrations to a fresh stack and runs pgTAP, integration, E2E and the backup round trip. When the PR adds migrations, CI also reproduces the production path first: the base commit's migrations and the seed, then your new ones with `supabase migration up`, then pgTAP (`scripts/ci/incremental-migrations.sh`). Editing or deleting a migration that is already on `main` fails CI. Put rows that should exist before your migration runs in `supabase/seed.sql` (it must work with the previous schema) |
+| Test | `pnpm db:reset && pnpm db:test` locally; CI applies all migrations to a fresh stack and runs pgTAP, integration, E2E and the backup round trip. When the PR adds migrations, CI also reproduces the production path first: the base commit's migrations and the seed, then your new ones with `supabase migration up`, then pgTAP (`scripts/ci/incremental-migrations.sh`). Editing or deleting a migration that is already on `main` fails CI. The seed is taken from the base commit too, so rows that should exist before your migration runs go in `supabase/seed.sql` of an earlier PR |
 | Preview against production | Optional, before or after merging: Actions → **Database migrations (production)** → **Run workflow** on `main`, mode **dry-run** (the default). It writes nothing and makes no backup; the job summary lists the migrations that would be applied |
 | Apply to production | **Automatic on merge:** a push to `main` that changes `supabase/migrations/**` runs the workflow in the `production-backup` environment: encrypted backup (same as the weekly backup, artifact `careeros-YYYY-MM-DD-run<id>-pre-migration.sql.gz.age`, 90 days) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`. One run at a time, never cancelled half-way. To re-run by hand: Run workflow with mode **apply** |
 | Check | Open the run's **Summary**: *Dry run* lists the pending migrations (or says the remote database is up to date), *Apply* shows the CLI output, *Migration history* shows each migration in the *Local* and *Remote* columns: after a good run every row has both. A red run is not silent: GitHub emails the person who merged. The last step, *Post-migration check*, is read-only: it fails when a public table has row level security off or the `private` schema is open, or (apply) when production has fewer migrations than the repository. Then check the dashboard as in [Dashboard](#dashboard) |
@@ -56,6 +56,10 @@ The merge that brings a migration also deploys the dashboard (Vercel) at the sam
 3. **Contract** (a later PR, once no deployed code or supported extension version uses the old shape): drop the old column, function or overload.
 
 A rename is add new → copy/backfill → switch code → drop old, spread over these steps.
+
+## Dependency audit exceptions
+
+CI runs `pnpm audit --prod --audit-level=high` through `scripts/ci/audit.ts`. When it fails, upgrade the package (or its parent). Only when no fix exists yet, add an entry to `.github/audit-exceptions.json`: `"GHSA-xxxx-xxxx-xxxx": { "reason": "why it does not apply or cannot be fixed", "expires": "YYYY-MM-DD" }`, with an expiry at most 90 days ahead, and mention it in the PR. The script passes the entries to `pnpm audit --ignore`; once an entry has expired, CI fails until the dependency is fixed or the entry is renewed with a new reason (ENV-08).
 
 ## Compatibility rules
 

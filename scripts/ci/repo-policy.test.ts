@@ -29,7 +29,7 @@ describe("repository policy checks", () => {
     expect(smoke).toContain("deployment_status:");
     expect(smoke).toContain("schedule:");
     expect(smoke).toContain("workflow_dispatch:");
-    expect(smoke).toContain("github.event.deployment.environment == 'Production'");
+    expect(smoke).toContain("startsWith(github.event.deployment.environment, 'Production')");
   });
 
   it("ENV-13 the health workflow runs daily in production-backup and gates on the repository", () => {
@@ -64,7 +64,8 @@ describe("repository policy checks", () => {
     expect(check).not.toMatch(/\b(insert|update|delete|truncate|drop|alter|create)\b/i);
     const ci = read(".github/workflows/ci.yml");
     expect(ci).toContain("actionlint");
-    expect(ci).toContain("pnpm audit --prod --audit-level=high");
+    expect(ci).toContain("scripts/ci/audit.ts");
+    expect(read("scripts/ci/audit.ts")).toContain('"--audit-level=high"');
     expect(ci).toContain("scripts/ci/incremental-migrations.sh");
     expect(read(".github/workflows/migrate.yml")).toContain("post-migrate-check.sql");
   });

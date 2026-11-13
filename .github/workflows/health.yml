@@ -3,10 +3,12 @@
 # changed its schedule, is the alert (docs/operations.md §7).
 #  - `sync`: a READ ONLY, aggregate-only SQL query against the production database (counts of
 #    uploaded sessions and active users; no ids, emails or domains are selected or printed).
-#    Fails when no session was uploaded in 24 hours although a user was active in the 7 days
-#    before, or when uploads fall below 25% of the prior daily average (scripts/ci/health-lib.ts).
-#  - `backup-freshness`: the newest scheduled backup artifact must be under 8 days old, which also
-#    catches GitHub silently disabling the Backup schedule after 60 days of repository inactivity.
+#    Fails when no session was uploaded in 24 hours, or when uploads fall below 25% of the prior
+#    daily average, but only if the 7 days before had at least 3 uploading users on at least 3
+#    days (scripts/ci/health-lib.ts).
+#  - `backup-freshness`: the newest scheduled backup artifact must be under 8 days old. It cannot
+#    catch GitHub disabling scheduled workflows after 60 days without repository activity (that
+#    disables this workflow too): do the monthly manual check of docs/operations.md §5.
 # `sync` uses the environment `production-backup` (deployment branches: `main` only) and the same
 # secret SUPABASE_DB_URL as backup.yml; no new secrets. A missing value FAILS the run.
 # Security (#112): only the query step receives the database URL, as an environment variable; no

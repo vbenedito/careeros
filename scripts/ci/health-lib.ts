@@ -9,6 +9,12 @@ export const MIN_BASELINE_SESSIONS_PER_DAY = 20;
 /** Fail when the last 24 h have fewer than this share of the prior 7-day daily average. */
 export const DROP_RATIO = 0.25;
 /** A scheduled backup is weekly: 7 days plus one day of slack. */
+/**
+ * Activity gate (low traffic must not cause a daily alert storm): both alerts need, in the 7 days
+ * before the last 24 h, at least this many distinct uploading users AND this many days with uploads.
+ */
+export const MIN_PRIOR_USERS = 3;
+export const MIN_PRIOR_ACTIVE_DAYS = 3;
 export const BACKUP_MAX_AGE_DAYS = 8;
 
 export interface HealthCounts {
@@ -17,6 +23,7 @@ export interface HealthCounts {
   users24h: number;
   users7d: number;
   usersPrior7d: number;
+  daysActivePrior7d: number;
   usersSilent24h: number;
   usersTotal: number;
   signups24h: number;
@@ -30,6 +37,7 @@ const COLUMNS: Record<keyof HealthCounts, string> = {
   users24h: "users_24h",
   users7d: "users_7d",
   usersPrior7d: "users_prior_7d",
+  daysActivePrior7d: "days_active_prior_7d",
   usersSilent24h: "users_silent_24h",
   usersTotal: "users_total",
   signups24h: "signups_24h",
@@ -78,14 +86,20 @@ export function assessHealth(c: HealthCounts): HealthAssessment {
   const failures: string[] = [];
   const notes: string[] = [];
 
-  if (c.sessions24h === 0 && c.usersPrior7d >= 1) {
+  const gated = c.usersPrior7d >= MIN_PRIOR_USERS && c.daysActivePrior7d >= MIN_PRIOR_ACTIVE_DAYS;
+  if (!gated && c.sessions24h === 0) {
+    notes.push(
+      `No uploads in 24 hours, but the alert is off: the 7 days before had ${c.usersPrior7d} uploading user(s) on ${c.daysActivePrior7d} day(s); it needs at least ${MIN_PRIOR_USERS} users on ${MIN_PRIOR_ACTIVE_DAYS} days.`,
+    );
+  }
+  if (gated && c.sessions24h === 0) {
     failures.push(
       `No study sessions were uploaded in the last 24 hours, although ${c.usersPrior7d} user(s) uploaded in the 7 days before. Uploads may be failing (docs/operations.md §7).`,
     );
   }
 
   const baseline = c.sessionsPrior7d / 7;
-  if (c.sessions24h > 0 && baseline >= MIN_BASELINE_SESSIONS_PER_DAY) {
+  if (gated && c.sessions24h > 0 && baseline >= MIN_BASELINE_SESSIONS_PER_DAY) {
     if (c.sessions24h < DROP_RATIO * baseline) {
       failures.push(
         `Uploads dropped sharply: ${c.sessions24h} in the last 24 hours against a daily average of ${baseline.toFixed(1)} over the 7 days before (threshold: below ${Math.round(DROP_RATIO * 100)}%).`,
@@ -93,7 +107,7 @@ export function assessHealth(c: HealthCounts): HealthAssessment {
     }
   } else if (c.sessions24h > 0) {
     notes.push(
-      `The drop rule is off: the prior daily average (${baseline.toFixed(1)}) is below ${MIN_BASELINE_SESSIONS_PER_DAY} uploads a day.`,
+      `The drop rule is off: it needs the activity gate and a prior daily average of at least ${MIN_BASELINE_SESSIONS_PER_DAY} uploads (now ${baseline.toFixed(1)}).`,
     );
   }
 
@@ -120,6 +134,7 @@ export function healthSummary(c: HealthCounts, a: HealthAssessment): string {
     ["Active users, last 24 h", String(c.users24h)],
     ["Active users, last 7 days", String(c.users7d)],
     ["Active users, the 7 days before the last 24 h", String(c.usersPrior7d)],
+    ["Days with uploads, the 7 days before", String(c.daysActivePrior7d)],
     [
       "Active in 7 days but silent for 24 h",
       ratio === undefined ? "n/a" : `${c.usersSilent24h} (${Math.round(ratio * 100)}%)`,
