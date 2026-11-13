@@ -1,0 +1,129 @@
+# Daily production health checks (ENV-13, ENV-14, grill H2/H7). There is no client telemetry and
+# no error-tracking vendor: a failed run of this workflow, which GitHub emails to whoever last
+# changed its schedule, is the alert (docs/operations.md §7).
+#  - `sync`: a READ ONLY, aggregate-only SQL query against the production database (counts of
+#    uploaded sessions and active users; no ids, emails or domains are selected or printed).
+#    Fails when no session was uploaded in 24 hours, or when uploads fall below 25% of the prior
+#    daily average, but only if the 7 days before had at least 3 uploading users on at least 3
+#    days (scripts/ci/health-lib.ts).
+#  - `backup-freshness`: the newest scheduled backup artifact must be under 8 days old. It cannot
+#    catch GitHub disabling scheduled workflows after 60 days without repository activity (that
+#    disables this workflow too): do the monthly manual check of docs/operations.md §5.
+# `sync` uses the environment `production-backup` (deployment branches: `main` only) and the same
+# secret SUPABASE_DB_URL as backup.yml; no new secrets. A missing value FAILS the run.
+# Security (#112): only the query step receives the database URL, as an environment variable; no
+# `set -x`; the password is masked on its own; connection strings are redacted from error output;
+# no `pnpm install` in the job that holds the URL.
+
+name: Production health
+
+on:
+  schedule:
+    - cron: "27 7 * * *" # daily 07:27 UTC (04:27 in São Paulo)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: health
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync activity (read-only SQL)
+    # Second layer: never from another branch (the environment's branch rule is the real guard).
+    if: github.repository == 'vbenedito/careeros' && github.ref == 'refs/heads/main'
+    environment: production-backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check configuration
+        env:
+          # Only whether it is set, never the URL itself.
+          HAS_DB_URL: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          if [ "$HAS_DB_URL" != "true" ]; then
+            echo "::error::SUPABASE_DB_URL is not set in the production-backup environment: the health check cannot run."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js (from .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      # GitHub masks the whole secret; also mask the password alone (and its decoded form).
+      - name: Mask the database password
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          node -e '
+            const u = new URL(process.env.PGURL);
+            for (const v of new Set([u.password, decodeURIComponent(u.password)]))
+              if (v) console.log(`::add-mask::${v}`);
+          '
+
+      # The only step that receives the database URL. psql runs from the same pinned PostgreSQL
+      # image as the backup's pg_dump (scripts/ops/db-dump.sh), in a READ ONLY transaction.
+      - name: Query activity counts (read-only, aggregates only)
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          scripts/ops/db-readonly.sh scripts/ops/health.sql > health.csv 2> health.err
+          status=$?
+          sed -E 's#://[^@/[:space:]]*@#://***@#g' health.err
+          rm -f health.err
+          exit "$status"
+
+      - name: Evaluate
+        run: node scripts/ci/health.ts db health.csv
+
+  backup-freshness:
+    name: Backup freshness
+    if: github.repository == 'vbenedito/careeros'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Reads the repository's own workflow runs and artifacts with the job token; no other secret.
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js (from .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      # The newest successful Backup run's unexpired dump (not the pre-migration ones, which
+      # say nothing about the weekly schedule). Empty when there is none.
+      - name: Find the newest backup artifact
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_id=$(gh api "repos/$REPO/actions/workflows/backup.yml/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+          created=""
+          if [ -n "$run_id" ]; then
+            created=$(gh api "repos/$REPO/actions/runs/$run_id/artifacts" \
+              --jq '[.artifacts[] | select(.expired == false and (.name | test("^careeros-[0-9-]+-run[0-9]+\\.sql\\.gz\\.age$"))) | .created_at] | max // empty')
+          fi
+          echo "created=$created" >> "$GITHUB_OUTPUT"
+
+      - name: Check the age (under 8 days)
+        env:
+          LATEST: ${{ steps.latest.outputs.created }}
+        run: node scripts/ci/health.ts backup "$LATEST"
