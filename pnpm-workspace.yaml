@@ -5,12 +5,3 @@ saveExact: true
 # Supply chain (#112): a package version must be at least 7 days old before it can be installed,
 # so a freshly published malicious release is usually caught and yanked before it reaches us.
 minimumReleaseAge: 10080
-# Exact versions already in the lockfile, audited in #110, that were younger than 7 days when the
-# policy was introduced (2026-11-10). Remove this list after 2026-11-13.
-minimumReleaseAgeExclude:
-  - "@babel/runtime@7.29.13"
-  - "@reduxjs/toolkit@2.14.0"
-  - es-toolkit@1.53.2
-  - jsdom@31.0.0
-  - lucide-react@1.70.0
-  - undici@8.12.4
