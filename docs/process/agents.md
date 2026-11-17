@@ -21,6 +21,7 @@ Replaces the blanket "independent review by a different agent" rule (AGENTS.md ย
 
 | Change | Review |
 |---|---|
+| Marketing documents (`docs/marketing/`, brand assets) | One specialist review agent (marketing or brand reviewer, Sonnet). It **approves instead of the product owner** (product owner decision, 2026-11-17, #198): if nothing HIGH or MEDIUM is left, the tech lead merges |
 | Docs, copy, version bumps, config with no behaviour change | CI + the tech lead's own check; no review agent (spec changes to product behaviour: one Sonnet review) |
 | Normal code (UI, dashboard, tests, tooling) | One Sonnet review |
 | Sync, auth, security, database migrations, CI workflows that hold secrets | One Opus deep review |
@@ -50,6 +51,7 @@ Saving tokens must not lower quality. Three safeguards:
 - Drafts, hooks, captions and variants on Sonnet or Haiku. Opus only for positioning and launch strategy.
 - Visuals and video in their dedicated tools; iterate on the specific asset, don't regenerate everything.
 - Get decisions (angle, audience, format) before generating assets.
+- Marketing documents are approved by a specialist review agent, not the product owner (ยง2). Facts the product owner owns (accounts, domain, budget, anything said in the product's name that changes product behaviour) still go to the product owner.
 
 ## 6. Measuring
 
