@@ -8,7 +8,7 @@ Amended 2026-11-12 (#145): limit 50 → 12; existing lists over the limit are ke
 
 Amended 2026-11-17 (#171): DATA-10 test note — `posix/` and `right/` zone copies are outside the "every real zone name" check; the validator is unchanged.
 
-Amended 2026-11-17 (#176): proposed for v1 — DATA-01 limit from the plan ([ENT](../v1/02-entitlements.md)); `study_sessions.problem_slug`; ingest v2 next to the current RPC (DATA-06b, [ADR-0011](../../docs/adr/0011-ingest-v2.md)); caps count only new rows (DATA-09b, grill E5); overlap rejections reported apart (grill E3); account setting (DATA-13, DATA-14); problem totals (DATA-15).
+Amended 2026-11-17 (#176): proposed for v1 — DATA-01 limit from the plan ([ENT](../v1/02-entitlements.md)); problem slugs in a separate table `study_session_problems` (DATA-16); ingest v2 next to the current RPC (DATA-06b, [ADR-0011](../../docs/adr/0011-ingest-v2.md)); caps count only new rows (DATA-09b, grill E5); overlap rejections reported apart (grill E3); account setting (DATA-13, DATA-14); problem totals (DATA-15).
 
 Supabase Postgres. All application tables live in `public`, have RLS **enabled and forced**, and reference `auth.users(id) ON DELETE CASCADE`, except `plans` (ENT-01, #176, proposed), which belongs to no user. Schema changes ship only as versioned migrations in `supabase/migrations/`.
 
@@ -40,7 +40,6 @@ Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isVa
 | `domain` | `public.hostname` not null | same domain type |
 | `started_at` | `timestamptz` not null | |
 | `ended_at` | `timestamptz` not null | |
-| `problem_slug` | `text` null | *(#176, proposed)* PRB-05 slug; `CHECK` length ≤ 100 and `PROBLEM_SLUG_PATTERN`; allowed only when `domain = 'leetcode.com'`. Null for every other row |
 | `duration_s` | `integer` | `GENERATED ALWAYS AS (extract(epoch from ended_at - started_at)::integer) STORED` |
 | `created_at` | `timestamptz` not null | `default now()` |
 
@@ -92,12 +91,23 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 ### `get_problem_totals(p_from date, p_to date, p_tz text) → table(problem_slug text, seconds bigint, last_day date)` *(#176, proposed)*
 
-- **DATA-15** Same checks as DATA-10. For the caller's intervals with a slug, grouped by slug: total seconds and the last local day (`started_at AT TIME ZONE p_tz`) in `[p_from, p_to]`. Ordered by seconds desc, then slug; at most 200 rows (PRB-11). `SECURITY INVOKER`.
+- **DATA-15** Same checks as DATA-10. For the caller's intervals with a slug (joined with `study_session_problems`), grouped by slug: total seconds and the last local day (`started_at AT TIME ZONE p_tz`) in `[p_from, p_to]`. Ordered by seconds desc, then slug; at most 200 rows (PRB-11). `SECURITY INVOKER`.
 
 ### `account_settings` *(#176, proposed)*
 
 - **DATA-13** One row per user: `user_id` (PK, `default auth.uid()`, FK cascade), `track_problems boolean not null default false`, `updated_at timestamptz not null default now()`. No row means off (PRB-01). RLS forced: `SELECT`, `INSERT` and `UPDATE` of `track_problems` only where `user_id = (select auth.uid())`; anonymous JWTs refused, as for the other tables. No `DELETE` (the row goes with the account).
-- **DATA-14** Server-side guard for PRB-16: `ingest_study_sessions_v2` stores `problem_slug` as null when the caller has no row or `track_problems` is false at call time. The interval itself is still stored.
+- **DATA-14** Server-side guard for PRB-16: `ingest_study_sessions_v2` stores no slug (no `study_session_problems` row) when the caller has no settings row or `track_problems` is false at call time. The interval itself is still stored.
+
+### `study_session_problems` *(#176, proposed)*
+
+| Column | Type | Rules |
+|---|---|---|
+| `session_id` | `uuid` PK | FK `study_sessions(id)` `ON DELETE CASCADE` |
+| `user_id` | `uuid` not null | FK `auth.users` cascade; always the session row's owner |
+| `problem_slug` | `text` not null | PRB-05 slug; `CHECK` length ≤ 100 and `PROBLEM_SLUG_PATTERN` |
+
+- **DATA-16** Slugs live in their own table, so they can be deleted while `study_sessions` stays immutable (DATA-03 unchanged; [ADR-0011](../../docs/adr/0011-ingest-v2.md)). Only `ingest_study_sessions_v2` inserts rows, and only for a session row of the caller on `leetcode.com`. RLS forced: `SELECT` and `DELETE` where `user_id = (select auth.uid())`; no `INSERT` or `UPDATE` for clients; anonymous JWTs refused. Index `(user_id)`.
+- **DATA-17** `set_problem_tracking(p_enabled boolean, p_delete_history boolean) → void` (`SECURITY INVOKER`, authenticated only, `NOT_AUTHENTICATED` without a user). In one transaction it takes the caller's ingest lock (the same advisory lock as DATA-09, so no upload in flight can add a slug after the delete), upserts the caller's `account_settings` row, and, when `p_enabled` is false and `p_delete_history` is true, deletes every `study_session_problems` row of the caller. `p_delete_history` with `p_enabled` true is refused (`22023`). It never touches `study_sessions`.
 
 ## 4. Account deletion
 

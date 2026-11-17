@@ -59,10 +59,12 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 - **PRB-15** The slug is the only part of a path CareerOS keeps, and only for `PROBLEM_DOMAIN` (SEC-01). The privacy page says so (SEC-13).
 - **PRB-16** Turning the setting **off**:
   - stops new slugs at once on the server (DATA-14) and within one refresh in the extension (PRB-03);
-  - **keeps** slugs already stored; the dashboard hides the problems card while the setting is off and shows it again with the old data when the setting is turned back on;
-  - stored slugs are deleted with the account (DATA-12), like every other row.
-
-  Open (product owner): should Settings also offer a button to delete the stored problem history without deleting the account?
+  - asks first, when the account has stored slugs: a confirm dialog "Also delete your problem history?" with two choices (product owner, 2026-11-17):
+    - **Turn off and keep history**: stored slugs stay. The dashboard hides the problems card while the setting is off. It shows the card again, with the old data, when the setting is turned back on.
+    - **Turn off and delete history**: every stored problem slug of the account is deleted (DATA-16). All study time stays: the intervals and every total are unchanged.
+  - needs no dialog when the account has no stored slugs: the switch just turns off;
+  - there is no separate delete button;
+  - stored slugs are always deleted with the account (DATA-12).
 - **PRB-17** Before the extension release that ships the feature (#182), the Chrome Web Store privacy answers and listing text are checked and updated if needed, so they mention that problem names from LeetCode addresses are stored when the user turns the feature on (STORE).
 
 ## 4. Acceptance criteria
@@ -73,3 +75,4 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 4. Turning the setting off in the dashboard: the extension stops attaching slugs within one refresh, and the server stores no slug sent after the change.
 5. The dashboard list for a seeded week shows the right names, totals, last days and order; the popup shows the current problem with today's time.
 6. Released extension 0.2.3 keeps syncing unchanged against the new database (ADR-0011 compatibility tests).
+7. Given an account with stored slugs, when the user turns the setting off and picks **Turn off and delete history**, then the account has no stored slug, `get_problem_totals` returns no rows, and `get_daily_totals` and `get_domain_totals` return the same values as before. With **Turn off and keep history**, the slugs are still there and come back when the setting is turned on again. Without stored slugs, no dialog is shown.
