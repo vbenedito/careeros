@@ -13,7 +13,7 @@ How to read it: facts carry a source tag like [S12]; the Sources list is at the 
 - **YouTube Shorts and TikTok** share one vertical text-and-music video. The file is made once and uploaded twice. This is the cheapest way to start on two platforms (D14).
 - **LinkedIn** is a test slot from week 3: 1 post a week, only if weeks 1 and 2 stayed within the time budget. It gets the same video as a native upload, with a caption written for LinkedIn. It is the best place we found for the working-engineer persona. This is our judgment; the persona has no source for LinkedIn use (persona, "Where they spend time online"). Video is weaker than documents on LinkedIn [S18, S20], so this is a test, not a commitment.
 - **Stop rule:** if a week takes more than 2 hours, drop LinkedIn first.
-- **LinkedIn starts only after the product owner accepts the admin point** (section 7, D19).
+- **LinkedIn admin:** the product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts (section 7).
 - **Wait:** Instagram Reels (first to add, same file), then dev.to or Hashnode, Threads, X, Bluesky. **Reddit:** listen only for now. **Product Hunt:** one launch later, not part of the start set.
 - **Revisit after 8 weeks of measured posts** (section 8).
 
@@ -55,7 +55,7 @@ Each block covers: audience, format for a faceless text video, self-promotion, l
   - Both are secondary. Treat it as "a penalty is likely; size unknown". We test it (section 8).
 - **Free scheduling.** Yes, native and free for profiles and company pages: 10 minutes to 3 months ahead, one post at a time, no first-comment scheduling [S17].
 - **Examples.** NeetCode on LinkedIn (see [S20]): faceless, utility posts as interview revision material, carousels, cheat sheets and infographics. It says video was tested first and did not suit the platform as well. No video examples from faceless accounts were verified.
-- **Watch out.** A faceless brand needs a Company Page. A Company Page needs a personal LinkedIn account as admin (assumption, unverified). The admin is not visible on posts, but it is the owner's decision (D19). LinkedIn starts only after the product owner accepts this. See section 7.
+- **Watch out.** A faceless brand needs a Company Page. A Company Page needs a personal LinkedIn account as admin (assumption, unverified). The admin is not visible on posts. The product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts. See section 7.
 
 ### YouTube Shorts
 
@@ -200,7 +200,7 @@ Notes on the scores:
 The product owner decides the handle and the email (D19, brand profile section 13).
 
 - **Handle.** Use the **same handle on every platform**. Check by hand if `careeros` is free on all platforms in use. Prepare 2 or 3 fallbacks before creating anything, so the accounts still match. Display name: "CareerOS" (voice: one word, capital C and OS). Handles and URLs may be lowercase.
-- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram (later): Creator or business, for scheduling [S14]. LinkedIn: a Company Page. **Open question:** a Company Page needs a personal LinkedIn account as admin (assumption, unverified). It is not visible on posts, but it is the owner's decision (D19). LinkedIn starts only after the product owner accepts this.
+- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram (later): Creator or business, for scheduling [S14]. LinkedIn: a Company Page. **Admin:** a Company Page needs a personal LinkedIn account as admin (assumption, unverified). It is not visible on posts. The product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts.
 - **Avatar and banner.** CareerOS has no logo yet (#195). Do not make accounts with a temporary avatar if the logo can come first. If one is needed, use plain text on the brand blue. Never an AI-generated person (this is also what Instagram's "AI-generated profile" rule is about [S13]).
 - **Bio text (all platforms).** Use the short form from the voice guide. Example: "Free Chrome extension that counts your study time on the sites you choose." No emoji, no hype words, no "stays free", no result promises.
 - **Bio link with UTM.** Pattern from the voice guide:
@@ -268,7 +268,7 @@ Assumptions to validate (the specialist review and the 8-week review should chec
 2. LinkedIn link penalty size. Sources disagree [S18, S19].
 3. TikTok scheduling limits (10 vs 30 days; Business account vs 10,000 followers) and which accounts have the commercial-music rule [S8, S9, S10].
 4. A baked-in royalty-free track is accepted by all three apps. Not verified.
-5. A LinkedIn Company Page needs a person as admin. Not verified.
+5. A LinkedIn Company Page needs a personal account as admin. Not verified. The owner accepted the role (Q31, 2026-11-17).
 6. Scheduling in YouTube Studio, X and Threads, and no native scheduling on Bluesky. Not verified.
 7. Vercel Web Analytics shows UTM values on our plan. Not verified.
 8. Cadence of 2 videos a week and 20 to 45 seconds per video.
@@ -281,7 +281,7 @@ Assumptions to validate (the specialist review and the 8-week review should chec
 2. On TikTok, YouTube Shorts and LinkedIn, search "leetcode", "coding interview", "interview prep" and "study plan". Note 3 accounts per platform that post text-on-screen or faceless content: what they post, how often, how they use links. Link them here. Do not copy.
 3. Check on each platform that the handle is free, and read the current AI-label setting in the upload screen.
 
-**Open for the product owner (D19):** handle, account email, custom domain in bios if ready, and whether a LinkedIn Company Page with a named admin is acceptable (section 7).
+**Open for the product owner (D19):** handle, account email, custom domain in bios if ready. The LinkedIn admin question is closed (Q31, 2026-11-17).
 
 ## Sources
 
