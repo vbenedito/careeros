@@ -10,6 +10,8 @@ agents: [grill:recon (haiku), grill:architecture (sonnet), grill:error-handling 
 
 # CareerOS — codebase grill (v0 close-out), 2026-11-12
 
+**Status (2026-11-17):** every fix below is released: the dashboard on Vercel and the extension in 0.2.3 on the Chrome Web Store. The *Status* column says where each finding was fixed, or why it was deferred or not fixed.
+
 Scope: `main` at `01259e7` — Chrome MV3 extension, Next 16 dashboard and landing, Supabase schema/RPCs, CI and ops workflows. Read-only analysis; nothing was executed against production. All five deep-dive agents completed. Findings below are deduplicated; where agents disagreed, the stronger evidence wins. No `[CRITICAL]` findings.
 
 Note on recon: it reported 26 migrations; the architecture agent counted 7 migration files. The difference does not affect any finding.
@@ -18,62 +20,62 @@ Note on recon: it reported 26 migrations; the architecture agent counted 7 migra
 
 ### Edge cases and data integrity (Paranoid Mode)
 
-| ID | Sev | Finding | Evidence |
-|---|---|---|---|
-| E1 | HIGH | **Token refresh has no timeout and runs inside the auth lock, which has none either.** A stalled connection blocks every sync cycle ("skipped"), domain refresh, dashboard Connect and Disconnect (always SYNC_IN_PROGRESS) until Chrome kills the worker. A kill after the server rotated the refresh token but before storing it can force a reconnect. | `apps/extension/src/background/auth/supabase-backend.ts:148`, `auth/mutex.ts:11`, `sync/sync-service.ts:125` |
-| E2 | MEDIUM | **Disconnect race:** an alarm cycle can start between `waitIdle` and taking the lock; the final sync (`ifIdle`) is skipped and the popup reports UNSYNCED_DATA, inviting the user to discard data that would upload seconds later. | `auth/auth-service.ts:230-243`, `background/index.ts:111-114` |
-| E3 | MEDIUM | **Clock moved back > 30 min:** the engine accepts overlapping intervals; the server silently skips same-device overlaps (DATA-09a), so they are quarantined for good, and an all-overlap batch trips the SYNC-05b "server bug" backoff (1 h, "Sync error"). | `engine/engine.ts:195-198`, `migrations/20261110100000_security_hardening.sql:69-79`, `sync-service.ts:160` |
-| E4 | MEDIUM | **Web: re-adding an existing site at exactly 12 returns 422 LIMIT_REACHED** (BEFORE INSERT limit trigger fires before the unique check). The extension handles this (#54); the web route doesn't, contradicting its own comment. | `apps/web/app/api/sites/route.ts:23-37`, `migrations/20261112100000_tracked_domain_limit_12.sql:18` |
-| E5 | LOW | Ingest caps (1,000/h, 3,500/24 h) count pure retries; a multi-week offline backlog can age past 30 days before it uploads. | `migrations/20261110100000_security_hardening.sql:49-57` |
-| E+ | GOOD | Idempotent ingest by client id; atomic engine+outbox writes; ±1 day totals window covers UTC−12…+14; DST-safe local midnight; Monday weeks; storage far below quota. | edge-cases agent |
+| ID | Sev | Finding | Evidence | Status |
+|---|---|---|---|---|
+| E1 | HIGH | **Token refresh has no timeout and runs inside the auth lock, which has none either.** A stalled connection blocks every sync cycle ("skipped"), domain refresh, dashboard Connect and Disconnect (always SYNC_IN_PROGRESS) until Chrome kills the worker. A kill after the server rotated the refresh token but before storing it can force a reconnect. | `apps/extension/src/background/auth/supabase-backend.ts:148`, `auth/mutex.ts:11`, `sync/sync-service.ts:125` | Fixed in #163 (extension 0.2.3) |
+| E2 | MEDIUM | **Disconnect race:** an alarm cycle can start between `waitIdle` and taking the lock; the final sync (`ifIdle`) is skipped and the popup reports UNSYNCED_DATA, inviting the user to discard data that would upload seconds later. | `auth/auth-service.ts:230-243`, `background/index.ts:111-114` | Fixed in #163 (extension 0.2.3) |
+| E3 | MEDIUM | **Clock moved back > 30 min:** the engine accepts overlapping intervals; the server silently skips same-device overlaps (DATA-09a), so they are quarantined for good, and an all-overlap batch trips the SYNC-05b "server bug" backoff (1 h, "Sync error"). | `engine/engine.ts:195-198`, `migrations/20261110100000_security_hardening.sql:69-79`, `sync-service.ts:160` | Deferred to v1: changes the ingest RPC contract, needs an ADR and compatibility with released extensions |
+| E4 | MEDIUM | **Web: re-adding an existing site at exactly 12 returns 422 LIMIT_REACHED** (BEFORE INSERT limit trigger fires before the unique check). The extension handles this (#54); the web route doesn't, contradicting its own comment. | `apps/web/app/api/sites/route.ts:23-37`, `migrations/20261112100000_tracked_domain_limit_12.sql:18` | Fixed in #162 |
+| E5 | LOW | Ingest caps (1,000/h, 3,500/24 h) count pure retries; a multi-week offline backlog can age past 30 days before it uploads. | `migrations/20261110100000_security_hardening.sql:49-57` | Deferred to v1: same ingest RPC contract change as E3 |
+| E+ | GOOD | Idempotent ingest by client id; atomic engine+outbox writes; ±1 day totals window covers UTC−12…+14; DST-safe local midnight; Monday weeks; storage far below quota. | edge-cases agent | — |
 
 ### Error handling and observability
 
-| ID | Sev | Finding | Evidence |
-|---|---|---|---|
-| H1 | HIGH | **Nobody learns when production breaks.** No error tracking or alerting; `error.tsx` discards the error; only 4 server files log. | `apps/web/lib/log.ts:6`, `apps/web/app/error.tsx:6` |
-| H2 | HIGH | **Upload failures and quarantine growth are invisible server-side**; extension failures only reach the local console and the user's popup. | `apps/extension/src/background/sync/sync-service.ts:146-196` |
-| H3 | HIGH | **Production build doesn't validate the settings that broke this week** (`SITE_URL`, `NEXT_PUBLIC_EXTENSION_ID`, `NEXT_PUBLIC_SUPABASE_*`, `EXTENSION_INSTALL_URL`): silent fallbacks to the Vercel domain/localhost and the store search; a missing `SITE_URL` silently drops HSTS. | `apps/web/next.config.ts:5-12`, `lib/env.ts:55-61`, `lib/landing/links.ts:22-30` |
-| H4 | MEDIUM | `/api/sites` 500s don't log the DB error (cause lost). | `app/api/sites/route.ts:40`, `sites/[id]/route.ts:22` |
-| H5 | MEDIUM | Extension catch-alls return FAILED/INTERNAL with no error kind recorded. | `background/index.ts:208,216`, `messaging/external.ts:86`, `sync-service.ts:198` |
-| H6 | MEDIUM | `/settings?error=delete` mixes "confirmation typed wrong" with "server failed". | `app/api/account/delete/route.ts:25,45` |
-| H7 | MEDIUM | Backup workflow can lapse silently (missing config = green notice; schedules disabled after 60 days of inactivity). | `.github/workflows/backup.yml:38-49` |
-| H+ | GOOD | Log hygiene: JSON, codes only, no PII, capped messages; env fail-fast where present. | `apps/web/lib/log.ts` |
+| ID | Sev | Finding | Evidence | Status |
+|---|---|---|---|---|
+| H1 | HIGH | **Nobody learns when production breaks.** No error tracking or alerting; `error.tsx` discards the error; only 4 server files log. | `apps/web/lib/log.ts:6`, `apps/web/app/error.tsx:6` | Fixed in #162 without a vendor (client errors reach the server log); a tool is evaluated in #160 |
+| H2 | HIGH | **Upload failures and quarantine growth are invisible server-side**; extension failures only reach the local console and the user's popup. | `apps/extension/src/background/sync/sync-service.ts:146-196` | Fixed in #166 (`health.yml`) |
+| H3 | HIGH | **Production build doesn't validate the settings that broke this week** (`SITE_URL`, `NEXT_PUBLIC_EXTENSION_ID`, `NEXT_PUBLIC_SUPABASE_*`, `EXTENSION_INSTALL_URL`): silent fallbacks to the Vercel domain/localhost and the store search; a missing `SITE_URL` silently drops HSTS. | `apps/web/next.config.ts:5-12`, `lib/env.ts:55-61`, `lib/landing/links.ts:22-30` | Fixed in #162 |
+| H4 | MEDIUM | `/api/sites` 500s don't log the DB error (cause lost). | `app/api/sites/route.ts:40`, `sites/[id]/route.ts:22` | Fixed in #162 |
+| H5 | MEDIUM | Extension catch-alls return FAILED/INTERNAL with no error kind recorded. | `background/index.ts:208,216`, `messaging/external.ts:86`, `sync-service.ts:198` | Fixed in #163 (extension 0.2.3) |
+| H6 | MEDIUM | `/settings?error=delete` mixes "confirmation typed wrong" with "server failed". | `app/api/account/delete/route.ts:25,45` | Fixed in #162 |
+| H7 | MEDIUM | Backup workflow can lapse silently (missing config = green notice; schedules disabled after 60 days of inactivity). | `.github/workflows/backup.yml:38-49` | Fixed in #166 |
+| H+ | GOOD | Log hygiene: JSON, codes only, no PII, capped messages; env fail-fast where present. | `apps/web/lib/log.ts` | — |
 
 ### Security
 
-| ID | Sev | Finding | Evidence |
-|---|---|---|---|
-| S1 | LOW | **Landing `/` sends full URLs to analytics** (no `beforeSend` on the static page): an OAuth fallback (`/?code=…`, `/?error_description=…`) or a shared link with personal data in the query would be stored — breaks the SEC-15 promise. | `apps/web/lib/landing/page.ts:300` |
-| S2 | LOW | **Vercel's analytics script runs on `/connect` and `/settings`**, the pages that mint extension sessions and delete accounts; the v0 audit's "no third-party scripts" residual-risk statement is now outdated. | `components/app/web-analytics.tsx:9-13`, `docs/history/security-audit-v0.md:90` |
-| S3 | LOW | **Migrations auto-apply to production on merge with no required approver** in GitHub; no test that every RLS policy still compares with `auth.uid()`. | `.github/workflows/migrate.yml:18-23,45,144-152` |
-| S+ | GOOD | Domain-limit migration keeps lock/`search_path`/revoke; insert-only grants; messaging rejects foreign senders/origins; popup has no `innerHTML`; landing CSP strict; 7-day release-age policy. | security agent |
+| ID | Sev | Finding | Evidence | Status |
+|---|---|---|---|---|
+| S1 | LOW | **Landing `/` sends full URLs to analytics** (no `beforeSend` on the static page): an OAuth fallback (`/?code=…`, `/?error_description=…`) or a shared link with personal data in the query would be stored — breaks the SEC-15 promise. | `apps/web/lib/landing/page.ts:300` | Fixed in #162 |
+| S2 | LOW | **Vercel's analytics script runs on `/connect` and `/settings`**, the pages that mint extension sessions and delete accounts; the v0 audit's "no third-party scripts" residual-risk statement is now outdated. | `components/app/web-analytics.tsx:9-13`, `docs/history/security-audit-v0.md:90` | Fixed in #162 |
+| S3 | LOW | **Migrations auto-apply to production on merge with no required approver** in GitHub; no test that every RLS policy still compares with `auth.uid()`. | `.github/workflows/migrate.yml:18-23,45,144-152` | RLS check fixed in #165. Required approver: won't fix — merging already needs the product owner's approval, and auto-apply on merge is the approved flow (#148) |
+| S+ | GOOD | Domain-limit migration keeps lock/`search_path`/revoke; insert-only grants; messaging rejects foreign senders/origins; popup has no `innerHTML`; landing CSP strict; 7-day release-age policy. | security agent | — |
 
 ### Testing and CI
 
-| ID | Sev | Finding | Evidence |
-|---|---|---|---|
-| T1 | HIGH | **The production migration path is untested:** CI applies all migrations to an empty DB; production gets incremental `db push` on live data, with no post-apply check. | `.github/workflows/migrate.yml:127-162`, `ci.yml:137` |
-| T2 | HIGH | **Nothing is tested in production conditions:** hosted Supabase CORS/`Date` header, Vercel build-time env, store ID + `externally_connectable`, the store zip actually loading. | `scripts/ci/integration.sh:9-19`, `ci.yml:96` |
-| T3 | MEDIUM | Coverage thresholds only on `packages/shared` and `engine`; none on `background/sync/**`, `background/auth/**`. | `vitest.config.ts:17-19` |
-| T4 | MEDIUM | Account deletion: no DB-level proof that every user-owned row is gone (GDPR erasure). | `apps/web/tests/integration/settings.int.test.ts` |
-| T5 | MEDIUM | Ingest idempotency is never tested under concurrency (parallel identical batches). | `supabase/tests/database/` |
-| T6 | MEDIUM | Server readiness loop doesn't fail after 60 tries; tests then run against a dead server. Some sleeps in tests. | `scripts/ci/integration.sh:24` |
-| T7 | MEDIUM | No dependency/security scanning (`pnpm audit`, CodeQL, secret scan), no `actionlint` in PR CI. | `.github/workflows/ci.yml` |
-| T8 | LOW | Backend job is serial; it scales linearly with tests. | `ci.yml:101-185` |
-| T+ | GOOD | SHA-pinned actions; backup→restore round trip each run; spec-ID traceability; real-Chromium extension E2E with the real handoff; hardened migrate workflow. | testing agent |
+| ID | Sev | Finding | Evidence | Status |
+|---|---|---|---|---|
+| T1 | HIGH | **The production migration path is untested:** CI applies all migrations to an empty DB; production gets incremental `db push` on live data, with no post-apply check. | `.github/workflows/migrate.yml:127-162`, `ci.yml:137` | Fixed in #166 |
+| T2 | HIGH | **Nothing is tested in production conditions:** hosted Supabase CORS/`Date` header, Vercel build-time env, store ID + `externally_connectable`, the store zip actually loading. | `scripts/ci/integration.sh:9-19`, `ci.yml:96` | Fixed in #166 (`smoke.yml`) |
+| T3 | MEDIUM | Coverage thresholds only on `packages/shared` and `engine`; none on `background/sync/**`, `background/auth/**`. | `vitest.config.ts:17-19` | Fixed in #165 |
+| T4 | MEDIUM | Account deletion: no DB-level proof that every user-owned row is gone (GDPR erasure). | `apps/web/tests/integration/settings.int.test.ts` | Fixed in #165 |
+| T5 | MEDIUM | Ingest idempotency is never tested under concurrency (parallel identical batches). | `supabase/tests/database/` | Fixed in #165 |
+| T6 | MEDIUM | Server readiness loop doesn't fail after 60 tries; tests then run against a dead server. Some sleeps in tests. | `scripts/ci/integration.sh:24` | Fixed in #165 |
+| T7 | MEDIUM | No dependency/security scanning (`pnpm audit`, CodeQL, secret scan), no `actionlint` in PR CI. | `.github/workflows/ci.yml` | Audit and actionlint fixed in #166. Secret scanning: GitHub's built-in scanning and push protection (repository setting). CodeQL: deferred to v1 |
+| T8 | LOW | Backend job is serial; it scales linearly with tests. | `ci.yml:101-185` | Deferred: split the job when it passes ~8 min (measure first) |
+| T+ | GOOD | SHA-pinned actions; backup→restore round trip each run; spec-ID traceability; real-Chromium extension E2E with the real handoff; hardened migrate workflow. | testing agent | — |
 
 ### Architecture (v1 readiness)
 
-| ID | Sev | Finding | Evidence |
-|---|---|---|---|
-| A1 | HIGH | **Business limits live in three places with no single owner:** the 12-site limit is a SQL literal; the shared constant only drives messages; landing copy hard-codes "12". The 50→12 change needed a function rewrite plus hand edits everywhere. | `migrations/20261112100000_tracked_domain_limit_12.sql:18`, `packages/shared/src/constants.ts:45`, `apps/web/lib/landing/content.ts:42,52` |
-| A2 | HIGH | **No entitlements model** for v1 premium; both clients map a hard-coded `hint === "DATA-01"`; landing says "There's no paid plan" (tested copy). | `app/api/sites/route.ts:37`, `background/domains/supabase-domains.ts:15`, `lib/landing/content.ts:66` |
-| A3 | MEDIUM | Protocol versioning is a stub: `.strict()` reply schemas break on any added field; a parse failure is shown as "not installed" instead of "outdated". | `background/messaging/external.ts:16`, `apps/web/lib/extension/protocol.ts:12,36` |
-| A4 | MEDIUM | Ingest SQL repeats constants (1830 s, 30 days, 5 min, 200, 10000) with no parity test. | `migrations/20261105120000_ingest_study_sessions.sql:51,52,85,95` |
-| A5 | MEDIUM | Proxy's `pathname === "/"` CSP exception won't scale to v1 marketing pages (pricing needs checkout JS). | `apps/web/proxy.ts:71,83` |
-| A6 | MEDIUM | Scale: dashboards aggregate raw rows on every load; three indexes on `study_sessions` (one possibly redundant). | `migrations/20261105120000…:91-97`, `20261105130000_totals_rpcs.sql:43-56` |
-| A+ | GOOD | Proxy as one ordered gate; clean dependency direction; ingest RPC as the single write path with server-side re-validation. | architecture agent |
+| ID | Sev | Finding | Evidence | Status |
+|---|---|---|---|---|
+| A1 | HIGH | **Business limits live in three places with no single owner:** the 12-site limit is a SQL literal; the shared constant only drives messages; landing copy hard-codes "12". The 50→12 change needed a function rewrite plus hand edits everywhere. | `migrations/20261112100000_tracked_domain_limit_12.sql:18`, `packages/shared/src/constants.ts:45`, `apps/web/lib/landing/content.ts:42,52` | Deferred to v1: entitlements design (v1 discovery) |
+| A2 | HIGH | **No entitlements model** for v1 premium; both clients map a hard-coded `hint === "DATA-01"`; landing says "There's no paid plan" (tested copy). | `app/api/sites/route.ts:37`, `background/domains/supabase-domains.ts:15`, `lib/landing/content.ts:66` | Deferred to v1: entitlements design (v1 discovery) |
+| A3 | MEDIUM | Protocol versioning is a stub: `.strict()` reply schemas break on any added field; a parse failure is shown as "not installed" instead of "outdated". | `background/messaging/external.ts:16`, `apps/web/lib/extension/protocol.ts:12,36` | Fixed in #163 (extension 0.2.3) |
+| A4 | MEDIUM | Ingest SQL repeats constants (1830 s, 30 days, 5 min, 200, 10000) with no parity test. | `migrations/20261105120000_ingest_study_sessions.sql:51,52,85,95` | Fixed in #165 |
+| A5 | MEDIUM | Proxy's `pathname === "/"` CSP exception won't scale to v1 marketing pages (pricing needs checkout JS). | `apps/web/proxy.ts:71,83` | Deferred to v1: route-based CSP table before the first marketing page |
+| A6 | MEDIUM | Scale: dashboards aggregate raw rows on every load; three indexes on `study_sessions` (one possibly redundant). | `migrations/20261105120000…:91-97`, `20261105130000_totals_rpcs.sql:43-56` | Deferred: rollup and index review when p95 is measured |
+| A+ | GOOD | Proxy as one ordered gate; clean dependency direction; ingest RPC as the single write path with server-side re-validation. | architecture agent | — |
 
 ## 2. Edge Case Risk Matrix
 
