@@ -1,6 +1,6 @@
 # Contributing
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-13
+Type: living · Owner: tech lead · Last reviewed: 2026-11-17
 
 How work moves from an idea to `main`. The rules for agents are in [AGENTS.md](../../AGENTS.md); this page is the full process behind them.
 
@@ -8,7 +8,8 @@ How work moves from an idea to `main`. The rules for agents are in [AGENTS.md](.
 
 | Role | Decides |
 |---|---|
-| Product owner | Scope, behavior, priorities, gate approvals, merge approval ("approved") |
+| Product owner | Scope, behavior, priorities, gate approvals, merge approval ("approved"), except marketing documents |
+| Specialist review agent | Approves marketing documents in place of the product owner ([agents.md](agents.md) §2, #198) |
 | Tech lead | Specs and ADRs drafts, issue breakdown, assignment of parallel work, integration and merge |
 | Reviewer | An agent or person who did not write the change |
 
@@ -46,7 +47,7 @@ flowchart LR
 4. Write or update tests named after requirement IDs (e.g. `TRK-05 …`), then implement the minimum that meets the acceptance criteria.
 5. Run the checks locally (below) and open a pull request.
 6. A reviewer who did not write the code checks spec adherence, security, correctness, tests and scope creep. The depth follows the risk of the change ([agents.md](agents.md) §2): docs and copy get CI plus the tech lead's check; code gets a Sonnet review; sync, auth, security, migrations and secret-holding workflows get an Opus deep review.
-7. The product owner says "approved". Then the tech lead squash-merges.
+7. The product owner says "approved" (for marketing documents: the specialist review agent approves, [agents.md](agents.md) §2). Then the tech lead squash-merges.
 
 ## Definition of done
 
