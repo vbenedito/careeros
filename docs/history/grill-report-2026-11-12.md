@@ -61,7 +61,7 @@ Note on recon: it reported 26 migrations; the architecture agent counted 7 migra
 | T4 | MEDIUM | Account deletion: no DB-level proof that every user-owned row is gone (GDPR erasure). | `apps/web/tests/integration/settings.int.test.ts` | Fixed in #165 |
 | T5 | MEDIUM | Ingest idempotency is never tested under concurrency (parallel identical batches). | `supabase/tests/database/` | Fixed in #165 |
 | T6 | MEDIUM | Server readiness loop doesn't fail after 60 tries; tests then run against a dead server. Some sleeps in tests. | `scripts/ci/integration.sh:24` | Fixed in #165 |
-| T7 | MEDIUM | No dependency/security scanning (`pnpm audit`, CodeQL, secret scan), no `actionlint` in PR CI. | `.github/workflows/ci.yml` | Audit and actionlint fixed in #166. Secret scanning: GitHub's built-in scanning and push protection (repository setting). CodeQL: deferred to v1 |
+| T7 | MEDIUM | No dependency/security scanning (`pnpm audit`, CodeQL, secret scan), no `actionlint` in PR CI. | `.github/workflows/ci.yml` | Audit and actionlint fixed in #166. Secret scanning and push protection enabled in the repository settings (2026-11-17). CodeQL: deferred to v1 |
 | T8 | LOW | Backend job is serial; it scales linearly with tests. | `ci.yml:101-185` | Deferred: split the job when it passes ~8 min (measure first) |
 | T+ | GOOD | SHA-pinned actions; backup→restore round trip each run; spec-ID traceability; real-Chromium extension E2E with the real handoff; hardened migrate workflow. | testing agent | — |
 
