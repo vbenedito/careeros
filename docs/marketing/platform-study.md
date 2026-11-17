@@ -214,7 +214,7 @@ The product owner decides the handle and the email (D19, brand profile section 1
 - **AI labels.** Follow the brand profile (section 10): use the platform's own AI label when it is offered, and add "Made with AI" to the caption when a post uses an AI voice or AI images.
   - **Now (text and royalty-free music):** no label needed by the platforms' rules we read [S4, S7, S12]. Keep the music licence on file.
   - **When an AI voice is tested (D13):** switch the label on in **all apps in use** and add "Made with AI". YouTube lists cloning your own voice as minor, but a realistic AI voice on TikTok and Instagram must be labeled [S4, S7, S12]. One rule for all is simpler and safer.
-- **Music.** Use royalty-free or licensed tracks, and keep the licence for each. TikTok Business accounts are limited to commercially licensed sounds [S8, S10]. Whether a licence that covers social video also covers a track baked into a video file on all three apps is not verified (assumption). #190 picks the source.
+- **Music.** Use royalty-free or licensed tracks, and keep the licence for each. TikTok Business accounts are limited to commercially licensed sounds [S8, S10]. Whether a licence that covers social video also covers a track baked into a video file on all apps in use is not verified (assumption). #190 picks the source.
 - **Hashtags.** Brand profile: 3 to 5 topic hashtags, only where the platform uses them. We read no platform source that sets a different count, so keep 3 to 5 on all apps in use (assumption).
 
 ## 8. Measure, and when to revisit
