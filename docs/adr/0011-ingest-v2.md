@@ -38,6 +38,7 @@ Option 3.
 + The slug guard is on the server (DATA-14), not only in the extension.
 − Two public RPCs until the old one is removed; both need grants (`authenticated` only) and pgTAP tests.
 − One more table and a join in `get_problem_totals`; ingest v2 writes two tables in one transaction.
+− The composite FK needs a new `UNIQUE (id, user_id, domain)` index on `study_sessions`. It is built with a plain `CREATE` in the migration, because `supabase db push` (`migrate.yml`) runs each migration in a transaction and `CREATE INDEX CONCURRENTLY` cannot run inside one. The table is small today (single-digit users), so the write lock is short. If the table grows, such an index needs a separate non-transactional step (see grill [A6](../history/grill-report-2026-11-12.md#architecture-v1-readiness)).
 − A slug sent while the setting is off is dropped silently; intervals recorded while on but uploaded after turning off lose their slug (privacy first, PRB-16).
 − One more migration on the ingest path: Opus deep review (D21).
 
