@@ -24,7 +24,7 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 
 - **PRB-01** The setting **Track LeetCode problems** belongs to the **account**, not to a device (D20). It is **off** for every account, new or existing, until the user turns it on (D16). It is stored on the server (DATA-13).
 - **PRB-02** The user switches it in the dashboard **Settings** page (DASH-16). The popup has no switch for it.
-- **PRB-03** The extension reads the setting with every tracked-site refresh (SYNC-09, SYNC-09c): on startup, on each sync alarm (at most `SYNC_PERIOD_MIN`), when the user changes, and when the popup opens. So a change in the dashboard reaches the extension within about 5 minutes. No new permission and no content script are needed (SEC-03, ADR-0006).
+- **PRB-03** The extension reads the setting with every tracked-site refresh (SYNC-09, SYNC-09c): on startup, on each sync alarm (at most `SYNC_PERIOD_MIN`), when the signed-in account changes, and when the popup opens. So a change in the dashboard reaches the extension within about 5 minutes. No new permission and no content script are needed (SEC-03, ADR-0006).
 - **PRB-04** The extension **fails closed**: when it has not read the setting yet, cannot read it, or is not connected, the setting counts as off.
 
 **Detection**
@@ -46,8 +46,8 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 
 **Dashboard**
 
-- **PRB-11** When the setting is on, the dashboard shows a **LeetCode problems** card for the selected week or month (DASH-17). One row per problem: name, total time in the period, last day studied in the period. Sorted by time, longest first; ties by name. At most `PROBLEM_LIST_MAX` rows. Days use the viewer's time zone (DASH-07).
-- **PRB-12** The **name** is built from the slug: hyphens become spaces and each word starts with an upper-case letter (`two-sum` → "Two Sum", `3sum` → "3sum", `lru-cache` → "Lru Cache"). It is a best effort; the real LeetCode title is never fetched. The rule is one pure function in `packages/shared`.
+- **PRB-11** When the setting is on, the dashboard shows a **LeetCode problems** card for the selected week or month (DASH-17). One row per problem: name, total time in the period, last day studied in the period. Sorted by time, longest first; ties by slug (A–Z). At most `PROBLEM_LIST_MAX` rows. Days use the viewer's time zone (DASH-07).
+- **PRB-12** The **name** is built from the slug by this exact rule: split the slug on hyphens; upper-case the first character of each part and keep the rest as it is; join the parts with one space. Examples: `two-sum` → "Two Sum", `3sum` → "3sum", `lru-cache` → "Lru Cache". The real LeetCode title is never fetched. The rule is one pure function in `packages/shared`.
 - **PRB-13** A one-time **announcement card** on the dashboard tells the user about the feature while the setting is off (DASH-18).
 
 **Popup**

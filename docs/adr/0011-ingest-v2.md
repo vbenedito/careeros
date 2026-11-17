@@ -9,7 +9,7 @@ v1 needs three changes to interval upload, in one ingest change (discovery D21):
 - **Grill E5**: the abuse caps (DATA-09) refuse a call even when every element is a retry of a stored row, so a long offline backlog can stall at the cap.
 
 Constraints:
-- Released extension **0.2.3** (and older store builds) call `ingest_study_sessions(sessions jsonb)` and accept a success **only when the body is an array** of ids (SYNC-05a "server time source"). Store updates are automatic but not instant; some installs stay old for weeks. A change to the reply type would turn every upload of an old extension into a sync error.
+- Released extension **0.2.3** and older store builds call `ingest_study_sessions(sessions jsonb)`. They accept a success **only when the body is an array** of ids (SYNC-05a "server time source"). Store updates are automatic, but not instant. Some installs stay old for weeks. A change to the reply type would turn every upload of an old extension into a sync error.
 - The function is the only write path (DATA-05, ADR-0004); it runs `SECURITY DEFINER` and uses `auth.uid()` only.
 - SYNC-05a guesses "future" rejections from the `Date` header, because the reply could not carry more.
 
@@ -23,7 +23,7 @@ Constraints:
 ## Decision
 Option 3.
 
-- `ingest_study_sessions_v2` returns `{"confirmed": [uuid], "rejected": [{"id": uuid, "reason": "invalid" | "future" | "overlap"}]}` (DATA-06b). It accepts an optional `problem` per element and stores it only when the caller's setting is on at call time (DATA-14).
+- `ingest_study_sessions_v2` returns `{"confirmed": [uuid], "rejected": [{"id": uuid, "reason": "invalid" | "future" | "overlap"}]}` (DATA-06b). It accepts an optional `problem` per element and stores it only when the caller's setting is on at call time (DATA-14). A `problem` that fails the pattern, or on an element whose domain is not `leetcode.com`, makes only that element `invalid`; the batch goes on.
 - Both functions share **one** private implementation (`private.ingest_sessions(sessions jsonb, keep_problem boolean)` returning confirmed ids and reasons). `ingest_study_sessions` is a thin wrapper that returns only the confirmed ids and never keeps a slug. So validation, locking, caps and overlap rules cannot drift apart.
 - **E5** (DATA-09b) is in the shared code, so it applies to both: a batch of pure retries is confirmed at the cap. The reply type of the old function does not change, so this is safe for 0.2.3.
 - **E3** is client-visible only in v2: the extension from 0.3.0 quarantines `overlap` rejections apart and never counts them (or `future`) for the SYNC-05b check (SYNC-05c). With 0.2.3 the old behaviour stays until the user updates.

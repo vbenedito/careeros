@@ -84,7 +84,7 @@ No other pages or navigation items in v0. The landing page's search files (`/rob
 ## 5a. LeetCode problems on the dashboard *(#176, proposed)*
 
 - **DASH-17** While the setting is on, the dashboard shows a **LeetCode problems** card under the charts for the selected period (PRB-11): a list of name (PRB-12), total time (formatted like the summary cards) and last day studied (e.g. "Tue, Nov 17"), from `get_problem_totals` (DATA-15). Empty state: "No LeetCode problems in this period." While the setting is off, the card is hidden. Same loading and error states as DASH-11.
-- **DASH-18** While the setting is off, a one-time **announcement card** at the top of the dashboard: "New: see your time per LeetCode problem.", a **Turn on in Settings** link (to `/settings#problems`) and a **Dismiss** button. Dismissing hides it for good in this browser (a cookie, no server record); turning the setting on hides it too.
+- **DASH-18** While the setting is off, a one-time **announcement card** at the top of the dashboard: "New: see your time per LeetCode problem.", a **Turn on in Settings** link (to `/settings#problems`) and a **Dismiss** button. Dismissing hides it for good in this browser: a flag in `localStorage`, no cookie, no server record. Reading and writing it are wrapped in `try/catch`; when storage is not available, the card is shown and Dismiss hides it until the page reloads. Turning the setting on hides it too.
 
 ## 6. Data loading
 
