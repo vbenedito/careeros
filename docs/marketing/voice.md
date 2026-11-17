@@ -32,7 +32,7 @@ Every example below uses only true product facts (brand profile, section 6) or i
 
 - **Is:** a number, a name or a rule where other brands use an adjective. It says what is stored and what is not.
 - **Is not:** vague, rounded up, or bigger than the truth.
-- **Example:** "It stores the site name and the start and end times. Nothing else."
+- **Example:** "It stores the site name and the start and end times. Nothing else about your browsing."
 - **Not this:** "Your privacy is our top priority."
 
 ### Respectful
@@ -52,7 +52,7 @@ The voice stays the same. The tone moves a little. Pick the row that matches the
 |---|---|---|---|---|
 | **Educational post** (a tip about measuring study, a habit, how the product works) | Teacher, calm, practical | 3 to 6 short lines, or 5 to 7 slides | Start with the reader's question. Give one idea. End with one plain next step. | Lists of 10 tips. Claims about what "works" with no source. Hour targets. |
 | **Product demo video text** | Neutral guide, step by step | 4 to 8 screens, 3 to 7 words each | Show the real flow: choose sites, study, see your week. Use sample data and label it. | Feature lists. Anything not shipped. Sound-only information. |
-| **Reply to a comment** | Warm, short, direct | 1 to 3 sentences | Answer the question first. Link to the privacy page or listing when it helps. Say "I am not sure" before guessing. | Defending. Arguing. Naming or judging other tools. Promising a feature or a date. |
+| **Reply to a comment** | Warm, short, direct | 1 to 3 sentences | Answer the question first. Link to the privacy page or listing when it helps. Say "We are not sure" before guessing. | Defending. Arguing. Naming or judging other tools. Promising a feature or a date. |
 | **Bug or outage notice** | Plain, accountable, factual | 3 to 5 sentences | Say what happened, who is affected, what you should do, and when the next update comes. Say "we" and own it. | Blaming users or providers. Minimizing ("small issue"). Guessing the cause or a fix time. |
 | **Celebrating a user milestone** (without real user data) | Quietly glad | 1 to 3 sentences | Speak to the reader's own milestone in general terms, or use a labeled sample. | Real user names, screenshots, counts or quotes. Praise that sounds like a promise of results. |
 
@@ -122,7 +122,7 @@ Say this, and no more than this (brand profile, section 6; SEC-01):
 
 Rules for privacy lines:
 
-- Use "never stores" for what is not stored. Do not use "never sees" or "never reads"; the extension reads the address of your active tab to find the site name. If a reader asks, say it: "It uses the tab's address only to get the site name."
+- Use "never stores" for what is not stored. Do not use "never sees" or "never reads" alone. "Never reads page content" is fine. The extension reads the address of your active tab to find the site name. If a reader asks, say it: "It uses the tab's address only to get the site name."
 - Do not claim "no cookies", "no data collected" or "fully anonymous". Your account email and sign-in provider are stored.
 - Permissions, if you list them: `tabs`, `idle`, `alarms`, `storage`. No content scripts.
 
@@ -186,7 +186,7 @@ Videos start as text on screen plus music, no voice (D13). They must work with t
 
 - **One idea per screen.** If a screen needs "and", split it.
 - **3 to 7 words per line, 2 lines at most.** Break lines at natural phrases. Never leave one word alone on a line.
-- **Show each screen long enough to read twice.** Rule of thumb: 1 second for every 3 words, plus 1 second. Do not rush.
+- **Show each screen long enough to read twice.** Rule of thumb: 1 second for every 2 words, plus 1 second. Do not rush.
 - **Screen 1 is the hook.** A real question or a plain fact. No clickbait that the video does not pay off.
 - **Order:** problem (1 to 2 screens), the idea (1), proof or demo (2 to 4), one next step (1). End on "Free Chrome extension" and the name, not on a hard sell.
 - **Use sentence case.** Keep the same font, size and position on every screen.
@@ -194,7 +194,7 @@ Videos start as text on screen plus music, no voice (D13). They must work with t
 - **Safe area.** Keep text away from the edges and from the platform's buttons and caption area.
 - **Sample data on screen.** Write "Sample data" in the corner on every screen that shows numbers.
 - **No real user data.** No real email, browsing or dashboard screenshot from a real account.
-- **Music is a bed, not the message.** Nothing important lives only in the music. Use royalty-free or licensed music. Label AI music or AI voice as the brand profile says (section 10).
+- **Music is a bed, not the message.** Nothing important lives only in the music. Use royalty-free or licensed music. Use the platform's own "AI-generated" label when it offers one (brand profile, section 10). Add "Made with AI" to the caption only for an AI voice or AI images.
 - **Captions and alt text.** The text on screen is the caption. Put the same message in the post caption, in plain words, for people who use screen readers.
 
 Short example (sample, 6 screens):
@@ -260,14 +260,14 @@ Run it on every post. If one answer is "no", fix the post first.
 8. Durations in the app format (`45m`, `1h 05m`)? "CareerOS" spelled correctly?
 9. 3 to 5 topic hashtags (if the platform uses them), and one link with `utm_*` parameters?
 10. Video: one idea per screen, readable with the sound off, "Sample data" shown, captions and alt text added?
-11. AI voice, AI images or AI music: platform label on, and "Made with AI" in the caption where the brand profile requires it?
+11. AI voice, AI images or AI music: platform "AI-generated" label on when offered? "Made with AI" in the caption only for an AI voice or AI images (brand profile, section 10)?
 12. Read it aloud once. Would a calm colleague say this? If it sounds like an ad, rewrite it.
 
 ## 8. Voice test
 
 Test on 2026-11-17, using only this page: a new line on a topic not in the landing copy.
 
-> "A remembered week often feels bigger than the real one. Measure one ordinary week first. Then plan the next week from what you counted."
+> "A remembered week can feel bigger than the real one. Measure one ordinary week first. Then plan the next week from what you counted."
 
 Check against the four traits: calm (no pressure), clear (three short sentences), exact (it says "measure one ordinary week", not "a lot"), respectful ("you", no target). It matches the landing page's study-hours section (§4.3a) and passes the checklist. Re-test after the first 10 real posts.
 
