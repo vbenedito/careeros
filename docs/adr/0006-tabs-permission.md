@@ -18,3 +18,6 @@ Option 1 for v0, with strict handling: only the hostname is derived, compared in
 
 ## Update 2026-11-11 (#131)
 Decided for the Chrome Web Store iteration: the `tabs` permission is kept and option 2 is not adopted (STORE-03, permissions stay exactly SEC-03).
+
+## Update 2026-11-17 (#176)
+v1 adds LeetCode time per problem ([PRB](../../specs/v1/01-problems.md), proposed). It needs **no new permission** and no content script: the problem slug is read from the path of the active tab URL, which the extension already reads with `tabs`. Only the slug of a `leetcode.com/problems/<slug>/…` path is kept, validated with a strict pattern, and only when the account turns the feature on (PRB-05, PRB-06, SEC-01 exception). The rest of the URL is still read in memory and dropped. Permissions stay exactly SEC-03.

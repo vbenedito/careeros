@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): incognito, failed browser queries, tab-update trigger
 
 Amended 2026-11-12 (#56): TRK-17a generation counter for timed-out slots, timeout on the local store's queue tasks.
 
+Amended 2026-11-17 (#176): TRK-02 and TRK-08 — on `leetcode.com`, the problem slug may also be read from the path, and a problem change closes the interval ([PRB](../v1/01-problems.md), proposed).
+
 ## 1. Objective
 
 Measure time the user spends actively studying on tracked domains, robust to MV3 service-worker termination, browser restarts and crashes, while collecting only what spec 07 allows.
@@ -25,7 +27,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 **Eligibility**
 
 - **TRK-01** Tracking happens only when *all* hold: the user is connected (spec 02), tracking is enabled on this device (EXT-UI settings), the tracked-domain list is loaded, and there is an eligible tab. Nothing is assumed before it is reported: until the tracking setting and an idle state have been read on this worker, tracking does not start (fails closed).
-- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. Incognito tabs are never tracked, even when the extension is allowed in incognito (SEC-01). The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted.
+- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. Incognito tabs are never tracked, even when the extension is allowed in incognito (SEC-01). The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted. *Exception (#176, proposed):* when the account setting is on, the problem slug of a `leetcode.com` path is kept (PRB-05, PRB-06); nothing else of the path.
 - **TRK-03** A hostname matches a tracked domain `d` when it equals `d` or ends with `.d` (after normalization: lowercase, trailing dot removed, leading `www.` removed). `leetcode.com` matches `leetcode.com` and `www.leetcode.com`, not `notleetcode.com`. The recorded domain is the **tracked domain**, not the raw hostname. If several match, the longest wins.
 - **TRK-04** The tab must be the active tab of the last-focused window, and that window must be focused (`chrome.windows.WINDOW_ID_NONE` ⇒ not focused). When Chrome reports no last-focused window (the query fails, e.g. macOS with every window closed), Chrome counts as not focused.
 
@@ -37,7 +39,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 
 **Intervals**
 
-- **TRK-08** An interval opens when tracking starts and closes on any pause, domain change, tab/window change that breaks eligibility, sign-out, tracking disabled, or when it reaches `MAX_INTERVAL_S` (immediately followed by a new interval if still eligible).
+- **TRK-08** An interval opens when tracking starts and closes on any pause, domain change, problem change (PRB-08, #176), tab/window change that breaks eligibility, sign-out, tracking disabled, or when it reaches `MAX_INTERVAL_S` (immediately followed by a new interval if still eligible).
 - **TRK-09** Intervals are split at **local midnight** of the device's time zone so each interval belongs to one calendar day.
 - **TRK-09a** Boundaries are **computed, not observed**: whenever the engine processes any event, it first closes the open interval at every boundary that has passed (`started_at + MAX_INTERVAL_S`, local midnight) using the boundary timestamp itself, opening the follow-up interval at the same instant. Heartbeat timing therefore never makes an interval exceed `MAX_INTERVAL_S`.
 - **TRK-10** Each closed interval has: `id` (UUIDv4, generated client-side at open), `device_id`, `domain`, `started_at`, `ended_at` (UTC ISO-8601, timestamps **truncated** to whole seconds). Intervals shorter than `MIN_INTERVAL_S` are discarded.
