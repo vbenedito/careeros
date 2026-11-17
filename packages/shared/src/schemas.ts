@@ -3,7 +3,7 @@
  * The database re-validates everything (DATA-07); these schemas are the first boundary.
  */
 import { z } from "zod";
-import { DATA, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, TRACKING } from "./constants";
 import { isValidDomain } from "./domain";
 
 export const DomainSchema = z
@@ -110,3 +110,33 @@ export const ExtensionAckReplySchema = z.object({
 export type ExtensionError = z.infer<typeof ExtensionErrorSchema>;
 export type ExtensionStatusReply = z.infer<typeof ExtensionStatusReplySchema>;
 export type ExtensionAckReply = z.infer<typeof ExtensionAckReplySchema>;
+
+/**
+ * ENT-05, ENT-07: the `details` of a limit error, `{"code":"LIMIT_REACHED","limit":12,"plan":"free"}`.
+ * Fields a later database adds are ignored (additive contract, ENT-06). The number and the plan
+ * always come from here, never from a shared constant at run time.
+ */
+export const LimitErrorDetailsSchema = z.object({
+  code: z.literal(ENTITLEMENTS.LIMIT_ERROR_CODE),
+  limit: z.number().int().positive(),
+  plan: z.string().min(1),
+});
+export type LimitErrorDetails = z.infer<typeof LimitErrorDetailsSchema>;
+
+/**
+ * ENT-07: reads the limit error details as PostgREST returns them (a JSON string, or an object
+ * when a client already parsed it). Missing or invalid details give null: the caller still
+ * reports LIMIT_REACHED from the hint, with a message without a number.
+ */
+export function parseLimitErrorDetails(details: unknown): LimitErrorDetails | null {
+  let value: unknown = details;
+  if (typeof details === "string") {
+    try {
+      value = JSON.parse(details);
+    } catch {
+      return null;
+    }
+  }
+  const parsed = LimitErrorDetailsSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}

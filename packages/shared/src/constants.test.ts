@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AUTH, DATA, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
+import { AUTH, DATA, ENTITLEMENTS, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
 
 const specsDir = resolve(import.meta.dirname, "../../../specs/v0");
 
@@ -67,5 +67,22 @@ describe("constants match the specs", () => {
 
   it("AUTH-07a protocol version starts at 1", () => {
     expect(PROTOCOL_VERSION).toBe(1);
+  });
+
+  it("ENT-05 ENT-06 ENT-11 specs/v1/02-entitlements.md §2 table equals ENTITLEMENTS", () => {
+    const spec = readFileSync(
+      resolve(import.meta.dirname, "../../../specs/v1/02-entitlements.md"),
+      "utf8",
+    );
+    const row = (name: string) =>
+      new RegExp(`^\\| \`${name}\` \\| \`?([^|\`]+?)\`? \\|`, "m").exec(spec)?.[1];
+    expect(row("PLAN_FREE")).toBe(ENTITLEMENTS.PLAN_FREE);
+    expect(row("FREE_MAX_TRACKED_DOMAINS")).toBe(`${ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS}`);
+    expect(row("LIMIT_ERROR_CODE")).toBe(ENTITLEMENTS.LIMIT_ERROR_CODE);
+    expect(row("LIMIT_ERROR_HINT")).toBe(ENTITLEMENTS.LIMIT_ERROR_HINT);
+  });
+
+  it("ENT-01 the old site-limit constant is the free plan's limit", () => {
+    expect(DATA.MAX_TRACKED_DOMAINS).toBe(ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS);
   });
 });

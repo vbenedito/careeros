@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DATA, SYNC, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, SYNC, TRACKING } from "./constants";
 import { DOMAIN_PATTERN } from "./domain";
 
 const migrationsDir = resolve(import.meta.dirname, "../../../supabase/migrations");
@@ -131,11 +131,51 @@ describe("database parity: ingest and totals constants", () => {
     expect(spec).toContain("> 92 days");
   });
 
-  it("TEST-08 DATA-01 the tracked-domain limit in the latest trigger equals MAX_TRACKED_DOMAINS", () => {
+  it("ENT-03 ENT-05 ENT-06 the latest trigger reads its limit from the plan and keeps the error contract", () => {
     const { sql } = latestFunctionSql("private.enforce_tracked_domain_limit");
-    expect(occurrences(sql, /count\(\*\) from public\.tracked_domains[^;]*>= (\d+)/g)).toEqual([
-      `${DATA.MAX_TRACKED_DOMAINS}`,
-    ]);
-    expect(sql).toContain(`at most ${DATA.MAX_TRACKED_DOMAINS} domains`);
+    // No literal limit: the number comes from public.plans through private.plan_of (ENT-03).
+    expect(
+      occurrences(sql, /count\(\*\) from public\.tracked_domains[^;]*>= (\S+)\)? then/g),
+    ).toEqual(["v_limit"]);
+    expect(sql).toContain("private.plan_of(new.user_id)");
+    expect(sql).toContain("from public.plans");
+    expect(sql).toContain("pg_advisory_xact_lock");
+    // ENT-05, ENT-06: same errcode and hint as before, message with the plan's number, new detail.
+    expect(sql).toContain("'A user can track at most % domains'");
+    expect(occurrences(sql, /errcode = '(\w+)'/g)).toContain("P0001");
+    expect(sql).toContain(`hint = '${ENTITLEMENTS.LIMIT_ERROR_HINT}'`);
+    expect(sql).toContain(`'code', '${ENTITLEMENTS.LIMIT_ERROR_CODE}'`);
+  });
+});
+
+/**
+ * ENT-11: the free plan's limits in the migrations equal the shared constants. The value is read
+ * from the LAST migration that sets the `free` row (an insert, or a later update), because that
+ * is what the database holds after all migrations ran.
+ */
+function lastFreePlanLimit(): { file: string; limit: string } {
+  const insert = /insert into public\.plans\s*\([^)]*\)\s*values\s*\(\s*'free'\s*,\s*(\d+)\s*\)/gi;
+  const update =
+    /update public\.plans\s+set\s+max_tracked_domains\s*=\s*(\d+)\s+where\s+id\s*=\s*'free'/gi;
+  for (const file of readdirSync(migrationsDir).sort().reverse()) {
+    const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+    // Within one file the last statement wins.
+    const hits = [...sql.matchAll(insert), ...sql.matchAll(update)].sort(
+      (a, b) => (a.index ?? 0) - (b.index ?? 0),
+    );
+    const last = hits.at(-1)?.[1];
+    if (last) return { file, limit: last };
+  }
+  throw new Error("no migration sets the free row of public.plans");
+}
+
+describe("database parity: entitlements", () => {
+  it("ENT-11 the free plan's max_tracked_domains in the migrations equals ENTITLEMENTS", () => {
+    expect(lastFreePlanLimit().limit).toBe(`${ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS}`);
+  });
+
+  it("ENT-11 the free plan id in the migrations equals PLAN_FREE", () => {
+    const { sql } = latestFunctionSql("private.plan_of");
+    expect(occurrences(sql, /select '(\w+)'::text/g)).toEqual([ENTITLEMENTS.PLAN_FREE]);
   });
 });

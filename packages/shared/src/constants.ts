@@ -53,10 +53,25 @@ export const AUTH = {
   LOCK_TIMEOUT_S: 45,
 } as const;
 
+/**
+ * specs/v1/02-entitlements.md §2. The database is the authority at run time (ADR-0012); these
+ * values feed static copy (landing page) and tests, and a parity test keeps them equal to the
+ * last migration that sets the `free` row (ENT-11).
+ */
+export const ENTITLEMENTS = {
+  PLAN_FREE: "free",
+  /** Same value as DATA-01. */
+  FREE_MAX_TRACKED_DOMAINS: 12,
+  /** ENT-05: stable code in the error details and in the dashboard API. */
+  LIMIT_ERROR_CODE: "LIMIT_REACHED",
+  /** ENT-06: the spec ID of the limit; released extensions map this hint to LIMIT_REACHED. */
+  LIMIT_ERROR_HINT: "DATA-01",
+} as const;
+
 /** specs/v0/04-data-model.md */
 export const DATA = {
-  /** DATA-01 */
-  MAX_TRACKED_DOMAINS: 12,
+  /** DATA-01 (kept for existing callers; the value now lives in ENTITLEMENTS, ENT-01). */
+  MAX_TRACKED_DOMAINS: ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS,
   /** DATA-02: server accepts up to MAX_INTERVAL_S + this tolerance. */
   INTERVAL_TOLERANCE_S: 30,
   /** DATA-07: the server accepts `ended_at` up to this far ahead of its own clock. */

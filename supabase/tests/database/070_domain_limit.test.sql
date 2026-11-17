@@ -1,4 +1,5 @@
 -- Tracked-domain limit 12 for #145 (DATA-01 amended 2026-11-12), run as real client roles.
+-- The number now comes from public.plans (ENT-03, #177); 100_entitlements covers the plan side.
 -- Accounts that already had more than 12 sites keep them: they can remove but not add.
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -8,9 +9,9 @@ select tests.create_user('carol');
 select tests.create_user('dave');
 
 select ok(
-  (select prosrc like '%>= 12%' and prosrc like '%pg_advisory_xact_lock%'
+  (select prosrc like '%private.plan_of%' and prosrc like '%pg_advisory_xact_lock%'
    from pg_proc where oid = 'private.enforce_tracked_domain_limit()'::regprocedure),
-  'DATA-01 the trigger function checks 12 and keeps the advisory lock'
+  'DATA-01 ENT-03 the trigger function reads the limit from the plan and keeps the advisory lock'
 );
 
 -- =============================================================================================
