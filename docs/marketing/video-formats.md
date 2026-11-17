@@ -35,7 +35,7 @@ The hook is screen 1. It is the strongest line the video can honestly pay off.
 - It is on screen at frame 0. No black frame, no logo opening, no "hey", no title card.
 - Something moves in the first 0.3 s: bars grow, or the first line fades in. A still frame is easy to scroll past.
 - Layers: the visual (bars, a big number or a plain background), the text, and the music starting on the first beat. Sound is the weakest layer, so the text must work alone.
-- 3 to 6 words, 7 at most. Use 88 px, bold (80 px if a line is longer than 17 characters, never more than 19).
+- 3 to 6 words, 7 at most. Use 88 px, bold (76 px if a line is longer than 17 characters; hook lines are at most 19 characters at 76 px, about 800 px wide).
 - Content: a real question the reader asks ("Can a study tracker read my pages?"), a plain fact, or a plain claim that the video proves. Pillar 3 opens with the reader's doubt, not with the list (content pillars, section 4).
 - It must be true to the video. The payoff comes inside the video, and never later than the second half. No clickbait, no "wait for it", no result promise, no hour target.
 - Write 3 hooks that use different ideas (a question, a fact, a plain claim). Keep the one that is most specific and most honest. Do this for every video; it takes about 3 minutes.
@@ -82,7 +82,7 @@ Layout inside the safe box:
 
 | Element | Size (px at 1080 wide) | Weight | Color |
 |---|---|---|---|
-| Hook text (screen 1) | 88 (80 for a line of 18 or 19 characters) | Bold (700) | `foreground` |
+| Hook text (screen 1) | 88 (76 for a line of 18 or 19 characters) | Bold (700) | `foreground` |
 | Body text | 72 | Medium (500) | `foreground` |
 | Body text, a line longer than 22 characters | 64, never smaller | Medium (500) | `foreground` |
 | Chart labels and values | 56 | Medium (500), tabular numbers | `foreground` |
@@ -165,7 +165,7 @@ For pillar 1 idea 9, pillar 2 ideas 2 and 10, pillar 3 ideas 4, 6 and 8.
 | 24.0 to 28.0 | 7 Check | A line the reader can check (for example the public code). Optional. |
 | 28.0 to 32.0 | 8 End | End screen. |
 
-Screens: 6 to 8. Total: 28 to 40 s. The myth is something a careful reader might truly think. The fact uses only brand profile section 6 words. For pillar 1 and 2, the "fact" is our view and says so ("We think ..."). Never name or mock a tool, a person or a group in the myth.
+Screens: 6 to 8. Total: 28 to 45 s. The myth is something a careful reader might truly think. The fact uses only brand profile section 6 words. For pillar 1 and 2, the "fact" is our view and says so ("We think ..."). Never name or mock a tool, a person or a group in the myth.
 
 #### Format E: question (tag: question)
 
@@ -193,7 +193,7 @@ A demo is any video that shows the extension or the dashboard UI. At most 1 in 1
 | List | 6 to 7 | 26 to 31 | Facts and short answers | 20 min |
 | Chart | 8 | about 31 | Pillar 1, "your real week" | 25 min |
 | Steps | 6 to 7 | 22 to 29 | Habits, setup | 20 min |
-| Myth-vs-fact | 6 to 8 | 28 to 40 | Pillar 3 doubts | 25 min |
+| Myth-vs-fact | 6 to 9 | 28 to 45 | Pillar 3 doubts | 25 min |
 | Question | 6 | about 22 | When time is short | 15 min |
 
 ## 2. Visual kit
@@ -286,13 +286,13 @@ CareerOS videos use a quiet music bed (D13). Music is licensed or royalty-free, 
 
 | Order | Source | Cost | What we verified | What we did not verify |
 |---|---|---|---|---|
-| 1. Main | **Pixabay Music** (pixabay.com/music) | Free | The Pixabay Content License lets you use content for free, without attribution, and modify or adapt it. You cannot sell or distribute it on a standalone basis, and you cannot use it in a misleading way [V5]. The Terms (read in the specialist review, 2026-11-17) allow commercial and non-commercial use with no attribution, but give **no warranty** and **no Content ID promise** [V5b]. | Composers may register a track later, so a claim can arrive after upload. The license page does not say how TikTok treats a baked-in track on a business account. **Assumption:** the license covers a commercial brand account on YouTube, TikTok and LinkedIn. The license record (section 3.3) must show that commercial use is covered. |
+| 1. Main | **Pixabay Music** (pixabay.com/music) | Free | The Pixabay Content License lets you use content for free, without attribution, and modify or adapt it. You cannot sell or distribute it on a standalone basis, and you cannot use it in a misleading way [V5]. The Terms (read in the specialist review, 2026-11-17) allow commercial and non-commercial use with no attribution, but give **no warranty** and **no Content ID promise** [V5b]. | Composers may register a track later, so a claim can arrive after upload (secondary source, [V12]). The license page does not say how TikTok treats a baked-in track on a business account. **Assumption:** the license covers a commercial brand account on YouTube, TikTok and LinkedIn. The license record (section 3.3) must show that commercial use is covered. |
 | 2. Backup, YouTube only | **YouTube Audio Library**, tracks marked "Attribution not required" | Free | YouTube says tracks in the library are known to it to be copyright-safe, so no Content ID claims on YouTube; Creative Commons tracks need the artist credit in the description [V6]. | The terms do not address use outside YouTube, and YouTube says it cannot give legal guidance for off-platform issues [V6]. A secondary article says use on TikTok and Instagram is generally fine but must be checked per track [V11]. **Treat these tracks as YouTube-only.** Use on TikTok or LinkedIn is an assumption and goes in the license record. Do not use "Attribution required" tracks. |
 | 3. TikTok-only fallback | **TikTok Commercial Music Library** (in the app) | Free | A secondary article says it is the library for brand content on business accounts, and that clearance is specific to TikTok [V12]. | We could not read TikTok's page. Use only if TikTok blocks the file with music baked in. The file for TikTok is then a different export (no music, add in the app), which breaks the "one master" rule. |
 
 **Steps after upload (Pixabay and any other track).**
 
-1. **TikTok:** answer the Music Usage Confirmation when the app asks at upload. Say the account is a business account and the video is brand content.
+1. **TikTok:** answer the Music Usage Confirmation when the app asks at upload (secondary source, [V13]; we did not read TikTok's own page). Say the account is a business account and the video is brand content.
 2. **YouTube:** the next day, open YouTube Studio and check the video for a copyright or Content ID notice. Do this again after 7 days for the first 8 weeks.
 3. If a claim or mute appears, follow the stop rule below.
 
@@ -562,19 +562,19 @@ Step 2 uses a generic "count" so the reader can use any method; the end screen n
 
 ### Script 3: Can a study tracker read my pages? (myth-vs-fact)
 
-**Source:** content pillars, section 4, idea 4. Theme: exactly what is stored. Length: 41.5 s, 9 screens. No sample numbers, so no sample label. Not a demo: no UI. Facts: brand profile section 6; voice, "Privacy, exactly". CareerOS is named on screen 9; the caption and the description name it from the first line.
+**Source:** content pillars, section 4, idea 4. Theme: exactly what is stored. Length: 42.5 s, 9 screens. No sample numbers, so no sample label. Not a demo: no UI. Facts: brand profile section 6; voice, "Privacy, exactly". CareerOS is named on screen 9; the caption and the description name it from the first line.
 
 | # | Time | On-screen text | Visual |
 |---|---|---|---|
-| 1 | 0.0 to 4.5 | Can a study tracker / read my pages? | Hook, 80 px (line 1 has 19 characters). Plain background. |
-| 2 | 4.5 to 8.5 | It reads every page / that you open. | Chip `Myth` (outlined, `muted-foreground`). |
-| 3 | 8.5 to 12.5 | It does not read / any page content. | Chip `Fact` (filled `primary`, `primary-foreground` text). |
-| 4 | 12.5 to 18.5 | It uses the tab address / only for the site name. | Plain text. |
-| 5 | 18.5 to 24.5 | It stores the site name, / start time and end time. | Chip `Your study time`. |
-| 6 | 24.5 to 28.5 | Full web addresses / and page titles. | Chip `Never stores`. |
-| 7 | 28.5 to 32.5 | Page content and / all your keystrokes. | Chip `Never stores`. Same layout as screen 6. |
-| 8 | 32.5 to 37.5 | The code is public. / Check it on GitHub. | Plain text. |
-| 9 | 37.5 to 41.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. |
+| 1 | 0.0 to 4.5 | Can a study tracker / read my pages? | Hook, 76 px (line 1 has 19 characters). Plain background. |
+| 2 | 4.5 to 9.0 | It reads every page / that you open. | Chip `Myth` (outlined, `muted-foreground`). 7 words, 4.5 s. |
+| 3 | 9.0 to 13.5 | It does not read / any page content. | Chip `Fact` (filled `primary`, `primary-foreground` text). 7 words, 4.5 s. |
+| 4 | 13.5 to 19.5 | It uses the tab address / only for the site name. | Plain text. |
+| 5 | 19.5 to 25.5 | It stores the site name, / start time and end time. | Chip `Your study time`. |
+| 6 | 25.5 to 29.5 | Full web addresses / and page titles. | Chip `Never stores`. |
+| 7 | 29.5 to 33.5 | Page content and / all your keystrokes. | Chip `Never stores`. Same layout as screen 6. |
+| 8 | 33.5 to 38.5 | The code is public. / Check it on GitHub. | Plain text. |
+| 9 | 38.5 to 42.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. |
 
 Notes for the editor:
 
@@ -618,7 +618,7 @@ Notes for the editor:
 
 | Check | Script 1 | Script 2 | Script 3 |
 |---|---|---|---|
-| Length 20 to 45 s | 30.5 s | 25.5 s | 41.5 s |
+| Length 20 to 45 s | 30.5 s | 25.5 s | 42.5 s |
 | Hook at frame 0, 7 words or fewer | Yes (6) | Yes (7) | Yes (7) |
 | Numbers are labeled sample | Yes | No numbers | No numbers |
 | No UI | Yes | Yes | Yes |
@@ -666,6 +666,7 @@ All accessed 2026-11-17. "Secondary" means a blog or news article, used where th
 - [V9] YouTube Help, clickable links policy: <https://support.google.com/youtube/answer/13748639> (from platform study [S2])
 - [V10] W3C, WCAG 2.2, success criterion 1.4.3 Contrast (Minimum): <https://www.w3.org/TR/WCAG22/#contrast-minimum> (cited from general knowledge; the page was not opened in this session)
 - [V11] Thematic, YouTube Audio Library guide, secondary: <https://hellothematic.com/youtube-audio-library/>
+- [V13] Epidemic Sound Help, how to post commercial content on TikTok, secondary (vendor help page; listed by search, not opened in this session): <https://help.epidemicsound.com/hc/en-us/articles/26251264491794-How-to-Post-Commercial-Content-on-TikTok>
 - [V12] Uppbeat, "Copyright-safe music for Shorts, Reels and TikTok", secondary: <https://uppbeat.io/blog/royalty-free-and-copyright-free-music/copyright-safe-music-for-shorts-reels-and-tiktok-how-to-post-without-claims-or-mutes>
 
 Internal: [brand profile](brand-profile.md), [persona](persona.md), [voice](voice.md), [platform study](platform-study.md), [content pillars](content-pillars.md), [design system](../design-system.md), [design tokens](../../packages/shared/theme/tokens.css), [v1 discovery](../../specs/v1/00-discovery.md).
