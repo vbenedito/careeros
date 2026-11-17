@@ -1,6 +1,6 @@
 # Contributing
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-12
+Type: living · Owner: tech lead · Last reviewed: 2026-11-13
 
 How work moves from an idea to `main`. The rules for agents are in [AGENTS.md](../../AGENTS.md); this page is the full process behind them.
 
@@ -87,6 +87,10 @@ As practised in `git log`:
 | `scripts/ci/integration.sh` | Integration and E2E in Chromium, including the app pages' responsive layout (TEST-01) |
 
 CI (`.github/workflows/ci.yml`) runs all of them on every pull request and push to `main` (ENV-08). Vercel builds a preview of the dashboard for each pull request.
+
+## Security-relevant review reports
+
+Security-relevant review reports (audits, grill reports with exploitable findings) are committed only after their fixes are released (pattern: [docs/history/security-audit-v0.md](../history/security-audit-v0.md)). Until then they stay out of the repository, for example in the private review thread.
 
 ## Documentation
 
