@@ -35,8 +35,8 @@ The hook is screen 1. It is the strongest line the video can honestly pay off.
 - It is on screen at frame 0. No black frame, no logo opening, no "hey", no title card.
 - Something moves in the first 0.3 s: bars grow, or the first line fades in. A still frame is easy to scroll past.
 - Layers: the visual (bars, a big number or a plain background), the text, and the music starting on the first beat. Sound is the weakest layer, so the text must work alone.
-- 3 to 6 words, 7 at most. Use 88 px, bold.
-- Content: a real question the reader asks ("Can it read my pages?"), a plain fact, or a plain claim that the video proves. Pillar 3 opens with the reader's doubt, not with the list (content pillars, section 4).
+- 3 to 6 words, 7 at most. Use 88 px, bold (80 px if a line is longer than 17 characters, never more than 19).
+- Content: a real question the reader asks ("Can a study tracker read my pages?"), a plain fact, or a plain claim that the video proves. Pillar 3 opens with the reader's doubt, not with the list (content pillars, section 4).
 - It must be true to the video. The payoff comes inside the video, and never later than the second half. No clickbait, no "wait for it", no result promise, no hour target.
 - Write 3 hooks that use different ideas (a question, a fact, a plain claim). Keep the one that is most specific and most honest. Do this for every video; it takes about 3 minutes.
 - Do not start with "Did you know", "Stop", "Never", "Secret" or a number that is not in the video.
@@ -54,6 +54,7 @@ Last 3 to 4 seconds. Same background as screen 1, so the video loops cleanly int
 - **Logo placeholder:** CareerOS has no logo yet (#195). Until then the end screen shows the word `CareerOS` in 88 px bold, `primary` color, on the background. Do not draw a temporary logo. When #195 ships, put the logo above the word and update this page.
 - Wording follows the voice: "Free Chrome extension" and the name. No "Download now", no "Try it today", no "stays free".
 - Never more than one call to action per video.
+- The end screen is exempt from the 3-word line rule: the name stands alone on its line.
 
 ### 1.4 Safe zones (TikTok and Shorts overlays)
 
@@ -81,7 +82,7 @@ Layout inside the safe box:
 
 | Element | Size (px at 1080 wide) | Weight | Color |
 |---|---|---|---|
-| Hook text (screen 1) | 88 | Bold (700) | `foreground` |
+| Hook text (screen 1) | 88 (80 for a line of 18 or 19 characters) | Bold (700) | `foreground` |
 | Body text | 72 | Medium (500) | `foreground` |
 | Body text, a line longer than 22 characters | 64, never smaller | Medium (500) | `foreground` |
 | Chart labels and values | 56 | Medium (500), tabular numbers | `foreground` |
@@ -111,13 +112,13 @@ For pillar 1 ideas 4 and 8, pillar 2 ideas 5, 8 and 9, pillar 3 ideas 1, 2 and 1
 | Time | Screen | Content |
 |---|---|---|
 | 0.0 to 4.0 | 1 Hook | The question or the claim that the list answers. At most 6 words. |
-| 4.0 to 8.0 | 2 Item 1 | Number chip `1`, then at most 7 words. |
-| 8.0 to 12.0 | 3 Item 2 | Same layout. |
-| 12.0 to 16.0 | 4 Item 3 | Same layout. (Item 4 only if needed, to 20.0.) |
-| 16.0 to 20.0 | 5 Sum | One line that closes the list. At most 7 words. |
-| 20.0 to 24.0 | 6 End | End screen (section 1.3). |
+| 4.0 to 8.5 | 2 Item 1 | Number chip `1`, then at most 7 words (7 words need 4.5 s). |
+| 8.5 to 13.0 | 3 Item 2 | Same layout. |
+| 13.0 to 17.5 | 4 Item 3 | Same layout. (Item 4 only if needed, to 22.0.) |
+| 17.5 to 22.0 | 5 Sum | One line that closes the list. At most 7 words. |
+| 22.0 to 26.0 | 6 End | End screen (section 1.3). |
 
-Screens: 6 (7 with a fourth item). Total: 24 to 28 s. Items are parallel (same grammar) and each one is a fact or a step from the pillar page, not an opinion with no label. Never add a seventh word to make a list "sound good".
+Screens: 6 (7 with a fourth item). Total: 26 to 30.5 s. A screen with fewer words may be shorter (timing rule). Items are parallel (same grammar) and each one is a fact or a step from the pillar page, not an opinion with no label. Never add a seventh word to make a list "sound good".
 
 #### Format B: chart (tag: chart)
 
@@ -129,11 +130,11 @@ For pillar 1 ideas 2, 3, 7. Plain drawn bars (section 2.4). Always sample data. 
 | 4.0 to 7.5 | 2 Frame | "Here is a sample week." The `Sample data` label is on every screen from here, and also on screen 1. |
 | 7.5 to 11.5 | 3 Total | The total with a unit. |
 | 11.5 to 19.0 | 4 and 5 Read | Two read-outs, one per screen. The chosen bars get the `primary` color and a text tag; the others use the grey. |
-| 19.0 to 23.0 | 6 View | Our view, said as a belief ("We think ..."), at most 7 words. |
-| 23.0 to 26.5 | 7 Close | The plain line that ties it to the reader. |
-| 26.5 to 30.5 | 8 End | End screen. No numbers, so no sample label. |
+| 19.0 to 23.5 | 6 View | Our view, said as a belief ("We think ..."), at most 7 words. |
+| 23.5 to 27.0 | 7 Close | The plain line that ties it to the reader. At most 5 words. |
+| 27.0 to 31.0 | 8 End | End screen. No numbers, so no sample label. |
 
-Screens: 8. Total: about 30 s. One chart per video. At most 7 bars. Bars start at zero, use a linear scale and carry their value as text. Every number has a unit. No second chart, no pie, no trend line, no "average", no percentage.
+Screens: 8. Total: about 31 s. One chart per video. At most 7 bars. Bars start at zero, use a linear scale and carry their value as text. Every number has a unit. No second chart, no pie, no trend line, no "average", no percentage.
 
 #### Format C: steps (tag: steps)
 
@@ -141,15 +142,15 @@ For pillar 2 ideas 3, 4 and 6, pillar 3 ideas 3 and 9, and the pillar 4 demos. S
 
 | Time | Screen | Content |
 |---|---|---|
-| 0.0 to 3.5 | 1 Hook | The situation of the reader, as a question. |
-| 3.5 to 6.5 | 2 Step 1 | Chip `Step 1`, then an action: verb first, at most 6 words. |
-| 6.5 to 10.0 | 3 Step 2 | Same layout. |
-| 10.0 to 13.0 | 4 Step 3 | Same layout. |
-| 13.0 to 17.0 | 5 Step 4 (optional) | Same layout. 4 steps is the limit. |
-| 17.0 to 21.0 | 6 Outcome | What the steps give you, in plain words. |
-| 21.0 to 24.0 | 7 End | End screen. |
+| 0.0 to 4.5 | 1 Hook | The situation of the reader, as a question. At most 7 words. |
+| 4.5 to 8.0 | 2 Step 1 | Chip `Step 1`, then an action: verb first. Slot by the timing rule (3 to 4.5 s). |
+| 8.0 to 11.5 | 3 Step 2 | Same layout. |
+| 11.5 to 15.0 | 4 Step 3 | Same layout. |
+| 15.0 to 18.5 | 5 Step 4 (optional) | Same layout. 4 steps is the limit. |
+| 18.5 to 22.5 | 6 Outcome | What the steps give you, in plain words. At most 6 words. |
+| 22.5 to 25.5 | 7 End | End screen. |
 
-Screens: 6 to 7. Total: 21 to 28 s. Each step is one action, in the imperative. Steps never promise a result. CareerOS has no plan feature, so planning steps say "your own notes".
+Screens: 6 to 7. Total: 22 to 29 s (the slots above are examples; each screen follows the timing rule). Each step is one action, in the imperative. Steps never promise a result. CareerOS has no plan feature, so planning steps say "your own notes".
 
 #### Format D: myth-vs-fact (tag: myth-vs-fact)
 
@@ -158,9 +159,9 @@ For pillar 1 idea 9, pillar 2 ideas 2 and 10, pillar 3 ideas 4, 6 and 8.
 | Time | Screen | Content |
 |---|---|---|
 | 0.0 to 3.5 | 1 Hook | The reader's doubt, as a question. |
-| 3.5 to 7.5 | 2 Myth | Chip `Myth`, then the wrong belief as a plain sentence. Not a quote, not "people say". |
-| 7.5 to 11.5 | 3 Fact | Chip `Fact`, then the true line. |
-| 11.5 to 24.0 | 4 to 6 Detail | One to three screens that explain the fact with exact product words. Use a reveal for long screens. |
+| 3.5 to 7.5 | 2 Myth | Chip `Myth`, then the wrong belief as a plain sentence of at most 6 words. Not a quote, not "people say". |
+| 7.5 to 11.5 | 3 Fact | Chip `Fact`, then the true line, at most 6 words. |
+| 11.5 to 24.0 | 4 to 6 Detail | One to three screens that explain the fact with exact product words. Slots follow the timing rule. |
 | 24.0 to 28.0 | 7 Check | A line the reader can check (for example the public code). Optional. |
 | 28.0 to 32.0 | 8 End | End screen. |
 
@@ -172,14 +173,14 @@ For pillar 1 ideas 1 and 5, pillar 2 ideas 1, 6 and 7, pillar 3 ideas 5 and 7.
 
 | Time | Screen | Content |
 |---|---|---|
-| 0.0 to 3.5 | 1 Hook | A real question the reader asks. The only question in the video. |
-| 3.5 to 6.5 | 2 Turn | A short sentence that opens the answer ("Not how much you think."). |
-| 6.5 to 10.0 | 3 Answer | The answer in plain words. |
-| 10.0 to 14.0 | 4 How or why | The rule, the number or the reason, with a unit. |
-| 14.0 to 17.5 | 5 Next step | One plain next step the reader can do alone. |
-| 17.5 to 21.0 | 6 End | End screen. |
+| 0.0 to 3.5 | 1 Hook | A real question the reader asks. The only question in the video. At most 5 words. |
+| 3.5 to 7.0 | 2 Turn | A short sentence that opens the answer ("Not how much you think."). At most 5 words. |
+| 7.0 to 10.5 | 3 Answer | The answer in plain words. At most 5 words. |
+| 10.5 to 14.5 | 4 How or why | The rule, the number or the reason, with a unit. At most 6 words. |
+| 14.5 to 18.5 | 5 Next step | One plain next step the reader can do alone. At most 6 words. |
+| 18.5 to 22.0 | 6 End | End screen. |
 
-Screens: 6. Total: about 21 s. The shortest format. Use it when the time budget is tight. Sample numbers need the label.
+Screens: 6. Total: about 22 s. The shortest format. Use it when the time budget is tight. Sample numbers need the label.
 
 #### Demo videos (pillar 4)
 
@@ -189,11 +190,11 @@ A demo is any video that shows the extension or the dashboard UI. At most 1 in 1
 
 | Format | Screens | Seconds | Best for | Time to edit (assumption) |
 |---|---|---|---|---|
-| List | 6 to 7 | 24 to 28 | Facts and short answers | 20 min |
-| Chart | 8 | about 30 | Pillar 1, "your real week" | 25 min |
-| Steps | 6 to 7 | 21 to 28 | Habits, setup | 20 min |
+| List | 6 to 7 | 26 to 31 | Facts and short answers | 20 min |
+| Chart | 8 | about 31 | Pillar 1, "your real week" | 25 min |
+| Steps | 6 to 7 | 22 to 29 | Habits, setup | 20 min |
 | Myth-vs-fact | 6 to 8 | 28 to 40 | Pillar 3 doubts | 25 min |
-| Question | 6 | about 21 | When time is short | 15 min |
+| Question | 6 | about 22 | When time is short | 15 min |
 
 ## 2. Visual kit
 
@@ -245,7 +246,7 @@ Charts are drawn with rectangles in the editor. They are not screenshots and not
 
 - **Direction:** horizontal bars, one row per item, 7 rows at most. Rows are 130 px apart; the bar is 56 px thick; corner radius 12 px (the token radius, `0.625rem`, at video scale).
 - **Layout inside the safe box:** label at x = 80 (56 px, `foreground`, 130 px wide, for example `Mon`), bar from x = 230, value text 24 px to the right of the bar end (56 px, tabular).
-- **Scale:** every bar starts at zero and uses one linear scale. Set the longest bar to 450 px and give the others `value / longest * 450`. Write the minutes, then draw. Example (sample day chart): 1h 30m = 450 px, so 5 px per minute.
+- **Scale:** every bar starts at zero and uses one linear scale. Set the longest bar to 450 px and give the others `value / longest * 450`. Write the minutes, then draw. Example (sample day chart): 2h 10m = 130 minutes = 450 px, so about 3.46 px per minute.
 - **Color:** all bars `primary`. When two bars are the point of the screen, they stay `primary` and the others turn to `chart-6`. The bars that matter also get their label in bold and a 4 px `foreground` outline, so the meaning does not depend on color.
 - **No** gridlines, axis, legend, shadows, 3D, gradients, icons, animated counters or trend lines. No "average" or percent. Values show as text on the bar row (app format).
 - **Motion:** bars grow from zero in 0.8 s, once, on the first screen. Later screens only change color and outline.
@@ -259,13 +260,13 @@ Charts are drawn with rectangles in the editor. They are not screenshots and not
 
 | Sample day | Time |
 |---|---|
-| Mon | 50m |
-| Tue | 1h 10m |
-| Wed | 30m |
-| Thu | 1h 20m |
-| Fri | 40m |
-| Sat | 1h 30m |
-| Sun | 40m |
+| Mon | 20m |
+| Tue | 30m |
+| Wed | 25m |
+| Thu | 1h 55m |
+| Fri | 20m |
+| Sat | 2h 10m |
+| Sun | 1h 00m |
 | Total | 6h 40m |
 
 | Sample site | Time |
@@ -275,7 +276,7 @@ Charts are drawn with rectangles in the editor. They are not screenshots and not
 | `greatfrontend.com` | 1h 30m |
 | Total | 6h 40m |
 
-Both tables add up to 6h 40m (400 minutes). They are made-up numbers for drawing. They are never described as what users do. Re-use these tables in every chart so the sample stays consistent; add a new sample only with the same total and a check of the sum.
+Both tables add up to 6h 40m (400 minutes). In the day table, Thursday and Saturday hold 4h 05m (245 minutes, a clear majority). They are made-up numbers for drawing. They are never described as what users do. Re-use these tables in every chart so the sample stays consistent; add a new sample only with the same total and a check of the sum.
 
 ## 3. Music
 
@@ -285,9 +286,15 @@ CareerOS videos use a quiet music bed (D13). Music is licensed or royalty-free, 
 
 | Order | Source | Cost | What we verified | What we did not verify |
 |---|---|---|---|---|
-| 1. Main | **Pixabay Music** (pixabay.com/music) | Free | The Pixabay Content License lets you use content for free, without attribution, and modify or adapt it. You cannot sell or distribute it on a standalone basis, and you cannot use it in a misleading way [V5]. | The summary does not mention music in detail and does not mention Content ID [V5]. We could not read the full Terms (the page did not load). **Assumption:** the license covers a commercial brand account on YouTube, TikTok and LinkedIn. Whether another uploader can register the same track and cause a claim is unknown. |
-| 2. Backup | **YouTube Audio Library**, tracks marked "Attribution not required" | Free | YouTube says tracks in the library are known to it to be copyright-safe; Creative Commons tracks need the artist credit in the description [V6]. A secondary article says tracks can generally be used on TikTok and Instagram too, but check each track [V11]. | YouTube's help page does not say if use outside YouTube is allowed, and says it cannot give legal guidance for off-platform issues [V6]. LinkedIn is not covered. Do not use "Attribution required" tracks: a Shorts description has no good place for credit on the other apps. |
+| 1. Main | **Pixabay Music** (pixabay.com/music) | Free | The Pixabay Content License lets you use content for free, without attribution, and modify or adapt it. You cannot sell or distribute it on a standalone basis, and you cannot use it in a misleading way [V5]. The Terms (read in the specialist review, 2026-11-17) allow commercial and non-commercial use with no attribution, but give **no warranty** and **no Content ID promise** [V5b]. | Composers may register a track later, so a claim can arrive after upload. The license page does not say how TikTok treats a baked-in track on a business account. **Assumption:** the license covers a commercial brand account on YouTube, TikTok and LinkedIn. The license record (section 3.3) must show that commercial use is covered. |
+| 2. Backup, YouTube only | **YouTube Audio Library**, tracks marked "Attribution not required" | Free | YouTube says tracks in the library are known to it to be copyright-safe, so no Content ID claims on YouTube; Creative Commons tracks need the artist credit in the description [V6]. | The terms do not address use outside YouTube, and YouTube says it cannot give legal guidance for off-platform issues [V6]. A secondary article says use on TikTok and Instagram is generally fine but must be checked per track [V11]. **Treat these tracks as YouTube-only.** Use on TikTok or LinkedIn is an assumption and goes in the license record. Do not use "Attribution required" tracks. |
 | 3. TikTok-only fallback | **TikTok Commercial Music Library** (in the app) | Free | A secondary article says it is the library for brand content on business accounts, and that clearance is specific to TikTok [V12]. | We could not read TikTok's page. Use only if TikTok blocks the file with music baked in. The file for TikTok is then a different export (no music, add in the app), which breaks the "one master" rule. |
+
+**Steps after upload (Pixabay and any other track).**
+
+1. **TikTok:** answer the Music Usage Confirmation when the app asks at upload. Say the account is a business account and the video is brand content.
+2. **YouTube:** the next day, open YouTube Studio and check the video for a copyright or Content ID notice. Do this again after 7 days for the first 8 weeks.
+3. If a claim or mute appears, follow the stop rule below.
 
 Not used: music from the trending lists of any app, songs, music from other videos, and "free" music from a site with no written license. AI-generated music: not at the start. If a Pixabay track page says it is AI-generated, choose another track, because platforms may ask for an AI label for it (platform study, section 7).
 
@@ -368,7 +375,7 @@ The time plan is an assumption. Measure it in weeks 1 and 2. If a week takes mor
 | 3. Edit | 45 | Duplicate the template, paste the text, draw the bars, add music, fade. About 22 minutes per video. |
 | 4. Export and check | 10 | Export. Watch each video once on a phone with the sound off, then with sound at half volume. |
 | 5. Captions and schedule | 25 | One caption per app; the text version; hashtags checked in the app; schedule on YouTube and TikTok (LinkedIn from week 3). |
-| 6. Analytics | 10 | Read each app's own numbers and write them in the calendar (platform study, section 8). |
+| 6. Analytics and claims | 10 | Read each app's own numbers and write them in the calendar (platform study, section 8). Check last week's videos for music claims in YouTube Studio. |
 | Total | 120 | |
 
 Replies to comments are done in the 10 spare minutes of steps 5 and 6, in plain words (voice, section 2).
@@ -419,7 +426,7 @@ Run it for every video. One "no" means: fix the video first.
 
 **Music and AI labels (brand profile, section 10)**
 
-18. The track is from a source in section 3.1. The license record exists. The track page does not say AI-generated.
+18. The track is from a source in section 3.1. The license record exists and shows that commercial use on TikTok and LinkedIn is covered. The track page does not say AI-generated. After upload: the Music Usage Confirmation is answered (TikTok) and the video is checked for claims the next day (YouTube Studio).
 19. AI labels: text and royalty-free music need none by the rules we read (platform study, section 7). If the video uses an AI voice or AI images: switch on the platform's own AI label in every app and add "Made with AI" to the caption. (None of the example scripts do.)
 
 **Text on each app**
@@ -436,30 +443,30 @@ Three scripts from three pillars and three formats. Each is ready to produce: co
 |---|---|---|---|
 | 1 | Pillar 1, idea 3: "A week has seven days. Which two did the work?" | Chart | YouTube Shorts, TikTok |
 | 2 | Pillar 2, idea 4: restarting after a gap | Steps | YouTube Shorts, TikTok, LinkedIn |
-| 3 | Pillar 3, idea 4: "Can it read my pages?" | Myth-vs-fact | YouTube Shorts, TikTok |
+| 3 | Pillar 3, idea 4: "Can a study tracker read my pages?" | Myth-vs-fact | YouTube Shorts, TikTok |
 
 ### Script 1: Which two days did the work? (chart)
 
 **Source:** content pillars, section 2, idea 3. Theme: your real week. Length: 30.5 s, 8 screens. Sample data on screens 1 to 7. Dark theme.
 
-Visual: seven horizontal bars (section 2.4) with the sample day values (section 2.5). Day labels `Mon` to `Sun` at left, values at the end of each bar. All bars `primary` until screen 4.
+Visual: seven horizontal bars (section 2.4) with the sample day values (section 2.5). Day labels `Mon` to `Sun` at left, values at the end of each bar. All bars `primary` until screen 4. Text is 72 px; use 64 px for a line longer than 22 characters (screens 4 and 7).
 
 | # | Time | On-screen text | Visual |
 |---|---|---|---|
 | 1 | 0.0 to 4.0 | Which two days / did the work? | Seven bars grow from zero in 0.8 s. `Sample data` chip. Hook text 88 px. |
 | 2 | 4.0 to 7.5 | Here is a sample week. | Bars stay. Text 72 px above the chart. |
-| 3 | 7.5 to 11.5 | Seven days. / 6h 40m in total. | Bars stay. The total in `primary`. |
-| 4 | 11.5 to 15.0 | Thursday and Saturday: / 2h 50m. | `Thu` and `Sat` bars stay `primary` with a 4 px outline and bold labels. The other bars turn `chart-6`. |
-| 5 | 15.0 to 19.0 | The other five days: / 3h 50m. | The five other bars `primary` with outline; `Thu` and `Sat` turn `chart-6`. |
+| 3 | 7.5 to 10.5 | Seven days: 6h 40m. | Bars stay. The total in `primary`. |
+| 4 | 10.5 to 14.5 | Thursday and Saturday / hold 4h 05m. | `Thu` and `Sat` bars stay `primary` with a 4 px outline and bold labels. The other bars turn `chart-6`. |
+| 5 | 14.5 to 19.0 | The other five days / hold 2h 35m. | The five other bars `primary` with outline; `Thu` and `Sat` turn `chart-6`. |
 | 6 | 19.0 to 23.0 | We think memory / keeps big days. | All bars `primary` again, no outline. |
 | 7 | 23.0 to 26.5 | A count keeps all seven. | Same chart, in the upper half; text below it. |
 | 8 | 26.5 to 30.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. Logo placeholder. No numbers, so no sample label. |
 
-Check of the numbers (sample): Thu 1h 20m + Sat 1h 30m = 2h 50m. The other five days: 50m + 1h 10m + 30m + 40m + 40m = 3h 10m + 40m = 3h 50m. Total = 6h 40m.
+Check of the numbers (sample): Thu 1h 55m + Sat 2h 10m = 4h 05m (245 minutes, more than half of 400). The other five days: 20m + 30m + 25m + 20m + 1h 00m = 2h 35m. Total = 6h 40m. Word counts: screen 4 has 6 words (4 s), screen 5 has 7 words (4.5 s), screen 3 has 4 words (3 s).
 
 **Hook alternatives not used:** "How much did you really study this week?" (pillar 1 idea 1, a different video) and "Seven days. Two did the work." (a claim, but less open than the question).
 
-**Why it is honest:** the hook asks about a sample chart, and the video answers it on screen 4. The view on screen 6 is labeled "We think" and gives no percentage or average (content pillars, section 2).
+**Why it is honest:** the hook asks about a sample chart, and the video answers it on screen 4: in this sample, two days hold a clear majority of the week. The view on screen 6 is labeled "We think" and gives no percentage or average (content pillars, section 2).
 
 **Music:** calm instrumental, about 80 beats per minute, 35 s or longer, from section 3.1.
 
@@ -468,12 +475,12 @@ Check of the numbers (sample): Thu 1h 20m + Sat 1h 30m = 2h 50m. The other five 
 - Title: `Which two days did the work? A sample week`
 - Description:
   ```
-  A sample week: 6h 40m over seven days. Thursday and Saturday hold 2h 50m of it.
+  A sample week: 6h 40m over seven days. Thursday and Saturday hold 4h 05m of it.
   We think memory keeps the big days. A count keeps all seven.
   Sample data. Not real user data.
 
   Text version:
-  Which two days did the work? Here is a sample week. Seven days, 6h 40m in total. Thursday and Saturday: 2h 50m. The other five days: 3h 50m. We think memory keeps big days. A count keeps all seven. Free Chrome extension. CareerOS.
+  Which two days did the work? Here is a sample week. Seven days: 6h 40m. Thursday and Saturday hold 4h 05m. The other five days hold 2h 35m. We think memory keeps big days. A count keeps all seven. Free Chrome extension. CareerOS.
 
   #studyplan #codinginterview #leetcode #softwareengineer
   ```
@@ -483,26 +490,26 @@ Check of the numbers (sample): Thu 1h 20m + Sat 1h 30m = 2h 50m. The other five 
 
 - Caption:
   ```
-  Which two days did the work? A sample week: 6h 40m. Thursday and Saturday hold 2h 50m of it. We think a count keeps all seven days. Sample data.
+  Which two days did the work? A sample week: 6h 40m. Thursday and Saturday hold 4h 05m of it. We think a count keeps all seven days. Sample data.
   #studyplan #codinginterview #leetcode #softwareengineer
   ```
 - Text version in the first comment or the caption if space allows. Link in bio.
 
-**Alt text:** "Seven horizontal bars show a sample study week, Monday to Sunday: 50m, 1h 10m, 30m, 1h 20m, 40m, 1h 30m, 40m. Total 6h 40m. Thursday and Saturday together are 2h 50m. Sample data."
+**Alt text:** "Seven horizontal bars show a sample study week, Monday to Sunday: 20m, 30m, 25m, 1h 55m, 20m, 2h 10m, 1h 00m. Total 6h 40m. Thursday and Saturday together are 4h 05m. Sample data."
 
 ### Script 2: Restarting after a gap (steps, with LinkedIn)
 
-**Source:** content pillars, section 3, idea 4 (marked LI). Theme: steady, not heroic. Length: 24.5 s, 7 screens. No numbers, so no sample label. Pillar 2: no feature is mentioned, and the video ends on the name only.
+**Source:** content pillars, section 3, idea 4 (marked LI). Theme: steady, not heroic. Length: 25.5 s, 7 screens. No numbers, so no sample label. Pillar 2: no feature is mentioned, and the video ends on the name only.
 
 | # | Time | On-screen text | Visual |
 |---|---|---|---|
-| 1 | 0.0 to 3.5 | Restarting after / a long gap? | Plain background. Line 1 appears at frame 0, line 2 at 0.4 s. Hook text 88 px. |
-| 2 | 3.5 to 6.5 | Study one / ordinary week. | Chip `Step 1`. |
-| 3 | 6.5 to 10.0 | Count the time / per day. | Chip `Step 2`. |
-| 4 | 10.0 to 13.0 | Write the total down. | Chip `Step 3`. |
-| 5 | 13.0 to 17.5 | Plan the next week / from that number. | Chip `Step 4`. |
-| 6 | 17.5 to 21.5 | A starting point, / not a score. | No chip. Text in `primary`. |
-| 7 | 21.5 to 24.5 | CareerOS | End screen, name only (logo placeholder). |
+| 1 | 0.0 to 4.5 | Back after a gap / in your prep? | Plain background. Line 1 appears at frame 0, line 2 at 0.4 s. Hook text 88 px. |
+| 2 | 4.5 to 7.5 | Study one ordinary week. | Chip `Step 1`. One line at 64 px. |
+| 3 | 7.5 to 11.0 | Count the time per day. | Chip `Step 2`. One line at 64 px. |
+| 4 | 11.0 to 14.0 | Write the total down. | Chip `Step 3`. |
+| 5 | 14.0 to 18.5 | Plan the next week / from that number. | Chip `Step 4`. |
+| 6 | 18.5 to 22.5 | A starting point, / not a score. | No chip. Text in `primary`. |
+| 7 | 22.5 to 25.5 | CareerOS | End screen, name only (logo placeholder). |
 
 Step 2 uses a generic "count" so the reader can use any method; the end screen names the product only. "Plan" means the reader's own notes. CareerOS has no plan feature and the video does not say it has one.
 
@@ -520,7 +527,7 @@ Step 2 uses a generic "count" so the reader can use any method; the end screen n
   Restarting after a gap in your interview prep? Study one ordinary week. Count the time per day. Write the total down. Plan the next week from that number. It is a starting point, not a score.
 
   Text version:
-  Restarting after a long gap? Step 1: Study one ordinary week. Step 2: Count the time per day. Step 3: Write the total down. Step 4: Plan the next week from that number. A starting point, not a score. CareerOS.
+  Back after a gap in your prep? Step 1: Study one ordinary week. Step 2: Count the time per day. Step 3: Write the total down. Step 4: Plan the next week from that number. A starting point, not a score. CareerOS.
 
   #studyplan #codinginterview #softwareengineer
   ```
@@ -544,7 +551,7 @@ Step 2 uses a generic "count" so the reader can use any method; the end screen n
 
   It is a starting point, not a score. Some weeks are small, and a small week still tells you something.
 
-  CareerOS: https://careeros-taupe.vercel.app/?utm_source=linkedin&utm_medium=social&utm_campaign=restart-after-gap
+  Free Chrome extension and dashboard: https://careeros-taupe.vercel.app/?utm_source=linkedin&utm_medium=social&utm_campaign=restart-after-gap
 
   #studyplan #codinginterview #softwareengineer
   ```
@@ -553,28 +560,29 @@ Step 2 uses a generic "count" so the reader can use any method; the end screen n
 
 **Alt text:** "Four steps on a plain background: study one ordinary week, count the time per day, write the total down, plan the next week from that number. A starting point, not a score. CareerOS."
 
-### Script 3: Can it read my pages? (myth-vs-fact)
+### Script 3: Can a study tracker read my pages? (myth-vs-fact)
 
-**Source:** content pillars, section 4, idea 4. Theme: exactly what is stored. Length: 38.5 s, 9 screens. No sample numbers, so no sample label. Not a demo: no UI. Facts: brand profile section 6; voice, "Privacy, exactly".
+**Source:** content pillars, section 4, idea 4. Theme: exactly what is stored. Length: 41.5 s, 9 screens. No sample numbers, so no sample label. Not a demo: no UI. Facts: brand profile section 6; voice, "Privacy, exactly". CareerOS is named on screen 9; the caption and the description name it from the first line.
 
 | # | Time | On-screen text | Visual |
 |---|---|---|---|
-| 1 | 0.0 to 3.5 | Can it read / my pages? | Hook 88 px. Plain background. |
-| 2 | 3.5 to 7.5 | It reads every page / you open. | Chip `Myth` (outlined, `muted-foreground`). |
-| 3 | 7.5 to 11.5 | It does not read / page content. | Chip `Fact` (filled `primary`, `primary-foreground` text). |
-| 4 | 11.5 to 17.5 | It uses the tab address / only for the site name. | Plain text. |
-| 5 | 17.5 to 23.5 | It stores the site name, / start time and end time. | Chip `Your study time`. |
-| 6 | 23.5 to 27.5 | Full web addresses / and page titles. | Chip `Never stores`. |
-| 7 | 27.5 to 30.5 | Page content / and keystrokes. | Chip `Never stores`. Same layout as screen 6. |
-| 8 | 30.5 to 34.5 | The code is public / on GitHub. | Plain text. |
-| 9 | 34.5 to 38.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. |
+| 1 | 0.0 to 4.5 | Can a study tracker / read my pages? | Hook, 80 px (line 1 has 19 characters). Plain background. |
+| 2 | 4.5 to 8.5 | It reads every page / that you open. | Chip `Myth` (outlined, `muted-foreground`). |
+| 3 | 8.5 to 12.5 | It does not read / any page content. | Chip `Fact` (filled `primary`, `primary-foreground` text). |
+| 4 | 12.5 to 18.5 | It uses the tab address / only for the site name. | Plain text. |
+| 5 | 18.5 to 24.5 | It stores the site name, / start time and end time. | Chip `Your study time`. |
+| 6 | 24.5 to 28.5 | Full web addresses / and page titles. | Chip `Never stores`. |
+| 7 | 28.5 to 32.5 | Page content and / all your keystrokes. | Chip `Never stores`. Same layout as screen 6. |
+| 8 | 32.5 to 37.5 | The code is public. / Check it on GitHub. | Plain text. |
+| 9 | 37.5 to 41.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. |
 
 Notes for the editor:
 
+- Screen 1 is about "a study tracker" on purpose: the question is general, and the answer on screens 3 to 7 is about CareerOS, which the end screen and the caption name. The video does not claim anything about other tools.
 - Screen 4 says "uses the tab address". Do not change it to "never sees" or "never reads". The extension uses the address of the active tab to get the site name (voice, "Privacy, exactly").
 - The chip "Your study time" on screen 5 keeps the line exact: the account email and the sign-in provider are stored too. If a viewer asks, answer in plain words (voice, section 2): "Your account email and sign-in provider are stored. For your study time, the site name and the start and end times."
 - Do not add "100%", "no cookies", "open source" or "private by design".
-- Do not show the Chrome permission window. That would show UI of the browser; it is not a CareerOS demo, but keep the video text-only.
+- Do not show the Chrome permission window. Keep the video text-only.
 
 **Hook alternatives not used:** "Does a study tracker watch everything you do?" (idea 1, a different video) and "What does a tracker see?" (vague).
 
@@ -591,7 +599,7 @@ Notes for the editor:
   About your study time, it stores the site name, start time and end time. It never stores full web addresses, page titles, page content or keystrokes. The code is public on GitHub.
 
   Text version:
-  Can it read my pages? Myth: it reads every page you open. Fact: it does not read page content. It uses the tab address only for the site name. About your study time, it stores the site name, start time and end time. Never stores full web addresses, page titles, page content or keystrokes. The code is public on GitHub. Free Chrome extension. CareerOS.
+  Can a study tracker read my pages? Myth: it reads every page that you open. Fact: it does not read any page content. It uses the tab address only for the site name. About your study time, it stores the site name, start time and end time. Never stores full web addresses, page titles, page content and all your keystrokes. The code is public. Check it on GitHub. Free Chrome extension. CareerOS.
 
   #chromeextension #privacy #codinginterview #softwareengineer
   ```
@@ -604,14 +612,14 @@ Notes for the editor:
   #chromeextension #privacy #codinginterview #softwareengineer
   ```
 
-**Alt text:** "Text only. Myth: it reads every page you open. Fact: it does not read page content. It uses the tab's address only to get the site name. About your study time, it stores the site name, start time and end time. It never stores full web addresses, page titles, page content or keystrokes. The code is public on GitHub. Free Chrome extension. CareerOS."
+**Alt text:** "Text only. Myth: it reads every page that you open. Fact: it does not read any page content. It uses the tab address only for the site name. About your study time, it stores the site name, start time and end time. It never stores full web addresses, page titles, page content or keystrokes. The code is public. Check it on GitHub. Free Chrome extension. CareerOS."
 
 ### Check of the three scripts against section 4.6
 
 | Check | Script 1 | Script 2 | Script 3 |
 |---|---|---|---|
-| Length 20 to 45 s | 30.5 s | 24.5 s | 38.5 s |
-| Hook at frame 0, 6 words or fewer | Yes (6) | Yes (5) | Yes (5) |
+| Length 20 to 45 s | 30.5 s | 25.5 s | 41.5 s |
+| Hook at frame 0, 7 words or fewer | Yes (6) | Yes (7) | Yes (7) |
 | Numbers are labeled sample | Yes | No numbers | No numbers |
 | No UI | Yes | Yes | Yes |
 | Facts from brand profile section 6 or sample | Sample | None needed | Section 6 |
@@ -633,7 +641,7 @@ Notes for the editor:
 ## 7. Open points
 
 1. Safe zones are our conservative choice, not official numbers. Confirm them with the first private uploads (section 4.5) and update section 1.4.
-2. Pixabay Music: the full Terms and its Content ID position were not read. Read them by hand before the first video and copy the music rule here with the date.
+2. Pixabay Music: no warranty and no Content ID promise [V5b]. Claims can come after upload, so the checks in section 3.1 stay in the weekly routine. Read the full Terms by hand before the first video and copy the music rule here with the date.
 3. Whether music baked into the file is accepted on TikTok for a business account is not verified (platform study, assumption 4).
 4. Kdenlive: confirm no watermark on the first export and read its license (GPL, assumption).
 5. CapCut's own terms were not read. If the product owner wants it, read the commercial-use terms of the free plan first.
@@ -651,6 +659,7 @@ All accessed 2026-11-17. "Secondary" means a blog or news article, used where th
 - [V3b] BIGVU, "CapCut free vs Pro: what 2026's restructure actually gives you" (2026-06-29), secondary: <https://bigvu.tv/blog/capcut-free-vs-pro-what-2026s-restructure-actually-gives-you/>
 - [V4] GitHub, Mona Sans repository (license: SIL Open Font License 1.1): <https://github.com/github/mona-sans>
 - [V5] Pixabay, Content License summary: <https://pixabay.com/service/license-summary/>
+- [V5b] Pixabay, Terms of Service (read in the specialist review of PR #204, 2026-11-17): <https://pixabay.com/service/terms/>
 - [V6] YouTube Help, Audio Library: <https://support.google.com/youtube/answer/3376882>
 - [V7] Social Media Today, TikTok music rules for businesses (2020-05-11), secondary: <https://www.socialmediatoday.com/news/tiktok-changes-rules-on-music-usage-by-businesses/577734/> (from platform study [S10])
 - [V8] Buffer, how to schedule TikTok posts, secondary: <https://buffer.com/resources/how-to-schedule-tiktok-posts/> (from platform study [S8])
@@ -661,4 +670,4 @@ All accessed 2026-11-17. "Secondary" means a blog or news article, used where th
 
 Internal: [brand profile](brand-profile.md), [persona](persona.md), [voice](voice.md), [platform study](platform-study.md), [content pillars](content-pillars.md), [design system](../design-system.md), [design tokens](../../packages/shared/theme/tokens.css), [v1 discovery](../../specs/v1/00-discovery.md).
 
-Not readable by our tools, so not used as evidence: CapCut's own terms and license pages, Pixabay's full Terms, TikTok's Commercial Music Library page, YouTube and TikTok overlay measurements, the `OFL.txt` text.
+Not readable by our tools, so not used as evidence: CapCut's own terms and license pages, TikTok's Commercial Music Library page, YouTube and TikTok overlay measurements, the `OFL.txt` text.
