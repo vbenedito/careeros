@@ -1,6 +1,6 @@
 # Release process
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-13
+Type: living · Owner: tech lead · Last reviewed: 2026-11-17
 
 How each part of CareerOS reaches users. Steps marked **Proposed** have not been practised yet. Account-specific production settings are kept privately by the product owner and are not repeated here.
 
@@ -21,15 +21,15 @@ The version is `version` in `apps/extension/package.json`; the manifest takes it
 | Step | How |
 |---|---|
 | 1. Bump | Raise `version` in `apps/extension/package.json` in a PR (e.g. `chore(extension): version 0.1.1 …`) |
-| 2. Build | With `apps/extension/.env.production` in place: `pnpm --filter @careeros/extension release` (unpacked zip with the `key`) and `pnpm --filter @careeros/extension release:store` (store zip without `key`, STORE-01) |
+| 2. Build | With `apps/extension/.env.production` in place: `pnpm --filter @careeros/extension release:store` (store zip without `key`, STORE-01). Delete the local env copy afterwards if it was staged for the build |
 | Automatic check | Every PR runs `pnpm check:store-package` (STORE-08): it builds the store zip with placeholder public values and fails on a `key`, a permission change, host permissions, a version that differs from `package.json`, a wrong `minimum_chrome_version`, source maps or `.env` files. It builds in a temporary directory, so it can be run locally without touching a release build |
-| 3. GitHub Release | Tag `vX.Y.Z`, attach `careeros-extension-X.Y.Z.zip`, add install/update notes: load unpacked → replace the folder → reload (ENV-05a). Done for v0.1.0 and v0.1.1 |
+| 3. GitHub Release | **None since 2026-11-17:** the Chrome Web Store is the only release channel (ENV-05a). The releases v0.1.0 and v0.1.1 stay for history |
 | 4. Chrome Web Store | Upload the `-store.zip` in the Developer Dashboard; the listing text, permission justifications and data disclosures are in [listing.md](../chrome-web-store/listing.md) (STORE-02..06). Submit for review |
 | 5. After publication | Set `EXTENSION_INSTALL_URL` to the listing URL and redeploy the dashboard (LAND-05) |
 
-The first store submission is in progress. Until a store version has been published and updated once, these parts are **Proposed**:
+Store updates are practised (0.2.1 → 0.2.3, 2026-11-12..17). Rollback and rejection are still **Proposed**:
 
-- **Store update:** bump the version, build `release:store`, upload as a new package, submit for review. Users get it through Chrome's automatic updates.
+- **Store update** (practised): bump the version, build `release:store`, upload as a new package, submit for review. Users get it through Chrome's automatic updates.
 - **Store rollback:** the store cannot reinstate an older package directly. Rebuild the last good commit with a **higher** version number and submit it. For a serious problem, unpublish the item while the fix is in review.
 - **Review rejection:** fix what the reviewer names, keeping SEC-01/SEC-03 and the listing in sync (STORE-03/04), and resubmit.
 
@@ -67,6 +67,6 @@ CI runs `pnpm audit --prod --audit-level=high` through `scripts/ci/audit.ts`. Wh
 |---|---|
 | Dashboard ↔ extension protocol | Every message carries `protocolVersion` (AUTH-07a). The dashboard accepts `DASHBOARD_PROTOCOL_VERSIONS`, the extension `SUPPORTED_PROTOCOL_VERSIONS`; both are `[1]`. **Proposed** for a version 2: release the extension supporting `[1, 2]` first, then the dashboard; drop 1 only after users have updated. The dashboard shows "Please update the extension" when it cannot talk to an installed version |
 | Ingest and tracked-domain API | Older extensions stay installed for a long time, unpacked ones never update by themselves. Keep `ingest_study_sessions(sessions jsonb)` and `tracked_domains` backward compatible |
-| Dashboard domain | The extension only accepts messages from `VITE_DASHBOARD_ORIGIN` (`externally_connectable`, AUTH-06). A new domain needs a new extension build with the new origin, a store review and a GitHub Release **before** the dashboard moves; then update `SITE_URL`, the Supabase Auth redirect URLs (SEC-11) and redeploy |
+| Dashboard domain | The extension only accepts messages from `VITE_DASHBOARD_ORIGIN` (`externally_connectable`, AUTH-06). A new domain needs a new extension build with the new origin, and a store review **before** the dashboard moves; then update `SITE_URL`, the Supabase Auth redirect URLs (SEC-11) and redeploy |
 | Supabase project | A new project changes `VITE_SUPABASE_URL` and the publishable key: a new extension release is needed ([operations restore](../operations.md#restore-procedure)) |
 | Extension ID | Pinned by `MANIFEST_KEYS`; the dashboard's `NEXT_PUBLIC_EXTENSION_ID` must match (AUTH-06, STORE-05) |

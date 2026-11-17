@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): repository layout, Node version, environment variable
 
 Amended 2026-11-12 (#142): ENV-08 runs the responsive layout checks (TEST-01) and uploads their screenshots.
 
+Amended 2026-11-17: ENV-05a — the Chrome Web Store is the only release channel; no more GitHub Releases with unpacked zips (product owner decision).
+
 Amended 2026-11-12 (#157): ENV-08 `checks` runs `pnpm check:spec-trace` (TEST-02).
 
 Amended 2026-11-12 (#147): ENV-08 applies production migrations with the workflow `migrate.yml` instead of from a laptop.
@@ -56,7 +58,7 @@ careeros/
 | Env | Backend | Dashboard | Extension build |
 |---|---|---|---|
 | **Local** | Supabase CLI stack in **Docker Desktop** (`supabase start`: Postgres, Auth, Studio, Inbucket) | `next dev` on `http://localhost:3000` | dev build, `externally_connectable` → localhost:3000, Supabase → local |
-| **Production** | Supabase Cloud project (free tier) | Vercel (free tier) | prod build, published on the Chrome Web Store (STORE, since 2026-11-12); unpacked zips from GitHub Releases for older installs |
+| **Production** | Supabase Cloud project (free tier) | Vercel (free tier) | prod build, published on the Chrome Web Store (STORE, since 2026-11-12), the only release channel since 2026-11-17 |
 
 - **ENV-04** No staging in v0.
 - **ENV-05** Configuration via env files (`.env.local`, never committed; `.env.example` committed). The extension's build-time config (dashboard origin, Supabase URL + publishable key, extension `key`) is injected by Vite per mode. Dev and prod builds use **different** manifest keys (different IDs, installable side by side; each dashboard env knows its own ID). The manifest `key` is a **public** key; the private keys were intentionally not kept, since unpacked builds don't need them (a Chrome Web Store iteration would use the store's signing).
@@ -76,7 +78,7 @@ careeros/
 | `VITE_DASHBOARD_ORIGIN` | extension | Required; an origin without path, https in production builds |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | extension | Required (https URL, `sb_publishable_…` key) in production builds; development builds may omit them and report "not configured". Values that look like secrets fail the build |
 
-- **ENV-05a** Releases: semantic version in `manifest.json`; each release is a GitHub Release with the prod zip and install/update instructions (load unpacked → replace folder → reload). Updates are manual for unpacked builds; store installs update automatically (STORE). AUTH-07a surfaces outdated builds. Amended 2026-11-12 (#133).
+- **ENV-05a** Releases: semantic version in `manifest.json`; each release is a Chrome Web Store update, and store installs update automatically (STORE). The store is the only release channel: no GitHub Releases with unpacked zips after v0.1.1, and unpacked installs from those releases do not update by themselves. AUTH-07a surfaces outdated builds. Amended 2026-11-12 (#133); 2026-11-17 (store only).
 - **ENV-06** Local OAuth: the local stack is used with seeded users (admin API) for development and tests; optionally a GitHub OAuth app for `localhost` can be configured, documented but not required.
 - **ENV-07** The dashboard is **not** containerized in v0 (Vercel builds it natively); Docker is used for the backend stack, database tests and CI parity (ADR-0008).
 

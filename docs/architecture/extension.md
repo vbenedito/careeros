@@ -251,7 +251,7 @@ Packages (`scripts/zip.ts`):
 
 | Script | Zip | Use |
 |---|---|---|
-| `release` | `careeros-extension-<version>.zip` | Unpacked production build, keeps the `key` (GitHub Release) |
+| `release` | `careeros-extension-<version>.zip` | Unpacked production build, keeps the `key` (same ID as the store item), for local checks only; not distributed since 2026-11-17 (ENV-05a) |
 | `release:store` | `careeros-extension-<version>-store.zip` | Chrome Web Store: same build without `key` (STORE-01) |
 
 The version comes from `apps/extension/package.json`. Release steps: [release process](../process/release.md#extension).
