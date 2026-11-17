@@ -212,16 +212,13 @@ flowchart LR
   V["Vercel<br/>Next.js (Node 26)"]
   SB["Supabase Cloud<br/>Postgres, Auth, PostgREST"]
   CWS["Chrome Web Store"]
-  GR["GitHub Releases<br/>unpacked zips"]
   U["User's Chrome"]
 
   GH -- "build on push to main" --> V
   GH -- "CI on PRs and main,<br/>weekly encrypted backup" --> GH
   GH -. "migrations applied with the Supabase CLI" .-> SB
   GH -. "release:store zip, manual upload" .-> CWS
-  GH -. "release zip, manual" .-> GR
   CWS --> U
-  GR --> U
   U --> V
   U --> SB
   V --> SB
@@ -231,7 +228,7 @@ flowchart LR
 |---|---|---|---|
 | Dashboard and landing | Vercel (Hobby) | Built from `main` | [release](../process/release.md#dashboard), ENV-05b |
 | Database, Auth | Supabase (Free) | Migrations in `supabase/migrations`, applied by `migrate.yml` on merge to `main` | [release](../process/release.md#database-migrations), [operations](../operations.md) |
-| Extension | Chrome Web Store; GitHub Releases for unpacked builds | `release:store` / `release` zips | [release](../process/release.md#extension), STORE-01..07, ENV-05a |
+| Extension | Chrome Web Store (the only release channel) | `release:store` zip | [release](../process/release.md#extension), STORE-01..07, ENV-05a |
 | CI, backups and migrations | GitHub Actions (`ci.yml`, `backup.yml`, `migrate.yml`) | On pull requests, pushes to `main`, weekly schedule, migration changes on `main` | ENV-08, [operations §4](../operations.md#4-backups), [§6](../operations.md#6-database-migrations) |
 
 ## Cross-cutting concerns
