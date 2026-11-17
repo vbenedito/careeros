@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): `public.hostname` domain type, indexes, column-level 
 
 Amended 2026-11-12 (#145): limit 50 → 12; existing lists over the limit are kept; v1 premium may raise it.
 
+Amended 2026-11-17 (#171): DATA-10 test note — `posix/` and `right/` zone copies are outside the "every real zone name" check; the validator is unchanged.
+
 Supabase Postgres. All application tables live in `public`, have RLS **enabled and forced**, and reference `auth.users(id) ON DELETE CASCADE`. Schema changes ship only as versioned migrations in `supabase/migrations/`.
 
 ## 1. Tables
@@ -66,7 +68,7 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 ### `get_daily_totals(p_from date, p_to date, p_tz text) → table(day date, seconds bigint)`
 
-- **DATA-10** Raises `NOT_AUTHENTICATED` (`PT401` → HTTP 401) when there is no user. Returns one row per day in `[p_from, p_to]` (zero-filled), summing `duration_s` of the caller's intervals by `(started_at AT TIME ZONE p_tz)::date`. Rejects ranges > 92 days or outside 0001-01-01..2999-12-31 (`INVALID_RANGE`; the dashboard never asks for dates before year 1000) and time zones that are not ≤ 64 characters of `[A-Za-z0-9_+/-]`, contain a digit (unless `Etc/GMT±N`, N ≤ 14, or one of `EST5EDT`, `CST6CDT`, `MST7MDT`, `PST8PDT`), or that the server cannot load (`INVALID_TIME_ZONE`). The zone is checked by loading it, not by scanning `pg_timezone_names` (which reads every zone file per call, #111). Names with a digit can parse as POSIX specs, and every distinct one would stay in the connection's zone cache; a pgTAP test keeps every real zone name allowed.
+- **DATA-10** Raises `NOT_AUTHENTICATED` (`PT401` → HTTP 401) when there is no user. Returns one row per day in `[p_from, p_to]` (zero-filled), summing `duration_s` of the caller's intervals by `(started_at AT TIME ZONE p_tz)::date`. Rejects ranges > 92 days or outside 0001-01-01..2999-12-31 (`INVALID_RANGE`; the dashboard never asks for dates before year 1000) and time zones that are not ≤ 64 characters of `[A-Za-z0-9_+/-]`, contain a digit (unless `Etc/GMT±N`, N ≤ 14, or one of `EST5EDT`, `CST6CDT`, `MST7MDT`, `PST8PDT`), or that the server cannot load (`INVALID_TIME_ZONE`). The zone is checked by loading it, not by scanning `pg_timezone_names` (which reads every zone file per call, #111). Names with a digit can parse as POSIX specs, and every distinct one would stay in the connection's zone cache; a pgTAP test keeps every real zone name allowed (the `posix/` and `right/` copies of the zone tree that some images list are not canonical names and may be refused).
 
 ### `get_domain_totals(p_from date, p_to date, p_tz text) → table(domain text, seconds bigint)`
 

@@ -145,6 +145,13 @@ jobs:
           pnpm exec supabase start -x studio,postgres-meta || {
             echo "::warning::supabase start failed; retrying once"
             pnpm exec supabase stop --no-backup || true
+            # #171: a socket opened before the sysctl can still hold a stack port; the retry
+            # 2 s later hit the same port. Log who holds 54320–54329, wait up to 60 s for them.
+            sudo ss -tanp '( sport >= :54320 and sport <= :54329 )' || true
+            for _ in $(seq 1 30); do
+              ss -Htan '( sport >= :54320 and sport <= :54329 )' | grep -q . || break
+              sleep 2
+            done
             pnpm exec supabase start -x studio,postgres-meta
           }
 
