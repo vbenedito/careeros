@@ -3,7 +3,7 @@
 -- the plan without changing the errcode or the hint that released extensions rely on.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(34);
 
 select tests.create_user('erin');
 select tests.create_user('frank');
@@ -33,6 +33,13 @@ select ok(
   not has_table_privilege('anon', 'public.plans', 'select')
   and not has_table_privilege('anon', 'public.plans', 'insert'),
   'ENT-01 anon has no access to plans'
+);
+select ok(
+  not has_table_privilege('service_role', 'public.plans', 'insert')
+  and not has_table_privilege('service_role', 'public.plans', 'update')
+  and not has_table_privilege('service_role', 'public.plans', 'delete')
+  and not has_table_privilege('service_role', 'public.plans', 'truncate'),
+  'ENT-01 service_role cannot write plans: only a migration changes them'
 );
 select policies_are('public', 'plans', array['plans_select_all', 'plans_no_anonymous'],
   'ENT-01 plans has exactly a read policy and the anonymous guard');
@@ -144,6 +151,11 @@ select is(
 
 -- Unique-before-limit: under the limit a duplicate is a unique violation; at the limit the BEFORE
 -- trigger answers first, exactly as before (the dashboard checks for an existing site itself).
+select throws_ok(
+  $$ insert into public.tracked_domains (domain) values ('site1.test') $$,
+  'P0001', 'A user can track at most 12 domains',
+  'DATA-01 ENT-06 at the limit a duplicate gets DATA-01, not 23505'
+);
 select lives_ok(
   $$ delete from public.tracked_domains where domain = 'site12.test' $$,
   'ENT-03 at the limit, a domain can be removed'

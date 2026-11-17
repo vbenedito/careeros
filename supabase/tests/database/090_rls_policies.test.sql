@@ -116,9 +116,9 @@ select is(
   (select array_agg(p.tablename || '.' || p.policyname || ':' || p.cmd order by p.policyname)
    from pg_policies p
    join reference_policies r on r.policy_key = p.tablename || '.' || p.policyname
-   where p.schemaname = 'public' and p.permissive = 'PERMISSIVE'),
+   where p.schemaname = 'public' and p.permissive = 'PERMISSIVE' and p.roles = array['authenticated']::name[]),
   array['plans.plans_select_all:SELECT'],
-  'ENT-01 SEC-07 the reference-table exception exists, is permissive and applies to SELECT only'
+  'ENT-01 SEC-07 the reference-table exception exists, is permissive, SELECT-only and for exactly {authenticated}'
 );
 select is(
   (select array_agg(t.tablename || ':' || g.privilege order by t.tablename, g.privilege)

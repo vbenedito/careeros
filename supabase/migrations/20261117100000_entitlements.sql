@@ -26,6 +26,9 @@ alter table public.plans force row level security;
 -- Deny by default, then grant back read access only (as for the other tables, #6).
 revoke all on table public.plans from anon, authenticated;
 grant select on table public.plans to authenticated;
+-- Supabase also grants service_role broad table privileges by default; only a migration may
+-- change plans (ENT-01), so take the write privileges away from it too.
+revoke insert, update, delete, truncate on table public.plans from service_role;
 
 -- The table holds no user data: every signed-in user may read every row. There is no INSERT,
 -- UPDATE or DELETE grant and no write policy, so clients cannot change a limit.
@@ -81,7 +84,7 @@ begin
   select p.max_tracked_domains into v_limit from public.plans p where p.id = v_plan;
   if v_limit is null then
     -- Fail closed: a plan without a row must never mean "no limit".
-    raise exception 'Plan % has no limit row', v_plan using errcode = 'P0001';
+    raise exception 'Plan % has no limit row', v_plan using errcode = 'P0001', hint = 'ENT-03';
   end if;
 
   if (select count(*) from public.tracked_domains where user_id = new.user_id) >= v_limit then
