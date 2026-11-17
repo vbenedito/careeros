@@ -38,10 +38,10 @@ Sophistication: a working developer. They know the tools and the jargon. They re
 ### Pains and fears
 
 - **Overload and fading effort.** A burst of intense study, then a slow decline until you stop ([Medium](https://medium.com/@sandeep.kumar.ece16/interview-preparation-issues-part-2-3e23ccdcfd75)). One author says a past prep cycle caused burnout that took about two years to recover from ([Two Pug](https://twopug.com/interview-prep-keep-at-it), read via a mirror).
-- **Guilt.** Sources describe feeling guilty about not doing more, and a "guilt spiral" after a missed day ([DEV Community](https://dev.to/alex_hunter_44f4c9ed6671e/leetcode-burnout-while-working-full-time-the-sustainable-survival-guide-ch1), [Senior Path](https://seniorpath.pages.dev/articles/execution-and-communication/keeping-interview-preparation-sustainable-without-burning-out)).
-- **Comparing with others.** Writers warn readers not to compare themselves with unsustainable schedules or peers ([DEV Community](https://dev.to/alex_hunter_44f4c9ed6671e/leetcode-burnout-while-working-full-time-the-sustainable-survival-guide-ch1), [Medium](https://medium.com/@sandeep.kumar.ece16/interview-preparation-issues-part-2-3e23ccdcfd75)). This means the temptation is real.
-- **Not knowing where the time goes.** One article tells busy developers to track one day honestly, because many cannot say where their time goes ([YeetCode blog](https://yeetcode-static.pages.dev/blog/ten-minutes-a-day)).
-- **Tools that ask too much.** A reviewer of a LeetCode timer complains about its permission to read and change data on all sites ([Chrome Web Store reviews](https://chromewebstore.google.com/detail/gfkgelnlcnomnahkfmhemgpahgmibofd/reviews?hl=en)).
+- **Guilt.** One source says people feel guilty about not doing more ([DEV Community](https://dev.to/alex_hunter_44f4c9ed6671e/leetcode-burnout-while-working-full-time-the-sustainable-survival-guide-ch1)). Another describes a "guilt spiral" after a missed day ([Senior Path](https://seniorpath.pages.dev/articles/execution-and-communication/keeping-interview-preparation-sustainable-without-burning-out)).
+- **Comparing with others.** Writers warn readers not to compare themselves with unsustainable schedules or peers ([DEV Community](https://dev.to/alex_hunter_44f4c9ed6671e/leetcode-burnout-while-working-full-time-the-sustainable-survival-guide-ch1), [Medium](https://medium.com/@sandeep.kumar.ece16/interview-preparation-issues-part-2-3e23ccdcfd75)). This suggests the temptation is real (our reading).
+- **Not knowing where the time goes.** One article suggests a one-day honest time audit (of phone use) to see where time goes ([YeetCode blog](https://yeetcode-static.pages.dev/blog/ten-minutes-a-day)).
+- **Tools that ask too much.** A reviewer of another extension complains about a broad permission warning ([Chrome Web Store reviews](https://chromewebstore.google.com/detail/gfkgelnlcnomnahkfmhemgpahgmibofd/reviews?hl=en)). Internal research only. Never name or quote this extension in posts (brand profile section 10).
 - Assumption, to validate: the biggest fear is "I studied a lot and still failed". We must never speak to that fear with promises (brand profile, section 10).
 
 ### Current workarounds
@@ -80,7 +80,7 @@ Short phrases, one per source, to guide language. Check each against the live pa
 | "measure useful consistency instead of heroic hours" | [Senior Path](https://seniorpath.pages.dev/articles/execution-and-communication/keeping-interview-preparation-sustainable-without-burning-out) | What to measure |
 | "this slow decay cycle continues till you just stop." | [Medium](https://medium.com/@sandeep.kumar.ece16/interview-preparation-issues-part-2-3e23ccdcfd75) | Fading effort |
 | "Work will always be demanding." | [YeetCode blog](https://yeetcode-static.pages.dev/blog/ten-minutes-a-day) | Time |
-| "permission to read and change all data on all sites" | [Chrome Web Store reviews](https://chromewebstore.google.com/detail/gfkgelnlcnomnahkfmhemgpahgmibofd/reviews?hl=en) | Permissions |
+| (paraphrase) Broad permission warnings put people off. Internal research only; never name or quote the extension in posts. | [Chrome Web Store reviews](https://chromewebstore.google.com/detail/gfkgelnlcnomnahkfmhemgpahgmibofd/reviews?hl=en) | Permissions |
 
 Words and ideas that repeat across sources (our paraphrase): consistency over intensity, burnout, guilt, "usable" time after work, overwhelmed, too many topics, forgetting the timer. Use "consistency" and "your real week". Avoid "grind".
 
@@ -130,7 +130,7 @@ None for now. Our sources are mostly about working engineers. We found no source
 6. Which platforms they use, and how (short video, LinkedIn). This feeds #188.
 7. Students and career changers may differ. No data.
 8. Reddit and Blind voice. Most threads could not be read. Read them by hand and add phrases.
-9. The "their own words" table came from reading pages through a summarizing tool. Open each page and confirm each phrase before public use.
+9. Four of the quoted phrases were confirmed word for word on 2026-11-17 by the specialist review. The Medium phrase is mid-sentence: quote it only with that in mind. The Chrome Web Store row is now a paraphrase.
 10. Ask the first real users (for example with a short, voluntary question in the dashboard or on the Chrome Web Store page). Do not publish any answer as a statistic unless the numbers are real.
 
 ## Sources
