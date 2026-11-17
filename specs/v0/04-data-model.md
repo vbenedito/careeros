@@ -8,6 +8,8 @@ Amended 2026-11-12 (#145): limit 50 → 12; existing lists over the limit are ke
 
 Amended 2026-11-17 (#171): DATA-10 test note — `posix/` and `right/` zone copies are outside the "every real zone name" check; the validator is unchanged.
 
+Amended 2026-11-17 (#176): proposed for v1 — DATA-01 limit from the plan ([ENT](../v1/02-entitlements.md)); `study_sessions.problem_slug`; ingest v2 next to the current RPC (DATA-06b, [ADR-0011](../../docs/adr/0011-ingest-v2.md)); caps count only new rows (DATA-09b, grill E5); overlap rejections reported apart (grill E3); account setting (DATA-13, DATA-14); problem totals (DATA-15).
+
 Supabase Postgres. All application tables live in `public`, have RLS **enabled and forced**, and reference `auth.users(id) ON DELETE CASCADE`. Schema changes ship only as versioned migrations in `supabase/migrations/`.
 
 ## 1. Tables
@@ -26,7 +28,7 @@ Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isVa
 | `created_at` | `timestamptz` not null | `default now()` |
 
 - `UNIQUE (user_id, domain)` (its index also serves `user_id` lookups and the FK cascade).
-- **DATA-01** A user may have at most **12** tracked domains (trigger-enforced). Lists that were already over the limit are kept: the user can remove sites but cannot add one while at or over the limit.
+- **DATA-01** A user may have at most **12** tracked domains (trigger-enforced). Lists that were already over the limit are kept: the user can remove sites but cannot add one while at or over the limit. *Amended 2026-11-17 (#176, proposed):* the number comes from the caller's plan (ENT-01..03; `free` = 12), and the error carries the limit and the plan (ENT-05, ENT-06). See [ENT](../v1/02-entitlements.md).
 
 ### `study_sessions` (stores intervals)
 
@@ -38,6 +40,7 @@ Both tables store hosts as `public.hostname`, a `text` domain that mirrors `isVa
 | `domain` | `public.hostname` not null | same domain type |
 | `started_at` | `timestamptz` not null | |
 | `ended_at` | `timestamptz` not null | |
+| `problem_slug` | `text` null | *(#176, proposed)* PRB-05 slug; `CHECK` length ≤ 100 and `PROBLEM_SLUG_PATTERN`; allowed only when `domain = 'leetcode.com'`. Null for every other row |
 | `duration_s` | `integer` | `GENERATED ALWAYS AS (extract(epoch from ended_at - started_at)::integer) STORED` |
 | `created_at` | `timestamptz` not null | `default now()` |
 
@@ -65,6 +68,15 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 - **DATA-08** Skips invalid elements, inserts the rest with `user_id = auth.uid()` and `ON CONFLICT (id) DO NOTHING`, and returns the ids of the **valid** elements that exist with `user_id = auth.uid()` (SYNC-04); an invalid element is never confirmed, even if its id was stored earlier. An id that collides with another user's row is therefore not returned and ends in quarantine.
 - **DATA-09** Abuse guard (call-level, two indexed counts per call): raises `ABUSE_LIMIT` (`PT429` → HTTP 429) when the caller already inserted ≥ 1,000 rows in the last hour or ≥ 3,500 rows in the last 24 hours. The counts are checked once per call, before the batch, so a user can exceed a cap by at most one batch (199 rows): harmless, and simpler than partial batches. A heavy real user creates ~18 rows a day; a 30-day offline backlog (≤ ~3,000 rows) fits in the daily cap and uploads over a few hours, the extension backing off on 429 without losing data (SYNC-06). *Changed by the product owner on 2026-11-10 (security audit #110): was > 10,000 per hour with no daily cap, which let a few throwaway accounts fill the free 500 MB database.*
 - **DATA-09a** An element whose interval overlaps another interval of the **same user and device**, stored or earlier in the same batch, is skipped like an invalid element (not confirmed → client quarantine). A retry of a stored interval (same id) is not an overlap; adjacent intervals (`[start, end)`) do not overlap. Intervals from different devices may overlap (two computers). Checked under the per-user lock, so concurrent calls cannot both pass. This keeps one user's data consistent (no double-counted time from one device); it is **not** an abuse limit, since the client chooses `device_id`. Storage abuse is bounded by DATA-09.
+- **DATA-09b** *(#176, grill E5, proposed)* The caps only stop **new** rows. A batch whose elements are all already stored for the caller (pure retries) is confirmed even when the caller is at a cap; a batch with at least one new row still raises `ABUSE_LIMIT` at the cap. Applies to both ingest RPCs (the reply of `ingest_study_sessions` keeps its type).
+
+### `ingest_study_sessions_v2(sessions jsonb) → jsonb` *(#176, proposed)*
+
+- **DATA-06b** A second ingest RPC, next to `ingest_study_sessions`, which keeps its contract for released extensions ([ADR-0011](../../docs/adr/0011-ingest-v2.md)). Same checks as DATA-06..09a (auth, batch size and bytes, per-element validation, overlap, abuse guard), same `SECURITY DEFINER` rules. Differences:
+  - an element may carry `problem` (a slug, PRB-05); it is validated with the same pattern as the column, and an invalid slug makes the element `invalid`;
+  - it returns `{"confirmed": [uuid…], "rejected": [{"id": uuid, "reason": "invalid" | "future" | "overlap"}]}`: `future` = only `ended_at` too far ahead (DATA-07), `overlap` = DATA-09a, `invalid` = anything else (grill E3). An element without a valid id is left out of both lists;
+  - the slug is stored only when the caller's problem setting is on at call time (DATA-14).
+  `ingest_study_sessions` never stores a slug (it ignores a `problem` key).
 
 ### `get_daily_totals(p_from date, p_to date, p_tz text) → table(day date, seconds bigint)`
 
@@ -77,6 +89,15 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 ### `private.link_requests` (AUTH-08 rate limit)
 
 `user_id` (FK → `auth.users`, cascade), `created_at`, index `(user_id, created_at)`; written and counted only by the definer function `public.consume_extension_link_quota() → boolean` (authenticated only; acts on `auth.uid()`; false after 5 requests in a rolling minute), called from the link route with the user's session; the caller's rows older than 1 h are deleted by the same function.
+
+### `get_problem_totals(p_from date, p_to date, p_tz text) → table(problem_slug text, seconds bigint, last_day date)` *(#176, proposed)*
+
+- **DATA-15** Same checks as DATA-10. For the caller's intervals with a slug, grouped by slug: total seconds and the last local day (`started_at AT TIME ZONE p_tz`) in `[p_from, p_to]`. Ordered by seconds desc, then slug; at most 200 rows (PRB-11). `SECURITY INVOKER`.
+
+### `account_settings` *(#176, proposed)*
+
+- **DATA-13** One row per user: `user_id` (PK, `default auth.uid()`, FK cascade), `track_problems boolean not null default false`, `updated_at timestamptz not null default now()`. No row means off (PRB-01). RLS forced: `SELECT`, `INSERT` and `UPDATE` of `track_problems` only where `user_id = (select auth.uid())`; anonymous JWTs refused, as for the other tables. No `DELETE` (the row goes with the account).
+- **DATA-14** Server-side guard for PRB-16: `ingest_study_sessions_v2` stores `problem_slug` as null when the caller has no row or `track_problems` is false at call time. The interval itself is still stored.
 
 ## 4. Account deletion
 

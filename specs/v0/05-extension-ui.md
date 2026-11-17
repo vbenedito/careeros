@@ -8,6 +8,8 @@ Amended 2026-11-12 (#58, #65): "Syncing…" footer state and the clock hint (pro
 
 Amended 2026-11-12 (#60, #65): the popup renders these states with exact texts ("Syncing…", the clock hint, the Disconnect confirmation with **Try syncing again**), a note on broad sites under Add site, "today" rolling over at midnight while open, Add-site errors cleared when the status changes, visible errors for `NOT_CONFIGURED` and unanswered commands, and Zod without its JIT probe (CSP).
 
+Amended 2026-11-17 (#176): proposed for v1 — the current LeetCode problem under the current session (EXT-UI-11, [PRB](../v1/01-problems.md)); the site-limit message uses the number from the server (EXT-UI-07, [ENT](../v1/02-entitlements.md)).
+
 ## 1. Direction
 
 Minimal, product-oriented, glanceable. Tracking is automatic: **no pause/resume button**. The dashboard owns analytics.
@@ -29,6 +31,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 - **EXT-UI-02** Durations format as `0m`, `45m`, `1h 05m`; under one minute shows `<1m`. Live values update every second while the popup is open. *(#60)* "Today" is recomputed from that clock tick with the engine's calendar (SYNC-12a): a popup left open across midnight starts the new day at once and reloads its data.
 - **EXT-UI-03** No charts, streaks, goals, badges or other analytics.
 - **EXT-UI-04** The "on this device" caption is always shown (SYNC-12).
+- **EXT-UI-11** *(#176, proposed)* While the open interval has a problem (PRB-08), the **Current session** block shows a second line: the problem name and its time today on this device, `Two Sum · 18m today` (PRB-14; duration format EXT-UI-02, live every second). Hidden when there is no problem. No problem list in the popup (EXT-UI-03).
 
 ### Status states
 
@@ -64,7 +67,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 ## 3. Settings view (inside the popup, back arrow to main)
 
 - **EXT-UI-06** **Tracking** switch (on by default). Off ⇒ closes any open interval and tracks nothing until turned on. Stored per device.
-- **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10). *(#60, product owner)* Under the input, one muted line: "Broad sites like youtube.com count every page on them." (no per-site warning).
+- **EXT-UI-07** **Tracked sites**: list with remove buttons and an input to add a domain (validated, normalized). Same server list as the dashboard (SYNC-09/10). *(#60, product owner)* Under the input, one muted line: "Broad sites like youtube.com count every page on them." (no per-site warning). *Amended 2026-11-17 (#176, proposed):* at the limit, the add error reads "You can track up to 12 sites." with the number from the server error (ENT-07, ENT-09), or "You've reached the site limit." when the error has no number.
 - **EXT-UI-08** **Account**: connected email · "Disconnect" (AUTH-12). *(#65)* When sessions are not on the server, the confirmation states how many (`pending` from the `UNSYNCED_DATA` reply: unsynced + quarantined, AUTH-12b) and offers **Try syncing again** before **Disconnect anyway**. A reply `SYNC_IN_PROGRESS` (an upload still running, AUTH-12b) shows "Still syncing your sessions. Try again in a moment." instead of the confirmation. *(#60, #65)* Texts: heading "Delete unsynced sessions?", then "3 study sessions haven't synced yet and will be deleted." ("1 study session hasn't …"); buttons **Try syncing again** (takes focus; reads "Syncing…" while it runs), **Disconnect anyway** (destructive) and **Cancel** (or Escape). After a retry that still leaves sessions, the count is updated and "Still not synced." is announced; `SYNC_IN_PROGRESS` or `FAILED` during a retry keeps the confirmation open with the message under it.
 - **EXT-UI-08a** When not connected, Settings shows the Tracking switch, then "Connect your account to manage your tracked sites." with **Connect account** (opens the dashboard's `/connect`) instead of Tracked sites and Account. If the last account left local data, **Forget local data** (AUTH-11a) follows; afterwards the view says "Local data deleted."
 - No other settings in v0.

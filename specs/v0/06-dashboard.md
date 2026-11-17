@@ -8,6 +8,8 @@ Amended 2026-11-12 (grill E4, H4, H6): DASH-12 re-adding a tracked site at the l
 
 Amended 2026-11-12 (#68, #70, #76, #78): DASH-02 trigger label before hydration and drawer scroll-lock nonce; DASH-07 first-visit skeleton and UTC hint; DASH-09 chart colour contrast; DASH-11 temporary vs permanent load errors; DASH-14 Settings heading outline and expired session on Delete account.
 
+Amended 2026-11-17 (#176): proposed for v1 — DASH-12 limit error with `limit`/`plan` ([ENT](../v1/02-entitlements.md)); LeetCode problems switch, card and one-time announcement (DASH-16..18, [PRB](../v1/01-problems.md)); route `/api/settings/problems`.
+
 ## 1. Direction
 
 Answers three questions: *how much did I study, how was it spread across days, on which platforms?* Visual language inspired by shadcn/ui dashboard blocks; product-oriented, minimal, light and dark.
@@ -27,6 +29,7 @@ Answers three questions: *how much did I study, how was it spread across days, o
 | `/privacy` | Privacy policy (spec 07) | public |
 | `/api/sites` (POST), `/api/sites/[id]` (DELETE) | Add / remove a tracked site (DASH-12) | required |
 | `/api/extension/link` (POST) | Token hash for the extension handoff (AUTH-08) | required |
+| `/api/settings/problems` (PUT) | Turn **Track LeetCode problems** on or off (DASH-16; #176, proposed) | required |
 | `/api/account/delete` (POST) | Account deletion (DASH-14) | required |
 | `/api/client-error` (POST) | Error-page report to the server log (ENV-11) | public |
 
@@ -72,9 +75,16 @@ No other pages or navigation items in v0. The landing page's search files (`/rob
 
 ## 5. Settings page
 
-- **DASH-12** **Tracked sites**: list, add (validated/normalized), remove (confirm). Shared with the extension (SYNC-09). Amended 2026-11-12 (grill E4, H4): adding a site that is already tracked succeeds (`200` with the existing site) also when the account is at the limit (DATA-01); an unexpected database error is logged (`logServerError`, code and capped message, no input) before the `500`.
+- **DASH-12** **Tracked sites**: list, add (validated/normalized), remove (confirm). Shared with the extension (SYNC-09). Amended 2026-11-12 (grill E4, H4): adding a site that is already tracked succeeds (`200` with the existing site) also when the account is at the limit (DATA-01); an unexpected database error is logged (`logServerError`, code and capped message, no input) before the `500`. Amended 2026-11-17 (#176, proposed): the limit error is `422 {"error":"LIMIT_REACHED","limit":12,"plan":"free"}` and the message uses that number (ENT-08, ENT-09).
 - **DASH-13** **Extension**: status via `STATUS` message (Connected as … / Not installed / Not connected), "Connect" (→ `/connect`) and "Disconnect".
 - **DASH-14** **Account**: email and provider, Sign out, **Sign out of all devices** (AUTH-12a), **Delete account** (recent sign-in, AUTH-14; typed confirmation, DATA-12; afterwards redirect to `/sign-in?deleted=1`). If the session expired meanwhile, the API still answers `401 NOT_AUTHENTICATED` (AUTH-03) and the page sends the viewer to `/sign-in?next=/settings#delete-account`, never to a JSON page. Headings: `h1` Settings, an `h2` per card styled as a section title, `h3` inside a card (Delete account). Amended 2026-11-12 (#78). Amended 2026-11-12 (grill H6): `/settings?error=delete` means the typed confirmation did not match ("the confirmation didn't match"), `?error=failed` means the server could not delete the account ("We couldn't delete your account right now. Try again in a few minutes."; logged as `account_delete.failed`).
+
+- **DASH-16** *(#176, proposed)* **LeetCode problems** card in Settings: a switch "Track LeetCode problems" (off by default, PRB-01) and one line: "Saves the problem name from LeetCode addresses (like two-sum) with your study time. Nothing else from the address." It saves through `PUT /api/settings/problems` `{ "enabled": boolean }` (Origin check and session, SEC-08) and says that the extension follows within about 5 minutes (PRB-03). When `leetcode.com` is not a tracked site, the card says the feature needs it.
+
+## 5a. LeetCode problems on the dashboard *(#176, proposed)*
+
+- **DASH-17** While the setting is on, the dashboard shows a **LeetCode problems** card under the charts for the selected period (PRB-11): a list of name (PRB-12), total time (formatted like the summary cards) and last day studied (e.g. "Tue, Nov 17"), from `get_problem_totals` (DATA-15). Empty state: "No LeetCode problems in this period." While the setting is off, the card is hidden. Same loading and error states as DASH-11.
+- **DASH-18** While the setting is off, a one-time **announcement card** at the top of the dashboard: "New: see your time per LeetCode problem.", a **Turn on in Settings** link (to `/settings#problems`) and a **Dismiss** button. Dismissing hides it for good in this browser (a cookie, no server record); turning the setting on hides it too.
 
 ## 6. Data loading
 

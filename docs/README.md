@@ -26,9 +26,14 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Web app (LLD)](architecture/web.md) | living | tech lead | Current | 2026-11-11 |
 | [Database (LLD)](architecture/database.md) | living | tech lead | Current | 2026-11-11 |
 | [Design system](design-system.md) | living | tech lead | Current | 2026-11-11 |
-| [ADRs](adr/README.md) (0001–0010, [template](adr/template.md)) | living | tech lead | 0001–0009 accepted; 0010 proposed (#137) | 2026-11-11 |
+| [ADRs](adr/README.md) (0001–0012, [template](adr/template.md)) | living | tech lead | 0001–0010 accepted; 0011, 0012 proposed (#176) | 2026-11-17 |
+| [ADR-0011: ingest v2](adr/0011-ingest-v2.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
+| [ADR-0012: entitlements](adr/0012-entitlements.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
 | **Product** | | | | |
-| [Specifications](../specs/README.md) | living | product owner | v0, LAND, STORE approved | 2026-11-11 |
+| [Specifications](../specs/README.md) | living | product owner | v0, LAND, STORE approved; v1 proposed | 2026-11-17 |
+| [v1 discovery](../specs/v1/00-discovery.md) | snapshot | product owner | Approved 2026-11-17 | 2026-11-17 |
+| [v1 spec: LeetCode problems (`PRB`)](../specs/v1/01-problems.md) | living | product owner | Proposed (#176) | 2026-11-17 |
+| [v1 spec: entitlements (`ENT`)](../specs/v1/02-entitlements.md) | living | product owner | Proposed (#176) | 2026-11-17 |
 | [Roadmap](roadmap.md) | living | product owner | Candidates, none authorized | 2026-11-11 |
 | [Landing content](landing/content.md) | living | product owner | Implemented; LAND-03 binds | 2026-11-11 |
 | [Landing SEO plan](landing/seo.md) | living | product owner | Implemented; LAND-04..07 bind | 2026-11-11 |
