@@ -29,6 +29,8 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Release 0.2.2 (2026-11-12): sync and sign-in reliability (#150), popup states (#151). Same permissions and description as 0.2.1; if 0.2.1 is still in review, 0.2.2 replaces it.
 
+> Release 0.2.3 (2026-11-17): reliability from the v0 grill review (#163): token refresh timeout, cross-account guard, Disconnect while syncing, protocol forward-compatibility. Same permissions and description as 0.2.2.
+
 ```
 CareerOS measures the time you spend studying for technical interviews, automatically, on the sites you choose.
 
