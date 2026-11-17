@@ -55,7 +55,7 @@ Alternatives for the H1, to choose with the design (#100):
 Monospace, scrolling: leetcode.com · neetcode.io · greatfrontend.com · docs.python.org · developer.mozilla.org · react.dev · coursera.org · github.com. Note under it: "Examples. Any site you study on works; you choose."
 
 ### 4.2a′ Privacy badges (directly under the hero, #140)
-One line of three pills, a list: **Never reads page content** · **No URLs stored** · **No ad trackers**. No "no cookies" claim (the dashboard uses session cookies).
+One line of two pills, a list: **Never reads page content** · **No ad trackers**. (Amended 2026-11-17, #176: "No URLs stored" removed by the product owner; implemented in #181; texts rethought in #196.) No "no cookies" claim (the dashboard uses session cookies).
 
 ### 4.2b Engine log (in How it works, beside the steps)
 Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session never exceeds 30 minutes (TRK-08):

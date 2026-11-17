@@ -6,7 +6,7 @@ Amended 2026-11-11 (#131): SYNC-02 triggers, SYNC-06 error classes, SYNC-07 quar
 
 Amended 2026-11-12 (#58, #83, #56, #65, #54; review of #150): Disconnect waits for a running cycle (SYNC-02b); "syncing" marker (SYNC-02c); future-dated rejections are retried (SYNC-05a, product owner decision A); empty confirmation is a call error (SYNC-05b); ingest timeout (SYNC-06a); unreadable entries counted (SYNC-07a); site-list refresh rules (SYNC-09a..c, SYNC-10a); popup "today" from the engine's calendar (SYNC-12a).
 
-Amended 2026-11-17 (#176): extensions from 0.3.0 upload through the ingest v2 RPC next to the current one (SYNC-03a, [ADR-0011](../../docs/adr/0011-ingest-v2.md), proposed); overlap rejections are reported apart and kept out of the SYNC-05b check (SYNC-05c, grill E3); pure retries are confirmed at the ingest caps (DATA-09b, grill E5); the site-list refresh also reads the problem setting (SYNC-09d).
+Amended 2026-11-17 (#176): extensions from 0.3.0 upload through the ingest v2 RPC next to the current one (SYNC-03a, [ADR-0011](../../docs/adr/0011-ingest-v2.md), proposed); overlap rejections are reported apart, dropped and counted, and kept out of the SYNC-05b check (SYNC-05c, grill E3); pure retries are confirmed at the ingest caps (DATA-09b, grill E5); the site-list refresh also reads the problem setting (SYNC-09d).
 
 Amended 2026-11-12 (grill E1/E2/H5/A3): a skipped final sync replies "still syncing" (SYNC-02a, AUTH-12c); unexpected errors record a coarse error kind (SYNC-06b); a token request blocked by the auth lock backs off (AUTH-10c).
 
@@ -41,10 +41,10 @@ Move closed intervals from the extension to the backend reliably — no loss, no
 - **SYNC-05b** *(#56)* A call that confirms **none** of a batch of several intervals (other than future-dated ones, SYNC-05a) is treated as a call error, not as per-row rejections: nothing is quarantined, the cycle waits 60 min and shows "Sync error" (like a client error, SYNC-06), and the next cycle sends only the oldest interval (`probeNext`). If that one is rejected alone, it is quarantined (a per-row rejection) and the queue moves on. *Amended 2026-11-17 (#176, grill E3):* with ingest v2, a batch with nothing confirmed is a call error only when **every** rejection has reason `invalid`. If at least one rejection is `overlap` or `future`, it is not a call error. Each rejection is then handled by its reason (SYNC-05c).
 - **SYNC-05c** *(#176, grill E3, proposed)* With ingest v2, each rejected id comes with a reason (DATA-06b). The client handles each reason like this:
   - `future`: deferred by SYNC-05a. The reason replaces the client's guess from the `Date` header. The header still gives the skew for the due time.
-  - `overlap`: quarantined with reason `overlap`. Such an interval overlaps stored time of the same device, for example after the clock moved back (TRK-15). It is counted in the popup's "not synced", like other quarantined intervals.
+  - `overlap`: **dropped**, not quarantined (product owner, 2026-11-17). Such an interval overlaps stored time of the same device, for example after the clock moved back (TRK-15). Its time is already on the server, so keeping it would help nobody. It is counted apart, like the SYNC-07 drop counter: the sync status adds its length to `overlapDroppedS` (seconds). The popup shows the count (EXT-UI, clock-moved-back line). The count resets when the account changes or local data is cleared.
   - `invalid`: quarantined, as in SYNC-05.
 
-  Overlap and future rejections never trigger the SYNC-05b backoff. They never show "Sync error". Open (product owner): should overlap rejections be dropped and counted apart instead of kept in quarantine, since their time is already stored?
+  Overlap and future rejections never trigger the SYNC-05b backoff. They never show "Sync error".
 - **SYNC-06** Error classes for a call:
 
 | Response | Handling |

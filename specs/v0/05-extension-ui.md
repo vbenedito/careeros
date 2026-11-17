@@ -8,7 +8,7 @@ Amended 2026-11-12 (#58, #65): "Syncing…" footer state and the clock hint (pro
 
 Amended 2026-11-12 (#60, #65): the popup renders these states with exact texts ("Syncing…", the clock hint, the Disconnect confirmation with **Try syncing again**), a note on broad sites under Add site, "today" rolling over at midnight while open, Add-site errors cleared when the status changes, visible errors for `NOT_CONFIGURED` and unanswered commands, and Zod without its JIT probe (CSP).
 
-Amended 2026-11-17 (#176): proposed for v1 — the current LeetCode problem under the current session (EXT-UI-11, [PRB](../v1/01-problems.md)); the site-limit message uses the number from the server (EXT-UI-07, [ENT](../v1/02-entitlements.md)).
+Amended 2026-11-17 (#176): proposed for v1 — the current LeetCode problem under the current session (EXT-UI-11, [PRB](../v1/01-problems.md)); the site-limit message uses the number from the server (EXT-UI-07, [ENT](../v1/02-entitlements.md)); a line for time dropped after the clock moved back (SYNC-05c).
 
 ## 1. Direction
 
@@ -61,6 +61,8 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 *(#58, product owner 2026-11-12)* `Syncing…` is shown while a cycle is uploading: `PopupView.syncing`, from `syncingSince` in the sync status (SYNC-02c). When the server rejects sessions because this computer's clock is fast (SYNC-05a), the popup shows a hint to correct the clock: `PopupView.clockAheadMinutes` (whole minutes, null when not applicable). Deferred sessions are part of the pending count (`PopupView.deferred` says how many of them wait for the clock).
 
 *(#60)* Texts: while syncing, the footer label is `Syncing…` (before any pending count; ` · 2 not synced` still follows). The clock hint shows when the clock is **5 minutes or more** ahead (`clockAheadMinutes` is null below that), as a small notice above the footer: "Your computer's clock is about 12 min ahead. Fix it so new study time syncs right away." and, when sessions are deferred, a second line "3 sessions waiting to sync." ("1 session waiting to sync.").
+
+*(#176, proposed; product owner 2026-11-17)* When the sync status holds `overlapDroppedS` above zero (SYNC-05c), the same notice area shows one line: "12 min not saved: your computer's clock moved back" (whole minutes, rounded up, at least 1). It is not an error: the footer does not show "Sync error" for it.
 
 - **EXT-UI-10** **Toolbar badge** on the extension icon: a small green dot while tracking, an amber `!` when not connected, nothing otherwise. The icon's tooltip states the same in words: "CareerOS — tracking leetcode.com", "CareerOS — not connected", "CareerOS — not tracking" (the manifest name, so "CareerOS (dev)" in dev builds). No live timer in the badge (#63). The rule is the pure `badgeFor` in `lib/badge.ts`; the worker (`background/badge.ts`) applies it with `chrome.action` whenever the stored engine state changes, and skips the calls when nothing changed. The dot is a one-space badge text on green `#16a34a`; the `!` is on amber `#b45309`.
 
