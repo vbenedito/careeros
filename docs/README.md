@@ -33,6 +33,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Landing content](landing/content.md) | living | product owner | Implemented; LAND-03 binds | 2026-11-11 |
 | [Landing SEO plan](landing/seo.md) | living | product owner | Implemented; LAND-04..07 bind | 2026-11-11 |
 | [Chrome Web Store listing](chrome-web-store/listing.md) | living | product owner | Submission in progress | 2026-11-11 |
+| [Marketing: brand profile](marketing/brand-profile.md) | living | product owner | Draft; open points for the product owner | 2026-11-17 |
 | **Process and operations** | | | | |
 | [Contributing](process/contributing.md) | living | tech lead | Current | 2026-11-11 |
 | [Agents: model routing](process/agents.md) | living | tech lead | Current | 2026-11-12 |
