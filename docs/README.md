@@ -43,6 +43,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Marketing: brand voice](marketing/voice.md) | living | product owner | Draft; test after first 10 posts | 2026-11-17 |
 | [Marketing: platform study](marketing/platform-study.md) | living | product owner | Draft; start set YouTube Shorts + TikTok, LinkedIn test slot; revisit after 8 weeks | 2026-11-17 |
 | [Marketing: content pillars](marketing/content-pillars.md) | living | product owner | Draft; 4 pillars (40/30/20/10); revisit after 8 weeks | 2026-11-17 |
+| [Marketing: video formats](marketing/video-formats.md) | living | product owner | Draft; 5 formats, visual kit, music, free workflow, 3 example scripts | 2026-11-17 |
 | **Process and operations** | | | | |
 | [Contributing](process/contributing.md) | living | tech lead | Current | 2026-11-11 |
 | [Agents: model routing](process/agents.md) | living | tech lead | Current | 2026-11-12 |
