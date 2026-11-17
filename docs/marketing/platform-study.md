@@ -8,14 +8,16 @@ How to read it: facts carry a source tag like [S12]; the Sources list is at the 
 
 ## 1. The answer in short
 
-**Start with three platforms: YouTube Shorts, TikTok and LinkedIn.**
+**Start with two platforms: YouTube Shorts and TikTok. LinkedIn is a test slot from week 3.**
 
 - **YouTube Shorts and TikTok** share one vertical text-and-music video. The file is made once and uploaded twice. This is the cheapest way to start on two platforms (D14).
-- **LinkedIn** gets the same video as a native upload, with a caption written for LinkedIn. It is the best place we found for the working-engineer persona and for a link with click intent. This is our judgment; the persona has no source for LinkedIn use (persona, "Where they spend time online").
+- **LinkedIn** is a test slot from week 3: 1 post a week, only if weeks 1 and 2 stayed within the time budget. It gets the same video as a native upload, with a caption written for LinkedIn. It is the best place we found for the working-engineer persona. This is our judgment; the persona has no source for LinkedIn use (persona, "Where they spend time online"). Video is weaker than documents on LinkedIn [S18, S20], so this is a test, not a commitment.
+- **Stop rule:** if a week takes more than 2 hours, drop LinkedIn first.
+- **LinkedIn starts only after the product owner accepts the admin point** (section 7, D19).
 - **Wait:** Instagram Reels (first to add, same file), then dev.to or Hashnode, Threads, X, Bluesky. **Reddit:** listen only for now. **Product Hunt:** one launch later, not part of the start set.
 - **Revisit after 8 weeks of measured posts** (section 8).
 
-Why not "all platforms": one person with free tools and spare time (D14) cannot keep quality on ten platforms. Each extra platform adds its own rules, labels, captions and checks. Three platforms with one video file is the most we think can be held at quality.
+Why not "all platforms": one person with free tools and spare time (D14) cannot keep quality on ten platforms. Each extra platform adds its own rules, labels, captions and checks. Two platforms with one video file is the most we are sure can be held at quality. LinkedIn is added only if the time budget allows.
 
 ## 2. Inputs and limits of this study
 
@@ -47,17 +49,23 @@ Each block covers: audience, format for a faceless text video, self-promotion, l
 - **Audience.** The persona is a working engineer in a job-related context. We have no source that this person uses LinkedIn for study content (assumption). The best sign is a direct peer: NeetCode, an interview-prep product, calls LinkedIn its second-largest social channel in a 2026 brand story. The story's numbers are self-reported, so we do not reuse them [S20].
 - **Format.** Native video of 30 to 90 seconds had a benchmark engagement rate of 5.60%, behind document posts at 6.60%. The article credits van der Blom's 2025 report, LinkedIn data and Sprout Social 2026, and says 91% of viewers watch muted, so captions matter [S18]. Our text-on-screen video is already caption-first. The same article says video worked better for visibility than for clicks [S18].
 - **Self-promotion.** A product page or brand post is normal on LinkedIn. We found no formal rule against it. (Assumption: LinkedIn's own policy was not readable.)
-- **Links.** Sources say a link in the post body lowers reach. They disagree on the size: one article says about 60% (it names no study) and cites a 1.3 million post analysis with a median drop of 18.8% for one external link [S19]. Another says about 60% and that the "link in first comment" trick is also penalized since early 2026 [S18]. Both are secondary. Treat it as "a penalty is likely; size unknown". We test it (section 8).
+- **Links.** Sources say a link in the post body lowers reach. They disagree on the size.
+  - One article says about 60% and names no study. It also cites an analysis of 1.3 million posts with a median drop of 18.8% for one external link [S19].
+  - Another says about 60%. It adds that the "link in first comment" trick is also penalized since early 2026 [S18].
+  - Both are secondary. Treat it as "a penalty is likely; size unknown". We test it (section 8).
 - **Free scheduling.** Yes, native and free for profiles and company pages: 10 minutes to 3 months ahead, one post at a time, no first-comment scheduling [S17].
 - **Examples.** NeetCode on LinkedIn (see [S20]): faceless, utility posts as interview revision material, carousels, cheat sheets and infographics. It says video was tested first and did not suit the platform as well. No video examples from faceless accounts were verified.
-- **Watch out.** A faceless brand needs a Company Page, and (assumption) a Company Page needs a real person's profile as admin. This touches D8. See section 7.
+- **Watch out.** A faceless brand needs a Company Page. A Company Page needs a personal LinkedIn account as admin (assumption, unverified). The admin is not visible on posts, but it is the owner's decision (D19). LinkedIn starts only after the product owner accepts this. See section 7.
 
 ### YouTube Shorts
 
 - **Audience.** No source on our persona's use of Shorts (assumption). An interview-prep channel on YouTube: NeetCode (@NeetCode), whose About text points to neetcode.io [S31]. We could not confirm if it posts Shorts.
 - **Format.** Up to 3 minutes; any upload of 3 minutes or less counts as a Short [S1, S3]. Our videos are shorter. Text-first, music-bed videos fit.
 - **Self-promotion.** A brand channel is normal. The July 2025 "inauthentic content" update is a monetization rule. It targets mass-produced, repetitive channels, for example slideshows that share the same narration [S5]. We will not monetize. Still, vary the content so the channel does not look like one template with swapped words.
-- **Links.** URLs in Shorts descriptions and comments are not clickable; YouTube says this is to "reduce spam and scam attempts" [S2]. Channel profile links are clickable (up to 14) [S2]. A Short can show one "related video" link to another video on the same channel [S6]. So the traffic path is: video, then channel page, then the link in the channel profile.
+- **Links.** There is no clickable link in Shorts descriptions or comments. YouTube says this is to "reduce spam and scam attempts" [S2].
+  - The link lives in the channel profile. Channel profile links are clickable, up to 14 [S2].
+  - A Short can show one "related video" link to another video on the same channel [S6].
+  - So the traffic path is: video, then channel page, then the profile link.
 - **Free scheduling.** YouTube Studio has scheduling (assumption; the help page could not be read).
 - **AI rules.** YouTube asks creators to disclose AI content that "seems realistic", including AI music that is the main focus of the video. Captions and cloning your own voice are listed as minor [S4]. Our royalty-free music and text need no label.
 - **Examples.** NeetCode (above, [S31]). Short-form examples not verified.
@@ -65,9 +73,11 @@ Each block covers: audience, format for a faceless text video, self-promotion, l
 ### TikTok
 
 - **Audience.** A 2026 SIGCSE paper analyzed 100 TikTok videos about computing careers and found useful content on daily work, internships and the tech industry. It does not measure how many students or engineers use TikTok for this [S11]. So: the content exists, our persona's use is **assumption**.
-- **Format.** Short vertical video. Text-on-screen fits. (Assumption: no platform source read.)
+- **Format.** Short vertical video. Text-on-screen fits. (Assumption: no platform source read.) Maximum length not checked, because sources conflict. Our videos are 20 to 45 seconds.
 - **Self-promotion.** Brand accounts are allowed. Business accounts have a music rule: they are limited to commercially licensed sounds. Sources differ on whether this applies to all business accounts or only verified ones [S8, S10]. Our music is licensed royalty-free anyway (D13).
-- **Links.** Link in bio (assumption; no primary page read). One bio link per account, so attribution is per platform, not per post.
+- **Links.** Link in bio (assumption; no primary page read).
+  - One bio link per account.
+  - So attribution is per platform, not per post.
 - **Free scheduling.** Desktop web scheduler is free, with a Business account. Sources differ on how far ahead (10 or 30 days) and on whether 10,000 followers are needed instead of a Business account. A scheduled post cannot be edited, only deleted and re-uploaded [S8, S9]. Verify at account creation.
 - **AI rules.** TikTok requires a label for AI content with realistic images, audio or video, using its AI label or a caption or sticker [S7, 2023]. Text and royalty-free music: none needed.
 - **Examples.** Not verified (profile pages blocked). See section 10.
@@ -132,7 +142,7 @@ Public data only. No follower counts. This is a small, hand-picked field, not a 
 
 | Who | Type | Where we saw them | What they do |
 |---|---|---|---|
-| NeetCode | Aspirational: interview-prep brand | LinkedIn [S20], YouTube [S31] | Utility content, carousels, cheat sheets. Faceless on LinkedIn. |
+| NeetCode | Aspirational: interview-prep brand | LinkedIn [S20], YouTube [S31] | Utility content, carousels, cheat sheets. Faceless on LinkedIn. Internal research only; never named in posts. |
 | WakaTime | Adjacent: developer time tracking | Product Hunt [S30] | Launches of features and yearly "most used languages" reports by the maker. |
 | useastra, fourleaf, blixwerk | Adjacent: job and interview content brands | dev.to [S29] | Data-style and Q&A articles, each with a link to its own site. |
 | muragekibicho | Similar maker | Bluesky [S33] | Builds a LeetCode-style site; individual account. |
@@ -167,15 +177,15 @@ Notes on the scores:
 
 ## 6. Recommended start set and what waits
 
-**Start set (D14: one person, free tools): YouTube Shorts, TikTok, LinkedIn.**
+**Start set (D14: one person, free tools): YouTube Shorts and TikTok. LinkedIn is a week-3 test slot.**
 
 | Platform | Role | Why now |
 |---|---|---|
 | YouTube Shorts | Main short-video home | Best total score. Longer life of a video on a channel page (assumption). Free tools. |
 | TikTok | Same video, second audience | Costs one upload. Gives a second read on whether short video works for this persona. |
-| LinkedIn | Professional reach and link click intent | Best persona argument we have; native scheduling is free [S17]. |
+| LinkedIn (test slot, from week 3) | Professional reach; tests the persona assumption | Best persona argument we have; native scheduling is free [S17]. Video is weaker than documents here [S18, S20]. 1 post a week. |
 
-**Cadence (assumption; #191 sets the final plan):** 2 new videos per week, each posted on all three. If this takes more than about 2 hours a week, post 1 video per week. Fewer posts at good quality matters more than volume (D14).
+**Cadence (assumption; #191 sets the final plan):** 2 new videos per week, each posted on YouTube Shorts and TikTok. From week 3, one of them also goes to LinkedIn, only if weeks 1 and 2 stayed within the time budget. **Stop rule: if a week takes more than 2 hours, drop LinkedIn first.** If it still takes too long, post 1 video per week. Fewer posts at good quality matters more than volume (D14).
 
 **Why the others wait:**
 
@@ -189,8 +199,8 @@ Notes on the scores:
 
 The product owner decides the handle and the email (D19, brand profile section 13).
 
-- **Handle.** Use the **same handle on every platform**. Check by hand if `careeros` is free on all three. Prepare 2 or 3 fallbacks before creating anything, so the three accounts still match. Display name: "CareerOS" (voice: one word, capital C and OS). Handles and URLs may be lowercase.
-- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram (later): Creator or business, for scheduling [S14]. LinkedIn: a Company Page. **Open question:** a Company Page needs a person as admin (assumption). That person is not shown as the face of the brand, so D8 stays true, but the owner should accept it first.
+- **Handle.** Use the **same handle on every platform**. Check by hand if `careeros` is free on all platforms in use. Prepare 2 or 3 fallbacks before creating anything, so the accounts still match. Display name: "CareerOS" (voice: one word, capital C and OS). Handles and URLs may be lowercase.
+- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram (later): Creator or business, for scheduling [S14]. LinkedIn: a Company Page. **Open question:** a Company Page needs a personal LinkedIn account as admin (assumption, unverified). It is not visible on posts, but it is the owner's decision (D19). LinkedIn starts only after the product owner accepts this.
 - **Avatar and banner.** CareerOS has no logo yet (#195). Do not make accounts with a temporary avatar if the logo can come first. If one is needed, use plain text on the brand blue. Never an AI-generated person (this is also what Instagram's "AI-generated profile" rule is about [S13]).
 - **Bio text (all platforms).** Use the short form from the voice guide. Example: "Free Chrome extension that counts your study time on the sites you choose." No emoji, no hype words, no "stays free", no result promises.
 - **Bio link with UTM.** Pattern from the voice guide:
@@ -213,7 +223,7 @@ D14 says the goal is to measure. #191 sets the targets. This page sets the check
 
 - **Before the first post:** confirm that Vercel Web Analytics shows `utm_*` values on our plan (assumption; not verified). If it does not, D25 needs a fix before launch.
 - **Weekly (10 minutes):** read each platform's own analytics: views, watch time or retention, saves or shares, profile or link clicks. Write the numbers in the calendar outside the repo (D17). Never publish them as statistics unless real.
-- **LinkedIn link test:** in the first 8 weeks, post the same kind of video with the link in the post on some weeks and without on others (link only in the profile). Compare reach and visits with `utm_source=linkedin`. One variable, one change at a time.
+- **LinkedIn link test:** in weeks 3 to 8, post the same kind of video with the link in the post on some weeks and without on others (link only in the profile). Compare reach and visits with `utm_source=linkedin`. One variable, one change at a time.
 - **Revisit trigger: after 8 weeks of measured posts (about 16 videos), or earlier if a platform costs more than 2 hours a week.** The review compares, for each platform: visits to the site from UTM links per hour spent, and views and retention per video. Set the thresholds in #191 before the first post, not after seeing the numbers.
 - **What the review decides:**
   1. Drop the weakest platform, or keep it as repost-only.
@@ -248,7 +258,7 @@ Make **one master file**, then change only what each app needs.
 
 Rules: write the caption for each app; do not paste the same caption on all three. Keep the **idea** the same. Run the voice checklist (voice, section 7) once per post. If you edit the video for one app, re-export the master and re-upload everywhere.
 
-**Weekly batch (assumption, about 2 hours):** write and edit 2 masters; schedule them on the three apps; spend 10 minutes on analytics; reply to comments in plain words (voice, section 2).
+**Weekly batch (assumption, about 2 hours):** write and edit 2 masters; schedule them on YouTube Shorts and TikTok (LinkedIn from week 3); spend 10 minutes on analytics; reply to comments in plain words (voice, section 2).
 
 ## 10. Assumptions and open points
 

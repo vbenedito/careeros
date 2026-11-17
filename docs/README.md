@@ -41,7 +41,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Marketing: brand profile](marketing/brand-profile.md) | living | product owner | Draft; open points for the product owner | 2026-11-17 |
 | [Marketing: audience persona](marketing/persona.md) | living | product owner | Draft; assumptions to validate | 2026-11-17 |
 | [Marketing: brand voice](marketing/voice.md) | living | product owner | Draft; test after first 10 posts | 2026-11-17 |
-| [Marketing: platform study](marketing/platform-study.md) | living | product owner | Draft; start set YouTube Shorts, TikTok, LinkedIn; revisit after 8 weeks | 2026-11-17 |
+| [Marketing: platform study](marketing/platform-study.md) | living | product owner | Draft; start set YouTube Shorts + TikTok, LinkedIn test slot; revisit after 8 weeks | 2026-11-17 |
 | **Process and operations** | | | | |
 | [Contributing](process/contributing.md) | living | tech lead | Current | 2026-11-11 |
 | [Agents: model routing](process/agents.md) | living | tech lead | Current | 2026-11-12 |
