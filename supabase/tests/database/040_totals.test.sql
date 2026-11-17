@@ -147,6 +147,9 @@ select lives_ok($$ select * from public.get_domain_totals('2026-11-02', '2026-11
 select is(
   array(select name from pg_catalog.pg_timezone_names
         where name ~ '[0-9]'
+          -- #171: newer images also list the posix/ and right/ copies of the zone tree. Browsers
+          -- send only canonical IANA names (DASH-07), so those copies may be refused.
+          and name !~ '^(posix|right)/'
           and pg_catalog.upper(name) !~ '^(ETC/)?GMT[+-]?([0-9]|1[0-4])$'
           and pg_catalog.upper(name) not in ('EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT')),
   '{}'::text[],
