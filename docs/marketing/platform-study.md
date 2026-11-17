@@ -213,9 +213,9 @@ The product owner decides the handle and the email (D19, brand profile section 1
   - On the video's last screen, say "Free Chrome extension. CareerOS." and "Link in profile" where the platform has no clickable link in the post (voice section 5).
 - **AI labels.** Follow the brand profile (section 10): use the platform's own AI label when it is offered, and add "Made with AI" to the caption when a post uses an AI voice or AI images.
   - **Now (text and royalty-free music):** no label needed by the platforms' rules we read [S4, S7, S12]. Keep the music licence on file.
-  - **When an AI voice is tested (D13):** switch the label on in **all three** apps and add "Made with AI". YouTube lists cloning your own voice as minor, but a realistic AI voice on TikTok and Instagram must be labeled [S4, S7, S12]. One rule for all is simpler and safer.
+  - **When an AI voice is tested (D13):** switch the label on in **all apps in use** and add "Made with AI". YouTube lists cloning your own voice as minor, but a realistic AI voice on TikTok and Instagram must be labeled [S4, S7, S12]. One rule for all is simpler and safer.
 - **Music.** Use royalty-free or licensed tracks, and keep the licence for each. TikTok Business accounts are limited to commercially licensed sounds [S8, S10]. Whether a licence that covers social video also covers a track baked into a video file on all three apps is not verified (assumption). #190 picks the source.
-- **Hashtags.** Brand profile: 3 to 5 topic hashtags, only where the platform uses them. We read no platform source that sets a different count, so keep 3 to 5 on all three (assumption).
+- **Hashtags.** Brand profile: 3 to 5 topic hashtags, only where the platform uses them. We read no platform source that sets a different count, so keep 3 to 5 on all apps in use (assumption).
 
 ## 8. Measure, and when to revisit
 
@@ -256,7 +256,7 @@ Make **one master file**, then change only what each app needs.
 | AI label | Only if the rule applies (section 7) | Same | Same |
 | Schedule | Studio (assumption) | Desktop web scheduler | Native scheduler [S17] |
 
-Rules: write the caption for each app; do not paste the same caption on all three. Keep the **idea** the same. Run the voice checklist (voice, section 7) once per post. If you edit the video for one app, re-export the master and re-upload everywhere.
+Rules: write the caption for each app; do not paste the same caption on all apps in use. Keep the **idea** the same. Run the voice checklist (voice, section 7) once per post. If you edit the video for one app, re-export the master and re-upload everywhere.
 
 **Weekly batch (assumption, about 2 hours):** write and edit 2 masters; schedule them on YouTube Shorts and TikTok (LinkedIn from week 3); spend 10 minutes on analytics; reply to comments in plain words (voice, section 2).
 
@@ -267,7 +267,7 @@ Assumptions to validate (the specialist review and the 8-week review should chec
 1. Our persona uses LinkedIn, YouTube Shorts and TikTok for study content (persona assumption 6). Not sourced.
 2. LinkedIn link penalty size. Sources disagree [S18, S19].
 3. TikTok scheduling limits (10 vs 30 days; Business account vs 10,000 followers) and which accounts have the commercial-music rule [S8, S9, S10].
-4. A baked-in royalty-free track is accepted by all three apps. Not verified.
+4. A baked-in royalty-free track is accepted by all apps in use. Not verified.
 5. A LinkedIn Company Page needs a personal account as admin. Not verified. The owner accepted the role (Q31, 2026-11-17).
 6. Scheduling in YouTube Studio, X and Threads, and no native scheduling on Bluesky. Not verified.
 7. Vercel Web Analytics shows UTM values on our plan. Not verified.
