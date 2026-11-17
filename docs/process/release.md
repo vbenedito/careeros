@@ -1,6 +1,6 @@
 # Release process
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-12
+Type: living · Owner: tech lead · Last reviewed: 2026-11-13
 
 How each part of CareerOS reaches users. Steps marked **Proposed** have not been practised yet. Account-specific production settings are kept privately by the product owner and are not repeated here.
 
@@ -11,7 +11,7 @@ How each part of CareerOS reaches users. Steps marked **Proposed** have not been
 | Build and deploy | Vercel's GitHub integration builds `apps/web` for every pull request (preview, protected) and deploys production when a PR is merged to `main` |
 | Environment | Set in Vercel per environment; the list and rules are ENV-05b in [specs/v0/09-environments.md](../../specs/v0/09-environments.md). `SUPABASE_SECRET_KEY` is scoped to Production only |
 | Build-time values | `EXTENSION_INSTALL_URL`, `GOOGLE_SITE_VERIFICATION`, `SITE_URL` and the `PRIVACY_*` values are read at build time (static landing page, robots, sitemap, the production build check). After changing them, **redeploy** |
-| Check | CI green before merge; after deploy, open `/`, sign in, open `/dashboard` and `/connect` |
+| Check | CI green before merge. After a Production deployment the [smoke workflow](../../.github/workflows/smoke.yml) runs by itself (canonical, store link, CSP, robots, sitemap, privacy, sign-in redirect, Supabase CORS and `Date`; [operations §7](../operations.md#7-scheduled-checks-and-what-an-email-means)): wait for it to be green, then sign in, open `/dashboard` and `/connect`. A red smoke run is emailed |
 | Rollback | Promote the previous production deployment in Vercel, or revert the commit on `main` |
 
 ## Extension
@@ -40,10 +40,10 @@ Migrations reach production through the workflow [Database migrations (productio
 | Step | How |
 |---|---|
 | Write | A new file in `supabase/migrations`; never edit an applied one. pgTAP tests in the same PR. Backward compatible (see below) |
-| Test | `pnpm db:reset && pnpm db:test` locally; CI applies all migrations to a fresh stack and runs pgTAP, integration, E2E and the backup round trip |
+| Test | `pnpm db:reset && pnpm db:test` locally; CI applies all migrations to a fresh stack and runs pgTAP, integration, E2E and the backup round trip. When the PR adds migrations, CI also reproduces the production path first: the base commit's migrations and the seed, then your new ones with `supabase migration up`, then pgTAP (`scripts/ci/incremental-migrations.sh`). Editing or deleting a migration that is already on `main` fails CI. The seed is taken from the base commit too, so rows that should exist before your migration runs go in `supabase/seed.sql` of an earlier PR |
 | Preview against production | Optional, before or after merging: Actions → **Database migrations (production)** → **Run workflow** on `main`, mode **dry-run** (the default). It writes nothing and makes no backup; the job summary lists the migrations that would be applied |
 | Apply to production | **Automatic on merge:** a push to `main` that changes `supabase/migrations/**` runs the workflow in the `production-backup` environment: encrypted backup (same as the weekly backup, artifact `careeros-YYYY-MM-DD-run<id>-pre-migration.sql.gz.age`, 90 days) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`. One run at a time, never cancelled half-way. To re-run by hand: Run workflow with mode **apply** |
-| Check | Open the run's **Summary**: *Dry run* lists the pending migrations (or says the remote database is up to date), *Apply* shows the CLI output, *Migration history* shows each migration in the *Local* and *Remote* columns: after a good run every row has both. A red run is not silent: GitHub emails the person who merged. Then check the dashboard as in [Dashboard](#dashboard) |
+| Check | Open the run's **Summary**: *Dry run* lists the pending migrations (or says the remote database is up to date), *Apply* shows the CLI output, *Migration history* shows each migration in the *Local* and *Remote* columns: after a good run every row has both. A red run is not silent: GitHub emails the person who merged. The last step, *Post-migration check*, is read-only: it fails when a public table has row level security off or the `private` schema is open, or (apply) when production has fewer migrations than the repository. Then check the dashboard as in [Dashboard](#dashboard) |
 | Emergency fallback | If Actions is unavailable: the laptop procedure in [operations §6](../operations.md#6-database-migrations) |
 | Rollback | **Proposed:** a new forward migration that undoes the change. For data loss, restore from the pre-migration backup of that run ([operations §4](../operations.md#4-backups)) |
 
@@ -56,6 +56,10 @@ The merge that brings a migration also deploys the dashboard (Vercel) at the sam
 3. **Contract** (a later PR, once no deployed code or supported extension version uses the old shape): drop the old column, function or overload.
 
 A rename is add new → copy/backfill → switch code → drop old, spread over these steps.
+
+## Dependency audit exceptions
+
+CI runs `pnpm audit --prod --audit-level=high` through `scripts/ci/audit.ts`. When it fails, upgrade the package (or its parent). Only when no fix exists yet, add an entry to `.github/audit-exceptions.json`: `"GHSA-xxxx-xxxx-xxxx": { "reason": "why it does not apply or cannot be fixed", "expires": "YYYY-MM-DD" }`, with an expiry at most 90 days ahead, and mention it in the PR. The script passes the entries to `pnpm audit --ignore`; once an entry has expired, CI fails until the dependency is fixed or the entry is renewed with a new reason (ENV-08).
 
 ## Compatibility rules
 

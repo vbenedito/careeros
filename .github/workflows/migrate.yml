@@ -1,7 +1,8 @@
 # Applies database migrations to production (#147, ENV-08, docs/process/release.md).
 # On every push to `main` that touches `supabase/migrations/**`: encrypted backup (the same script
-# as backup.yml) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`,
-# with the dry run and the migration list in the job summary.
+# as backup.yml) → `supabase db push --dry-run` → `supabase db push` → `supabase migration list`
+# → a read-only post-migration check (RLS on every public table, `private` closed, migration
+# count), with the dry run and the migration list in the job summary.
 # Run workflow (workflow_dispatch) offers `mode`: `dry-run` (default; no backup, nothing written)
 # or `apply` (the same as a push).
 # Needs, in the GitHub environment `production-backup` (deployment branches: `main` only), the
@@ -179,3 +180,37 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
+
+      # Read-only post-check (grill T1): psql in a READ ONLY transaction asserts that row level
+      # security is on for every public table and that the `private` schema is closed to the API
+      # roles, and (apply mode) that production has at least as many applied migrations as the
+      # repository has files. Runs on a dry run too: it checks the current state of production.
+      - name: Post-migration check (read-only)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          PGURL="$SUPABASE_DB_URL" scripts/ops/db-readonly.sh scripts/ops/post-migrate-check.sql \
+            > check.csv 2> check.err
+          status=$?
+          sed -E 's#://[^@/[:space:]]*@#://***@#g' check.err
+          if [ "$status" -ne 0 ]; then
+            echo "::error::The post-migration check failed (see the log above)."
+            exit "$status"
+          fi
+          tables=$(awk -F, 'NR==2 {print $1}' check.csv)
+          applied=$(awk -F, 'NR==2 {print $2}' check.csv)
+          if ! [[ "$tables" =~ ^[0-9]+$ && "$applied" =~ ^[0-9]+$ ]]; then
+            echo "::error::The post-migration check returned no valid counts."
+            exit 1
+          fi
+          expected=$(find supabase/migrations -maxdepth 1 -name '*.sql' | wc -l)
+          {
+            echo "## Post-migration check (read-only)"
+            echo "- Public tables with row level security: $tables (none without)"
+            echo "- Migrations applied in production: $applied (repository: $expected)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$MODE" = "apply" ] && [ "$applied" -lt "$expected" ]; then
+            echo "::error::Production has $applied applied migrations, the repository has $expected."
+            exit 1
+          fi

@@ -3,7 +3,9 @@
 # holder of the private key (kept offline by the product owner) can read it.
 # Needs, in the GitHub environment `production-backup` (deployment branches: `main` only): secret
 # SUPABASE_DB_URL (Session pooler URI, IPv4, ending in `?sslmode=require`) and variable
-# BACKUP_AGE_RECIPIENT (an age public key). Without them the job is skipped.
+# BACKUP_AGE_RECIPIENT (an age public key). Without them the job FAILS (grill H7): a silently
+# skipped backup is worse than a red run, which GitHub emails. health.yml also checks that the
+# newest backup artifact is under 8 days old.
 # Security (#112): the guarantee is the environment's deployment-branch rule (`main` only) with
 # the secret existing nowhere else (no repository-level copy); a branch can edit this file, so
 # the `if:` below is only a second layer. Only the dump step receives the database URL.
@@ -28,7 +30,8 @@ jobs:
   backup:
     name: Encrypted database dump
     # Second layer: never from another branch (the environment's branch rule is the real guard).
-    if: github.ref == 'refs/heads/main'
+    # Forks have no configuration and no schedule to care about, so they skip instead of failing.
+    if: github.repository == 'vbenedito/careeros' && github.ref == 'refs/heads/main'
     environment: production-backup
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -36,30 +39,28 @@ jobs:
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
     steps:
       - name: Check configuration
-        id: config
         env:
           # Only whether it is set, never the URL itself.
           HAS_DB_URL: ${{ secrets.SUPABASE_DB_URL != '' }}
         run: |
-          if [ "$HAS_DB_URL" != "true" ] || [ -z "$AGE_RECIPIENT" ]; then
-            echo "::notice::SUPABASE_DB_URL or BACKUP_AGE_RECIPIENT not set: skipping the backup."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_DB_URL" != "true" ]; then
+            echo "::error::SUPABASE_DB_URL is not set in the production-backup environment: no backup was made."
+            exit 1
+          fi
+          if [ -z "$AGE_RECIPIENT" ]; then
+            echo "::error::BACKUP_AGE_RECIPIENT is not set in the production-backup environment: no backup was made."
+            exit 1
           fi
 
       - name: Checkout (for the dump scripts)
-        if: steps.config.outputs.ready == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install age (pinned, checksum verified)
-        if: steps.config.outputs.ready == 'true'
         run: scripts/ops/install-age.sh
 
       - name: Dump and encrypt (plaintext never touches the disk)
-        if: steps.config.outputs.ready == 'true'
         # The only step that receives the database URL.
         env:
           PGURL: ${{ secrets.SUPABASE_DB_URL }}
@@ -71,7 +72,6 @@ jobs:
           echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
 
       - name: Store the encrypted dump (90 days)
-        if: steps.config.outputs.ready == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.BACKUP_FILE }}

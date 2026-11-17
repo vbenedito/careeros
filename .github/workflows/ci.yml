@@ -1,7 +1,7 @@
 # CI for CareerOS (ENV-08, ENV-09).
-# `checks`: lint, typecheck, spec-ID traceability, Markdown links, unit tests, landing responsive layout (TEST-01) and builds, store package check on every PR
+# `checks`: lint, workflow lint (actionlint), dependency audit, typecheck, spec-ID traceability, Markdown links, unit tests, landing responsive layout (TEST-01) and builds, store package check on every PR
 # and push to main.
-# `backend`: local Supabase stack in Docker, migrations + seed, pgTAP (ADR-0008), integration and E2E
+# `backend`: local Supabase stack in Docker, incremental migration path (base commit → PR), migrations + seed, pgTAP (ADR-0008), integration and E2E
 # (including the app pages' responsive layout, TEST-01).
 # Both jobs upload their responsive-layout screenshots as artifacts (14 days) for review.
 
@@ -50,6 +50,20 @@ jobs:
 
       - name: Lint (Biome)
         run: pnpm lint
+
+      # Workflow syntax, expressions and (with the runner's shellcheck) `run:` scripts (grill T7).
+      # actionlint is pinned by version and checksum. SC2016 is ignored for the `node -e '…'`
+      # snippets that mask the database password: the `${…}` there is JavaScript, not shell.
+      - name: Lint workflows (actionlint)
+        run: |
+          scripts/ci/install-actionlint.sh
+          actionlint -ignore 'shellcheck reported issue in this script: SC2016'
+
+      # Known vulnerabilities in the production dependency tree (grill T7). A failure means a new
+      # advisory: upgrade the package (or its parent). Only if no fix exists, add an expiring
+      # entry to .github/audit-exceptions.json (docs/process/release.md); an expired entry fails.
+      - name: Dependency audit (production, high and above)
+        run: node scripts/ci/audit.ts
 
       - name: Typecheck
         run: pnpm typecheck
@@ -133,6 +147,14 @@ jobs:
             pnpm exec supabase stop --no-backup || true
             pnpm exec supabase start -x studio,postgres-meta
           }
+
+      # The production path (grill T1): when the change adds migrations, apply only the base
+      # commit's migrations and the seed, then the full set with `migration up`, then pgTAP.
+      # No-op without new migrations. The clean reset below is the empty-database path.
+      - name: Incremental migrations (base commit → full set, then pgTAP)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/ci/incremental-migrations.sh
 
       - name: Reset database (migrations + seed)
         run: pnpm db:reset
