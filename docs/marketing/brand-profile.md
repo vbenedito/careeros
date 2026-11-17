@@ -81,6 +81,9 @@ The full voice comes in #187. Until then:
 - Specific numbers instead of adjectives ("pauses after 60 seconds", not "smart idle detection").
 - No hype words ("revolutionary", "supercharge", "10x"). No exclamation marks.
 - English only (D10).
+- **No emoji** in the text.
+- **3 to 5 topic hashtags** per post, where the platform uses hashtags. The platform study (#188) may adjust this per platform.
+- **Pronunciation:** "CareerOS" is said "career O S", like macOS.
 
 ## 9. Social presence (decided)
 
@@ -100,13 +103,15 @@ The full voice comes in #187. Until then:
 - **No personal data.** Never show real user data, emails or browsing in posts or screenshots. Sample data only, labeled as sample.
 - **No future promises.** No features, dates or prices that are not shipped. A paid plan may come later (D5, D23); we do not hint at what it will be.
 - **No "no cookies" claim.** The dashboard uses session cookies for sign-in.
+- **No "stays free" promise in posts.** Posts say only "free".
+- **AI is labeled.** Use the platform's own "AI-generated" label when it offers one. Add "Made with AI" to the caption when a post uses an AI voice or AI images. Royalty-free music needs no label.
 - **No "open source" claim.** Say "public code on GitHub".
 - **No privacy overstatement.** Say exactly what is stored (section 6). When LeetCode time per problem ships, it stores the problem name from the address, LeetCode only, and only if you turn it on (D11, D16). Update this page then.
 
 ## 11. Coming in v1 (say only after it ships)
 
 - Time per LeetCode problem, from the address only. Off by default; you turn it on in Settings (D11, D16, D20).
-- It stays free, like everything free today (D22).
+- It is free (D22). In posts, say only "free"; no "stays free" promise (section 10).
 
 Until the release is live, posts do not mention it.
 
@@ -116,6 +121,7 @@ Full rules live in the [design system](../design-system.md). For marketing:
 
 - **Landing page:** dark only, with its own small palette; headings in Mona Sans.
 - **Product (popup and dashboard):** shared tokens in `packages/shared/theme/tokens.css`, light and dark. Primary color is a blue (`oklch(0.5 0.17 265)` light, `oklch(0.72 0.14 265)` dark).
+- **Logo:** CareerOS has no logo yet. It will be designed and validated in #195 (high priority). Social avatars wait for it.
 - **Store assets:** icon, screenshots and promo tiles in `docs/chrome-web-store/assets/`.
 - **Rules to keep:** contrast at least WCAG AA; status is never shown by color alone; durations in the app format (`45m`, `1h 05m`); sample data only.
 - **Accessibility:** captions or on-screen text on every video (our videos are text-first anyway); alt text on every image.
@@ -124,9 +130,6 @@ Full rules live in the [design system](../design-system.md). For marketing:
 
 1. **Social handle and account email.** Which name (`@careeros`?) and which email: brand Gmail or domain email (D19).
 2. **Custom domain.** Use it in bios and links if ready (D19).
-3. **Public "stays free" line.** May posts say "everything free today stays free" (D22), or only "free"?
-4. **AI disclosure.** How we label AI-made music, images or a future AI voice (D13).
-5. **Emoji and hashtag policy.** For example: no emoji, 3 to 5 topic hashtags. To confirm in #187.
-6. **Example posts.** 3 to 5 posts you like and 1 to 2 you dislike, with one line on why.
-7. **Pronunciation of "CareerOS".** For a future AI voice: "career O S" or "career-oss"?
-8. **Logo for social avatars.** Use the store icon (`icon-128.png`) or a new mark?
+3. **Example posts (optional).** 3 to 5 posts you like and 1 to 2 you dislike, with one line on why.
+
+Decided on 2026-11-17: posts say only "free" (section 10); AI disclosure (section 10); no emoji and 3 to 5 hashtags (section 8); pronunciation (section 8); logo in #195 (section 12).
