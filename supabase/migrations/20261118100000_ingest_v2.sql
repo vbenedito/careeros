@@ -184,9 +184,6 @@ $$;
 
 revoke all on function private.parse_session_element(jsonb, boolean) from public, anon, authenticated;
 
--- The old parser has no caller left (both RPCs use parse_session_element).
-drop function private.parse_study_session(jsonb);
-
 -- ---------------------------------------------------------------------------------------------
 -- Shared implementation of both ingest RPCs (ADR-0011). Not SECURITY DEFINER itself: it runs
 -- with the rights of the definer wrappers, which are its only callers (clients have no usage on
@@ -385,6 +382,11 @@ $$;
 -- `create or replace` keeps the existing privileges; restate them so this file is self-evident.
 revoke all on function public.ingest_study_sessions(jsonb) from public, anon;
 grant execute on function public.ingest_study_sessions(jsonb) to authenticated;
+
+-- The old parser has no caller left once the wrapper above is replaced (both RPCs now use
+-- parse_session_element). Dropped only here, after the replace, so a released-client call that
+-- waited on this migration's locks never runs the old body against a missing parser.
+drop function private.parse_study_session(jsonb);
 
 -- ---------------------------------------------------------------------------------------------
 -- DATA-06b: ingest v2 (ADR-0011).
