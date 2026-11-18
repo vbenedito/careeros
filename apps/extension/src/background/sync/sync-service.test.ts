@@ -673,3 +673,75 @@ describe("ingest v2 reasons (SYNC-03a, SYNC-05c, ADR-0011 test plan 5)", () => {
     expect(s.batches[0]).toEqual([a]);
   });
 });
+
+describe("review of #216", () => {
+  it("SYNC-03a ADR-0011 compatibility: a 0.2.3 outbox row without problem uploads unchanged through v2", async () => {
+    // Exactly the shape extension 0.2.3 wrote to the outbox: no `problem` key.
+    const legacy: Interval = {
+      id: "00000000-0000-4000-8000-0000000f0023",
+      device_id: "00000000-0000-4000-8000-00000000d001",
+      domain: "leetcode.com",
+      started_at: "2026-11-09T14:00:00Z",
+      ended_at: "2026-11-09T14:10:00Z",
+    };
+    const s = setup([], [{ ...legacy }]);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches).toEqual([[legacy]]);
+    expect(Object.keys(s.batches[0]?.[0] ?? {}).sort()).toEqual([
+      "device_id",
+      "domain",
+      "ended_at",
+      "id",
+      "started_at",
+    ]);
+    expect(INGEST_RPC).toBe("ingest_study_sessions_v2");
+  });
+
+  it("SYNC-02a #113 a status write queued before a clear does not land after it", async () => {
+    const pending = [interval()];
+    const storage = fakeStorage({ [OUTBOX_KEY]: pending });
+    const epoch = createAccountEpoch();
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      epoch,
+      isConnected: async () => true,
+      ingest: async (batch) => ({
+        ok: true,
+        confirmedIds: [],
+        rejected: batch.map((i) => ({ id: i.id, reason: "overlap" as const })),
+      }),
+    });
+    // Hold the serialized chain with a dismissal whose storage read waits; meanwhile the cycle
+    // queues its writes, then local data is cleared (epoch bump) before they run.
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const get = storage.get.bind(storage);
+    let first = true;
+    storage.get = async (k) => {
+      if (first && k === SYNC_STATE_KEY) {
+        first = false;
+        await gate;
+      }
+      return get(k);
+    };
+    storage.data.set(SYNC_STATE_KEY, { ...INITIAL_SYNC_STATE, overlapDroppedS: 60 });
+    const dismissal = sync.dismissOverlap(60);
+    await new Promise((r) => setTimeout(r, 0)); // the dismissal now holds the chain
+    const cycle = sync.run(token);
+    await new Promise((r) => setTimeout(r, 0)); // the cycle's marker write is queued behind it
+    epoch.bump();
+    storage.data.delete(SYNC_STATE_KEY); // what clear() does
+    release();
+    await dismissal;
+    await cycle;
+    expect(storage.data.has(SYNC_STATE_KEY)).toBe(false);
+  });
+});

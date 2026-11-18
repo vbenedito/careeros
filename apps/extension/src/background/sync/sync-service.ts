@@ -74,14 +74,20 @@ export function createSyncService(deps: {
     stateChain = run.catch(() => {});
     return run;
   }
-  const persist = (next: SyncState) =>
+  /**
+   * `stale` is checked again inside the queued write (review of #216): a clear or account change
+   * that lands while the write waits for its turn must not get the previous account's status.
+   */
+  const persist = (next: SyncState, stale: () => boolean) =>
     serialized(async () => {
+      if (stale()) return;
       const { overlapDroppedS } = await readState();
       await storage.set({ [SYNC_STATE_KEY]: { ...next, overlapDroppedS } });
     });
   /** Adds to (or, negative, subtracts from) the stored count; never below 0. */
-  const changeOverlap = (deltaS: number) =>
+  const changeOverlap = (deltaS: number, stale: () => boolean) =>
     serialized(async () => {
+      if (stale()) return;
       const raw = (await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY];
       // Nothing stored and nothing to add: a disconnected profile gets no sync status (#113).
       if (raw === undefined && deltaS <= 0) return;
@@ -118,7 +124,7 @@ export function createSyncService(deps: {
     const state = await readState();
     // Every write of this cycle ends the "syncing" marker (SYNC-02c).
     const writeState = async (next: SyncState) => {
-      if (!stale()) await persist({ ...next, syncingSince: null });
+      if (!stale()) await persist({ ...next, syncingSince: null }, stale);
     };
     if (!force && now() < state.notBefore) return "skipped";
     let marked = false;
@@ -151,7 +157,7 @@ export function createSyncService(deps: {
         }
         if (!marked && !stale()) {
           // SYNC-02c (#58): the popup shows "Syncing…" while this is recent.
-          await persist({ ...state, syncingSince: now() });
+          await persist({ ...state, syncingSince: now() }, stale);
           marked = true;
         }
         let token = await accessToken();
@@ -213,7 +219,7 @@ export function createSyncService(deps: {
           if (settled.overlapDroppedS > 0) {
             // SYNC-05c: counted at once, so a later failure of the cycle cannot lose it.
             if (stale()) return "not-connected";
-            await changeOverlap(settled.overlapDroppedS);
+            await changeOverlap(settled.overlapDroppedS, stale);
           }
           state.failures = 0;
           state.probeNext = false;
@@ -319,7 +325,11 @@ export function createSyncService(deps: {
      */
     dismissOverlap(shownS: number): Promise<void> {
       if (!Number.isFinite(shownS) || shownS <= 0) return Promise.resolve();
-      return changeOverlap(-shownS);
+      const started = deps.epoch?.current();
+      return changeOverlap(
+        -shownS,
+        () => deps.epoch !== undefined && deps.epoch.current() !== started,
+      );
     },
   };
 }

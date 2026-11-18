@@ -10,6 +10,8 @@ Amended 2026-11-17 (#176): TRK-02 and TRK-08 — on `leetcode.com`, the problem 
 
 Amended 2026-11-18 (#179): the TRK-02 exception and the TRK-08 problem change are implemented in the extension engine, no longer proposed. The open interval carries its problem (PRB-08); with the setting off the engine behaves as in 0.2.3.
 
+Amended 2026-11-18 (#179, product owner): TRK-10 — intervals opened or closed by a problem split (PRB-08) are exempt from the `MIN_INTERVAL_S` discard.
+
 ## 1. Objective
 
 Measure time the user spends actively studying on tracked domains, robust to MV3 service-worker termination, browser restarts and crashes, while collecting only what spec 07 allows.
@@ -44,7 +46,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 - **TRK-08** An interval opens when tracking starts and closes on any pause, domain change, problem change (PRB-08, #176), tab/window change that breaks eligibility, sign-out, tracking disabled, or when it reaches `MAX_INTERVAL_S` (immediately followed by a new interval if still eligible).
 - **TRK-09** Intervals are split at **local midnight** of the device's time zone so each interval belongs to one calendar day.
 - **TRK-09a** Boundaries are **computed, not observed**: whenever the engine processes any event, it first closes the open interval at every boundary that has passed (`started_at + MAX_INTERVAL_S`, local midnight) using the boundary timestamp itself, opening the follow-up interval at the same instant. Heartbeat timing therefore never makes an interval exceed `MAX_INTERVAL_S`.
-- **TRK-10** Each closed interval has: `id` (UUIDv4, generated client-side at open), `device_id`, `domain`, `started_at`, `ended_at` (UTC ISO-8601, timestamps **truncated** to whole seconds). Intervals shorter than `MIN_INTERVAL_S` are discarded.
+- **TRK-10** Each closed interval has: `id` (UUIDv4, generated client-side at open), `device_id`, `domain`, `started_at`, `ended_at` (UTC ISO-8601, timestamps **truncated** to whole seconds). Intervals shorter than `MIN_INTERVAL_S` are discarded, except an interval opened or closed by a problem split (PRB-08; #179, product owner 2026-11-18), which is kept (with the setting off there are no problem splits, so nothing changes).
 - **TRK-11** Intervals on one device never overlap.
 
 **Lifecycle & recovery**

@@ -28,6 +28,11 @@ export interface OpenInterval {
    * the interval's identity, like the domain.
    */
   problem?: string | null;
+  /**
+   * PRB-08 (product owner, 2026-11-18): opened by a problem split (a change of problem on the
+   * same domain). Such an interval is kept even when shorter than MIN_INTERVAL_S.
+   */
+  splitOpened?: boolean;
   /** Epoch seconds. */
   startedAt: number;
 }
@@ -115,9 +120,20 @@ export const CLOCK_BACK_MAX_BLOCK_S = TRACKING.MAX_INTERVAL_S;
 
 const iso = (t: number) => `${new Date(t * 1000).toISOString().slice(0, 19)}Z`;
 
-/** TRK-10: a closed interval, or nothing when it is shorter than MIN_INTERVAL_S. */
-function emit(open: OpenInterval, endedAt: number, env: EngineEnv): EngineEffect[] {
-  if (endedAt - open.startedAt < TRACKING.MIN_INTERVAL_S) return [];
+/**
+ * TRK-10: a closed interval, or nothing when it is shorter than MIN_INTERVAL_S — unless it was
+ * opened or closed by a problem split (PRB-08): with the setting off it would have been part of
+ * a longer interval, so dropping it would lose time (PRB-07). Zero-length pieces never count.
+ */
+function emit(
+  open: OpenInterval,
+  endedAt: number,
+  env: EngineEnv,
+  closedBySplit = false,
+): EngineEffect[] {
+  const length = endedAt - open.startedAt;
+  const exempt = (open.splitOpened === true || closedBySplit) && length > 0;
+  if (length < TRACKING.MIN_INTERVAL_S && !exempt) return [];
   return [
     {
       type: "EMIT_INTERVAL",
@@ -166,10 +182,19 @@ function rollTo(
   return current;
 }
 
-/** Closes the open interval at `t` (TRK-08), splitting at boundaries first. */
-function closeAt(open: OpenInterval, t: number, env: EngineEnv, effects: EngineEffect[]) {
+/**
+ * Closes the open interval at `t` (TRK-08), splitting at boundaries first. `bySplit`: the close
+ * is a problem split (PRB-08), which exempts the last piece from MIN_INTERVAL_S.
+ */
+function closeAt(
+  open: OpenInterval,
+  t: number,
+  env: EngineEnv,
+  effects: EngineEffect[],
+  bySplit = false,
+) {
   const end = Math.max(t, open.startedAt);
-  effects.push(...emit(rollTo(open, end, env, effects), end, env));
+  effects.push(...emit(rollTo(open, end, env, effects), end, env, bySplit));
 }
 
 /**
@@ -245,13 +270,26 @@ export function step(
   // interval at the same instant when there is something to track.
   const target = trackingTarget(signals);
   const problem = target ? trackingProblem(signals) : null;
+  // PRB-08 (product owner, 2026-11-18): a problem split is a change of problem on the same
+  // domain, including the PRB-09 setting on → off; both pieces it touches keep short lengths.
+  const problemSplit =
+    open !== null &&
+    target !== null &&
+    open.domain === target &&
+    (open.problem ?? null) !== problem;
   if (open && (open.domain !== target || (open.problem ?? null) !== problem)) {
-    closeAt(open, now, env, effects);
+    closeAt(open, now, env, effects, problemSplit);
     open = null;
   }
   if (notBefore !== null && now >= notBefore) notBefore = null;
   if (!open && target && notBefore === null) {
-    open = { id: env.newId(), domain: target, problem, startedAt: now };
+    open = {
+      id: env.newId(),
+      domain: target,
+      problem,
+      ...(problemSplit ? { splitOpened: true } : {}),
+      startedAt: now,
+    };
   }
 
   return { state: { signals, open, lastHeartbeatAt: now, lastInputAt, notBefore }, effects };

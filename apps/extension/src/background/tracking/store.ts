@@ -52,6 +52,7 @@ export const EngineStateSchema = z.object({
       id: z.uuid(),
       domain: DomainSchema,
       problem: ProblemSlugSchema.nullable().default(null),
+      splitOpened: z.boolean().default(false),
       startedAt: epoch,
     })
     .refine((o) => o.problem === null || o.domain === PROBLEMS.PROBLEM_DOMAIN)

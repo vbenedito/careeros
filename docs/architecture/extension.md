@@ -72,7 +72,7 @@ stateDiagram-v2
   NotTracking --> NotTracking: clock moved back<br/>(block new intervals until notBefore)
 ```
 
-The open interval carries `problem` (slug or null). `trackingProblem(signals)` is the slug only while the setting is on (`trackProblems === true`, fails closed: null until read, PRB-04) and the tab's tracked domain is `leetcode.com` (PRB-05); turning it on asks for the tab again (the URL is never kept), turning it off clears the slug at once, so an open interval with a problem closes (PRB-09). With the setting off the engine behaves as in 0.2.3 and intervals have no `problem` key.
+The open interval carries `problem` (slug or null). `trackingProblem(signals)` is the slug only while the setting is on (`trackProblems === true`, fails closed: null until read, PRB-04) and the tab's tracked domain is `leetcode.com` (PRB-05); turning it on asks for the tab again (the URL is never kept), turning it off clears the slug at once, so an open interval with a problem closes (PRB-09). A piece opened (`splitOpened`) or closed by a problem split on the same domain is kept even under 5 s, so the pieces add up to the domain time (PRB-07, PRB-08). With the setting off the engine behaves as in 0.2.3 and intervals have no `problem` key.
 
 The target is non-null only when all of TRK-01 hold (connected, tracking on, domain list loaded, focused tracked tab) and the user is active, or idle with the media hold (TRK-05, TRK-06, [ADR-0005](../adr/0005-media-activity.md)). Every step persists the state (TRK-12).
 
@@ -83,7 +83,7 @@ stateDiagram-v2
   [*] --> Open: eligible + active
   Open --> Closed: pause / domain or problem change / 30 min / midnight / disabled / sign-out
   Closed --> Outbox: duration ≥ 5 s
-  Closed --> [*]: duration < 5 s (discarded)
+  Closed --> [*]: duration < 5 s (discarded, unless opened or closed by a problem split)
   Outbox --> Synced: server confirms id
   Outbox --> Quarantine: rejected as invalid
   Outbox --> [*]: older than 30 days (dropped, counted)
