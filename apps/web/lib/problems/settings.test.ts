@@ -58,8 +58,7 @@ describe("problems card visibility (PRB-16, DASH-17)", () => {
 
   it("PRB-16 after keep history, turning it back on shows the card with the old data", () => {
     expect(showProblemsCard("on")).toBe(true);
-    // The list depends only on the stored slugs, not on the setting.
-    expect(problemRows(stored)).toEqual(problemRows(stored));
+    // The rows come only from the stored slugs; the setting decides only whether the card shows.
     expect(problemRows(stored)[0]?.name).toBe("Two Sum");
   });
 });

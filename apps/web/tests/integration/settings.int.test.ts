@@ -73,13 +73,17 @@ describe("settings (integration)", () => {
     }
   });
 
-  it("DATA-01 the 13th site is refused with LIMIT_REACHED", async () => {
+  it("DATA-01 ENT-08 the 13th site is refused with LIMIT_REACHED, limit and plan", async () => {
     const { id, cookie } = await signedInUser("limit");
     sql(`insert into public.tracked_domains (user_id, domain)
          select '${id}', 'site' || g || '.com' from generate_series(1, ${DATA.MAX_TRACKED_DOMAINS}) g`);
     const res = await addSite(cookie, "one-more.com");
     expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ error: "LIMIT_REACHED" });
+    expect(await res.json()).toEqual({
+      error: "LIMIT_REACHED",
+      limit: DATA.MAX_TRACKED_DOMAINS,
+      plan: "free",
+    });
   });
 
   it("DATA-04 a user cannot remove another user's site", async () => {
