@@ -1,6 +1,6 @@
 # CareerOS brand profile
 
-Type: living · Owner: product owner · Last reviewed: 2026-11-17
+Type: living · Owner: product owner · Last reviewed: 2026-11-18
 
 This is the first marketing document (issue #185, step 1 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). Every later marketing document and every post reads it first: persona (#186), voice (#187), platform study (#188), content pillars (#189), video formats (#190), goals and calendar (#191).
 
@@ -121,7 +121,11 @@ Full rules live in the [design system](../design-system.md). For marketing:
 
 - **Landing page:** dark only, with its own small palette; headings in Mona Sans.
 - **Product (popup and dashboard):** shared tokens in `packages/shared/theme/tokens.css`, light and dark. Primary color is a blue (`oklch(0.5 0.17 265)` light, `oklch(0.72 0.14 265)` dark).
-- **Logo:** CareerOS has no logo yet. It will be designed and validated in #195 (high priority). Social avatars wait for it.
+- **Logo:** designed in #195 (direction C, a C with a dot). Files, colours, contrast, minimum size and clear space are in [`brand/README.md`](brand/README.md):
+  - Mark: `brand/careeros-mark.svg` (light), `brand/careeros-mark-dark.svg` (dark), `brand/careeros-mark-small.svg` and `brand/careeros-mark-small-dark.svg` (below 32 px).
+  - Lockup: `brand/careeros-lockup.svg` (light), `brand/careeros-lockup-dark.svg` (dark).
+  - Social avatars: `brand/careeros-avatar-light-1024.png`, `-400.png`, `brand/careeros-avatar-dark-1024.png`, `-400.png` (and the `careeros-avatar*.svg` sources).
+  - The extension icon and favicon are unchanged; whether they follow is a separate issue.
 - **Store assets:** icon, screenshots and promo tiles in `docs/chrome-web-store/assets/`.
 - **Rules to keep:** contrast at least WCAG AA; status is never shown by color alone; durations in the app format (`45m`, `1h 05m`); sample data only.
 - **Accessibility:** captions or on-screen text on every video (our videos are text-first anyway); alt text on every image.
