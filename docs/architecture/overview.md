@@ -235,7 +235,7 @@ flowchart LR
 
 | Concern | How | Where it is specified |
 |---|---|---|
-| Security | Deny-by-default grants and forced RLS; one write RPC; nonce CSP for the app and a script-free CSP for the landing page; same-origin checks on mutating routes; secret key only in Vercel server env | SEC-03..12, DATA-04..09, LAND-06; [web.md](web.md#security-policies), [database.md](database.md#grants-and-rls) |
+| Security | Deny-by-default grants and forced RLS; writes to intervals, slugs and the problem setting only through definer RPCs; nonce CSP for the app and a script-free CSP for the landing page; same-origin checks on mutating routes; secret key only in Vercel server env | SEC-03..12, DATA-04..09, LAND-06; [web.md](web.md#security-policies), [database.md](database.md#grants-and-rls) |
 | Privacy | Only tracked hostnames, start/end times and a random device id leave the browser; the extension has no analytics; the website has cookieless Vercel Web Analytics only ([ADR-0010](../adr/0010-web-analytics.md)) | SEC-01, SEC-02, SEC-13..15; [`/privacy`](../../apps/web/app/privacy/page.tsx) |
 | Observability | Extension: structured logger, debug only in dev builds, last sync outcome shown in the popup. Dashboard: one JSON line per server error in Vercel runtime logs, no personal data | ENV-10, ENV-11, SEC-06 |
 | Backups | Weekly data-only dump, encrypted with age inside the job, kept 90 days; restore tested in every CI run | [operations §4](../operations.md#4-backups) |

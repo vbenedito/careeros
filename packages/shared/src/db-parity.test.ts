@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DATA, ENTITLEMENTS, SYNC, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, PROBLEMS, SYNC, TRACKING } from "./constants";
 import { DOMAIN_PATTERN } from "./domain";
 
 const migrationsDir = resolve(import.meta.dirname, "../../../supabase/migrations");
@@ -60,9 +60,19 @@ function latestFunctionSql(name: string): { file: string; sql: string } {
 const occurrences = (sql: string, pattern: RegExp) => [...sql.matchAll(pattern)].map((m) => m[1]);
 
 describe("database parity: ingest and totals constants", () => {
-  const parser = latestFunctionSql("private.parse_study_session");
-  const ingest = latestFunctionSql("public.ingest_study_sessions");
+  // Since #178 both ingest RPCs are thin wrappers around one shared implementation (ADR-0011).
+  const parser = latestFunctionSql("private.parse_session_element");
+  const ingest = latestFunctionSql("private.ingest_sessions");
   const spec = readFileSync(resolve(specsDir, "04-data-model.md"), "utf8");
+
+  it("DATA-06b both ingest RPCs delegate to the shared implementation", () => {
+    expect(latestFunctionSql("public.ingest_study_sessions").sql).toContain(
+      "private.ingest_sessions(sessions, false)",
+    );
+    expect(latestFunctionSql("public.ingest_study_sessions_v2").sql).toContain(
+      "private.ingest_sessions(sessions, true)",
+    );
+  });
 
   it("TEST-08 DATA-02 every interval cap in the SQL equals MAX_INTERVAL_S + INTERVAL_TOLERANCE_S", () => {
     const cap = `${TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S}`;
@@ -123,8 +133,12 @@ describe("database parity: ingest and totals constants", () => {
     ]);
   });
 
-  it("TEST-08 DATA-10 DATA-11 both totals functions accept at most 92 days, as the spec says", () => {
-    for (const name of ["public.get_daily_totals", "public.get_domain_totals"]) {
+  it("TEST-08 DATA-10 DATA-11 DATA-15 every totals function accepts at most 92 days, as the spec says", () => {
+    for (const name of [
+      "public.get_daily_totals",
+      "public.get_domain_totals",
+      "public.get_problem_totals",
+    ]) {
       const { sql } = latestFunctionSql(name);
       expect(occurrences(sql, /p_to - p_from \+ 1 > (\d+)/g), name).toEqual(["92"]);
     }
@@ -177,5 +191,49 @@ describe("database parity: entitlements", () => {
   it("ENT-11 the free plan id in the migrations equals PLAN_FREE", () => {
     const { sql } = latestFunctionSql("private.plan_of");
     expect(occurrences(sql, /select '(\w+)'::text/g)).toEqual([ENTITLEMENTS.PLAN_FREE]);
+  });
+});
+
+/**
+ * PRB-05, DATA-16: the problem domain, slug pattern and length in the database equal PROBLEMS
+ * (table CHECK and the ingest v2 parser), and the problem list limit equals PROBLEM_LIST_MAX.
+ */
+describe("database parity: problems", () => {
+  const table = (() => {
+    for (const file of readdirSync(migrationsDir).sort().reverse()) {
+      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+      const match = /create table public\.study_session_problems \([\s\S]*?\n\);/.exec(sql);
+      if (match) return match[0];
+    }
+    throw new Error("study_session_problems not found in supabase/migrations");
+  })();
+  const parser = latestFunctionSql("private.parse_session_element").sql;
+
+  it("PRB-05 DATA-16 the slug pattern in the table CHECK and the parser equals PROBLEM_SLUG_PATTERN", () => {
+    expect(occurrences(table, /problem_slug ~ '([^']+)'/g)).toEqual([
+      PROBLEMS.PROBLEM_SLUG_PATTERN.source,
+    ]);
+    expect(occurrences(parser, /\(element ->> 'problem'\) !~ '([^']+)'/g)).toEqual([
+      PROBLEMS.PROBLEM_SLUG_PATTERN.source,
+    ]);
+  });
+
+  it("PRB-05 DATA-16 the slug length limit equals PROBLEM_SLUG_MAX", () => {
+    expect(occurrences(table, /char_length\(problem_slug\) <= (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_SLUG_MAX}`,
+    ]);
+    expect(occurrences(parser, /char_length\(element ->> 'problem'\) > (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_SLUG_MAX}`,
+    ]);
+  });
+
+  it("PRB-05 DATA-16 the problem domain equals PROBLEM_DOMAIN", () => {
+    expect(occurrences(table, /check \(domain = '([^']+)'\)/g)).toEqual([PROBLEMS.PROBLEM_DOMAIN]);
+    expect(occurrences(parser, /domain::text <> '([^']+)'/g)).toEqual([PROBLEMS.PROBLEM_DOMAIN]);
+  });
+
+  it("PRB-11 DATA-15 get_problem_totals returns at most PROBLEM_LIST_MAX rows", () => {
+    const { sql } = latestFunctionSql("public.get_problem_totals");
+    expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
   });
 });

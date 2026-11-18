@@ -1,4 +1,4 @@
--- Account erasure (DATA-12, AUTH-13; grill T4): deleting an auth user, as the dashboard's
+-- Account erasure (DATA-12, AUTH-13; grill T4; PRB-16: slugs and the setting go too): deleting an auth user, as the dashboard's
 -- delete path does (auth admin deleteUser removes the auth.users row), leaves no row of that
 -- user in any table with a user_id column. The tables are discovered from information_schema,
 -- so a table added later is covered automatically: if it forgets `on delete cascade`, this fails.
@@ -21,6 +21,12 @@ values
    'leetcode.com', '2026-11-05 09:00:00+00', '2026-11-05 09:10:00+00');
 insert into private.link_requests (user_id)
 values (tests.user_id('erased')), (tests.user_id('kept'));
+insert into public.account_settings (user_id, track_problems)
+values (tests.user_id('erased'), true), (tests.user_id('kept'), true);
+insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
+values
+  ('e0000000-0000-4000-8000-000000000001', tests.user_id('erased'), 'leetcode.com', 'two-sum'),
+  ('e0000000-0000-4000-8000-000000000002', tests.user_id('kept'), 'leetcode.com', 'two-sum');
 
 -- Every base table in the application schemas with a user_id column OR a column that references
 -- auth.users(id) by foreign key, whatever its name (pg_constraint).
@@ -67,14 +73,16 @@ $$;
 select is(
   (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables
    where schema_name || '.' || table_name <> all (array[
-     'private.link_requests', 'public.study_sessions', 'public.tracked_domains'])),
+     'private.link_requests', 'public.account_settings', 'public.study_session_problems',
+     'public.study_sessions', 'public.tracked_domains'])),
   null::text[],
   'TEST-04 DATA-12 every user-owned table found has a seed row in this test (add one for a new table)'
 );
 
 select ok(
   (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables)
-    @> array['private.link_requests', 'public.study_sessions', 'public.tracked_domains'],
+    @> array['private.link_requests', 'public.account_settings', 'public.study_session_problems',
+     'public.study_sessions', 'public.tracked_domains'],
   'TEST-04 DATA-12 discovery finds the known user-owned tables'
 );
 select ok(
@@ -97,7 +105,8 @@ select is(
 );
 select ok(
   pg_temp.tables_holding(tests.user_id('kept'))
-    @> array['private.link_requests', 'public.study_sessions', 'public.tracked_domains'],
+    @> array['private.link_requests', 'public.account_settings', 'public.study_session_problems',
+     'public.study_sessions', 'public.tracked_domains'],
   'TEST-04 DATA-12 deleting one user leaves another user''s rows untouched'
 );
 

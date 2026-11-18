@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AUTH, DATA, ENTITLEMENTS, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
+import { AUTH, DATA, ENTITLEMENTS, PROBLEMS, PROTOCOL_VERSION, SYNC, TRACKING } from "./constants";
 
 const specsDir = resolve(import.meta.dirname, "../../../specs/v0");
 
@@ -80,6 +80,29 @@ describe("constants match the specs", () => {
     expect(row("FREE_MAX_TRACKED_DOMAINS")).toBe(`${ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS}`);
     expect(row("LIMIT_ERROR_CODE")).toBe(ENTITLEMENTS.LIMIT_ERROR_CODE);
     expect(row("LIMIT_ERROR_HINT")).toBe(ENTITLEMENTS.LIMIT_ERROR_HINT);
+  });
+
+  it("PRB-05 PRB-11 specs/v1/01-problems.md §2 table equals PROBLEMS", () => {
+    const spec = readFileSync(
+      resolve(import.meta.dirname, "../../../specs/v1/01-problems.md"),
+      "utf8",
+    );
+    const row = (name: string) =>
+      new RegExp(`^\\| \`${name}\` \\| \`?([^|\`]+?)\`? \\|`, "m").exec(spec)?.[1];
+    expect(row("PROBLEM_DOMAIN")).toBe(PROBLEMS.PROBLEM_DOMAIN);
+    expect(row("PROBLEM_PATH_PREFIX")).toBe(PROBLEMS.PROBLEM_PATH_PREFIX);
+    expect(row("PROBLEM_SLUG_PATTERN")).toBe(PROBLEMS.PROBLEM_SLUG_PATTERN.source);
+    expect(row("PROBLEM_SLUG_MAX")).toBe(`${PROBLEMS.PROBLEM_SLUG_MAX}`);
+    expect(row("PROBLEM_LIST_MAX")).toBe(`${PROBLEMS.PROBLEM_LIST_MAX}`);
+  });
+
+  it("PRB-05 the slug pattern accepts and refuses the spec examples", () => {
+    for (const slug of ["two-sum", "3sum", "lru-cache"]) {
+      expect(PROBLEMS.PROBLEM_SLUG_PATTERN.test(slug), slug).toBe(true);
+    }
+    for (const slug of ["Two-Sum", "two--sum", "-two", "two-", "two_sum", ""]) {
+      expect(PROBLEMS.PROBLEM_SLUG_PATTERN.test(slug), slug).toBe(false);
+    }
   });
 
   it("ENT-01 the old site-limit constant is the free plan's limit", () => {

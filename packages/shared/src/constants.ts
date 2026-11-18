@@ -68,6 +68,18 @@ export const ENTITLEMENTS = {
   LIMIT_ERROR_HINT: "DATA-01",
 } as const;
 
+/**
+ * specs/v1/01-problems.md §2 (PRB-05, PRB-11). The database repeats the domain, the slug pattern
+ * and the length in study_session_problems and ingest v2; db-parity.test.ts keeps them equal.
+ */
+export const PROBLEMS = {
+  PROBLEM_DOMAIN: "leetcode.com",
+  PROBLEM_PATH_PREFIX: "/problems/",
+  PROBLEM_SLUG_PATTERN: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  PROBLEM_SLUG_MAX: 100,
+  PROBLEM_LIST_MAX: 200,
+} as const;
+
 /** specs/v0/04-data-model.md */
 export const DATA = {
   /** DATA-01 (kept for existing callers; the value now lives in ENTITLEMENTS, ENT-01). */
