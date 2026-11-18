@@ -9,13 +9,14 @@ export type RequestResult<T> =
   | { ok: true; data: T }
   /**
    * `status` is the HTTP status, or null when the request never got a response; `error` is the
-   * route's `{ error }` code when it sent one.
+   * route's `{ error }` code when it sent one; `limit` is the number a limit error carries
+   * (ENT-07, ENT-08).
    */
-  | { ok: false; status: number | null; error?: string };
+  | { ok: false; status: number | null; error?: string; limit?: number };
 
 export async function request<S extends z.ZodType>(
   path: string,
-  options: { method?: "GET" | "POST" | "DELETE"; json?: unknown; schema: S },
+  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; json?: unknown; schema: S },
 ): Promise<RequestResult<z.infer<S>>> {
   const init: RequestInit = { method: options.method ?? "GET" };
   if (options.json !== undefined) {
@@ -35,10 +36,14 @@ export async function request<S extends z.ZodType>(
     return { ok: false, status: response.status };
   }
   if (!response.ok) {
-    const error = (body as { error?: unknown } | null)?.error;
-    return typeof error === "string"
-      ? { ok: false, status: response.status, error }
-      : { ok: false, status: response.status };
+    const fields = body as { error?: unknown; limit?: unknown } | null;
+    const { error, limit } = fields ?? {};
+    return {
+      ok: false,
+      status: response.status,
+      ...(typeof error === "string" ? { error } : {}),
+      ...(typeof limit === "number" && Number.isInteger(limit) && limit > 0 ? { limit } : {}),
+    };
   }
   const parsed = options.schema.safeParse(body);
   return parsed.success ? { ok: true, data: parsed.data } : { ok: false, status: response.status };

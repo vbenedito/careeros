@@ -6,6 +6,8 @@ Amended 2026-11-18 (#179): PRB-03..10 implemented in the extension (setting read
 
 Amended 2026-11-18 (#179, product owner): PRB-08 — an interval opened or closed by a problem split is kept even when shorter than `MIN_INTERVAL_S` (TRK-10), so the pieces add up to the domain time (PRB-07).
 
+Amended 2026-11-18 (#181): PRB-16 — the dialog also has Cancel; it is shown when the stored-slug check fails.
+
 ## 1. Objective
 
 Show how much time the user spends on each LeetCode problem. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
@@ -63,7 +65,7 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 - **PRB-15** The slug is the only part of a path CareerOS keeps, and only for `PROBLEM_DOMAIN` (SEC-01). The privacy page says so (SEC-13).
 - **PRB-16** Turning the setting **off**:
   - stops new slugs at once on the server (DATA-14) and within one refresh in the extension (PRB-03);
-  - asks first, when the account has stored slugs: a confirm dialog "Also delete your problem history?" with two choices (product owner, 2026-11-17):
+  - asks first, when the account has stored slugs: a confirm dialog "Also delete your problem history?" with two choices (product owner, 2026-11-17), plus **Cancel**, which closes the dialog and leaves the setting on (product owner, 2026-11-18). If the check for stored slugs fails, the dialog is shown (asking is the safe side):
     - **Turn off and keep history**: stored slugs stay. The dashboard hides the problems card while the setting is off. It shows the card again, with the old data, when the setting is turned back on.
     - **Turn off and delete history**: every stored problem slug of the account is deleted (DATA-16). All study time stays: the intervals and every total are unchanged.
   - needs no dialog when the account has no stored slugs: the switch just turns off;

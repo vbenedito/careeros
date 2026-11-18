@@ -54,11 +54,44 @@ describe("POST /api/sites (DASH-12, DATA-01)", () => {
     expect(await res.json()).toEqual({ id: "s1", domain: "leetcode.com" });
   });
 
-  it("DATA-01 a new site at the limit is still refused with LIMIT_REACHED", async () => {
-    state.insert = { data: null, error: { code: "P0001", hint: "DATA-01", message: "limit" } };
+  it("ENT-08 a new site at the limit is refused with 422, the limit and the plan from the error", async () => {
+    state.insert = {
+      data: null,
+      error: {
+        code: "P0001",
+        hint: "DATA-01",
+        message: "A user can track at most 12 domains",
+        details: '{"code":"LIMIT_REACHED","limit":12,"plan":"free"}',
+      },
+    };
     const res = await post();
     expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ error: "LIMIT_REACHED" });
+    expect(await res.json()).toEqual({ error: "LIMIT_REACHED", limit: 12, plan: "free" });
+  });
+
+  it("ENT-08 the number is the one in the error, not a constant", async () => {
+    state.insert = {
+      data: null,
+      error: {
+        code: "P0001",
+        hint: "DATA-01",
+        details: '{"code":"LIMIT_REACHED","limit":20,"plan":"plus"}',
+      },
+    };
+    expect(await (await post()).json()).toEqual({
+      error: "LIMIT_REACHED",
+      limit: 20,
+      plan: "plus",
+    });
+  });
+
+  it("ENT-07 missing or invalid details still give LIMIT_REACHED, without limit or plan", async () => {
+    for (const details of [undefined, "", "not json", '{"code":"LIMIT_REACHED","limit":"12"}']) {
+      state.insert = { data: null, error: { code: "P0001", hint: "DATA-01", details } };
+      const res = await post();
+      expect(res.status).toBe(422);
+      expect(await res.json()).toEqual({ error: "LIMIT_REACHED" });
+    }
   });
 
   it("DASH-12 a unique violation returns the existing site", async () => {

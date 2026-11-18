@@ -4,7 +4,7 @@
  * a URL) and stores the normalized domain; adding a site that is already tracked succeeds.
  * Runs with the user's session, so RLS and the site limit (DATA-01) apply.
  */
-import { parseDomainInput } from "@careeros/shared";
+import { ENTITLEMENTS, parseDomainInput, parseLimitErrorDetails } from "@careeros/shared";
 import { fail, json } from "@/lib/http/json";
 import { errorFields, logServerError } from "@/lib/log";
 import { isSameOrigin } from "@/lib/security/origin";
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // Re-adding a site that is already tracked succeeds (DASH-12). The unique violation (23505)
   // and, at the limit, the BEFORE INSERT limit trigger (hint DATA-01, which fires before the
   // unique check) both mean "maybe it is already there": look the domain up.
-  if (error.code === "23505" || error.hint === "DATA-01") {
+  if (error.code === "23505" || error.hint === ENTITLEMENTS.LIMIT_ERROR_HINT) {
     const existing = await supabase
       .from("tracked_domains")
       .select("id, domain")
@@ -38,7 +38,18 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (existing.data) return json(existing.data);
   }
-  if (error.hint === "DATA-01") return fail(422, "LIMIT_REACHED");
+  if (error.hint === ENTITLEMENTS.LIMIT_ERROR_HINT) {
+    // ENT-07, ENT-08: the number and the plan come from the error's details; when they are
+    // missing or invalid, the code alone is still reported.
+    const limit = parseLimitErrorDetails(error.details);
+    return json(
+      {
+        error: ENTITLEMENTS.LIMIT_ERROR_CODE,
+        ...(limit ? { limit: limit.limit, plan: limit.plan } : {}),
+      },
+      422,
+    );
+  }
   // The account was deleted while this session's access token was still valid (AUTH-13).
   if (error.code === "23503") return fail(401, "NOT_AUTHENTICATED");
   logServerError("sites.add.failed", errorFields(error));

@@ -34,7 +34,7 @@ export function TrackedSites({ sites }: { sites: Site[] }) {
       schema: SiteSchema,
     });
     setBusy(false);
-    if (!result.ok) return setError(siteErrorMessage(result.error, result.status));
+    if (!result.ok) return setError(siteErrorMessage(result.error, result.status, result.limit));
     setValue("");
     setError(null);
     router.refresh();

@@ -38,6 +38,22 @@ describe("request", () => {
     expect(await request("/api/x", { schema })).toEqual({ ok: false, status: 500 });
   });
 
+  it("ENT-08 reports the limit a limit error carries, and ignores a bad one", async () => {
+    respond(422, { error: "LIMIT_REACHED", limit: 12, plan: "free" });
+    expect(await request("/api/x", { schema })).toEqual({
+      ok: false,
+      status: 422,
+      error: "LIMIT_REACHED",
+      limit: 12,
+    });
+    respond(422, { error: "LIMIT_REACHED", limit: "12" });
+    expect(await request("/api/x", { schema })).toEqual({
+      ok: false,
+      status: 422,
+      error: "LIMIT_REACHED",
+    });
+  });
+
   it("sends a JSON body", async () => {
     respond(200, { tokenHash: "abc" });
     await request("/api/x", { method: "DELETE", json: { a: 1 }, schema });

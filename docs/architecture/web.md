@@ -1,6 +1,6 @@
 # Web app design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-12
+Type: living · Owner: tech lead · Last reviewed: 2026-11-18
 
 Low-level design of `apps/web`: the Next.js dashboard and the public landing page, deployed on Vercel. Rules are in [AUTH](../../specs/v0/02-auth.md), [DASH](../../specs/v0/06-dashboard.md), [SEC](../../specs/v0/07-security-privacy.md) and [LAND](../../specs/landing/00-landing.md). The big picture is in the [overview](overview.md).
 
@@ -20,8 +20,9 @@ The browser never calls Supabase. Every Supabase call runs on the server with th
 | `GET /auth/callback` | Route handler | Public | Exchanges the code for cookies; `next` via `safeNextPath` | AUTH-01..03 |
 | `POST /auth/sign-out` | Route handler | Same origin | `scope=local`, or `global` for all devices | AUTH-04, 12a |
 | `POST /api/extension/link` | Route handler | Session, same origin | Single-use token hash; 5/min quota; secret key | AUTH-08, 09 |
-| `POST /api/sites` | Route handler | Session, same origin | Adds a tracked site (normalized); duplicate = success | DASH-12, DATA-01 |
+| `POST /api/sites` | Route handler | Session, same origin | Adds a tracked site (normalized); duplicate = success; at the limit `422 {error, limit, plan}` read from the database error's `details` (`parseLimitErrorDetails`) | DASH-12, DATA-01, ENT-08 |
 | `DELETE /api/sites/[id]` | Route handler | Session, same origin | Removes a tracked site | DASH-12 |
+| `PUT /api/settings/problems` | Route handler | Session, same origin | Turns **Track LeetCode problems** on or off; `deleteHistory` only with `enabled: false`; calls `set_problem_tracking` | DASH-16, PRB-16, DATA-17 |
 | `POST /api/account/delete` | Route handler (form, sent with `fetch` by Settings) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies; Settings follows its redirect, or goes to sign-in on the proxy's 401 (#78) | DASH-14, AUTH-13, 14 |
 | `/robots.txt`, `/sitemap.xml` | `app/robots.ts`, `app/sitemap.ts` | Public | Disallow `/api/`, `/auth/`; sitemap lists `/` and `/privacy` | LAND-07 |
 | `/opengraph-image`, `/icon.svg`, `/fonts/*` | Generated image, static files | Public | Share image, favicon, self-hosted fonts | LAND-04, 07 |
@@ -88,12 +89,13 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 |---|---|---|
 | `get_daily_totals` (period and today), `get_domain_totals` | `lib/dashboard/data.ts` | RPCs, `security invoker` |
 | `tracked_domains` select | `/settings` | Table, RLS |
+| `account_settings` (select own row; none = off), `study_session_problems` (`exists` query, only the boolean reaches the browser), `get_problem_totals`, `set_problem_tracking` | `lib/problems/data.ts`, `/api/settings/problems` | Table reads under RLS, RPCs (`get_problem_totals` invoker, `set_problem_tracking` definer), DATA-13..17 |
 | `tracked_domains` insert / delete | `/api/sites`, `/api/sites/[id]` | Table, RLS, 12-site trigger |
 | `consume_extension_link_quota` | `/api/extension/link` | RPC, `security definer` |
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |
 
-The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives (the UTC page is sent too and revealed by CSS after 4 s, so a failed hydration never leaves the skeleton up) and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*` and `lib/settings/*`.
+The viewer's time zone comes from the `tz` cookie set by `TimeZoneGate` (`components/dashboard/time-zone-sync.tsx`), which on a first visit keeps the page behind the loading skeleton until the refreshed, zone-aware render arrives (the UTC page is sent too and revealed by CSS after 4 s, so a failed hydration never leaves the skeleton up) and shows `UtcHint` when days fall back to UTC (#70); the zone is validated (`lib/dashboard/time-zone.ts`) and checked again by the database (DASH-07, DATA-10). Pure view logic lives in `lib/dashboard/*`, `lib/settings/*` and `lib/problems/*` (problem list, switch decisions, announcement flag; the name comes from `problemName` in `packages/shared`, PRB-12).
 
 Browser-side code talks to the extension through `lib/extension/messenger.ts` (2 s timeout, 15 s for `DISCONNECT`) and reads replies with `lib/extension/protocol.ts`, which also detects an outdated extension or another account (AUTH-07a/07b). Browser calls to the app's own API go through `lib/http/request.ts`, which validates every body with Zod.
 
