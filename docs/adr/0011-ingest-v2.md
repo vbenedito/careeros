@@ -1,6 +1,6 @@
 # ADR-0011 — Versioned ingest RPC next to the current one
 
-Status: Proposed · Date: 2026-11-17 · Issue: #176 · Implementation: #178 (database), #179 (extension)
+Status: Accepted · Date: 2026-11-17 · Issue: #176 · Implementation: #178 (database, `20261118100000_ingest_v2.sql`), #179 (extension)
 
 ## Context
 v1 needs three changes to interval upload, in one ingest change (discovery D21):

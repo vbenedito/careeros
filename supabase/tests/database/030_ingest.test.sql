@@ -19,7 +19,7 @@ select ok(has_function_privilege('authenticated', 'public.ingest_study_sessions(
   'authenticated can execute it');
 select ok(not has_function_privilege('anon', 'public.ingest_study_sessions(jsonb)', 'execute'),
   'anon cannot execute it');
-select ok(not has_function_privilege('authenticated', 'private.parse_study_session(jsonb)', 'execute'),
+select ok(not has_function_privilege('authenticated', 'private.parse_session_element(jsonb, boolean)', 'execute'),
   'the private parser is not callable by clients');
 select has_index('public', 'study_sessions', 'study_sessions_user_created_idx',
   array['user_id', 'created_at'], 'DATA-09 index (user_id, created_at)');

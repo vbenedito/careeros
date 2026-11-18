@@ -21,13 +21,19 @@ psql_local "insert into auth.users (instance_id, id, aud, role, email, email_con
   values (gen_random_uuid(), '$uid', '$uid', 'github', '{\"sub\":\"$uid\"}', now(), now());
   insert into public.tracked_domains (user_id, domain) values ('$uid', 'leetcode.com');
   insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
-  values (gen_random_uuid(), '$uid', gen_random_uuid(), 'leetcode.com',
-          now() - interval '1 hour', now() - interval '40 minutes');" >/dev/null
+  values ('$uid', '$uid', gen_random_uuid(), 'leetcode.com',
+          now() - interval '1 hour', now() - interval '40 minutes');
+  insert into public.account_settings (user_id, track_problems) values ('$uid', true);
+  insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
+  values ('$uid', '$uid', 'leetcode.com', 'two-sum');" >/dev/null
 
 fingerprint() {
   psql_local "select (select count(*) from auth.users) || ',' || (select count(*) from auth.identities)
     || ',' || (select count(*) from public.tracked_domains) || ',' || (select count(*) || ':'
-    || coalesce(sum(duration_s), 0) from public.study_sessions)"
+    || coalesce(sum(duration_s), 0) from public.study_sessions)
+    || ',' || (select count(*) filter (where track_problems) from public.account_settings)
+    || ',' || (select count(*) || ':' || coalesce(string_agg(problem_slug, '|' order by session_id), '')
+    from public.study_session_problems)"
 }
 before=$(fingerprint)
 

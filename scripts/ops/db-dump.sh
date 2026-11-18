@@ -2,7 +2,10 @@
 # Writes a data-only dump of CareerOS to stdout (#31, docs/operations.md). The schema is not
 # included: it is the migrations in this repository, so restore = migrations + this dump.
 # Not included on purpose: private.link_requests (rate-limit state) and auth sessions (every
-# user signs in and connects the extension again after a restore to a new project).
+# user signs in and connects the extension again after a restore to a new project), and
+# public.plans (configuration owned by the migrations, restored with the schema).
+# pg_dump writes table data in foreign-key order (study_sessions before study_session_problems);
+# backup-restore-test.sh proves the round trip in CI.
 # Usage: PGURL=<postgres-url> scripts/ops/db-dump.sh
 # The URL holds the database password: it is read from the environment and handed to Docker
 # by name, so it never appears in a command line, process list or shell history.
@@ -14,4 +17,5 @@ image=${PG_IMAGE:-postgres:17@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dff
 docker run --rm --network host -e PGURL "$image" \
   sh -c 'pg_dump "$PGURL" --data-only --no-owner --no-privileges \
     --table=auth.users --table=auth.identities \
-    --table=public.tracked_domains --table=public.study_sessions'
+    --table=public.tracked_domains --table=public.study_sessions \
+    --table=public.account_settings --table=public.study_session_problems'
