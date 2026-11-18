@@ -15,7 +15,9 @@ describe("workflow parity", () => {
       devDependencies: Record<string, string>;
     };
     const workflow = readFileSync(resolve(root, ".github/workflows/migrate.yml"), "utf8");
-    const pinned = /uses: supabase\/setup-cli@[^\n]*\n\s*with:\n\s*version: (\S+)/.exec(workflow)?.[1];
+    const pinned = /uses: supabase\/setup-cli@[^\n]*\n\s*with:\n\s*version: (\S+)/.exec(
+      workflow,
+    )?.[1];
     expect(pinned).toBeDefined();
     expect(pinned).toBe(pkg.devDependencies.supabase);
   });
