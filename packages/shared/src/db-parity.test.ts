@@ -237,3 +237,41 @@ describe("database parity: problems", () => {
     expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
   });
 });
+
+/**
+ * #178 escaped defect: two new user-data tables were not in the backup dump. Every public table
+ * a migration creates must be dumped by scripts/ops/db-dump.sh, unless it is configuration that
+ * the migrations themselves restore (allow-listed with a reason).
+ */
+describe("database parity: backups", () => {
+  const notDumped: Record<string, string> = {
+    "public.plans": "configuration owned by the migrations (ENT-01); restored with the schema",
+  };
+  const created = new Set<string>();
+  const dropped = new Set<string>();
+  for (const file of readdirSync(migrationsDir).sort()) {
+    const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+    for (const m of sql.matchAll(/create table (?:if not exists )?(public\.\w+)/gi)) {
+      created.add(m[1] as string);
+    }
+    for (const m of sql.matchAll(/drop table (?:if exists )?(public\.\w+)/gi)) {
+      dropped.add(m[1] as string);
+    }
+  }
+  const tables = [...created].filter((t) => !dropped.has(t)).sort();
+  const dump = readFileSync(resolve(migrationsDir, "../../scripts/ops/db-dump.sh"), "utf8");
+  const dumped = new Set(
+    occurrences(dump, /--table=([\w.]+)/g).filter((t): t is string => t !== undefined),
+  );
+
+  it("ENV-08 every public table created in the migrations is in the backup dump or allow-listed", () => {
+    expect(tables.length).toBeGreaterThan(0);
+    expect(tables.filter((t) => !dumped.has(t) && !(t in notDumped))).toEqual([]);
+  });
+
+  it("ENV-08 the dump and the allow-list name only tables that exist", () => {
+    const publicDumped = [...dumped].filter((t) => t.startsWith("public."));
+    expect(publicDumped.filter((t) => !tables.includes(t))).toEqual([]);
+    expect(Object.keys(notDumped).filter((t) => !tables.includes(t) || dumped.has(t))).toEqual([]);
+  });
+});

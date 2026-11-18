@@ -183,4 +183,4 @@ How they reach production: [release process](../process/release.md#database-migr
 
 ## Backups
 
-Weekly data-only dump of `auth.users`, `auth.identities`, `tracked_domains` and `study_sessions`, encrypted with age; restore = migrations + dump. Procedure and checks: [operations §4](../operations.md#4-backups).
+Weekly data-only dump of `auth.users`, `auth.identities`, `tracked_domains`, `study_sessions`, `account_settings` and `study_session_problems` (`plans` comes from the migrations), encrypted with age; restore = migrations + dump. Procedure and checks: [operations §4](../operations.md#4-backups).
