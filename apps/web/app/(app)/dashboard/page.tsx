@@ -25,6 +25,7 @@ import {
 } from "@/lib/dashboard/time-zone";
 import { extensionId } from "@/lib/env";
 import { loadProblemSetting, loadProblems } from "@/lib/problems/data";
+import { showProblemsCard } from "@/lib/problems/settings";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export default async function DashboardPage({
@@ -58,7 +59,9 @@ export default async function DashboardPage({
 
   // DASH-17: the list comes after the zone is final; while the setting is off the card is hidden.
   const problems =
-    result.ok && problemSetting === "on" ? await loadProblems(supabase, period, timeZone) : null;
+    result.ok && showProblemsCard(problemSetting)
+      ? await loadProblems(supabase, period, timeZone)
+      : null;
   const problemsCard = problems ? (
     <ProblemsCard
       rows={problems.ok ? problems.rows : []}

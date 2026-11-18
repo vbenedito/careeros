@@ -142,6 +142,13 @@ describe("PRB-16 turning off", () => {
     expect(toggle().getAttribute("aria-checked")).toBe("true");
   });
 
+  it("PRB-16 closing the dialog returns focus to the switch", async () => {
+    view({ enabled: true, stored: true });
+    fireEvent.click(toggle());
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(document.activeElement).toBe(toggle()));
+  });
+
   it("PRB-16 the delete choice is the destructive one", () => {
     view({ enabled: true, stored: true });
     fireEvent.click(toggle());

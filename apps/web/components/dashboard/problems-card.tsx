@@ -41,10 +41,8 @@ export function ProblemsCard({
         ) : (
           <ul className="flex flex-col divide-y divide-border" data-testid="problems-list">
             {rows.map((row) => (
-              <li key={row.slug} className="flex items-baseline gap-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate" title={row.name}>
-                  {row.name}
-                </span>
+              <li key={row.slug} className="flex items-start gap-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 break-words">{row.name}</span>
                 <span className="shrink-0 tabular-nums" data-testid="problem-time">
                   {row.duration}
                 </span>

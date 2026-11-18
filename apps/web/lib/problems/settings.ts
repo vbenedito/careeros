@@ -24,8 +24,17 @@ export function switchAction(enabled: boolean, hasStoredProblems: boolean): Swit
   return hasStoredProblems ? "ask" : "turn-off";
 }
 
+/**
+ * PRB-16, DASH-17: the problems card is shown only while the setting is on. The rows come from
+ * the stored slugs whatever the setting says, so after "keep history" they are back as they were
+ * when it is turned on again.
+ */
+export function showProblemsCard(setting: "on" | "off" | "unknown"): boolean {
+  return setting === "on";
+}
+
 /** PRB-03: the extension reads the setting with each tracked-site refresh. */
-export const EXTENSION_FOLLOWS_NOTE = `The extension picks up a change within about ${SYNC.SYNC_PERIOD_MIN} minutes.`;
+export const EXTENSION_FOLLOWS_NOTE = `The extension updates within about ${SYNC.SYNC_PERIOD_MIN} minutes.`;
 
 /** DASH-16: the card needs the problem domain itself in the tracked sites (PRB-05). */
 export function isProblemDomainTracked(domains: readonly string[]): boolean {

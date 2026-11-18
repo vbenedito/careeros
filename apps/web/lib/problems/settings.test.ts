@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { problemRows } from "./list";
 import {
   EXTENSION_FOLLOWS_NOTE,
   isProblemDomainTracked,
   ProblemSettingRequestSchema,
   problemSettingErrorMessage,
+  showProblemsCard,
   switchAction,
 } from "./settings";
 
@@ -43,6 +45,22 @@ describe("PUT /api/settings/problems body (DASH-16)", () => {
     }
     expect(parse({ enabled: true, extra: 1 })).toBe(false);
     expect(parse({ enabled: false, deleteHistory: "true" })).toBe(false);
+  });
+});
+
+describe("problems card visibility (PRB-16, DASH-17)", () => {
+  const stored = [{ problem_slug: "two-sum", seconds: 600, last_day: "2026-11-17" }];
+
+  it("PRB-16 the card is hidden while the setting is off, or unknown", () => {
+    expect(showProblemsCard("off")).toBe(false);
+    expect(showProblemsCard("unknown")).toBe(false);
+  });
+
+  it("PRB-16 after keep history, turning it back on shows the card with the old data", () => {
+    expect(showProblemsCard("on")).toBe(true);
+    // The list depends only on the stored slugs, not on the setting.
+    expect(problemRows(stored)).toEqual(problemRows(stored));
+    expect(problemRows(stored)[0]?.name).toBe("Two Sum");
   });
 });
 

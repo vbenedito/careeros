@@ -5,7 +5,7 @@
  * slugs asks first (PRB-16): keep the history, delete it, or cancel.
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +37,7 @@ export function ProblemsSetting({
   const router = useRouter();
   const labelId = useId();
   const descriptionId = useId();
+  const switchRef = useRef<HTMLButtonElement>(null);
   const [shown, setShown] = useState(enabled);
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,6 +70,7 @@ export function ProblemsSetting({
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
         <Switch
+          ref={switchRef}
           checked={shown}
           onCheckedChange={flip}
           disabled={busy}
@@ -98,7 +100,13 @@ export function ProblemsSetting({
       ) : null}
 
       <Dialog open={asking} onOpenChange={(open) => !open && !busy && setAsking(false)}>
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            // No trigger element: return focus to the switch, not to the page body.
+            event.preventDefault();
+            switchRef.current?.focus();
+          }}
+        >
           <DialogTitle>Also delete your problem history?</DialogTitle>
           <DialogDescription>
             Your study time stays. Only the problem names are deleted.
