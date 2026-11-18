@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { LoadError } from "@/components/dashboard/load-error";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { PlatformChart } from "@/components/dashboard/platform-chart";
+import { ProblemsAnnouncement } from "@/components/dashboard/problems-announcement";
+import { ProblemsCard } from "@/components/dashboard/problems-card";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TimeZoneGate, type TimeZoneStatus, UtcHint } from "@/components/dashboard/time-zone-sync";
 import { activityBars } from "@/lib/dashboard/activity";
@@ -22,6 +24,7 @@ import {
   todayIn,
 } from "@/lib/dashboard/time-zone";
 import { extensionId } from "@/lib/env";
+import { loadProblemSetting, loadProblems } from "@/lib/problems/data";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export default async function DashboardPage({
@@ -38,9 +41,10 @@ export default async function DashboardPage({
     tzCookie === undefined ? "unresolved" : isValidTimeZone(tzCookie) ? "viewer" : "fallback";
   let today = todayIn(timeZone);
   let period = resolvePeriod(params, today);
-  let [user, result] = await Promise.all([
+  let [user, result, problemSetting] = await Promise.all([
     getCurrentUser(),
     loadDashboard(supabase, period, today, timeZone),
+    loadProblemSetting(supabase),
   ]);
   // DASH-07: a zone Node accepts but the database does not know falls back to UTC instead of
   // breaking the page for as long as the cookie lives.
@@ -52,11 +56,24 @@ export default async function DashboardPage({
     tzStatus = "fallback";
   }
 
+  // DASH-17: the list comes after the zone is final; while the setting is off the card is hidden.
+  const problems =
+    result.ok && problemSetting === "on" ? await loadProblems(supabase, period, timeZone) : null;
+  const problemsCard = problems ? (
+    <ProblemsCard
+      rows={problems.ok ? problems.rows : []}
+      {...(problems.ok ? {} : { error: problems.reason })}
+      retryHref={periodHref(period.view, period.anchor)}
+    />
+  ) : null;
+
   return (
     // DASH-07 (#70): a first visit shows the skeleton, not UTC days, until the zone is known.
     <TimeZoneGate status={tzStatus} skeleton={<DashboardSkeleton />}>
       <PageHeader title="Dashboard" actions={<PeriodSelector period={period} today={today} />} />
       <main className="flex flex-col gap-4 p-4 md:p-6">
+        {/* DASH-18: only while the setting is off (not when it is on or could not be read). */}
+        {problemSetting === "off" ? <ProblemsAnnouncement /> : null}
         <UtcHint />
         {result.ok ? (
           <>
@@ -71,10 +88,14 @@ export default async function DashboardPage({
                   />
                   <PlatformChart slices={platformSlices(result.data.domains)} />
                 </div>
+                {problemsCard}
                 <ExtensionStatus extensionId={extensionId()} userEmail={user?.email ?? null} />
               </>
             ) : (
-              <EmptyState extensionId={extensionId()} userEmail={user?.email ?? null} />
+              <>
+                <EmptyState extensionId={extensionId()} userEmail={user?.email ?? null} />
+                {problemsCard}
+              </>
             )}
           </>
         ) : (

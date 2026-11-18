@@ -2,6 +2,10 @@
  * Landing page copy (LAND-03). Every claim matches specs/v0; see docs/landing/content.md.
  * Kept as data so the page and its tests share one source.
  */
+import { ENTITLEMENTS } from "@careeros/shared";
+
+/** ENT-10: every limit number on the page comes from the shared constants, never typed by hand. */
+export const MAX_SITES = ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS;
 
 export const TITLE = "Study Time Tracker for Coding Interviews | CareerOS";
 export const DESCRIPTION =
@@ -39,7 +43,7 @@ export const RULES = [
   { v: "60 s", d: "without input and tracking pauses" },
   { v: "15 min", d: "a playing video keeps counting without input" },
   { v: "5 s", d: "shortest session saved; shorter blips are dropped" },
-  { v: "12", d: "study sites per account, subdomains included" },
+  { v: String(MAX_SITES), d: "study sites per account, subdomains included" },
 ] as const;
 
 export const FAQ = [
@@ -49,7 +53,7 @@ export const FAQ = [
   },
   {
     q: "Which sites can I track?",
-    a: "Any site you add, up to 12. Subdomains count too: adding python.org also covers docs.python.org.",
+    a: `Any site you add, up to ${MAX_SITES}. Subdomains count too: adding python.org also covers docs.python.org.`,
   },
   {
     q: "What happens when I step away?",
@@ -75,11 +79,12 @@ export const FAQ = [
 ] as const;
 
 /**
- * Privacy badges under the hero (LAND-03, #140). Each is true for v0: the extension reads only
- * the active tab's host (TRK-02, SEC-01), never stores or sends the address, and the site has no
- * ad trackers (SEC-15). No "no cookies" claim: the dashboard uses session cookies.
+ * Privacy badges under the hero (LAND-03, #140). Two remain (amended 2026-11-17, #176, product
+ * owner): "No URLs stored" is gone because v1 can store a LeetCode problem slug (PRB). The
+ * extension never reads page content, and the site has no ad trackers (SEC-15). No "no cookies"
+ * claim: the dashboard uses session cookies. The texts are rethought in #196.
  */
-export const BADGES = ["Never reads page content", "No URLs stored", "No ad trackers"] as const;
+export const BADGES = ["Never reads page content", "No ad trackers"] as const;
 
 /**
  * "How many hours should you study" explainer (LAND-03, #140): no target numbers, no studies.

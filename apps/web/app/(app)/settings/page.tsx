@@ -2,11 +2,14 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { AccountSettings } from "@/components/settings/account-settings";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
+import { ProblemsSetting } from "@/components/settings/problems-setting";
 import { TrackedSites } from "@/components/settings/tracked-sites";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
 import { isAuthProvider } from "@/lib/auth/routes";
 import { extensionId } from "@/lib/env";
+import { hasStoredProblems, loadProblemSetting } from "@/lib/problems/data";
+import { isProblemDomainTracked } from "@/lib/problems/settings";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,9 +24,11 @@ export default async function SettingsPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const [{ data: claims }, sites] = await Promise.all([
+  const [{ data: claims }, sites, problemSetting, storedProblems] = await Promise.all([
     supabase.auth.getClaims(),
     supabase.from("tracked_domains").select("id, domain").order("domain"),
+    loadProblemSetting(supabase),
+    hasStoredProblems(supabase),
   ]);
   const user = claims?.claims;
   if (!user) redirect("/sign-in");
@@ -52,6 +57,29 @@ export default async function SettingsPage({
               </p>
             ) : (
               <TrackedSites sites={sites.data} />
+            )}
+          </CardContent>
+        </Card>
+        <Card id="problems" aria-labelledby="problems-title" className="scroll-mt-4">
+          <CardHeader>
+            <CardTitle id="problems-title" variant="section">
+              LeetCode problems
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {problemSetting === "unknown" ? (
+              <p role="alert" className="text-sm">
+                Couldn't load this setting. Reload the page to try again.
+              </p>
+            ) : (
+              <ProblemsSetting
+                enabled={problemSetting === "on"}
+                hasStoredProblems={storedProblems}
+                // When the sites could not load, do not claim leetcode.com is missing.
+                leetcodeTracked={
+                  sites.error ? true : isProblemDomainTracked(sites.data.map((s) => s.domain))
+                }
+              />
             )}
           </CardContent>
         </Card>

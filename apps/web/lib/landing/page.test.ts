@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { ENTITLEMENTS } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
 import {
   DESCRIPTION,
@@ -101,7 +103,8 @@ describe("landing page (LAND)", () => {
     const row = /<ul class="wrap badges" role="list" aria-label="Privacy">(.*?)<\/ul>/.exec(html);
     expect(row).not.toBeNull();
     const items = [...(row?.[1] ?? "").matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1]);
-    expect(items).toEqual(["Never reads page content", "No URLs stored", "No ad trackers"]);
+    expect(items).toEqual(["Never reads page content", "No ad trackers"]);
+    expect(html).not.toContain("No URLs stored");
     expect(html.indexOf('class="wrap badges"')).toBeGreaterThan(html.indexOf("</h1>"));
     expect(html.indexOf('class="wrap badges"')).toBeLessThan(html.indexOf('class="belt"'));
     expect(html.toLowerCase()).not.toContain("cookie");
@@ -208,5 +211,29 @@ describe("landing page (LAND)", () => {
         .split("; ")
         .filter((d) => !d.startsWith("script-src")),
     );
+  });
+});
+
+describe("landing limit numbers (ENT-10)", () => {
+  const limit = ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS;
+  const source = (file: string) => readFileSync(new URL(file, import.meta.url), "utf8");
+  /** The source without comments and without CSS numbers like `0.12`. */
+  const code = (file: string) =>
+    source(file)
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  it("ENT-10 the landing content file has no literal 12 for the site limit", () => {
+    expect(code("./content.ts")).not.toMatch(/(?<![\d.])12(?![\d.])/);
+  });
+
+  it("ENT-10 the landing page file does not type the site limit either", () => {
+    expect(code("./page.ts")).not.toMatch(/up to \d+ sites/);
+  });
+
+  it("ENT-10 the rules in numbers and the FAQ show the number from ENTITLEMENTS", () => {
+    expect(html).toContain(`<dt>${limit}</dt><dd>study sites per account`);
+    expect(html).toContain(`Any site you add, up to ${limit}.`);
+    expect(html).toContain(`up to ${limit} sites, subdomains included`);
   });
 });
