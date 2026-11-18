@@ -15,9 +15,12 @@ describe("workflow parity", () => {
       devDependencies: Record<string, string>;
     };
     const workflow = readFileSync(resolve(root, ".github/workflows/migrate.yml"), "utf8");
-    const pinned = /uses: supabase\/setup-cli@[^\n]*\n\s*with:\n\s*version: (\S+)/.exec(
-      workflow,
-    )?.[1];
+    expect(workflow.match(/uses: supabase\/setup-cli@/g)?.length).toBe(1);
+    const pinned =
+      /uses: supabase\/setup-cli@[^\n]*\n(?:[ \t]+[^\n]*\n)*?[ \t]+version:\s*["']?([^"'\s#]+)/.exec(
+        workflow,
+      )?.[1];
+    expect(pinned, "migrate.yml: no `version:` under supabase/setup-cli").toBeDefined();
     expect(pinned).toBeDefined();
     expect(pinned).toBe(pkg.devDependencies.supabase);
   });
