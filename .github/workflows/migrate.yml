@@ -76,7 +76,7 @@ jobs:
       - name: Set up the Supabase CLI
         uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
-          version: 3.0.0
+          version: 3.1.0
 
       - name: Check the CLI version matches package.json
         run: |
