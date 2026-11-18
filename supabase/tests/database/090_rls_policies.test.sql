@@ -4,17 +4,26 @@
 -- automatically. Exceptions are listed below with a reason and must be RESTRICTIVE (they can
 -- only narrow access, never widen it).
 begin;
-select plan(7);
+select plan(9);
 
 -- Allow-list: "table.policy" -> reason.
 --   tracked_domains.tracked_domains_no_anonymous, study_sessions.study_sessions_no_anonymous:
 --     restrictive policies that refuse anonymous-JWT callers (AUTH-01, security hardening); they
 --     test the is_anonymous claim, not row ownership. Ownership is enforced by the permissive
 --     *_own policies, which are checked by the rule.
+--   plans.plans_no_anonymous: the same restrictive refusal on the plans table (ENT-01).
+--   plans.plans_select_all: the one permissive exception. `plans` holds no user data (one row per
+--     plan, ENT-01), so every signed-in user may read every row. It is allowed only because the
+--     table has no write grant for clients and the policy is SELECT-only; both are asserted at
+--     the end of this file, so a write policy or grant added to `plans` fails here.
 create temp table policy_exceptions (policy_key text primary key, reason text not null) on commit drop;
 insert into policy_exceptions values
   ('tracked_domains.tracked_domains_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01)'),
-  ('study_sessions.study_sessions_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01)');
+  ('study_sessions.study_sessions_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01)'),
+  ('plans.plans_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01, ENT-01)');
+create temp table reference_policies (policy_key text primary key, reason text not null) on commit drop;
+insert into reference_policies values
+  ('plans.plans_select_all', 'read-only reference table without user data (ENT-01)');
 
 -- An expression "binds to the caller" when it compares an owner column (user_id or id, optionally
 -- table-qualified) with auth.uid(), in either order, bare or wrapped in a subselect as pg_policies
@@ -42,6 +51,7 @@ as $$
   from pg_policies p
   where schemaname = 'public'
     and not exists (select 1 from policy_exceptions e where e.policy_key = p.tablename || '.' || p.policyname)
+    and not exists (select 1 from reference_policies e where e.policy_key = p.tablename || '.' || p.policyname)
     and not (pg_temp.binds_to_caller(qual) and pg_temp.binds_to_caller(with_check));
 $$;
 
@@ -98,6 +108,26 @@ select is(
    where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity),
   null::text[],
   'TEST-07 SEC-07 every public table has row level security enabled'
+);
+
+-- The permissive exception is safe only while it stays read-only: SELECT-only policy, and no
+-- INSERT, UPDATE, DELETE or TRUNCATE grant for any client role (ENT-01).
+select is(
+  (select array_agg(p.tablename || '.' || p.policyname || ':' || p.cmd order by p.policyname)
+   from pg_policies p
+   join reference_policies r on r.policy_key = p.tablename || '.' || p.policyname
+   where p.schemaname = 'public' and p.permissive = 'PERMISSIVE' and p.roles = array['authenticated']::name[]),
+  array['plans.plans_select_all:SELECT'],
+  'ENT-01 SEC-07 the reference-table exception exists, is permissive, SELECT-only and for exactly {authenticated}'
+);
+select is(
+  (select array_agg(t.tablename || ':' || g.privilege order by t.tablename, g.privilege)
+   from (select distinct split_part(r.policy_key, '.', 1) as tablename from reference_policies r) t
+   cross join (values ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) as g(privilege)
+   where has_table_privilege('authenticated', 'public.' || t.tablename, g.privilege)
+      or has_table_privilege('anon', 'public.' || t.tablename, g.privilege)),
+  null::text[],
+  'ENT-01 SEC-07 a table with a permissive reference policy has no client write grant'
 );
 
 select * from finish();

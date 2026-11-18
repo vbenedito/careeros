@@ -7,7 +7,9 @@ import {
   ExtensionRequestSchema,
   ExtensionStatusReplySchema,
   IntervalSchema,
+  LimitErrorDetailsSchema,
   ProtocolEnvelopeSchema,
+  parseLimitErrorDetails,
 } from "./schemas";
 
 const valid = {
@@ -143,5 +145,30 @@ describe("extension replies", () => {
     expect(ProtocolEnvelopeSchema.safeParse({ protocolVersion: "1" }).success).toBe(false);
     expect(ProtocolEnvelopeSchema.safeParse({}).success).toBe(false);
     expect(ProtocolEnvelopeSchema.safeParse("PING").success).toBe(false);
+  });
+
+  it("ENT-07 reads the limit and the plan from the error details (string or object)", () => {
+    const details = { code: "LIMIT_REACHED", limit: 12, plan: "free" };
+    expect(parseLimitErrorDetails(JSON.stringify(details))).toEqual(details);
+    expect(parseLimitErrorDetails(details)).toEqual(details);
+    // A later database may add fields: they are ignored.
+    expect(LimitErrorDetailsSchema.parse({ ...details, extra: true })).toEqual(details);
+  });
+
+  it("ENT-07 missing or invalid details give null, so the caller falls back to the hint", () => {
+    for (const bad of [
+      undefined,
+      null,
+      "",
+      "not json",
+      "{}",
+      { code: "OTHER", limit: 12, plan: "free" },
+      { code: "LIMIT_REACHED", limit: "12", plan: "free" },
+      { code: "LIMIT_REACHED", limit: 0, plan: "free" },
+      { code: "LIMIT_REACHED", limit: 1.5, plan: "free" },
+      { code: "LIMIT_REACHED", limit: 12 },
+    ]) {
+      expect(parseLimitErrorDetails(bad), JSON.stringify(bad)).toBeNull();
+    }
   });
 });
