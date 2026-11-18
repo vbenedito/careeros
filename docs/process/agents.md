@@ -2,6 +2,8 @@
 
 Status: **Current** (product owner, 2026-11-12) · Owner: tech lead · Applies to every session that delegates work to sub-agents.
 
+Amended 2026-11-18 (#212): §6 ledger rule (ADM-14) and the "Skills used" rule (#199).
+
 The goal is the same or better quality for fewer tokens. Pick the model by the **risk and kind of thinking** a task needs, not by how important the project is.
 
 ## 1. Which model
@@ -56,3 +58,7 @@ Saving tokens must not lower quality. Three safeguards:
 ## 6. Measuring
 
 Each sub-agent reports its token use when it finishes. The tech lead watches for outliers (an agent above ~200k tokens on a well-specified task is a sign the prompt lacked facts). In a session, `/explain-usage` shows where the tokens went.
+
+**Ledger (ADM-14, product owner 2026-11-18).** Before a session ends, the main session writes one JSON file with its records (session goal; per agent: model, work, kind, issue, PR, tokens, minutes, rounds, first-round HIGH/MEDIUM findings, files and skills given) and pushes it to the private repo `vbenedito/careeros-ops` under `ledger/YYYY/` (schema: [spec ADM-06](../../specs/v1/03-admin.md), [ADR-0013](../adr/0013-admin-access.md)). Sub-agent tokens are the exact numbers each agent reports at its last finish; main-session tokens are an estimate unless measured with `/explain-usage`. Files are never edited; a correction is a new file. The ledger never goes in this public repository. If the session cannot push, it says so in its last message to the product owner.
+
+**Skills used (#199).** A specialist review agent loads the skills that match the work and starts its report with `Skills used: …`. The tech lead copies that line into the merge comment.

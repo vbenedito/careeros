@@ -1,6 +1,6 @@
 # 03 — Internal admin dashboard
 
-Status: **Proposed (2026-11-18)** · Issue: #208 · Source: product-owner decisions A1–A10 (2026-11-18, below) · Related ADRs: [0013](../../docs/adr/0013-admin-access.md) (admin access and private ledger)
+Status: **Accepted (2026-11-18, gate 5, #209)** · Issue: #208 · Source: product-owner decisions A1–A10 (2026-11-18, below) · Related ADRs: [0013](../../docs/adr/0013-admin-access.md) (admin access and private ledger)
 
 ## 1. Objective
 
@@ -109,7 +109,7 @@ Social media control (A9: scheduled and posted posts, views, link clicks), live 
 
 | Issue | Work | Area | Model · review | Order |
 |---|---|---|---|---|
-| ADM-a | Process: ledger rule and "Skills used" rule in `agents.md`; ledger schema README in the private repo; backfill of 2026-11-17/18 | `docs/process/`, private repo | Main session · tech lead's check | First (now) |
-| ADM-b | DB: `admins` table, RLS, grants, pgTAP (ADM-01) | `supabase/` | Sonnet · **Opus deep review** (auth) | After #178 is merged and applied |
-| ADM-c | Web: `/admin` guard and 404 (ADM-02..04), ledger reader with schema and cache (ADM-05..08), env check, sessions panel (ADM-09) | `apps/web/app/admin`, `apps/web/lib/admin`, `packages/shared` | Sonnet · **Opus deep review** (auth, secret) | After ADM-b; not at the same time as #181 (shared web files) |
-| ADM-d | Web: cost, reviews, v1 progress, docs map, diagram panels (ADM-09..13, ADM-15) and the `v1` label on the v1 issues | `apps/web/app/admin` | Sonnet · Sonnet | After ADM-c |
+| ADM-a (#212) | Process: ledger rule and "Skills used" rule in `agents.md`; ledger schema README in the private repo; backfill of 2026-11-17/18 | `docs/process/`, private repo | Main session · tech lead's check | First (now) |
+| ADM-b (#213) | DB: `admins` table, RLS, grants, pgTAP (ADM-01) | `supabase/` | Sonnet · **Opus deep review** (auth) | After #178 is merged and applied |
+| ADM-c (#214) | Web: `/admin` guard and 404 (ADM-02..04), ledger reader with schema and cache (ADM-05..08), env check, sessions panel (ADM-09) | `apps/web/app/admin`, `apps/web/lib/admin`, `packages/shared` | Sonnet · **Opus deep review** (auth, secret) | After ADM-b; not at the same time as #181 (shared web files) |
+| ADM-d (#215) | Web: cost, reviews, v1 progress, docs map, diagram panels (ADM-09..13, ADM-15) and the `v1` label on the v1 issues | `apps/web/app/admin` | Sonnet · Sonnet | After ADM-c |
