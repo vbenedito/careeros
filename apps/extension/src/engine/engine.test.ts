@@ -638,3 +638,234 @@ describe("local day start (SYNC-12a, #56)", () => {
     expect(localDayStartMs(Date.UTC(2026, 10, 12, 1, 0), next)).toBe(Date.UTC(2026, 10, 12, 1, 0));
   });
 });
+
+describe("LeetCode problems (specs/v1/01-problems.md PRB-04..09)", () => {
+  const PROBLEM_TAB = tab("https://www.leetcode.com/problems/two-sum/description/?envType=x#a");
+  const THREE_SUM = tab("https://leetcode.com/problems/3sum/");
+  const PROBLEMSET = tab("https://leetcode.com/problemset/");
+
+  /** `studying()` with the setting on, on a problem page. */
+  function solving(): Sim {
+    const sim = studying();
+    sim.send(0, { type: "PROBLEMS", enabled: true });
+    sim.send(0, { type: "TAB", tab: PROBLEM_TAB });
+    return sim;
+  }
+
+  const problems = (sim: Sim) => sim.emitted().map((i) => i.problem ?? null);
+
+  it("PRB acceptance 1 PRB-05 PRB-06 600 s on a problem page are stored under leetcode.com with two-sum only", () => {
+    const sim = solving();
+    sim.heartbeats(0, 600, PROBLEM_TAB, "active");
+    sim.send(600, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([["leetcode.com", 0, 600]]);
+    expect(problems(sim)).toEqual(["two-sum"]);
+    const everything = JSON.stringify([sim.state, sim.effects]);
+    expect(everything).not.toMatch(/problems|description|envType|www\.|news\.example|#a/);
+    for (const i of sim.emitted()) expect(IntervalSchema.safeParse(i).success).toBe(true);
+  });
+
+  it("PRB acceptance 2 PRB-04 PRB-07 with the setting off or not read, the same time has no problem", () => {
+    for (const setting of [undefined, false] as const) {
+      const sim = studying();
+      if (setting !== undefined) sim.send(0, { type: "PROBLEMS", enabled: setting });
+      sim.send(0, { type: "TAB", tab: PROBLEM_TAB });
+      sim.heartbeats(0, 600, PROBLEM_TAB, "active");
+      sim.send(600, { type: "TAB", tab: NEWS });
+      expect(sim.intervals()).toEqual([["leetcode.com", 0, 600]]);
+      // Exactly the 0.2.3 shape: no `problem` key at all.
+      expect(sim.emitted().map((i) => "problem" in i)).toEqual([false]);
+    }
+  });
+
+  it("PRB acceptance 3 PRB-08 TRK-08 a problem change closes and reopens at the same instant", () => {
+    const sim = solving();
+    sim.send(100, { type: "TAB", tab: THREE_SUM });
+    sim.send(200, { type: "TAB", tab: PROBLEMSET }); // slug → none
+    sim.send(280, { type: "TAB", tab: PROBLEM_TAB }); // none → slug
+    sim.send(350, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([
+      ["leetcode.com", 0, 100],
+      ["leetcode.com", 100, 200],
+      ["leetcode.com", 200, 280],
+      ["leetcode.com", 280, 350],
+    ]);
+    expect(problems(sim)).toEqual(["two-sum", "3sum", null, "two-sum"]);
+  });
+
+  /** Total seconds of the emitted pieces. */
+  const total = (sim: Sim) => sim.intervals().reduce((sum, [, from, to]) => sum + to - from, 0);
+
+  /** Runs `script` with the setting on and off; returns both simulations. */
+  function onAndOff(script: (sim: Sim) => void): [Sim, Sim] {
+    const on = solving();
+    const off = studying();
+    off.send(0, { type: "TAB", tab: PROBLEM_TAB });
+    script(on);
+    script(off);
+    return [on, off];
+  }
+
+  it("PRB-07 PRB-08 PRB acceptance 3 two-sum → /problemset/ for 3 s → 3sum: pieces add up to the domain time", () => {
+    const [on, off] = onAndOff((sim) => {
+      sim.heartbeats(0, 600, PROBLEM_TAB, "active");
+      sim.send(600, { type: "TAB", tab: PROBLEMSET });
+      sim.send(603, { type: "TAB", tab: THREE_SUM });
+      sim.heartbeats(603, 700, THREE_SUM, "active");
+      sim.send(700, { type: "TAB", tab: NEWS });
+    });
+    expect(on.intervals()).toEqual([
+      ["leetcode.com", 0, 600],
+      ["leetcode.com", 600, 603], // shorter than MIN_INTERVAL_S, kept: opened and closed by a split
+      ["leetcode.com", 603, 700],
+    ]);
+    expect(problems(on)).toEqual(["two-sum", null, "3sum"]);
+    expect(off.intervals()).toEqual([["leetcode.com", 0, 700]]);
+    expect(total(on)).toBe(total(off));
+  });
+
+  it("PRB-07 PRB-08 PRB acceptance 3 two-sum → 3sum for 3 s → pause: the 3 s piece is kept", () => {
+    const [on, off] = onAndOff((sim) => {
+      sim.heartbeats(0, 600, PROBLEM_TAB, "active");
+      sim.send(600, { type: "TAB", tab: THREE_SUM });
+      sim.send(603, { type: "IDLE", state: "locked" });
+    });
+    expect(on.intervals()).toEqual([
+      ["leetcode.com", 0, 600],
+      ["leetcode.com", 600, 603], // opened by a split, closed by a pause
+    ]);
+    expect(problems(on)).toEqual(["two-sum", "3sum"]);
+    expect(off.intervals()).toEqual([["leetcode.com", 0, 603]]);
+    expect(total(on)).toBe(total(off));
+  });
+
+  it("PRB-08 PRB-09 a piece closed by setting on → off is kept even when short", () => {
+    const sim = solving();
+    sim.send(0, { type: "TAB", tab: THREE_SUM }); // split at 0: two-sum piece is 0 s, nothing
+    sim.send(3, { type: "PROBLEMS", enabled: false });
+    sim.send(100, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([
+      ["leetcode.com", 0, 3],
+      ["leetcode.com", 3, 100],
+    ]);
+    expect(problems(sim)).toEqual(["3sum", null]);
+  });
+
+  it("TRK-10 PRB-08 intervals not touched by a problem split keep the 5 s rule", () => {
+    const sim = new Sim();
+    sim.send(0, { type: "START" });
+    sim.send(0, { type: "AUTH", connected: true });
+    sim.send(0, { type: "SETTINGS", trackingEnabled: true });
+    sim.send(0, { type: "PROBLEMS", enabled: true });
+    sim.send(0, { type: "DOMAINS", domains: ["leetcode.com", "neetcode.io"] });
+    sim.send(0, { type: "IDLE", state: "active" });
+    sim.send(0, { type: "TAB", tab: PROBLEM_TAB }); // opened by eligibility, not by a split
+    expect(sim.state.open).toMatchObject({ problem: "two-sum" });
+    expect(sim.state.open?.splitOpened).toBeUndefined();
+    sim.send(3, { type: "TAB", tab: NEWS }); // domain change after 3 s: discarded, as in 0.2.3
+    expect(sim.emitted()).toEqual([]);
+    const off = studying();
+    off.send(3, { type: "TAB", tab: NEWS });
+    expect(off.emitted()).toEqual([]);
+  });
+
+  it("PRB-08 the same slug on another page of the problem keeps the interval open", () => {
+    const sim = solving();
+    sim.send(60, { type: "TAB", tab: tab("https://leetcode.com/problems/two-sum/submissions/1/") });
+    expect(sim.emitted()).toEqual([]);
+    expect(sim.state.open?.problem).toBe("two-sum");
+  });
+
+  it("PRB-08 TRK-09a boundaries keep the problem on every piece", () => {
+    const sim = solving();
+    sim.heartbeats(0, 3000, PROBLEM_TAB, "active");
+    sim.send(3000, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([
+      ["leetcode.com", 0, 1800],
+      ["leetcode.com", 1800, 3000],
+    ]);
+    expect(problems(sim)).toEqual(["two-sum", "two-sum"]);
+  });
+
+  it("PRB-09 PRB acceptance 4 setting on → off closes the interval with a problem; the next has none", () => {
+    const sim = solving();
+    sim.heartbeats(0, 180, PROBLEM_TAB, "active");
+    sim.send(200, { type: "PROBLEMS", enabled: false });
+    expect(sim.state.open).toMatchObject({
+      domain: "leetcode.com",
+      problem: null,
+      startedAt: T0 + 200,
+    });
+    expect(sim.state.signals.focusedProblem).toBeNull();
+    sim.heartbeats(200, 400, PROBLEM_TAB, "active");
+    sim.send(400, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([
+      ["leetcode.com", 0, 200],
+      ["leetcode.com", 200, 400],
+    ]);
+    expect(problems(sim)).toEqual(["two-sum", null]);
+  });
+
+  it("PRB-09 setting off with an interval without a problem changes nothing (behaviour as 0.2.3)", () => {
+    const sim = studying();
+    sim.send(0, { type: "PROBLEMS", enabled: true });
+    sim.send(0, { type: "TAB", tab: PROBLEMSET });
+    sim.send(100, { type: "PROBLEMS", enabled: false });
+    expect(sim.emitted()).toEqual([]);
+    expect(sim.state.open?.startedAt).toBe(T0);
+  });
+
+  it("PRB-03 PRB-05 turning the setting on asks for the tab again (the URL is not kept)", () => {
+    const sim = studying();
+    const r = sim.send(10, { type: "PROBLEMS", enabled: true });
+    expect(r.effects).toContainEqual({ type: "REQUERY_TAB" });
+    expect(sim.send(10, { type: "PROBLEMS", enabled: true }).effects).toEqual([]);
+    sim.send(10, { type: "TAB", tab: PROBLEM_TAB });
+    expect(sim.intervals()).toEqual([["leetcode.com", 0, 10]]);
+    expect(sim.state.open?.problem).toBe("two-sum");
+  });
+
+  it("PRB-05 the tab must belong to the tracked domain leetcode.com itself", () => {
+    const sim = new Sim();
+    sim.send(0, { type: "START" });
+    sim.send(0, { type: "AUTH", connected: true });
+    sim.send(0, { type: "SETTINGS", trackingEnabled: true });
+    sim.send(0, { type: "PROBLEMS", enabled: true });
+    sim.send(0, { type: "DOMAINS", domains: ["leetcode.cn", "neetcode.io"] });
+    sim.send(0, { type: "IDLE", state: "active" });
+    sim.send(0, { type: "TAB", tab: tab("https://leetcode.cn/problems/two-sum/") });
+    expect(sim.state.open).toMatchObject({ domain: "leetcode.cn", problem: null });
+    sim.send(10, { type: "TAB", tab: tab("https://neetcode.io/problems/two-sum/") });
+    expect(sim.state.open).toMatchObject({ domain: "neetcode.io", problem: null });
+  });
+
+  it("PRB-04 PRB-08 a pause or a disconnect closes the interval; no problem without a target", () => {
+    const sim = solving();
+    sim.send(100, { type: "AUTH", connected: false });
+    expect(sim.state.open).toBeNull();
+    expect(problems(sim)).toEqual(["two-sum"]);
+  });
+
+  it("PRB-08 removing leetcode.com from the list drops the problem with the domain", () => {
+    const sim = solving();
+    sim.send(100, { type: "DOMAINS", domains: ["neetcode.io"] });
+    expect(sim.state.signals.focusedProblem).toBeNull();
+    expect(sim.state.open).toBeNull();
+  });
+
+  it("TRK-14 a RESYNC forgets the problem until the tab is read again", () => {
+    const sim = solving();
+    sim.send(60, { type: "HEARTBEAT", tab: PROBLEM_TAB, idle: "active", mediaIdle: "active" });
+    sim.send(61 + GAP_S, { type: "IDLE", state: "active" });
+    expect(sim.state.signals.focusedProblem).toBeNull();
+    expect(problems(sim)).toEqual(["two-sum"]);
+  });
+
+  it("PRB-08 an open interval stored by 0.2.3 (no problem key) is not split by the new code", () => {
+    const sim = studying();
+    const { problem: _drop, ...legacyOpen } = sim.state.open as NonNullable<EngineState["open"]>;
+    sim.state = { ...sim.state, open: legacyOpen };
+    sim.send(60, { type: "HEARTBEAT", tab: LEETCODE, idle: "active", mediaIdle: "active" });
+    expect(sim.emitted()).toEqual([]);
+  });
+});

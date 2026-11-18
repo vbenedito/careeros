@@ -2,6 +2,10 @@
 
 Status: **Proposed (2026-11-17)** · Issue: #176 · Source: [v1 discovery](00-discovery.md) D4, D11, D15, D16, D20, D21, D22 · Related ADRs: [0006](../../docs/adr/0006-tabs-permission.md) (permissions), [0011](../../docs/adr/0011-ingest-v2.md) (ingest v2)
 
+Amended 2026-11-18 (#179): PRB-03..10 implemented in the extension (setting read and cached with the site list, detection, intervals, ingest v2), no longer proposed. PRB-05: "the user must track `leetcode.com` itself" means the tab's recorded tracked domain (TRK-03, longest match) is `PROBLEM_DOMAIN`; the slug rule is `problemSlugFromUrl` in `packages/shared`. The rest of this spec stays proposed.
+
+Amended 2026-11-18 (#179, product owner): PRB-08 — an interval opened or closed by a problem split is kept even when shorter than `MIN_INTERVAL_S` (TRK-10), so the pieces add up to the domain time (PRB-07).
+
 ## 1. Objective
 
 Show how much time the user spends on each LeetCode problem. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
@@ -40,7 +44,7 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 
 **Intervals**
 
-- **PRB-08** An interval carries an optional `problem` (the slug, or none). The problem is part of what the engine compares: when the problem changes (another slug, a slug to none, none to a slug), the open interval closes and a new one opens at the same instant, as for a domain change (TRK-08). All other interval rules stay (TRK-09..11).
+- **PRB-08** An interval carries an optional `problem` (the slug, or none). The problem is part of what the engine compares: when the problem changes (another slug, a slug to none, none to a slug), the open interval closes and a new one opens at the same instant, as for a domain change (TRK-08). All other interval rules stay (TRK-09..11), with one exception (product owner, 2026-11-18): an interval **opened or closed by a problem split** (a change of problem on the same domain, including the PRB-09 close when the setting turns off) is kept even when it is shorter than `MIN_INTERVAL_S` (TRK-10); with the setting off it would have been part of a longer interval. Intervals not involved in a problem split keep the TRK-10 rule.
 - **PRB-09** When the setting changes from on to off, the open interval closes at that moment if it has a problem, and the next one has none. Intervals already closed keep their slug in the outbox and are uploaded as they are; the server drops the slug when the setting is off at upload time (DATA-14).
 - **PRB-10** The extension sends the slug only through the new ingest RPC (DATA-06b, ADR-0011). The current RPC never receives a slug.
 

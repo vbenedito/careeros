@@ -106,7 +106,7 @@ flowchart LR
   SEC -. "used only here" .- RH
   DUI <-- "② externally_connectable<br/>PING · STATUS · CONNECT · DISCONNECT" --> SW
   SW -- "② verifyOtp(token hash) · refresh<br/>signOut (on disconnect)" --> GA
-  SW -- "③ own JWT · publishable key<br/>ingest_study_sessions · tracked_domains" --> API
+  SW -- "③ own JWT · publishable key<br/>ingest_study_sessions_v2 · tracked_domains" --> API
 ```
 
 **Legend**
@@ -124,7 +124,7 @@ flowchart LR
 |---|---|---|---|
 | ① | Sign-in | Sign-in form → `/auth/sign-in` → Supabase `/authorize` (PKCE) → Google/GitHub → `/auth/callback` exchanges the code → session cookies. `/auth/sign-out` ends this session or, with "all devices", every session | AUTH-01..05, AUTH-12a |
 | ② | Extension connection | `/connect` sends `PING` → `POST /api/extension/link` (same origin, `getUser()`, 5/min quota) mints a single-use token hash with the secret key → page sends `CONNECT` to the extension → extension `verifyOtp` → its own session. `DISCONNECT` signs it out | AUTH-06..12 |
-| ③ | Tracking → sync | Chrome events → pure engine → closed intervals into the outbox (one storage write with the state) → every 5 min, on worker start and after (re)connecting: `ingest_study_sessions` with the extension's JWT → confirmed ids leave the outbox, rejected ones go to quarantine | TRK-*, SYNC-01..08, ADR-0004 |
+| ③ | Tracking → sync | Chrome events → pure engine → closed intervals into the outbox (one storage write with the state) → every 5 min, on worker start and after (re)connecting: `ingest_study_sessions_v2` with the extension's JWT → confirmed ids leave the outbox, rejected ones are handled by reason (future deferred, overlap dropped and counted, invalid quarantined) | TRK-*, SYNC-01..08, ADR-0004 |
 | ④ | Dashboard totals | `tz` cookie (viewer's IANA zone) → Server Components call `get_daily_totals` / `get_domain_totals` with the user's JWT → cards, bar chart, donut | DASH-04..10, DATA-10/11 |
 
 **Public routes** (AUTH-03): `/` (landing, served by `app/route.ts` to signed-out visitors), `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`, `/fonts/*`, `/sign-in`, `/auth/sign-in`, `/auth/callback`, `/privacy`. Everything else needs a session; a signed-in visitor at `/` or `/sign-in` is redirected to `/dashboard`.
@@ -172,7 +172,7 @@ sequenceDiagram
   participant E as Engine (pure)
   participant S as chrome.storage.local
   participant Y as Sync service
-  participant D as ingest_study_sessions
+  participant D as ingest_study_sessions_v2
   C->>T: tab / window / idle / heartbeat
   T->>E: step(state, event, now)
   E-->>T: new state + closed intervals
@@ -180,11 +180,11 @@ sequenceDiagram
   Note over Y: alarm every 5 min, worker start, new session
   Y->>S: oldest ≤ 200 outbox intervals
   Y->>D: batch with the extension's JWT
-  D-->>Y: confirmed ids
-  Y->>S: confirmed → synced today, rest → quarantine
+  D-->>Y: confirmed ids + rejected ids with reasons
+  Y->>S: confirmed → synced today; future → deferred; overlap → dropped (counted); invalid → quarantine
 ```
 
-Rules: TRK-08..19, SYNC-01..08, [ADR-0004](../adr/0004-idempotent-ingest.md). Details: [extension.md](extension.md#sync-cycle).
+Rules: TRK-08..19, SYNC-01..08, SYNC-03a, SYNC-05c, [ADR-0004](../adr/0004-idempotent-ingest.md), [ADR-0011](../adr/0011-ingest-v2.md). Details: [extension.md](extension.md#sync-cycle).
 
 ### Dashboard read
 
@@ -264,7 +264,7 @@ Folders are organized **by feature**, not by technical layer (no generic `contro
 | Pattern | Where | Why |
 |---|---|---|
 | **Functional core, imperative shell** (a light form of ports & adapters) | Extension: pure `engine/`, thin `background/` adapters | The trickiest rules (idle, media, midnight, crash recovery) are testable with a fake clock |
-| **Transactional outbox + idempotent consumer** | Extension outbox → `ingest_study_sessions` | No lost or duplicated time across retries, offline periods and worker restarts (ADR-0004) |
+| **Transactional outbox + idempotent consumer** | Extension outbox → `ingest_study_sessions_v2` | No lost or duplicated time across retries, offline periods and worker restarts (ADR-0004) |
 | **Deny by default** | Database grants, RLS, default privileges | New tables and functions are never exposed by accident; every access is granted explicitly (DATA-04/05) |
 | **Database as the final authority** | Domain types, constraints, triggers, single write RPC | Rules hold even if a client is buggy or malicious |
 | **Validate at the boundary** | Shared Zod schemas at messages, uploads and user input | Inner code works with trusted, typed data (SEC-10) |

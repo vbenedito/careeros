@@ -3,8 +3,9 @@
  * The database re-validates everything (DATA-07); these schemas are the first boundary.
  */
 import { z } from "zod";
-import { DATA, ENTITLEMENTS, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, PROBLEMS, TRACKING } from "./constants";
 import { isValidDomain } from "./domain";
+import { isValidProblemSlug } from "./problems";
 
 export const DomainSchema = z
   .string()
@@ -15,10 +16,17 @@ export const UtcSecondsSchema = z.iso.datetime({ precision: 0 });
 
 const MAX_ACCEPTED_S = TRACKING.MAX_INTERVAL_S + DATA.INTERVAL_TOLERANCE_S;
 
+/** PRB-05: a LeetCode problem slug (pattern and PROBLEM_SLUG_MAX). */
+export const ProblemSlugSchema = z
+  .string()
+  .refine(isValidProblemSlug, { message: "Invalid problem slug" });
+
 /**
- * TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions`.
+ * TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions_v2`.
  * MIN_INTERVAL_S is not enforced here: the engine discards short intervals before they are
  * stored (TRK-10), and the server only requires a positive duration (DATA-02).
+ * PRB-08: `problem` is present only when the interval has one, and only on PROBLEM_DOMAIN
+ * (PRB-15); an interval without a problem has exactly the 0.2.3 shape.
  */
 export const IntervalSchema = z
   .object({
@@ -27,9 +35,13 @@ export const IntervalSchema = z
     domain: DomainSchema,
     started_at: UtcSecondsSchema,
     ended_at: UtcSecondsSchema,
+    problem: ProblemSlugSchema.optional(),
   })
   .strict()
   .superRefine((interval, ctx) => {
+    if (interval.problem !== undefined && interval.domain !== PROBLEMS.PROBLEM_DOMAIN) {
+      ctx.addIssue({ code: "custom", message: "problem only on the problem domain" });
+    }
     const seconds = (Date.parse(interval.ended_at) - Date.parse(interval.started_at)) / 1000;
     if (seconds <= 0) {
       ctx.addIssue({ code: "custom", message: "ended_at must be after started_at" });
@@ -139,4 +151,42 @@ export function parseLimitErrorDetails(details: unknown): LimitErrorDetails | nu
   }
   const parsed = LimitErrorDetailsSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ingest v2 reply (DATA-06b, SYNC-05c, ADR-0011)
+// ---------------------------------------------------------------------------------------------
+
+/** DATA-06b: why the server rejected an id. */
+export const INGEST_REJECT_REASONS = ["invalid", "future", "overlap"] as const;
+export type IngestRejectReason = (typeof INGEST_REJECT_REASONS)[number];
+
+/**
+ * `ingest_study_sessions_v2` returns `{"confirmed": [uuid], "rejected": [{"id", "reason"}]}`.
+ * Not strict: keys a later database adds are ignored. A reason this client does not know is read
+ * as `invalid` (quarantined: kept, never lost) by `parseIngestV2Reply`.
+ */
+export const IngestV2ReplySchema = z.object({
+  confirmed: z.array(z.string()),
+  rejected: z.array(z.object({ id: z.string(), reason: z.string() })),
+});
+
+export interface IngestV2Reply {
+  confirmed: string[];
+  rejected: { id: string; reason: IngestRejectReason }[];
+}
+
+/** SYNC-05c: the reply, or null when it does not have the v2 shape (a call error). */
+export function parseIngestV2Reply(value: unknown): IngestV2Reply | null {
+  const parsed = IngestV2ReplySchema.safeParse(value);
+  if (!parsed.success) return null;
+  const known = (r: string): r is IngestRejectReason =>
+    (INGEST_REJECT_REASONS as readonly string[]).includes(r);
+  return {
+    confirmed: parsed.data.confirmed,
+    rejected: parsed.data.rejected.map(({ id, reason }) => ({
+      id,
+      reason: known(reason) ? reason : "invalid",
+    })),
+  };
 }

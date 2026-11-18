@@ -8,7 +8,7 @@ import {
   QUARANTINE_KEY,
   SYNCED_TODAY_KEY,
 } from "./keys";
-import { createOutbox, deferredDue, endedInServerFuture } from "./outbox";
+import { createOutbox, deferredDue } from "./outbox";
 import { createSerialQueue } from "./queue";
 
 const DAY = 86_400_000;
@@ -24,6 +24,10 @@ function interval(startMs: number, minutes = 10): Interval {
     ended_at: iso(startMs + minutes * 60_000),
   };
 }
+
+/** SYNC-05c: the reasons of an ingest v2 reply. */
+const futureReasons = (...items: Interval[]) =>
+  new Map(items.map((i) => [i.id, "future" as const]));
 
 function setup(initial: Record<string, unknown> = {}) {
   const area = fakeStorage(initial);
@@ -128,22 +132,30 @@ describe("local store (SYNC-01, 05, 07, 08)", () => {
 describe("deferred intervals and unreadable entries (#58, #83, #56)", () => {
   const SKEW = 20 * 60_000; // device clock 20 min ahead of the server
 
-  it("SYNC-05a only rejections ending beyond the server's tolerance are deferred; others are quarantined", async () => {
-    const future = interval(NOW - 5 * 60_000, 4); // ends 1 min ago locally = 19 min ahead of the server
+  it("SYNC-05a SYNC-05c only rejections with reason future are deferred; invalid ones are quarantined", async () => {
+    // Ends 1 min ago locally = 19 min ahead of the server.
+    const ahead = interval(NOW - 5 * 60_000, 4);
     const past = interval(NOW - 3 * 3600_000);
-    const { area, outbox } = setup({ [OUTBOX_KEY]: [past, future] });
-    expect(await outbox.settle([past, future], [], NOW - SKEW)).toEqual({
-      deferred: 1,
-      quarantined: 1,
-    });
+    const { area, outbox } = setup({ [OUTBOX_KEY]: [past, ahead] });
+    expect(
+      await outbox.settle(
+        [past, ahead],
+        [],
+        NOW - SKEW,
+        new Map([
+          [past.id, "invalid"],
+          [ahead.id, "future"],
+        ]),
+      ),
+    ).toEqual({ deferred: 1, quarantined: 1, overlapDroppedS: 0 });
     expect(area.data.get(QUARANTINE_KEY)).toEqual([past]);
     expect(area.data.get(DEFERRED_KEY)).toEqual([
-      { interval: future, retryAt: NOW + 19 * 60_000, attempts: 1 },
+      { interval: ahead, retryAt: NOW + 19 * 60_000, attempts: 1 },
     ]);
     expect(area.data.get(OUTBOX_KEY)).toEqual([]);
     expect(await outbox.counts()).toEqual({ pending: 0, deferred: 1, quarantined: 1, dropped: 0 });
     // Deferred time still counts as today's time on this device (SYNC-12).
-    expect(await outbox.today()).toEqual([future]);
+    expect(await outbox.today()).toEqual([ahead]);
   });
 
   it("SYNC-05a deferred intervals come first in a batch once due, never before", async () => {
@@ -162,15 +174,53 @@ describe("deferred intervals and unreadable entries (#58, #83, #56)", () => {
   });
 
   it("SYNC-05a after CLOCK_RETRY_MAX future rejections the interval goes to quarantine", async () => {
-    const future = interval(NOW - 5 * 60_000, 4);
+    const iv = interval(NOW - 5 * 60_000, 4);
     const { area, outbox } = setup({
-      [DEFERRED_KEY]: [{ interval: future, retryAt: NOW, attempts: 3 }],
+      [DEFERRED_KEY]: [{ interval: iv, retryAt: NOW, attempts: 3 }],
     });
     // Due by the measured skew (its end passed by the estimated server clock), yet rejected again.
-    expect(await outbox.batch(200, -SKEW)).toEqual([future]);
-    expect(await outbox.settle([future], [], NOW - SKEW)).toEqual({ deferred: 0, quarantined: 1 });
-    expect(area.data.get(QUARANTINE_KEY)).toEqual([future]);
+    expect(await outbox.batch(200, -SKEW)).toEqual([iv]);
+    expect(await outbox.settle([iv], [], NOW - SKEW, futureReasons(iv))).toEqual({
+      deferred: 0,
+      quarantined: 1,
+      overlapDroppedS: 0,
+    });
+    expect(area.data.get(QUARANTINE_KEY)).toEqual([iv]);
     expect(area.data.get(DEFERRED_KEY)).toEqual([]);
+  });
+
+  it("SYNC-05c overlap rejections are dropped (not quarantined) and their seconds returned", async () => {
+    const a = interval(NOW - 7200_000, 10);
+    const b = interval(NOW - 3600_000, 2);
+    const c = interval(NOW - 1800_000, 1);
+    const { area, outbox } = setup({
+      [OUTBOX_KEY]: [a, c],
+      [DEFERRED_KEY]: [{ interval: b, retryAt: NOW, attempts: 1 }],
+    });
+    const result = await outbox.settle(
+      [a, b, c],
+      [],
+      NOW,
+      new Map([
+        [a.id, "overlap"],
+        [b.id, "overlap"],
+        [c.id, "invalid"],
+      ]),
+    );
+    expect(result).toEqual({ deferred: 0, quarantined: 1, overlapDroppedS: 720 });
+    expect(area.data.get(QUARANTINE_KEY)).toEqual([c]);
+    expect(area.data.get(OUTBOX_KEY)).toEqual([]);
+    expect(area.data.get(DEFERRED_KEY)).toEqual([]);
+    expect(await outbox.counts()).toEqual({ pending: 0, deferred: 0, quarantined: 1, dropped: 0 });
+  });
+
+  it("SYNC-05c a future rejection without the server's time is deferred until the capped retry", async () => {
+    const iv = interval(NOW - 5 * 60_000, 4);
+    const { area, outbox } = setup({ [OUTBOX_KEY]: [iv] });
+    expect(await outbox.settle([iv], [], null, futureReasons(iv))).toMatchObject({ deferred: 1 });
+    expect(area.data.get(DEFERRED_KEY)).toEqual([
+      { interval: iv, retryAt: NOW + 30 * 60_000, attempts: 1 },
+    ]);
   });
 
   it("SYNC-05a a retried interval rejected for another reason is quarantined; a confirmed one is synced", async () => {
@@ -246,24 +296,10 @@ describe("deferred retry timing (#150 review)", () => {
     attempts: 1,
   });
 
-  it("SYNC-05a near the boundary (within CLOCK_SLACK_S) a rejection still counts as future-dated", () => {
-    const server = NOW;
-    const ending = (endMs: number) => interval(endMs - 4 * MIN, 4);
-    // Beyond the 5-minute tolerance: future-dated.
-    expect(endedInServerFuture(ending(server + 5 * MIN + 2_000), server)).toBe(true);
-    // 3 s inside the tolerance, but within the 5 s slack: still treated as future-dated.
-    expect(endedInServerFuture(ending(server + 5 * MIN - 3_000), server)).toBe(true);
-    // Clearly inside: a real rejection.
-    expect(endedInServerFuture(ending(server + 5 * MIN - 6_000), server)).toBe(false);
-    expect(endedInServerFuture(ending(server), server)).toBe(false);
-    const atBoundary = ending(server + 5 * MIN);
-    expect(endedInServerFuture(atBoundary, null)).toBe(false);
-  });
-
   it("SYNC-05a retryAt is capped at DEFERRED_RETRY_CAP_MIN", async () => {
     const far = interval(NOW - 4 * MIN, 4); // ends now locally
     const { area, outbox } = setup({ [OUTBOX_KEY]: [far] });
-    await outbox.settle([far], [], NOW - 3 * 3600_000); // clock 3 h ahead
+    await outbox.settle([far], [], NOW - 3 * 3600_000, futureReasons(far)); // clock 3 h ahead
     const [entry] = area.data.get(DEFERRED_KEY) as { retryAt: number }[];
     expect(entry?.retryAt).toBe(NOW + 30 * MIN);
   });
@@ -322,6 +358,7 @@ describe("deferred retry timing (#150 review)", () => {
           batch,
           accepted.map((i) => i.id),
           server(),
+          futureReasons(...batch.filter((i) => !accepted.includes(i))),
         );
       return batch;
     };
@@ -345,7 +382,7 @@ describe("deferred retry timing (#150 review)", () => {
       [DEFERRED_KEY]: [{ interval: iv, retryAt: NOW, attempts: 3 }],
     });
     expect(await outbox.batch(200, null)).toEqual([iv]);
-    await outbox.settle([iv], [], NOW - 2 * 3600_000);
+    await outbox.settle([iv], [], NOW - 2 * 3600_000, futureReasons(iv));
     expect(area.data.get(QUARANTINE_KEY)).toEqual([iv]);
   });
 });

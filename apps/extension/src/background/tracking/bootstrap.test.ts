@@ -37,7 +37,7 @@ const interval = {
 };
 
 describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
-  it("TRK-01 TRK-19 start sends START, AUTH and SETTINGS always, DOMAINS once cached", async () => {
+  it("TRK-01 TRK-19 PRB-04 start sends START, AUTH, SETTINGS and PROBLEMS always, DOMAINS once cached", async () => {
     const rec = recordingTracker();
     const store = createTrackingStore(
       fakeStorage({ [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com"] } }),
@@ -47,6 +47,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       { type: "START" },
       { type: "AUTH", connected: true },
       { type: "SETTINGS", trackingEnabled: true },
+      { type: "PROBLEMS", enabled: false },
       { type: "DOMAINS", domains: ["leetcode.com"] },
     ]);
     const none = recordingTracker();
@@ -55,10 +56,20 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       store: createTrackingStore(fakeStorage()),
       isConnected: async () => false,
     });
-    expect(none.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS"]);
+    expect(none.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS", "PROBLEMS"]);
+    // SYNC-09d: the setting comes from the cached list; only `true` is on.
+    const on = recordingTracker();
+    await startTracking({
+      tracker: on.tracker,
+      store: createTrackingStore(
+        fakeStorage({ [DOMAINS_CACHE_KEY]: { domains: ["leetcode.com"], trackProblems: true } }),
+      ),
+      isConnected: async () => true,
+    });
+    expect(on.events).toContainEqual({ type: "PROBLEMS", enabled: true });
   });
 
-  it("EXT-UI-06 SYNC-09 AUTH-10 storage changes become engine events", async () => {
+  it("EXT-UI-06 SYNC-09 SYNC-09d AUTH-10 storage changes become engine events", async () => {
     const rec = recordingTracker();
     const storage = fakeStorage({
       [TRACKING_ENABLED_KEY]: false,
@@ -79,11 +90,12 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     handle({ [TRACKING_ENABLED_KEY]: { newValue: true } }, "sync");
     await new Promise((r) => setTimeout(r, 0));
     // Lazy sources resolve asynchronously; the real queue keeps arrival order (queue.test.ts).
-    expect(rec.events).toHaveLength(4);
+    expect(rec.events).toHaveLength(5);
     expect(rec.events).toEqual(
       expect.arrayContaining([
         { type: "SETTINGS", trackingEnabled: false },
         { type: "DOMAINS", domains: ["neetcode.io"] },
+        { type: "PROBLEMS", enabled: false },
         { type: "AUTH", connected: true },
         { type: "AUTH", connected: false },
       ]),
@@ -178,7 +190,8 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     expect(storage.data.has(OUTBOX_KEY)).toBe(false);
     expect(storage.data.has(ENGINE_STATE_KEY)).toBe(false);
     expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false); // the list belongs to the user
-    expect(rec.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS"]);
+    expect(rec.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS", "PROBLEMS"]);
+    expect(rec.events).toContainEqual({ type: "PROBLEMS", enabled: false }); // PRB-04
   });
 });
 

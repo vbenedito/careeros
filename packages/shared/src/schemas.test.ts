@@ -9,6 +9,7 @@ import {
   IntervalSchema,
   LimitErrorDetailsSchema,
   ProtocolEnvelopeSchema,
+  parseIngestV2Reply,
   parseLimitErrorDetails,
 } from "./schemas";
 
@@ -50,6 +51,15 @@ describe("IntervalSchema", () => {
     ["date only", { ended_at: "2026-11-05" }],
   ])("TRK-10 rejects %s", (_name, patch) => {
     expect(IntervalSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
+  });
+
+  it("PRB-08 PRB-15 accepts a valid problem only on leetcode.com", () => {
+    expect(IntervalSchema.safeParse({ ...valid, problem: "two-sum" }).success).toBe(true);
+    expect(IntervalSchema.safeParse({ ...valid, problem: "Two-Sum" }).success).toBe(false);
+    expect(IntervalSchema.safeParse({ ...valid, problem: null }).success).toBe(false);
+    expect(
+      IntervalSchema.safeParse({ ...valid, domain: "neetcode.io", problem: "two-sum" }).success,
+    ).toBe(false);
   });
 
   it("SEC-01 rejects unknown fields such as a URL or title", () => {
@@ -170,5 +180,33 @@ describe("extension replies", () => {
     ]) {
       expect(parseLimitErrorDetails(bad), JSON.stringify(bad)).toBeNull();
     }
+  });
+});
+
+describe("ingest v2 reply (DATA-06b, SYNC-05c)", () => {
+  it("SYNC-05c reads confirmed ids and reasons; an unknown reason is invalid; other shapes are null", () => {
+    expect(
+      parseIngestV2Reply({
+        confirmed: ["a"],
+        rejected: [
+          { id: "b", reason: "future" },
+          { id: "c", reason: "overlap" },
+          { id: "d", reason: "invalid" },
+          { id: "e", reason: "something-new" },
+        ],
+        extra: 1,
+      }),
+    ).toEqual({
+      confirmed: ["a"],
+      rejected: [
+        { id: "b", reason: "future" },
+        { id: "c", reason: "overlap" },
+        { id: "d", reason: "invalid" },
+        { id: "e", reason: "invalid" },
+      ],
+    });
+    expect(parseIngestV2Reply(["a"])).toBeNull(); // the v1 reply shape
+    expect(parseIngestV2Reply(null)).toBeNull();
+    expect(parseIngestV2Reply({ confirmed: ["a"] })).toBeNull();
   });
 });

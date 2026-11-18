@@ -6,7 +6,13 @@
  * Stored values are validated on load; anything unexpected falls back to the initial state,
  * which fails closed (TRK-01).
  */
-import { DomainSchema, type Interval, IntervalSchema } from "@careeros/shared";
+import {
+  DomainSchema,
+  type Interval,
+  IntervalSchema,
+  PROBLEMS,
+  ProblemSlugSchema,
+} from "@careeros/shared";
 import { z } from "zod";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../../engine/engine";
 import { SYNC_STATE_KEY } from "../../lib/sync-state";
@@ -34,11 +40,23 @@ export const EngineStateSchema = z.object({
     trackedDomains: z.array(DomainSchema).nullable(),
     // Only ever a tracked domain (SEC-02): the schema rejects anything that is not a domain.
     focusedDomain: DomainSchema.nullable(),
+    // PRB-06: only a validated slug, never a path. Defaults keep 0.2.3 state readable.
+    focusedProblem: ProblemSlugSchema.nullable().default(null),
+    trackProblems: z.boolean().nullable().default(null),
     audible: z.boolean(),
     idle,
     mediaHold: z.boolean(),
   }),
-  open: z.object({ id: z.uuid(), domain: DomainSchema, startedAt: epoch }).nullable(),
+  open: z
+    .object({
+      id: z.uuid(),
+      domain: DomainSchema,
+      problem: ProblemSlugSchema.nullable().default(null),
+      splitOpened: z.boolean().default(false),
+      startedAt: epoch,
+    })
+    .refine((o) => o.problem === null || o.domain === PROBLEMS.PROBLEM_DOMAIN)
+    .nullable(),
   lastHeartbeatAt: nullableEpoch,
   lastInputAt: nullableEpoch,
   notBefore: nullableEpoch,
@@ -147,6 +165,17 @@ export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
     /** EXT-UI-06: on unless explicitly turned off. */
     async trackingEnabled(): Promise<boolean> {
       return (await area.get(TRACKING_ENABLED_KEY))[TRACKING_ENABLED_KEY] !== false;
+    },
+
+    /**
+     * PRB-03/04, SYNC-09d: the account setting cached with the domain list. Off unless the cache
+     * holds `trackProblems: true` (not read yet, failed read, no row, disconnected: off).
+     */
+    async trackProblems(): Promise<boolean> {
+      const cache = (await area.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY] as
+        | { trackProblems?: unknown }
+        | undefined;
+      return cache?.trackProblems === true;
     },
 
     /**

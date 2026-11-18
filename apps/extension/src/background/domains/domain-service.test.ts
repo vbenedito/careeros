@@ -5,7 +5,13 @@ import { DOMAINS_CACHE_KEY } from "../tracking/keys";
 import { createDomainService, type DomainsApi, DomainsApiError } from "./domain-service";
 
 function setup(
-  options: { connected?: boolean | (() => boolean); server?: string[]; limit?: number } = {},
+  options: {
+    connected?: boolean | (() => boolean);
+    server?: string[];
+    limit?: number;
+    /** SYNC-09d: the server's setting; an Error makes the read fail. */
+    setting?: boolean | Error;
+  } = {},
 ) {
   const server = new Set(options.server ?? ["leetcode.com"]);
   let failWith: DomainsApiError | null = null;
@@ -26,7 +32,14 @@ function setup(
       if (failWith) throw failWith;
       server.delete(d);
     },
+    trackProblems: async () => {
+      reads++;
+      if (s.setting instanceof Error) throw s.setting;
+      return s.setting;
+    },
   };
+  let reads = 0;
+  const s = { setting: options.setting ?? (false as boolean | Error) };
   const storage = fakeStorage();
   let rejected = 0;
   const service = createDomainService({
@@ -46,6 +59,8 @@ function setup(
     storage,
     cache,
     fail: (e: DomainsApiError | null) => (failWith = e),
+    setSetting: (v: boolean | Error) => (s.setting = v),
+    settingReads: () => reads,
     rejected: () => rejected,
   };
 }
@@ -54,7 +69,7 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
   it("#113 invalid server rows are dropped before caching", async () => {
     const s = setup({ server: ["leetcode.com", "com", "www.neetcode.io", "LeetCode.org"] });
     expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
-    expect(s.cache()).toEqual({ domains: ["leetcode.com"], fetchedAt: 1000 });
+    expect(s.cache()).toEqual({ domains: ["leetcode.com"], trackProblems: false, fetchedAt: 1000 });
   });
 
   it("#113 a list fetched across a change of account is not cached", async () => {
@@ -68,6 +83,7 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
         },
         insert: async () => {},
         delete: async () => {},
+        trackProblems: async () => true,
       },
       storage,
       isConnected: async () => true,
@@ -85,7 +101,40 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
       ok: true,
       domains: ["leetcode.com", "neetcode.io"],
     });
-    expect(s.cache()).toEqual({ domains: ["leetcode.com", "neetcode.io"], fetchedAt: 1000 });
+    expect(s.cache()).toEqual({
+      domains: ["leetcode.com", "neetcode.io"],
+      trackProblems: false,
+      fetchedAt: 1000,
+    });
+  });
+
+  it("SYNC-09d PRB-03 every refresh reads the problem setting and caches it with the list", async () => {
+    const s = setup({ setting: true });
+    await s.service.refresh();
+    expect(s.cache()).toMatchObject({ domains: ["leetcode.com"], trackProblems: true });
+    s.setSetting(false);
+    await s.service.add("neetcode.io");
+    expect(s.cache()).toMatchObject({ trackProblems: false });
+    expect(s.settingReads()).toBe(2);
+  });
+
+  it("SYNC-09d PRB-04 a failed read of the setting is off and never fails the list refresh", async () => {
+    const s = setup({ setting: true });
+    await s.service.refresh();
+    s.setSetting(new DomainsApiError("UNAVAILABLE"));
+    expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
+    expect(s.cache()).toMatchObject({ domains: ["leetcode.com"], trackProblems: false });
+    s.setSetting(new DomainsApiError("UNAUTHORIZED"));
+    expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
+    expect(s.rejected()).toBe(0);
+  });
+
+  it("SYNC-09d SYNC-09b the setting is not cached when the account is gone meanwhile", async () => {
+    let connected = true;
+    const s = setup({ setting: true, connected: () => connected });
+    connected = false;
+    expect(await s.service.refresh()).toEqual({ ok: false, error: "NOT_CONNECTED" });
+    expect(s.cache()).toBeUndefined();
   });
 
   it("SYNC-10 add normalizes the input, writes to the server first, then updates the cache", async () => {

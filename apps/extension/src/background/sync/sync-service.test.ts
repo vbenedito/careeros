@@ -1,12 +1,12 @@
 import type { Interval } from "@careeros/shared";
 import { describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/log";
-import { SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
+import { INITIAL_SYNC_STATE, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import { fakeStorage } from "../../test/fakes";
 import { createAccountEpoch } from "../account-epoch";
 import { DEFERRED_KEY, OUTBOX_KEY, QUARANTINE_KEY } from "../tracking/keys";
 import { createOutbox } from "../tracking/outbox";
-import { classify, parseDateHeader } from "./supabase-ingest";
+import { classify, INGEST_RPC, parseDateHeader } from "./supabase-ingest";
 import { createSyncService, INGEST_TIMEOUT_MS, type IngestResult } from "./sync-service";
 
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0);
@@ -341,14 +341,19 @@ describe("sync hardening (#58, #83, #56)", () => {
     expect(s.rejected()).toBe(0);
   });
 
-  it("SYNC-05a rejected for ending in the future: deferred until the server's clock passes the end, then retried", async () => {
+  it("SYNC-05a SYNC-05c rejected as future: deferred until the server's clock passes the end, then retried", async () => {
     const skew = 20 * 60_000; // device clock 20 min ahead
     const serverNow = NOW - skew;
     const future = endingAt(NOW - 60_000); // ended 1 min ago locally, 19 min ahead of the server
     const fine = endingAt(NOW - 3 * 3600_000);
     const s = setup(
       [
-        { ok: true, confirmedIds: [fine.id], serverNow },
+        {
+          ok: true,
+          confirmedIds: [fine.id],
+          rejected: [{ id: future.id, reason: "future" }],
+          serverNow,
+        },
         (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: NOW }),
       ],
       [fine, future],
@@ -371,7 +376,7 @@ describe("sync hardening (#58, #83, #56)", () => {
     expect(s.state()?.clockAheadMs).toBeNull();
   });
 
-  it("SYNC-05a without the server's time, a rejection is quarantined as before", async () => {
+  it("SYNC-05 SYNC-05c an unconfirmed id without a reason is invalid: quarantined", async () => {
     const future = endingAt(NOW - 60_000);
     const s = setup([{ ok: true, confirmedIds: [] }], [future]);
     expect(await s.sync.run(token)).toBe("done");
@@ -479,7 +484,12 @@ describe("server time and skew (#150 review)", () => {
     const future = endingAt(NOW - 60_000);
     const s = setup(
       [
-        { ok: true, confirmedIds: [], serverNow: NOW - skew },
+        {
+          ok: true,
+          confirmedIds: [],
+          rejected: [{ id: future.id, reason: "future" }],
+          serverNow: NOW - skew,
+        },
         // The user fixed the clock: the next response measures no skew.
         (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
         (batch) => ({ ok: true, confirmedIds: batch.map((i) => i.id), serverNow: s.clock.now }),
@@ -557,5 +567,181 @@ describe("unexpected errors (SYNC-06b, grill H5)", () => {
     fail = false;
     expect(await sync.run(token)).toBe("done");
     expect(state().lastErrorKind).toBeNull();
+  });
+});
+
+describe("ingest v2 reasons (SYNC-03a, SYNC-05c, ADR-0011 test plan 5)", () => {
+  const reject = (i: Interval, reason: "invalid" | "future" | "overlap") => ({ id: i.id, reason });
+
+  it("SYNC-03a PRB-10 the extension calls only ingest_study_sessions_v2", () => {
+    expect(INGEST_RPC).toBe("ingest_study_sessions_v2");
+  });
+
+  it("SYNC-05c a batch of only overlaps does not back off, shows no Sync error and is counted", async () => {
+    const [a, b] = [interval(), interval()]; // 10 min each
+    const s = setup(
+      [{ ok: true, confirmedIds: [], rejected: [reject(a, "overlap"), reject(b, "overlap")] }],
+      [a, b],
+    );
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.state()).toMatchObject({
+      lastOutcome: "ok",
+      probeNext: false,
+      notBefore: 0,
+      overlapDroppedS: 1200,
+    });
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([]);
+    expect(s.storage.data.get(OUTBOX_KEY)).toEqual([]);
+  });
+
+  it("SYNC-05b SYNC-05c nothing confirmed with one future or overlap is not a call error", async () => {
+    const [a, b, c] = [interval(), interval(), interval()];
+    const s = setup(
+      [
+        {
+          ok: true,
+          confirmedIds: [],
+          rejected: [reject(a, "invalid"), reject(b, "overlap"), reject(c, "invalid")],
+        },
+      ],
+      [a, b, c],
+    );
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([a, c]);
+    expect(s.state()).toMatchObject({ lastOutcome: "ok", overlapDroppedS: 600 });
+  });
+
+  it("SYNC-05b SYNC-05c nothing confirmed and every rejection invalid is still a call error", async () => {
+    const [a, b] = [interval(), interval()];
+    const s = setup(
+      [{ ok: true, confirmedIds: [], rejected: [reject(a, "invalid"), reject(b, "invalid")] }],
+      [a, b],
+    );
+    expect(await s.sync.run(token)).toBe("failed");
+    expect(s.state()).toMatchObject({ lastOutcome: "error", probeNext: true });
+    expect(s.storage.data.get(QUARANTINE_KEY)).toEqual([]);
+  });
+
+  it("SYNC-05c the count adds up over cycles; dismissing subtracts only the value shown", async () => {
+    const [a, b] = [interval(), interval()];
+    const s = setup(
+      [
+        { ok: true, confirmedIds: [], rejected: [reject(a, "overlap")] },
+        { ok: true, confirmedIds: [], rejected: [reject(b, "overlap")] },
+      ],
+      [a],
+    );
+    await s.sync.run(token);
+    expect(s.state()?.overlapDroppedS).toBe(600);
+    const shown = 600; // the popup rendered this…
+    s.storage.data.set(OUTBOX_KEY, [b]);
+    await s.sync.run(token); // …then more time was dropped
+    expect(s.state()?.overlapDroppedS).toBe(1200);
+    await s.sync.dismissOverlap(shown);
+    expect(s.state()?.overlapDroppedS).toBe(600);
+    await s.sync.dismissOverlap(10_000);
+    expect(s.state()?.overlapDroppedS).toBe(0);
+  });
+
+  it("SYNC-05c a dismissal while a cycle runs is not overwritten by the cycle's later writes", async () => {
+    const a = interval();
+    let s: ReturnType<typeof setup> | undefined;
+    s = setup(
+      [
+        async () => {
+          await s?.sync.dismissOverlap(300);
+          return { ok: true, confirmedIds: [a.id] };
+        },
+      ],
+      [a],
+    );
+    s.storage.data.set(SYNC_STATE_KEY, { ...INITIAL_SYNC_STATE, overlapDroppedS: 900 });
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.state()?.overlapDroppedS).toBe(600);
+  });
+
+  it("SYNC-05c with nothing stored, a dismissal writes no sync status (#113)", async () => {
+    const s = setup([], []);
+    await s.sync.dismissOverlap(60);
+    expect(s.storage.data.has(SYNC_STATE_KEY)).toBe(false);
+  });
+
+  it("SYNC-05c PRB-10 an interval with a problem is sent as it is", async () => {
+    const a = { ...interval(), problem: "two-sum" };
+    const s = setup([], [a]);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches[0]).toEqual([a]);
+  });
+});
+
+describe("review of #216", () => {
+  it("SYNC-03a ADR-0011 compatibility: a 0.2.3 outbox row without problem uploads unchanged through v2", async () => {
+    // Exactly the shape extension 0.2.3 wrote to the outbox: no `problem` key.
+    const legacy: Interval = {
+      id: "00000000-0000-4000-8000-0000000f0023",
+      device_id: "00000000-0000-4000-8000-00000000d001",
+      domain: "leetcode.com",
+      started_at: "2026-11-09T14:00:00Z",
+      ended_at: "2026-11-09T14:10:00Z",
+    };
+    const s = setup([], [{ ...legacy }]);
+    expect(await s.sync.run(token)).toBe("done");
+    expect(s.batches).toEqual([[legacy]]);
+    expect(Object.keys(s.batches[0]?.[0] ?? {}).sort()).toEqual([
+      "device_id",
+      "domain",
+      "ended_at",
+      "id",
+      "started_at",
+    ]);
+    expect(INGEST_RPC).toBe("ingest_study_sessions_v2");
+  });
+
+  it("SYNC-02a #113 a status write queued before a clear does not land after it", async () => {
+    const pending = [interval()];
+    const storage = fakeStorage({ [OUTBOX_KEY]: pending });
+    const epoch = createAccountEpoch();
+    const sync = createSyncService({
+      outbox: createOutbox({
+        area: storage,
+        exclusive: (t) => t(),
+        now: () => NOW,
+        startOfLocalDay: (t) => t - (t % 86_400_000),
+      }),
+      storage,
+      now: () => NOW,
+      sessionRejected: async () => {},
+      epoch,
+      isConnected: async () => true,
+      ingest: async (batch) => ({
+        ok: true,
+        confirmedIds: [],
+        rejected: batch.map((i) => ({ id: i.id, reason: "overlap" as const })),
+      }),
+    });
+    // Hold the serialized chain with a dismissal whose storage read waits; meanwhile the cycle
+    // queues its writes, then local data is cleared (epoch bump) before they run.
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const get = storage.get.bind(storage);
+    let first = true;
+    storage.get = async (k) => {
+      if (first && k === SYNC_STATE_KEY) {
+        first = false;
+        await gate;
+      }
+      return get(k);
+    };
+    storage.data.set(SYNC_STATE_KEY, { ...INITIAL_SYNC_STATE, overlapDroppedS: 60 });
+    const dismissal = sync.dismissOverlap(60);
+    await new Promise((r) => setTimeout(r, 0)); // the dismissal now holds the chain
+    const cycle = sync.run(token);
+    await new Promise((r) => setTimeout(r, 0)); // the cycle's marker write is queued behind it
+    epoch.bump();
+    storage.data.delete(SYNC_STATE_KEY); // what clear() does
+    release();
+    await dismissal;
+    await cycle;
+    expect(storage.data.has(SYNC_STATE_KEY)).toBe(false);
   });
 });

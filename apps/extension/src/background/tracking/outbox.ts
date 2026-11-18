@@ -8,7 +8,7 @@
  * Never call these from inside `tracker.exclusive` / `dispatch`: the queue is not re-entrant
  * and the call would wait for its own slot forever.
  */
-import { DATA, type Interval, SYNC } from "@careeros/shared";
+import { type IngestRejectReason, type Interval, SYNC } from "@careeros/shared";
 import type { KeyValueArea } from "../auth/storage";
 import {
   DEFERRED_KEY,
@@ -42,25 +42,15 @@ export interface SettleResult {
   /** Rejected only because they ended in the future by the server's clock (SYNC-05a). */
   deferred: number;
   quarantined: number;
+  /** SYNC-05c: seconds of the intervals rejected as `overlap`, dropped (not quarantined). */
+  overlapDroppedS: number;
 }
+
+const seconds = (i: Interval) => (Date.parse(i.ended_at) - Date.parse(i.started_at)) / 1000;
 
 const startedMs = (i: Interval) => Date.parse(i.started_at);
-const FUTURE_TOLERANCE_MS = DATA.FUTURE_TOLERANCE_S * 1000;
-const CLOCK_SLACK_MS = SYNC.CLOCK_SLACK_S * 1000;
 const RETRY_CAP_MS = SYNC.DEFERRED_RETRY_CAP_MIN * 60_000;
 const MAX_AGE_MS = SYNC.LOCAL_QUEUE_MAX_AGE_D * 86_400_000;
-
-/**
- * SYNC-05a: whether a rejected interval was (most likely) refused by DATA-07 for ending more
- * than the tolerance after the server's clock. `CLOCK_SLACK_S` is taken off the server's time
- * so a rejection near the boundary (whole-second header, server compared slightly earlier) is
- * retried rather than quarantined. Without the server's time nothing is known.
- */
-export function endedInServerFuture(i: Interval, serverNow: number | null): boolean {
-  return (
-    serverNow !== null && Date.parse(i.ended_at) > serverNow - CLOCK_SLACK_MS + FUTURE_TOLERANCE_MS
-  );
-}
 
 /**
  * SYNC-05a: whether a deferred interval may be sent again. Its due time is server-relative: its
@@ -147,15 +137,17 @@ export function createOutbox(deps: {
     },
 
     /**
-     * SYNC-04/05/05a/08: after an upload of `sent`, confirmed ids move to "synced today" (or
-     * are forgotten if not from today). A sent interval the server did not confirm is deferred
-     * when it ends in the future by the server's clock (`serverNow`), until CLOCK_RETRY_MAX
-     * rejections; anything else goes to quarantine.
+     * SYNC-04/05/05a/05c/08: after an upload of `sent`, confirmed ids move to "synced today" (or
+     * are forgotten if not from today). A sent interval the server did not confirm is handled by
+     * its reason (ingest v2): `future` is deferred until CLOCK_RETRY_MAX rejections, its due time
+     * from the server's clock (`serverNow`, the `Date` header) when known; `overlap` is dropped
+     * and its seconds returned; `invalid`, or no reason, goes to quarantine.
      */
     settle(
       sent: Interval[],
       confirmedIds: readonly string[],
       serverNow: number | null = null,
+      reasons: ReadonlyMap<string, IngestRejectReason> = new Map(),
     ): Promise<SettleResult> {
       return exclusive(async (slot) => {
         const s = await read();
@@ -171,17 +163,24 @@ export function createOutbox(deps: {
         ];
         const toQuarantine: Interval[] = [];
         const toDefer: DeferredInterval[] = [];
+        let overlapDroppedS = 0;
         for (const i of settled) {
           if (confirmed.has(i.id)) continue;
+          const reason = reasons.get(i.id) ?? "invalid";
+          if (reason === "overlap") {
+            // SYNC-05c: it can never be stored without overlapping time already stored for this
+            // device; keeping it would only leave a "not synced" count that never clears.
+            overlapDroppedS += seconds(i);
+            continue;
+          }
           const previous = attempts.get(i.id);
           const tries = previous === undefined ? 1 : previous + (countedRetries.has(i.id) ? 1 : 0);
-          if (
-            serverNow !== null &&
-            endedInServerFuture(i, serverNow) &&
-            tries <= SYNC.CLOCK_RETRY_MAX
-          ) {
-            // Fallback due time in local terms, capped; the skew rule usually fires first.
-            const wait = Math.max(0, Date.parse(i.ended_at) - serverNow);
+          if (reason === "future" && tries <= SYNC.CLOCK_RETRY_MAX) {
+            // SYNC-05c: the reason replaces the guess from the `Date` header. Fallback due time
+            // in local terms, capped; the skew rule usually fires first. Without the server's
+            // time, the cap.
+            const wait =
+              serverNow === null ? RETRY_CAP_MS : Math.max(0, Date.parse(i.ended_at) - serverNow);
             toDefer.push({
               interval: i,
               retryAt: now + Math.min(wait, RETRY_CAP_MS),
@@ -201,7 +200,7 @@ export function createOutbox(deps: {
           [QUARANTINE_KEY]: [...s.quarantine, ...toQuarantine],
           [DROPPED_COUNT_KEY]: s.dropped,
         });
-        return { deferred: toDefer.length, quarantined: toQuarantine.length };
+        return { deferred: toDefer.length, quarantined: toQuarantine.length, overlapDroppedS };
       });
     },
 

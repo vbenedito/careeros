@@ -60,7 +60,7 @@ flowchart LR
   SEC -. "used only here" .- RH
   DUI <-- "② externally_connectable<br/>PING · STATUS · CONNECT · DISCONNECT" --> SW
   SW -- "② verifyOtp(token hash) · refresh<br/>signOut (on disconnect)" --> GA
-  SW -- "③ own JWT · publishable key<br/>ingest_study_sessions · tracked_domains" --> API
+  SW -- "③ own JWT · publishable key<br/>ingest_study_sessions_v2 · tracked_domains" --> API
 ```
 
 ① sign-in · ② extension connection · ③ tracking → upload · ④ dashboard totals. 🔑 a user's own session (the dashboard and the extension never share one) · 🔒 the Supabase secret key, server-only. Legend, flows and detailed designs: [`docs/architecture/`](docs/architecture/overview.md); decisions: [ADRs](docs/adr/).
