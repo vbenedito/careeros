@@ -7,7 +7,8 @@
  *
  * Privacy (TRK-02, SEC-02): events carry the tab URL only transiently. `Signals` keeps the
  * matched *tracked* domain, never the URL or the hostname of a non-tracked site, so it is safe to
- * persist.
+ * persist. PRB-06: of the path, only the LeetCode problem slug may be kept, and only while the
+ * account setting is on (PRB-05).
  *
  * Composition with Engine B (#15): B is the only entry point, `(state, event, now)`. Its state
  * holds `signals` next to the open interval and timestamps; it compares
@@ -15,7 +16,12 @@
  * event changes the target at most once. After a worker start, a heartbeat gap (TRK-14) or a
  * clock jump (TRK-15), B sends RESYNC so stale persisted observations are never trusted.
  */
-import { hostnameFromUrl, isValidDomain, matchTrackedDomain } from "@careeros/shared";
+import {
+  hostnameFromUrl,
+  isValidDomain,
+  matchTrackedDomain,
+  problemSlugFromUrl,
+} from "@careeros/shared";
 
 /** `chrome.idle` states, plus `unknown` until the first report after a RESYNC (never active). */
 export type IdleState = "active" | "idle" | "locked";
@@ -41,6 +47,16 @@ export interface Signals {
   trackedDomains: readonly string[] | null;
   /** TRK-02..04: tracked domain of the active tab of the focused window; null otherwise. */
   focusedDomain: string | null;
+  /**
+   * PRB-05: the problem slug of that tab, or null. Set only while `trackProblems` is true and
+   * the tab's tracked domain is PROBLEM_DOMAIN; the URL itself is never kept (PRB-06).
+   */
+  focusedProblem: string | null;
+  /**
+   * PRB-03/04, SYNC-09d: the account setting "Track LeetCode problems"; null until read. Only
+   * `true` turns detection on (fails closed).
+   */
+  trackProblems: boolean | null;
   /** Whether that tab is playing audio (TRK-06). */
   audible: boolean;
   /** TRK-05: last `chrome.idle` state (detection interval IDLE_THRESHOLD_S). */
@@ -57,6 +73,8 @@ export type SignalEvent =
   | { type: "AUTH"; connected: boolean }
   | { type: "SETTINGS"; trackingEnabled: boolean }
   | { type: "DOMAINS"; domains: readonly string[] }
+  /** PRB-03, SYNC-09d: the cached account setting; false when not read, failed or no row. */
+  | { type: "PROBLEMS"; enabled: boolean }
   /** Active tab of the focused window changed (or its URL/audible did); null = no focused window. */
   | { type: "TAB"; tab: TabSnapshot | null }
   | { type: "IDLE"; state: IdleState }
@@ -83,6 +101,8 @@ export const INITIAL_SIGNALS: Signals = {
   trackingEnabled: null,
   trackedDomains: null,
   focusedDomain: null,
+  focusedProblem: null,
+  trackProblems: null,
   audible: false,
   idle: "unknown",
   mediaHold: false,
@@ -96,6 +116,15 @@ export function domainOfTab(
   if (!tab || !trackedDomains) return null;
   const hostname = hostnameFromUrl(tab.url);
   return hostname ? matchTrackedDomain(hostname, trackedDomains) : null;
+}
+
+/** PRB-05: the problem of a tab, given the signals' setting and its tracked domain. */
+function problemOfTab(
+  tab: TabSnapshot | null,
+  domain: string | null,
+  trackProblems: boolean | null,
+): string | null {
+  return trackProblems === true && tab ? problemSlugFromUrl(tab.url, domain) : null;
 }
 
 /** TRK-01 (minus activity): every condition except the user being active. */
@@ -114,9 +143,22 @@ export function trackingTarget(s: Signals): string | null {
   return domain && isActive(s) ? domain : null;
 }
 
+/**
+ * PRB-08: the problem of the interval being tracked now, or null. Only while there is a target
+ * (TRK-01..07) and the setting is on (PRB-04).
+ */
+export function trackingProblem(s: Signals): string | null {
+  return trackingTarget(s) !== null && s.trackProblems === true ? s.focusedProblem : null;
+}
+
 function withTab(s: Signals, tab: TabSnapshot | null): Signals {
   const focusedDomain = domainOfTab(tab, s.trackedDomains);
-  return { ...s, focusedDomain, audible: focusedDomain !== null && (tab?.audible ?? false) };
+  return {
+    ...s,
+    focusedDomain,
+    focusedProblem: problemOfTab(tab, focusedDomain, s.trackProblems),
+    audible: focusedDomain !== null && (tab?.audible ?? false),
+  };
 }
 
 function withIdle(before: Signals, s: Signals, idle: IdleState): Signals {
@@ -170,10 +212,26 @@ export function reduceSignals(
       // tracked and ask the adapter for the current tab, which may match a newly added domain.
       const focusedDomain =
         s.focusedDomain && trackedDomains.includes(s.focusedDomain) ? s.focusedDomain : null;
-      s = { ...s, trackedDomains, focusedDomain, audible: focusedDomain ? s.audible : false };
+      s = {
+        ...s,
+        trackedDomains,
+        focusedDomain,
+        focusedProblem: focusedDomain ? s.focusedProblem : null,
+        audible: focusedDomain ? s.audible : false,
+      };
       effects.push({ type: "REQUERY_TAB" });
       break;
     }
+    case "PROBLEMS":
+      if (event.enabled) {
+        // PRB-05: the URL is not kept, so the current tab must be read again to find its slug.
+        if (s.trackProblems !== true) effects.push({ type: "REQUERY_TAB" });
+        s = { ...s, trackProblems: true };
+      } else {
+        // PRB-09: off drops the problem at once; the engine closes an interval that had one.
+        s = { ...s, trackProblems: false, focusedProblem: null };
+      }
+      break;
     case "TAB":
       s = withTab(s, event.tab);
       break;
@@ -186,7 +244,14 @@ export function reduceSignals(
       if (event.mediaIdle !== "active") s = { ...s, mediaHold: false };
       break;
     case "RESYNC":
-      s = { ...s, focusedDomain: null, audible: false, idle: "unknown", mediaHold: false };
+      s = {
+        ...s,
+        focusedDomain: null,
+        focusedProblem: null,
+        audible: false,
+        idle: "unknown",
+        mediaHold: false,
+      };
       effects.push({ type: "REQUERY_TAB" }, { type: "REQUERY_IDLE" });
       break;
   }

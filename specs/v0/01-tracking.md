@@ -8,6 +8,8 @@ Amended 2026-11-12 (#56): TRK-17a generation counter for timed-out slots, timeou
 
 Amended 2026-11-17 (#176): TRK-02 and TRK-08 — on `leetcode.com`, the problem slug may also be read from the path, and a problem change closes the interval ([PRB](../v1/01-problems.md), proposed).
 
+Amended 2026-11-18 (#179): the TRK-02 exception and the TRK-08 problem change are implemented in the extension engine, no longer proposed. The open interval carries its problem (PRB-08); with the setting off the engine behaves as in 0.2.3.
+
 ## 1. Objective
 
 Measure time the user spends actively studying on tracked domains, robust to MV3 service-worker termination, browser restarts and crashes, while collecting only what spec 07 allows.
@@ -27,7 +29,7 @@ Measure time the user spends actively studying on tracked domains, robust to MV3
 **Eligibility**
 
 - **TRK-01** Tracking happens only when *all* hold: the user is connected (spec 02), tracking is enabled on this device (EXT-UI settings), the tracked-domain list is loaded, and there is an eligible tab. Nothing is assumed before it is reported: until the tracking setting and an idle state have been read on this worker, tracking does not start (fails closed).
-- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. Incognito tabs are never tracked, even when the extension is allowed in incognito (SEC-01). The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted. *Exception (#176, proposed):* when the account setting is on, the problem slug of a `leetcode.com` path is kept (PRB-05, PRB-06); nothing else of the path.
+- **TRK-02** A tab is evaluated only if its URL scheme is `http` or `https`. Incognito tabs are never tracked, even when the extension is allowed in incognito (SEC-01). The extension reads the tab URL **only to extract the hostname**; the full URL, path, query, title and content are never stored or transmitted. *Exception (#176):* when the account setting is on, the problem slug of a `leetcode.com` path is kept (PRB-05, PRB-06); nothing else of the path.
 - **TRK-03** A hostname matches a tracked domain `d` when it equals `d` or ends with `.d` (after normalization: lowercase, trailing dot removed, leading `www.` removed). `leetcode.com` matches `leetcode.com` and `www.leetcode.com`, not `notleetcode.com`. The recorded domain is the **tracked domain**, not the raw hostname. If several match, the longest wins.
 - **TRK-04** The tab must be the active tab of the last-focused window, and that window must be focused (`chrome.windows.WINDOW_ID_NONE` ⇒ not focused). When Chrome reports no last-focused window (the query fails, e.g. macOS with every window closed), Chrome counts as not focused.
 

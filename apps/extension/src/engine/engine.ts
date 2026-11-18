@@ -15,6 +15,7 @@ import {
   type SignalEffect,
   type SignalEvent,
   type Signals,
+  trackingProblem,
   trackingTarget,
 } from "./signals";
 
@@ -22,6 +23,11 @@ export interface OpenInterval {
   /** UUIDv4 generated at open (TRK-10). */
   id: string;
   domain: string;
+  /**
+   * PRB-08: the problem slug; null or absent = none (state stored by 0.2.3 has no key). Part of
+   * the interval's identity, like the domain.
+   */
+  problem?: string | null;
   /** Epoch seconds. */
   startedAt: number;
 }
@@ -121,6 +127,9 @@ function emit(open: OpenInterval, endedAt: number, env: EngineEnv): EngineEffect
         domain: open.domain,
         started_at: iso(open.startedAt),
         ended_at: iso(endedAt),
+        // PRB-08: the key exists only with a problem, so an interval without one keeps the
+        // 0.2.3 shape.
+        ...(open.problem ? { problem: open.problem } : {}),
       },
     },
   ];
@@ -147,7 +156,12 @@ function rollTo(
   let current = open;
   for (let b = boundaryOf(current, env); b <= t; b = boundaryOf(current, env)) {
     effects.push(...emit(current, b, env));
-    current = { id: env.newId(), domain: current.domain, startedAt: b };
+    current = {
+      id: env.newId(),
+      domain: current.domain,
+      problem: current.problem ?? null,
+      startedAt: b,
+    };
   }
   return current;
 }
@@ -226,16 +240,18 @@ export function step(
     }
   }
 
-  // TRK-08: close on any change of target (pause, domain change, eligibility loss) and open
-  // a new interval when there is something to track.
+  // TRK-08, PRB-08: close on any change of target (pause, domain change, eligibility loss) or of
+  // problem (another slug, slug to none, none to slug; PRB-09 setting off), and open a new
+  // interval at the same instant when there is something to track.
   const target = trackingTarget(signals);
-  if (open && open.domain !== target) {
+  const problem = target ? trackingProblem(signals) : null;
+  if (open && (open.domain !== target || (open.problem ?? null) !== problem)) {
     closeAt(open, now, env, effects);
     open = null;
   }
   if (notBefore !== null && now >= notBefore) notBefore = null;
   if (!open && target && notBefore === null) {
-    open = { id: env.newId(), domain: target, startedAt: now };
+    open = { id: env.newId(), domain: target, problem, startedAt: now };
   }
 
   return { state: { signals, open, lastHeartbeatAt: now, lastInputAt, notBefore }, effects };

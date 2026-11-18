@@ -108,8 +108,9 @@ describe("interval sync (real Chromium)", () => {
     expect(rows()).toBe(3);
   });
 
-  it("SYNC-05 SYNC-05a a rejected interval goes to quarantine, a future-dated one is deferred; the rest still syncs", async () => {
-    // Overlaps the first uploaded interval of this device (DATA-09a): a real rejection.
+  it("SYNC-05a SYNC-05c an overlap is dropped and counted, a future-dated one is deferred; the rest still syncs", async () => {
+    // Overlaps the first uploaded interval of this device (DATA-09a): reason `overlap` from
+    // ingest v2, dropped (not quarantined) and its 120 s counted (#179).
     const overlap = interval(deviceId, 58, { ended_at: iso(Date.now() - 56 * 60_000) });
     // Valid locally, but the server refuses intervals ending > 5 min in the future (DATA-07):
     // deferred until the server's clock (from its Date header, through CORS) passes its end.
@@ -117,7 +118,13 @@ describe("interval sync (real Chromium)", () => {
     await putOutbox([overlap, future, interval(deviceId, 30)]);
     await triggerSync();
     await expect.poll(() => rows(), { timeout: 15_000 }).toBe(4);
-    await expect.poll(async () => (await storage<unknown[]>(QUARANTINE))?.length).toBe(1);
+    await expect
+      .poll(
+        async () =>
+          (await storage<{ overlapDroppedS?: number }>("careeros.sync.state"))?.overlapDroppedS,
+      )
+      .toBe(120);
+    expect((await storage<unknown[]>(QUARANTINE)) ?? []).toEqual([]);
     const deferred = await storage<{ interval: { id: string }; retryAt: number }[]>(DEFERRED);
     expect(deferred?.map((d) => d.interval.id)).toEqual([future.id]);
     // Due once the server's clock reaches its end: ~25 minutes from now.

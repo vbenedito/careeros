@@ -2,6 +2,8 @@
 
 Status: **Proposed (2026-11-17)** · Issue: #176 · Source: [v1 discovery](00-discovery.md) D4, D11, D15, D16, D20, D21, D22 · Related ADRs: [0006](../../docs/adr/0006-tabs-permission.md) (permissions), [0011](../../docs/adr/0011-ingest-v2.md) (ingest v2)
 
+Amended 2026-11-18 (#179): PRB-03..10 implemented in the extension (setting read and cached with the site list, detection, intervals, ingest v2), no longer proposed. PRB-05: "the user must track `leetcode.com` itself" means the tab's recorded tracked domain (TRK-03, longest match) is `PROBLEM_DOMAIN`; the slug rule is `problemSlugFromUrl` in `packages/shared`. The rest of this spec stays proposed.
+
 ## 1. Objective
 
 Show how much time the user spends on each LeetCode problem. The problem is read from the address of the active tab. Nothing else about the page is read or kept.

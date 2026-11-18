@@ -47,6 +47,13 @@ export interface SyncState {
    * completes. For diagnostics ("Sync error" support); holds no personal data.
    */
   lastErrorKind: string | null;
+  /**
+   * SYNC-05c (#179): seconds of intervals the server rejected as `overlap` (same-device overlap,
+   * e.g. after the clock moved back, TRK-15) and that were dropped. Grows with each such drop;
+   * the popup's dismiss subtracts the value it showed. Reset with the sync status (account
+   * change, local data cleared).
+   */
+  overlapDroppedS: number;
 }
 
 export const INITIAL_SYNC_STATE: SyncState = {
@@ -59,15 +66,21 @@ export const INITIAL_SYNC_STATE: SyncState = {
   probeNext: false,
   serverSkewMs: null,
   lastErrorKind: null,
+  overlapDroppedS: 0,
 };
 
 /** A cycle older than this is from a worker that was killed: not "syncing" any more. */
 export const SYNCING_STALE_MS = 2 * 60_000;
 
 export function parseSyncState(value: unknown): SyncState {
-  return value && typeof value === "object"
-    ? { ...INITIAL_SYNC_STATE, ...(value as Partial<SyncState>) }
-    : INITIAL_SYNC_STATE;
+  if (!value || typeof value !== "object") return INITIAL_SYNC_STATE;
+  const state = { ...INITIAL_SYNC_STATE, ...(value as Partial<SyncState>) };
+  const overlap = state.overlapDroppedS;
+  return {
+    ...state,
+    overlapDroppedS:
+      typeof overlap === "number" && Number.isFinite(overlap) && overlap > 0 ? overlap : 0,
+  };
 }
 
 /** SYNC-02c: whether the popup should show "Syncing…" (EXT-UI footer). */

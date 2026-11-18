@@ -1,8 +1,8 @@
 # Extension design
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-12
+Type: living · Owner: tech lead · Last reviewed: 2026-11-18
 
-Low-level design of the Chrome MV3 extension in `apps/extension`. Rules are in [TRK](../../specs/v0/01-tracking.md), [AUTH](../../specs/v0/02-auth.md), [SYNC](../../specs/v0/03-sync.md), [EXT-UI](../../specs/v0/05-extension-ui.md) and [STORE](../../specs/store/00-chrome-web-store.md). The big picture is in the [overview](overview.md).
+Low-level design of the Chrome MV3 extension in `apps/extension`. Rules are in [TRK](../../specs/v0/01-tracking.md), [PRB](../../specs/v1/01-problems.md), [AUTH](../../specs/v0/02-auth.md), [SYNC](../../specs/v0/03-sync.md), [EXT-UI](../../specs/v0/05-extension-ui.md) and [STORE](../../specs/store/00-chrome-web-store.md). The big picture is in the [overview](overview.md).
 
 ## Module map
 
@@ -31,23 +31,23 @@ flowchart TB
 
 | Path (`src/`) | Role | Main specs |
 |---|---|---|
-| `engine/signals.ts` | Engine A: folds Chrome observations into `Signals` and decides the tracking target | TRK-01..07 |
-| `engine/engine.ts` | Engine B: `step(state, event, now, env) → { state, effects }`; opens, splits and closes intervals | TRK-08..16 |
+| `engine/signals.ts` | Engine A: folds Chrome observations into `Signals` and decides the tracking target and its LeetCode problem (`trackingProblem`, slug from `problemSlugFromUrl` in `packages/shared`, only while the account setting is on) | TRK-01..07, PRB-04..06 |
+| `engine/engine.ts` | Engine B: `step(state, event, now, env) → { state, effects }`; opens, splits and closes intervals; the problem is part of an interval's identity | TRK-08..16, PRB-08, PRB-09 |
 | `background/index.ts` | Service worker entry: wires every module and registers all listeners synchronously | TRK-19, SYNC-02 |
 | `background/tracking/chrome-port.ts` | Chrome adapter: tab, focus (500 ms debounce), idle, heartbeat alarm, popup port | TRK-02, 04, 06, 13, 18, 19 |
 | `background/tracking/tracker.ts`, `queue.ts` | One serialized queue; each slot loads state, steps the engine, commits, answers re-query effects; 10 s timeout for events and `exclusive` tasks; a generation counter drops the writes of timed-out slots | TRK-12, 13, 17, 17a |
 | `background/tracking/store.ts`, `keys.ts` | Storage schemas and keys; engine state and outbox written together | TRK-12, SYNC-01 |
-| `background/tracking/outbox.ts` | Outbox, deferred (clock ahead), quarantine, synced-today, prune and counts | SYNC-01, 05, 05a, 07, 07a, 08 |
-| `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events; `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12 |
+| `background/tracking/outbox.ts` | Outbox, deferred (`future`), quarantine (`invalid`), `overlap` dropped and its seconds returned, synced-today, prune and counts | SYNC-01, 05, 05a, 05c, 07, 07a, 08 |
+| `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events (the site-list cache gives `DOMAINS` and `PROBLEMS`); `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12, PRB-03 |
 | `background/tracking/device.ts` | Random device id, UUID generator, local-midnight calendar (`engine.localDayStartMs` gives "today" from it) | TRK-09, 10, SYNC-12a |
-| `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, "syncing" mark and clock skew stored for the popup, bounded `waitIdle` for Disconnect | SYNC-02..08 |
-| `background/sync/supabase-ingest.ts` | Calls `ingest_study_sessions`; maps errors to classes; reads the server's time from the `Date` header | SYNC-05a, 06, DATA-06..09 |
+| `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, rejections handled by reason, "syncing" mark, clock skew and dropped-overlap seconds stored for the popup (`dismissOverlap`), bounded `waitIdle` for Disconnect | SYNC-02..08, 05c |
+| `background/sync/supabase-ingest.ts` | Calls only `ingest_study_sessions_v2` (no fallback, ADR-0011); parses the reply with `parseIngestV2Reply`; maps errors to classes; reads the server's time from the `Date` header | SYNC-03a, 05a, 05c, 06, DATA-06b |
 | `background/sync/triggers.ts` | Sync alarm → cycle + site list; session write → cycle, site list only when the user changed | SYNC-02, 09c |
 | `background/auth/auth-service.ts` | Connect, token refresh, session rejected, disconnect (waits for a running upload first; a skipped final sync is "still syncing"), forget local data; one lock with a 45 s acquire timeout | AUTH-07b, 10..12c |
 | `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local` (written by the persistent client only while adopting); refreshes on a non-persisting client, result stored by compare-and-set, 15 s timeout, late answers never written; in-memory lock that gives up after `LOCK_TIMEOUT_S` | AUTH-10, 10a, 10b, 10c, ADR-0002 |
 | `lib/error-kind.ts` | Coarse, PII-free error label (class name, known code) for logs and the sync status | SYNC-06b |
 | `background/account-epoch.ts` | In-memory counter of account changes; stale work writes nothing | SYNC-02a, AUTH-11 |
-| `background/domains/` | Tracked-site cache and server edits | SYNC-09..11, 09b, 10a |
+| `background/domains/` | Tracked-site cache and server edits; each refresh also reads `account_settings.track_problems` (failed read or no row = off) and caches it with the list | SYNC-09..11, 09b, 09d, 10a, PRB-03, PRB-04 |
 | `background/messaging/external.ts` | Messages from the dashboard origin | AUTH-06..07b, SEC-05 |
 | `background/messaging/internal.ts` | Messages from the extension's own pages; answers also in builds without Supabase config | EXT-UI-05a, 05c, SEC-05 |
 | `background/api/data-client.ts` | supabase-js data client that asks `AuthService` for each token | AUTH-10 |
@@ -66,11 +66,13 @@ stateDiagram-v2
   [*] --> NotTracking
   NotTracking --> Tracking: target ≠ null and notBefore passed<br/>(open interval, new UUID)
   Tracking --> NotTracking: target = null<br/>(pause: idle, locked, unfocused, untracked tab, disabled, disconnected)
-  Tracking --> Tracking: target changes domain<br/>(close, open new)
+  Tracking --> Tracking: target changes domain or problem<br/>(close, open new at the same instant)
   Tracking --> Tracking: boundary passed: 30 min or local midnight<br/>(close at boundary, reopen)
   Tracking --> NotTracking: gap > 2 heartbeats or clock moved back<br/>(close at last heartbeat, RESYNC)
   NotTracking --> NotTracking: clock moved back<br/>(block new intervals until notBefore)
 ```
+
+The open interval carries `problem` (slug or null). `trackingProblem(signals)` is the slug only while the setting is on (`trackProblems === true`, fails closed: null until read, PRB-04) and the tab's tracked domain is `leetcode.com` (PRB-05); turning it on asks for the tab again (the URL is never kept), turning it off clears the slug at once, so an open interval with a problem closes (PRB-09). With the setting off the engine behaves as in 0.2.3 and intervals have no `problem` key.
 
 The target is non-null only when all of TRK-01 hold (connected, tracking on, domain list loaded, focused tracked tab) and the user is active, or idle with the media hold (TRK-05, TRK-06, [ADR-0005](../adr/0005-media-activity.md)). Every step persists the state (TRK-12).
 
@@ -79,15 +81,17 @@ What happens to a closed interval:
 ```mermaid
 stateDiagram-v2
   [*] --> Open: eligible + active
-  Open --> Closed: pause / domain change / 30 min / midnight / disabled / sign-out
+  Open --> Closed: pause / domain or problem change / 30 min / midnight / disabled / sign-out
   Closed --> Outbox: duration ≥ 5 s
   Closed --> [*]: duration < 5 s (discarded)
   Outbox --> Synced: server confirms id
-  Outbox --> Quarantine: server rejects id
+  Outbox --> Quarantine: rejected as invalid
   Outbox --> [*]: older than 30 days (dropped, counted)
-  Outbox --> Deferred: server rejects id, ended_at in its future (clock ahead)
+  Outbox --> [*]: rejected as overlap (dropped, seconds added to overlapDroppedS)
+  Outbox --> Deferred: rejected as future (clock ahead)
   Deferred --> Synced: retried once ended_at passed on the server
-  Deferred --> Quarantine: rejected otherwise, or 3 times in the future
+  Deferred --> [*]: rejected as overlap (dropped, counted)
+  Deferred --> Quarantine: rejected as invalid, or 3 times as future
   Synced --> [*]: pruned after today
 ```
 
@@ -100,7 +104,7 @@ sequenceDiagram
   participant Y as SyncService
   participant O as Outbox
   participant A as AuthService
-  participant D as ingest_study_sessions
+  participant D as ingest_study_sessions_v2
   Y->>Y: read sync state, skip if backing off (unless forced)
   Y->>O: prune (SYNC-07/08)
   loop while the outbox has intervals
@@ -108,10 +112,11 @@ sequenceDiagram
     Y->>Y: first batch: write syncingSince (SYNC-02c)
     Y->>A: accessToken()
     Y->>D: batch + JWT (aborted after 20 s → unavailable)
-    alt nothing confirmed of several (not explained by the clock)
+    alt nothing confirmed of several, every rejection invalid
       Y->>Y: call error: wait 1 hour, probe 1 interval next (SYNC-05b)
-    else confirmed ids
-      Y->>O: settle: confirmed → synced today; ended in the server's future (− 5 s slack) → deferred; others → quarantine
+    else confirmed and rejected ids with reasons
+      Y->>O: settle: confirmed → synced today; future → deferred; overlap → dropped; invalid (or no reason) → quarantine
+      Y->>Y: add dropped overlap seconds to the sync status (SYNC-05c)
     else expired (PGRST301/303)
       Y->>A: accessToken({ forceRefresh }) and retry once
     else auth (401, PT401, 23503)
@@ -138,7 +143,7 @@ Every token request, Connect, Disconnect, status and session rejection runs unde
 
 Unexpected errors in the catch-alls (sync cycle, popup Disconnect and Forget local data, dashboard messages, alarm and session-change triggers) are logged as `{ kind }` from `errorKind` — class name plus a known code, never the message (SYNC-06b).
 
-A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. Only skew-due retries (or any, while no skew is known) count toward `CLOCK_RETRY_MAX`. The server's time comes from the `Date` header only (the RPC returns `uuid[]`, which cannot grow a field without breaking released clients); when it is missing the cycle logs `sync.server_time_unavailable` once.
+A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest measured skew), at its capped `retryAt` (≤ 30 min after deferral), or at once when `retryAt` is more than 30 min ahead of the local clock (clock moved back) — `deferredDue` in `tracking/outbox.ts`. Only skew-due retries (or any, while no skew is known) count toward `CLOCK_RETRY_MAX`. Since #179 the reason `future` from ingest v2 decides what is deferred; the server's time still comes from the `Date` header and only sets the skew and the due time. When it is missing the cycle logs `sync.server_time_unavailable` once, and a `future` rejection is due at the capped `retryAt`.
 
 ### Sync status for the popup (`careeros.sync.state`)
 
@@ -152,6 +157,7 @@ A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest meas
 | `probeNext` | Next cycle sends one interval (SYNC-05b) |
 | `serverSkewMs` | Latest measured local − server clock (ms), or null (SYNC-05a) |
 | `lastErrorKind` | Kind of the unexpected error that ended the last cycle (`errorKind`), cleared when a cycle completes; diagnostics only, no personal data (SYNC-06b) |
+| `overlapDroppedS` | Seconds of intervals rejected as `overlap` and dropped (SYNC-05c). Only `SyncService` changes it, one write at a time, so a cycle never writes back an older count; `dismissOverlap(shownS)` subtracts the value the popup showed. Reset with the status (account change, local data cleared) |
 
 `buildPopupView` (`lib/popup-view.ts`) turns these into `syncing` (footer label `Syncing…`), `clockAheadMinutes` (null under 5 min) and `deferred` for the footer and the clock hint (`popup/components/ClockHint.tsx`).
 
@@ -205,13 +211,13 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | `careeros.auth.session` | supabase-js session (access + refresh token) | yes (sign-out) |
 | `careeros.auth.dataOwner` | User id that owns the local data | yes |
 | `careeros.auth.needsReconnect` | Session became invalid; popup shows "Reconnect" | yes |
-| `careeros.tracking.engine` | Engine state (signals, open interval, checkpoints) | yes |
-| `careeros.tracking.outbox` | Closed intervals waiting for upload | yes |
+| `careeros.tracking.engine` | Engine state (signals incl. the current problem slug and the setting, open interval with its problem, checkpoints) | yes |
+| `careeros.tracking.outbox` | Closed intervals waiting for upload (with `problem` when they have one) | yes |
 | `careeros.tracking.deferred` | Intervals rejected as ending in the server's future: `{ interval, retryAt, attempts }` (SYNC-05a) | yes |
 | `careeros.tracking.quarantine` | Intervals the server rejected | yes |
 | `careeros.tracking.syncedToday` | Today's confirmed intervals, for popup totals | yes |
 | `careeros.tracking.droppedCount` | Intervals dropped as too old or unreadable | yes |
-| `careeros.domains.cache` | Tracked-domain list | yes (also when the session becomes invalid) |
+| `careeros.domains.cache` | Tracked-domain list and the account's problem setting (`trackProblems`, SYNC-09d) | yes (also when the session becomes invalid) |
 | `careeros.sync.state` | Backoff, last outcome, last sync time, syncing mark, clock skew (see above) | yes |
 | `careeros.device.id` | Random device id | replaced when local data is cleared |
 | `careeros.settings.trackingEnabled` | Per-device switch; missing means on | no |

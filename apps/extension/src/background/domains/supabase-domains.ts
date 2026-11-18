@@ -30,6 +30,16 @@ export function createSupabaseDomainsApi(client: SupabaseClient): DomainsApi {
       const failure = toError(error, status);
       if (failure) throw failure;
     },
+    async trackProblems() {
+      // DATA-13: RLS returns only the caller's row; no row = off (PRB-01).
+      const { data, error, status } = await client
+        .from("account_settings")
+        .select("track_problems")
+        .maybeSingle();
+      const failure = toError(error, status);
+      if (failure) throw failure;
+      return (data as { track_problems?: unknown } | null)?.track_problems === true;
+    },
     async delete(domain) {
       const { error, status } = await client.from("tracked_domains").delete().eq("domain", domain);
       const failure = toError(error, status);

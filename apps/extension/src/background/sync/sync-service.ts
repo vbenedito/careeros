@@ -1,22 +1,24 @@
 /**
  * Upload of closed intervals (SYNC-02..06, AUTH-11). One cycle at a time; batches of the
- * oldest ≤ 200 intervals go to `ingest_study_sessions`; confirmed ids leave the outbox, the
- * rest of the batch is deferred (ended in the future by the server's clock) or quarantined.
- * Failures back off and never discard data.
+ * oldest ≤ 200 intervals go to `ingest_study_sessions_v2` (SYNC-03a); confirmed ids leave the
+ * outbox, the rest of the batch is handled by its reason (SYNC-05c): `future` deferred,
+ * `overlap` dropped and counted, `invalid` quarantined. Failures back off and never discard data.
  */
-import { DATA, type Interval, SYNC } from "@careeros/shared";
+import { DATA, type IngestRejectReason, type Interval, SYNC } from "@careeros/shared";
 import { errorKind } from "../../lib/error-kind";
 import type { Logger } from "../../lib/log";
 import { parseSyncState, SYNC_STATE_KEY, type SyncState } from "../../lib/sync-state";
 import type { AccountEpoch } from "../account-epoch";
 import type { TokenProvider } from "../auth/auth-service";
 import type { KeyValueArea } from "../auth/storage";
-import { endedInServerFuture, type Outbox } from "../tracking/outbox";
+import type { Outbox } from "../tracking/outbox";
 
 export type IngestResult =
   | {
       ok: true;
       confirmedIds: string[];
+      /** SYNC-05c: rejected ids with their reason; an id in neither list counts as `invalid`. */
+      rejected?: { id: string; reason: IngestRejectReason }[];
       /** The server's clock when it answered (epoch ms, from the `Date` header), if known. */
       serverNow?: number | null;
     }
@@ -60,6 +62,34 @@ export function createSyncService(deps: {
 
   const readState = async () => parseSyncState((await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY]);
 
+  /**
+   * SYNC-05c: every write of the sync status runs one at a time and keeps the stored
+   * `overlapDroppedS`, which only `addOverlap` and `dismissOverlap` change. A cycle holds an
+   * older copy of the status; without this it would write back a count the popup dismissed
+   * meanwhile.
+   */
+  let stateChain: Promise<unknown> = Promise.resolve();
+  function serialized<T>(task: () => Promise<T>): Promise<T> {
+    const run = stateChain.then(task, task);
+    stateChain = run.catch(() => {});
+    return run;
+  }
+  const persist = (next: SyncState) =>
+    serialized(async () => {
+      const { overlapDroppedS } = await readState();
+      await storage.set({ [SYNC_STATE_KEY]: { ...next, overlapDroppedS } });
+    });
+  /** Adds to (or, negative, subtracts from) the stored count; never below 0. */
+  const changeOverlap = (deltaS: number) =>
+    serialized(async () => {
+      const raw = (await storage.get(SYNC_STATE_KEY))[SYNC_STATE_KEY];
+      // Nothing stored and nothing to add: a disconnected profile gets no sync status (#113).
+      if (raw === undefined && deltaS <= 0) return;
+      const stored = parseSyncState(raw);
+      const overlapDroppedS = Math.max(0, stored.overlapDroppedS + deltaS);
+      await storage.set({ [SYNC_STATE_KEY]: { ...stored, overlapDroppedS } });
+    });
+
   /** SYNC-06a: the ingest call, aborted and counted as "unavailable" after the timeout. */
   async function ingestWithTimeout(batch: Interval[], token: string): Promise<IngestResult> {
     const controller = new AbortController();
@@ -88,7 +118,7 @@ export function createSyncService(deps: {
     const state = await readState();
     // Every write of this cycle ends the "syncing" marker (SYNC-02c).
     const writeState = async (next: SyncState) => {
-      if (!stale()) await storage.set({ [SYNC_STATE_KEY]: { ...next, syncingSince: null } });
+      if (!stale()) await persist({ ...next, syncingSince: null });
     };
     if (!force && now() < state.notBefore) return "skipped";
     let marked = false;
@@ -121,7 +151,7 @@ export function createSyncService(deps: {
         }
         if (!marked && !stale()) {
           // SYNC-02c (#58): the popup shows "Syncing…" while this is recent.
-          await storage.set({ [SYNC_STATE_KEY]: { ...state, syncingSince: now() } });
+          await persist({ ...state, syncingSince: now() });
           marked = true;
         }
         let token = await accessToken();
@@ -154,12 +184,22 @@ export function createSyncService(deps: {
           }
           if (serverNow !== null) state.serverSkewMs = now() - serverNow;
           const confirmed = new Set(result.confirmedIds);
+          const reasons = new Map<string, IngestRejectReason>(
+            (result.rejected ?? [])
+              .filter((r) => !confirmed.has(r.id))
+              .map((r) => [r.id, r.reason]),
+          );
+          const reasonOf = (i: Interval) => reasons.get(i.id) ?? "invalid";
           const rejected = batch.filter((i) => !confirmed.has(i.id));
-          const future = rejected.filter((i) => endedInServerFuture(i, serverNow));
-          // SYNC-05b (#56): "nothing confirmed" for several intervals that cannot all be
-          // explained by the clock looks like a server bug, not per-row rejections: a call
-          // error (nothing quarantined); the next cycle probes with the oldest interval alone.
-          if (confirmed.size === 0 && rejected.length - future.length > 1) {
+          // SYNC-05b (#56), SYNC-05c: "nothing confirmed" for several intervals, all `invalid`,
+          // looks like a server bug, not per-row rejections: a call error (nothing quarantined);
+          // the next cycle probes with the oldest interval alone. One `overlap` or `future`
+          // among them means the server judged each row: handled by reason, never a backoff.
+          if (
+            confirmed.size === 0 &&
+            rejected.length > 1 &&
+            rejected.every((i) => reasonOf(i) === "invalid")
+          ) {
             await writeState({
               ...state,
               notBefore: now() + LONG_BACKOFF_MS,
@@ -168,7 +208,13 @@ export function createSyncService(deps: {
             });
             return "failed";
           }
-          const settled = await outbox.settle(batch, result.confirmedIds, serverNow); // SYNC-04/05
+          // SYNC-04/05/05a/05c
+          const settled = await outbox.settle(batch, result.confirmedIds, serverNow, reasons);
+          if (settled.overlapDroppedS > 0) {
+            // SYNC-05c: counted at once, so a later failure of the cycle cannot lose it.
+            if (stale()) return "not-connected";
+            await changeOverlap(settled.overlapDroppedS);
+          }
           state.failures = 0;
           state.probeNext = false;
           // SYNC-05a: remember how far ahead this device's clock is while it causes rejections
@@ -267,6 +313,14 @@ export function createSyncService(deps: {
       return idle;
     },
     status: readState,
+    /**
+     * SYNC-05c: the popup dismissed its clock-moved-back line showing `shownS` seconds. Only that
+     * value is subtracted, so time dropped after the popup rendered is kept and shown next.
+     */
+    dismissOverlap(shownS: number): Promise<void> {
+      if (!Number.isFinite(shownS) || shownS <= 0) return Promise.resolve();
+      return changeOverlap(-shownS);
+    },
   };
 }
 

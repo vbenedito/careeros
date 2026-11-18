@@ -1,6 +1,13 @@
-/** `ingest_study_sessions` over PostgREST (spec 04 DATA-06..09), mapped to SYNC-06 classes. */
+/**
+ * `ingest_study_sessions_v2` over PostgREST (DATA-06b, SYNC-03a, ADR-0011), mapped to SYNC-06
+ * classes. From 0.3.0 the extension calls only v2: no fallback to `ingest_study_sessions`.
+ */
+import { parseIngestV2Reply } from "@careeros/shared";
 import { createClient } from "@supabase/supabase-js";
 import type { Ingest, IngestResult } from "./sync-service";
+
+/** SYNC-03a: the only ingest RPC this extension calls. */
+export const INGEST_RPC = "ingest_study_sessions_v2";
 
 export function createSupabaseIngest(config: {
   supabaseUrl: string;
@@ -21,11 +28,14 @@ export function createSupabaseIngest(config: {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { fetch: fetchWithDate },
     });
-    const call = client.rpc("ingest_study_sessions", { sessions: batch });
+    // PRB-10: the slug (if any) travels in the interval; only v2 ever receives it.
+    const call = client.rpc(INGEST_RPC, { sessions: batch });
     // SYNC-06a: a stalled connection is aborted by the caller's timeout.
     const { data, error, status } = await (signal ? call.abortSignal(signal) : call);
-    if (!error && Array.isArray(data))
-      return { ok: true, confirmedIds: data as string[], serverNow };
+    const reply = error ? null : parseIngestV2Reply(data);
+    if (reply)
+      return { ok: true, confirmedIds: reply.confirmed, rejected: reply.rejected, serverNow };
+    // A success whose body is not the v2 shape is a malformed call ("client": Sync error).
     return { ok: false, kind: classify(status, error?.code, error?.message) };
   };
 }

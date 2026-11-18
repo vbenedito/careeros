@@ -245,6 +245,39 @@ describe("tracking store (TRK-12, SEC-02)", () => {
   });
 });
 
+describe("SEC acceptance 2 with problem tracking on (SEC-01, PRB-06, #179)", () => {
+  it("SEC-01 PRB-06 SEC acceptance 2: only the problem slug is stored; no other path, query or host", async () => {
+    const s = setup();
+    await connectAndTrack(s);
+    await s.tracker.dispatch({ type: "PROBLEMS", enabled: true });
+    for (const [i, tab] of [
+      {
+        url: "https://www.leetcode.com/problems/two-sum/description/?envType=study#notes",
+        audible: false,
+      },
+      { url: "https://leetcode.com/problems/3sum/submissions/987654/", audible: false },
+      {
+        url: "https://leetcode.com/contest/weekly-contest-400/problems/lru-cache/",
+        audible: false,
+      },
+      { url: "https://leetcode.com/problems/Valid-Parentheses/", audible: false },
+      { url: "https://leetcode.com/problemset/?search=graph", audible: false },
+      NEWS,
+      { url: "https://mail.leetcode.com/inbox?id=7", audible: true },
+      null,
+    ].entries()) {
+      s.clock.now = T0 + (i + 1) * 30_000;
+      await s.tracker.dispatch({ type: "TAB", tab });
+    }
+    const dump = JSON.stringify([...s.storage.data.entries()]);
+    expect(dump).not.toMatch(
+      /description|envType|study|notes|submissions|987654|contest|weekly|lru|Valid|Parentheses|problemset|search|graph|news\.example|article|mail\.|inbox|www\.|\/problems/,
+    );
+    const slugs = parseOutbox(s.storage.data.get(OUTBOX_KEY)).map((i) => i.problem ?? null);
+    expect(slugs).toEqual(["two-sum", "3sum", null, null]);
+  });
+});
+
 describe("tracker generation counter and exclusive timeout (#56)", () => {
   it("TRK-17a an exclusive task is released after SLOT_TIMEOUT_MS and its late write is dropped", async () => {
     vi.useFakeTimers();
