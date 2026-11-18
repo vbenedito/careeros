@@ -18,7 +18,7 @@ Related: [brand profile](../brand-profile.md) section 12, [design system](../../
 | `careeros-avatar-light-1024.png`, `-400.png` | Light avatar, ready to upload. |
 | `careeros-avatar-dark-1024.png`, `-400.png` | Dark avatar, ready to upload. |
 
-Light avatar for TikTok, YouTube and LinkedIn by default. The glyph sits well inside the circle crop (all of it is within 65% of the radius of the inscribed circle).
+Light avatar for TikTok, YouTube and LinkedIn by default. The glyph sits well inside the circle crop (all of it is within 65% of the radius of the inscribed circle). The light avatar's navy disc has weak edge contrast on a dark-mode feed (1.25:1 on `#0e0f12`; the glyph itself stays 9.84:1). Use the light avatar everywhere; the dark avatar is for surfaces that are always dark (for example a dark end card), not for a profile picture, because a profile shows the same image in light and dark mode.
 
 ## Colours
 
@@ -57,7 +57,7 @@ Hex values are the sRGB conversion of the OKLCH tokens in `packages/shared/theme
 
 ## Wordmark font
 
-"CareerOS" is set in Inter Display Bold (SIL Open Font License) and converted to SVG paths. No font needs to be installed. Spacing is the font's own with -1% tracking; "OS" takes the accent colour.
+"CareerOS" is set in Inter Display Bold (SIL Open Font License) and converted to SVG paths. No font needs to be installed. Font credit: Inter, © The Inter Project Authors, SIL OFL 1.1, outlined; no font file is shipped. Spacing is the font's own with -1% tracking; "OS" takes the accent colour.
 
 ## Open question for the product owner
 
