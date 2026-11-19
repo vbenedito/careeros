@@ -13,6 +13,10 @@ export SUPABASE_SECRET_KEY=$SECRET_KEY
 # The development extension build (pinned ID, apps/extension/manifest.config.ts).
 export NEXT_PUBLIC_EXTENSION_ID=jfklbpedlpkginmdfckogdgaggmdmkbk
 export NEXT_TELEMETRY_DISABLED=1
+# ADM-08, acceptance 4: a random canary in place of the ledger token. GitHub answers 401, so /admin
+# shows "Ledger unavailable (HTTP 401)"; the canary must appear nowhere in the build, the HTML or the log.
+OPS_LEDGER_TOKEN=canary_$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+export OPS_LEDGER_TOKEN
 
 pnpm --filter @careeros/web build
 VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY \
@@ -26,5 +30,10 @@ scripts/ci/wait-for-server.sh http://localhost:3000/sign-in "$server" web-integr
 
 export DASHBOARD_URL=$SITE_URL API_URL PUBLISHABLE_KEY SECRET_KEY DB_CONTAINER=supabase_db_careeros
 pnpm --filter @careeros/web test:integration
+# The admin test rendered /admin as an admin with the canary token configured (its HTML is checked there).
+if grep -rqF -- "$OPS_LEDGER_TOKEN" apps/web/.next web-integration-server.log; then
+  echo "OPS_LEDGER_TOKEN canary found in the build output or the server log" >&2
+  exit 1
+fi
 pnpm --filter @careeros/extension test:integration
 pnpm --filter @careeros/extension test:e2e

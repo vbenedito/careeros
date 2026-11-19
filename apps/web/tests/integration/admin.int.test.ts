@@ -1,6 +1,6 @@
 /**
- * The admin page guard against the running dashboard (ADM-02..04, acceptance 1). The ledger is
- * not configured in CI (no OPS_LEDGER_TOKEN), so the admin page shows "Ledger unavailable" (ADM-08).
+ * The admin page guard against the running dashboard (ADM-02..04, acceptance 1). CI runs the server with a canary
+ * OPS_LEDGER_TOKEN that GitHub rejects, so the admin page shows "Ledger unavailable (HTTP 401)" (ADM-08).
  */
 import { describe, expect, it } from "vitest";
 import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
@@ -36,7 +36,10 @@ describe("admin page (integration)", () => {
     const html = await allowed.text();
     expect(html).toContain("<h1");
     expect(html).toContain("Sessions");
-    expect(html).toContain("Ledger unavailable");
+    // The canary token (integration.sh) is rejected by GitHub: 401, and the token stays hidden (ADM-08).
+    expect(html).toContain("Ledger unavailable (HTTP 401)");
+    const canary = process.env.OPS_LEDGER_TOKEN;
+    if (canary) expect(html).not.toContain(canary);
     expect(html).toContain('name="robots" content="noindex, nofollow"');
 
     // The 404 is the not-found page of an unknown path: same status, same noindex, same content.

@@ -50,8 +50,12 @@ export function blobRequest(token: string, sha: string): GithubRequest {
 }
 
 const TreeSchema = z.object({
+  truncated: z.boolean().optional(),
   tree: z.array(z.object({ path: z.string(), type: z.string(), sha: z.string() })),
 });
+
+/** A file larger than this is an invalid file, never parsed (ADM-06). */
+export const MAX_BLOB_BYTES = 1_000_000;
 
 export interface LedgerFileRef {
   /** Path under `LEDGER_DIR`, e.g. `2026/2026-11-18-a.json`. */
@@ -59,10 +63,20 @@ export interface LedgerFileRef {
   sha: string;
 }
 
+export interface LedgerListing {
+  files: LedgerFileRef[];
+  /** Entries under `LEDGER_DIR` whose SHA is not a 40-digit hex id: listed as invalid files. */
+  invalid: string[];
+}
+
 export type GithubResult<T> =
   | { ok: true; value: T }
-  /** `status` is the HTTP status, or null when no response arrived. Nothing else is kept. */
-  | { ok: false; status: number | null };
+  /**
+   * `status` is the HTTP status, or null when no response arrived. `reason` tells a 200 that
+   * could not be used: `unreadable` (the body is not the expected JSON) or `truncated` (GitHub
+   * cut the tree short, so the ledger would be partial). Nothing else is kept.
+   */
+  | { ok: false; status: number | null; reason?: "unreadable" | "truncated" };
 
 type Fetcher = (url: string, init: CachedRequestInit) => Promise<Response>;
 
@@ -71,7 +85,7 @@ const SHA = /^[0-9a-f]{40}$/;
 export async function listLedgerFiles(
   token: string,
   fetcher: Fetcher = fetch,
-): Promise<GithubResult<LedgerFileRef[]>> {
+): Promise<GithubResult<LedgerListing>> {
   const { url, init } = treeRequest(token);
   let res: Response;
   try {
@@ -81,30 +95,34 @@ export async function listLedgerFiles(
   }
   if (!res.ok) return { ok: false, status: res.status };
   const parsed = TreeSchema.safeParse(await res.json().catch(() => null));
-  if (!parsed.success) return { ok: false, status: res.status };
-  const files = parsed.data.tree
-    .filter(
-      (e) =>
-        e.type === "blob" &&
-        e.path.startsWith(LEDGER_DIR) &&
-        e.path.endsWith(".json") &&
-        SHA.test(e.sha),
-    )
-    .map((e) => ({ name: e.path.slice(LEDGER_DIR.length), sha: e.sha }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  return { ok: true, value: files };
+  if (!parsed.success) return { ok: false, status: null, reason: "unreadable" };
+  if (parsed.data.truncated) return { ok: false, status: null, reason: "truncated" };
+  const files: LedgerFileRef[] = [];
+  const invalid: string[] = [];
+  for (const e of parsed.data.tree) {
+    if (e.type !== "blob" || !e.path.startsWith(LEDGER_DIR) || !e.path.endsWith(".json")) continue;
+    const name = e.path.slice(LEDGER_DIR.length);
+    if (SHA.test(e.sha)) files.push({ name, sha: e.sha });
+    else invalid.push(name);
+  }
+  files.sort((a, b) => a.name.localeCompare(b.name));
+  return { ok: true, value: { files, invalid: invalid.sort() } };
 }
 
+/** The file's text, or `null` when it is larger than `MAX_BLOB_BYTES` (an invalid file). */
 export async function readLedgerFile(
   token: string,
   sha: string,
   fetcher: Fetcher = fetch,
-): Promise<GithubResult<string>> {
+): Promise<GithubResult<string | null>> {
   const { url, init } = blobRequest(token, sha);
   try {
     const res = await fetcher(url, init);
     if (!res.ok) return { ok: false, status: res.status };
-    return { ok: true, value: await res.text() };
+    if (Number(res.headers.get("content-length")) > MAX_BLOB_BYTES)
+      return { ok: true, value: null };
+    const text = await res.text();
+    return { ok: true, value: Buffer.byteLength(text) > MAX_BLOB_BYTES ? null : text };
   } catch {
     return { ok: false, status: null };
   }

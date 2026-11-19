@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { loadLedger, parseLedgerFiles } from "./ledger";
+import { BLOB_CONCURRENCY, loadLedger, parseLedgerFiles } from "./ledger";
 
 const TOKEN = "test-token-not-real";
 
@@ -68,7 +68,7 @@ describe("ledger loading (ADM-08)", () => {
   it("ADM-08 a file failure is unavailable with its HTTP status", async () => {
     const result = await loadLedger({
       token: TOKEN,
-      list: async () => ({ ok: true, value: files }),
+      list: async () => ({ ok: true, value: { files, invalid: [] } }),
       read: async () => ({ ok: false, status: 404 }),
     });
     expect(result).toEqual({ status: "unavailable", httpStatus: 404 });
@@ -81,7 +81,7 @@ describe("ledger loading (ADM-08)", () => {
     }));
     const result = await loadLedger({
       token: TOKEN,
-      list: async () => ({ ok: true, value: files }),
+      list: async () => ({ ok: true, value: { files, invalid: [] } }),
       read,
     });
     expect(result.status).toBe("ok");
@@ -90,5 +90,55 @@ describe("ledger loading (ADM-08)", () => {
     expect(result.invalid).toEqual(["2030/bad.json"]);
     expect(JSON.stringify(result)).not.toContain(TOKEN);
     expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("ADM-08 a truncated or unreadable listing is unavailable with its reason, no status", async () => {
+    for (const reason of ["truncated", "unreadable"] as const) {
+      const result = await loadLedger({
+        token: TOKEN,
+        list: async () => ({ ok: false, status: null, reason }),
+      });
+      expect(result).toEqual({ status: "unavailable", httpStatus: null, reason });
+    }
+  });
+
+  it("ADM-06 oversize files and unexpected SHAs are listed as invalid files", async () => {
+    const result = await loadLedger({
+      token: TOKEN,
+      list: async () => ({
+        ok: true,
+        value: {
+          files: [{ name: "2030/huge.json", sha: "c".repeat(40) }],
+          invalid: ["2030/odd.json"],
+        },
+      }),
+      read: async () => ({ ok: true, value: null }),
+    });
+    expect(result).toMatchObject({
+      status: "ok",
+      sessions: [],
+      invalid: ["2030/huge.json", "2030/odd.json"],
+    });
+  });
+
+  it("ADM-16 blobs are fetched at most BLOB_CONCURRENCY at a time", async () => {
+    let running = 0;
+    let peak = 0;
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      name: `2030/f${i}.json`,
+      sha: "d".repeat(40),
+    }));
+    await loadLedger({
+      token: TOKEN,
+      list: async () => ({ ok: true, value: { files: many, invalid: [] } }),
+      read: async () => {
+        running++;
+        peak = Math.max(peak, running);
+        await new Promise((r) => setTimeout(r, 2));
+        running--;
+        return { ok: true, value: session("2030-01-02-a") };
+      },
+    });
+    expect(peak).toBe(BLOB_CONCURRENCY);
   });
 });

@@ -1,7 +1,15 @@
 import { SessionsPanel } from "@/app/admin/sessions-panel";
 import { requireAdmin } from "@/lib/admin/guard";
-import { loadLedger } from "@/lib/admin/ledger";
+import { type LedgerLoad, loadLedger } from "@/lib/admin/ledger";
 import { buildSessionRows } from "@/lib/admin/sessions-view";
+
+/** What follows "Ledger unavailable": the HTTP status only, or why a 200 was unusable. */
+function unavailableNote(ledger: Extract<LedgerLoad, { status: "unavailable" }>): string | null {
+  if (ledger.httpStatus !== null) return `HTTP ${ledger.httpStatus}`;
+  if (ledger.reason === "unreadable") return "unreadable response";
+  if (ledger.reason === "truncated") return "listing truncated";
+  return null;
+}
 
 /**
  * ADM-02..09. A layout does not hold back its page's data loading, so the guard is awaited here
@@ -18,7 +26,7 @@ export default async function AdminPage() {
       {ledger.status === "ok" ? (
         <SessionsPanel rows={buildSessionRows(ledger.sessions)} invalid={ledger.invalid} />
       ) : (
-        <SessionsPanel unavailableStatus={ledger.httpStatus} />
+        <SessionsPanel unavailableNote={unavailableNote(ledger)} />
       )}
     </>
   );

@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SessionRow } from "@/lib/admin/sessions-view";
 
 type Props =
-  | { rows: SessionRow[]; invalid: string[]; unavailableStatus?: undefined }
-  | { rows?: undefined; invalid?: undefined; unavailableStatus: number | null };
+  | { rows: SessionRow[]; invalid: string[]; unavailableNote?: undefined }
+  | { rows?: undefined; invalid?: undefined; unavailableNote: string | null };
 
 /** ADM-09: one row per session, newest first. Props are plain view-model values. */
 export function SessionsPanel(props: Props) {
@@ -16,7 +16,7 @@ export function SessionsPanel(props: Props) {
         {props.rows === undefined ? (
           <p className="text-sm" role="status">
             Ledger unavailable
-            {props.unavailableStatus === null ? "" : ` (HTTP ${props.unavailableStatus})`}
+            {props.unavailableNote === null ? "" : ` (${props.unavailableNote})`}
           </p>
         ) : (
           <>

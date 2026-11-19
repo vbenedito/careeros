@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { blobRequest, listLedgerFiles, readLedgerFile, treeRequest } from "./github";
+import {
+  blobRequest,
+  listLedgerFiles,
+  MAX_BLOB_BYTES,
+  readLedgerFile,
+  treeRequest,
+} from "./github";
 
 const TOKEN = "test-token-not-real";
 const SHA = "a".repeat(40);
@@ -54,10 +60,13 @@ describe("ledger GitHub requests (ADM-08)", () => {
     const result = await listLedgerFiles(TOKEN, fetcher);
     expect(result).toEqual({
       ok: true,
-      value: [
-        { name: "2029/2029-12-31-a.json", sha: "b".repeat(40) },
-        { name: "2030/2030-01-02-a.json", sha: SHA },
-      ],
+      value: {
+        files: [
+          { name: "2029/2029-12-31-a.json", sha: "b".repeat(40) },
+          { name: "2030/2030-01-02-a.json", sha: SHA },
+        ],
+        invalid: [],
+      },
     });
   });
 
@@ -77,5 +86,49 @@ describe("ledger GitHub requests (ADM-08)", () => {
     const fail = async () => Promise.reject(new Error(`connect ECONNREFUSED ${TOKEN}`));
     expect(await listLedgerFiles(TOKEN, fail)).toEqual({ ok: false, status: null });
     expect(await readLedgerFile(TOKEN, SHA, fail)).toEqual({ ok: false, status: null });
+  });
+
+  it("ADM-06 an entry with an unexpected SHA is listed as invalid, not dropped", async () => {
+    const result = await listLedgerFiles(TOKEN, async () =>
+      json({ tree: [{ path: "ledger/2030/odd.json", type: "blob", sha: "xyz" }] }),
+    );
+    expect(result).toEqual({ ok: true, value: { files: [], invalid: ["2030/odd.json"] } });
+  });
+
+  it("ADM-08 a truncated tree is unavailable, never a partial ledger", async () => {
+    const result = await listLedgerFiles(TOKEN, async () => json({ truncated: true, tree: [] }));
+    expect(result).toEqual({ ok: false, status: null, reason: "truncated" });
+  });
+
+  it("ADM-08 a 200 that is not the expected JSON is unreadable, not an HTTP status", async () => {
+    expect(await listLedgerFiles(TOKEN, async () => new Response("<html>"))).toEqual({
+      ok: false,
+      status: null,
+      reason: "unreadable",
+    });
+    expect(await listLedgerFiles(TOKEN, async () => json({ nope: 1 }))).toEqual({
+      ok: false,
+      status: null,
+      reason: "unreadable",
+    });
+  });
+
+  it("ADM-06 a file over the size cap reads as null (an invalid file)", async () => {
+    const big = "x".repeat(MAX_BLOB_BYTES + 1);
+    expect(await readLedgerFile(TOKEN, SHA, async () => new Response(big))).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(await readLedgerFile(TOKEN, SHA, async () => new Response("{}"))).toEqual({
+      ok: true,
+      value: "{}",
+    });
+    const declared = new Response("{}", {
+      headers: { "content-length": String(MAX_BLOB_BYTES + 1) },
+    });
+    expect(await readLedgerFile(TOKEN, SHA, async () => declared)).toEqual({
+      ok: true,
+      value: null,
+    });
   });
 });

@@ -11,7 +11,11 @@ import { type LedgerFileRef, listLedgerFiles, readLedgerFile } from "./github";
 
 export type LedgerLoad =
   | { status: "ok"; sessions: LedgerSession[]; invalid: string[] }
-  | { status: "unavailable"; httpStatus: number | null };
+  | {
+      status: "unavailable";
+      httpStatus: number | null;
+      reason?: "unreadable" | "truncated";
+    };
 
 /** Pure: validates the files' text. `invalid` is sorted by name. */
 export function parseLedgerFiles(files: readonly { name: string; text: string }[]) {
@@ -32,6 +36,23 @@ export function parseLedgerFiles(files: readonly { name: string; text: string }[
   return { sessions, invalid: invalid.sort() };
 }
 
+/** Parallel blob fetches at a time. */
+export const BLOB_CONCURRENCY = 8;
+
+/** Maps in order with at most `limit` calls running at once. */
+async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>) {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i] as T);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 interface Deps {
   token?: string | null;
   list?: typeof listLedgerFiles;
@@ -45,20 +66,39 @@ export async function loadLedger(deps: Deps = {}): Promise<LedgerLoad> {
   const read = deps.read ?? readLedgerFile;
 
   const listing = await list(token);
-  if (!listing.ok) return { status: "unavailable", httpStatus: listing.status };
+  if (!listing.ok) {
+    return {
+      status: "unavailable",
+      httpStatus: listing.status,
+      ...(listing.reason ? { reason: listing.reason } : {}),
+    };
+  }
 
-  const reads = await Promise.all(
-    listing.value.map(async (file: LedgerFileRef) => ({
+  const reads = await mapLimit(
+    listing.value.files,
+    BLOB_CONCURRENCY,
+    async (file: LedgerFileRef) => ({
       file,
       result: await read(token, file.sha),
-    })),
+    }),
   );
   const failed = reads.find((r) => !r.result.ok);
-  if (failed && !failed.result.ok)
-    return { status: "unavailable", httpStatus: failed.result.status };
+  if (failed && !failed.result.ok) {
+    return {
+      status: "unavailable",
+      httpStatus: failed.result.status,
+      ...(failed.result.reason ? { reason: failed.result.reason } : {}),
+    };
+  }
 
+  // A file over the size cap has no text: it is listed as invalid, like one that fails the schema.
   const files = reads.flatMap(({ file, result }) =>
-    result.ok ? [{ name: file.name, text: result.value }] : [],
+    result.ok ? [{ name: file.name, text: result.value ?? "" }] : [],
   );
-  return { status: "ok", ...parseLedgerFiles(files) };
+  const parsed = parseLedgerFiles(files);
+  return {
+    status: "ok",
+    sessions: parsed.sessions,
+    invalid: [...parsed.invalid, ...listing.value.invalid].sort(),
+  };
 }
