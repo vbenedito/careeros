@@ -19,7 +19,22 @@ export default function OpengraphImage() {
         color: "#f6f6f6",
       }}
     >
-      <div style={{ fontSize: 36, fontWeight: 700 }}>CareerOS</div>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 36, fontWeight: 700 }}
+      >
+        <svg width="64" height="64" viewBox="0 0 512 512" aria-hidden="true">
+          <rect width="512" height="512" rx="96" fill="#79a1fc" />
+          <path
+            d="M326.2 333.6A116 116 0 1 1 326.2 178.4"
+            fill="none"
+            stroke="#102252"
+            strokeWidth="64"
+            strokeLinecap="round"
+          />
+          <circle cx="382" cy="256" r="38" fill="#102252" />
+        </svg>
+        CareerOS
+      </div>
       <div style={{ fontSize: 80, fontWeight: 700, lineHeight: 1.05, letterSpacing: -2 }}>
         See where your study time really goes
       </div>

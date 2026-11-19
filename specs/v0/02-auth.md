@@ -20,7 +20,7 @@ Self-service sign-up/sign-in with Google or GitHub on the dashboard, and a secur
 - **AUTH-02** Sessions are stored in HTTP-only cookies via `@supabase/ssr`. Server code authorizes with `supabase.auth.getUser()` / verified claims — never trusts unverified `getSession()` data on the server.
 - **AUTH-03** All routes require a session except (`apps/web/lib/auth/routes.ts`):
   - the prefixes `/sign-in`, `/auth/callback`, `/auth/sign-in`, `/privacy` and `/fonts` (self-hosted landing fonts), each matched exactly or followed by `/…`;
-  - the landing page's exact paths `/`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg` (LAND-01/07).
+  - the landing page's exact paths `/`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`, `/apple-icon.png` (LAND-01/07).
 
   The proxy (`apps/web/proxy.ts`) applies the rules:
   - Unauthenticated page requests redirect to `/sign-in?next=<path and query>`: `307` for `GET`/`HEAD`, `303` for other methods (so a `POST` is not re-sent).

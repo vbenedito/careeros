@@ -20,6 +20,9 @@
   --ring: oklch(0.5 0.17 265);
   --primary: oklch(0.5 0.17 265);
   --primary-foreground: oklch(0.985 0 0);
+  /* Logo mark (#225): tile and glyph; the logo keeps its own navy, so it is not --primary. */
+  --brand: oklch(0.27 0.09 265);
+  --brand-foreground: oklch(0.86 0.09 265);
   --destructive: oklch(0.55 0.2 27);
   --destructive-foreground: oklch(0.985 0 0);
   --success: oklch(0.52 0.14 150);
@@ -48,6 +51,8 @@
   --ring: oklch(0.72 0.14 265);
   --primary: oklch(0.72 0.14 265);
   --primary-foreground: oklch(0.17 0 0);
+  --brand: oklch(0.72 0.14 265);
+  --brand-foreground: oklch(0.27 0.09 265);
   --destructive: oklch(0.7 0.17 25);
   --destructive-foreground: oklch(0.17 0 0);
   --success: oklch(0.75 0.15 150);
@@ -75,6 +80,8 @@
     --ring: oklch(0.72 0.14 265);
     --primary: oklch(0.72 0.14 265);
     --primary-foreground: oklch(0.17 0 0);
+    --brand: oklch(0.72 0.14 265);
+    --brand-foreground: oklch(0.27 0.09 265);
     --destructive: oklch(0.7 0.17 25);
     --destructive-foreground: oklch(0.17 0 0);
     --success: oklch(0.75 0.15 150);
@@ -102,6 +109,8 @@
   --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);

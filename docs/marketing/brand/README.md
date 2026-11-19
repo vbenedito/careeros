@@ -61,4 +61,4 @@ Hex values are the sRGB conversion of the OKLCH tokens in `packages/shared/theme
 
 ## Open question for the product owner
 
-The Chrome extension icon (`docs/chrome-web-store/assets/`, `apps/extension`) and the web favicon still use the old clock icon. Whether they switch to this mark is a separate issue. This change does not touch them. If they follow, use `careeros-mark-small.svg` for 16 and 32 px.
+The website switched to this mark in #225 (favicon is `careeros-mark-small.svg`; sidebar and sign-in use the `brand` / `brand-foreground` tokens). The Chrome extension icon (`docs/chrome-web-store/assets/`, `apps/extension`) still uses the old clock icon; whether it follows is a separate issue (it needs a store update). If it follows, use `careeros-mark-small.svg` for 16 and 32 px.

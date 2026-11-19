@@ -24,7 +24,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/client-error/x")).toBe(false);
   });
 
-  it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg"])(
+  it.each(["/", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/icon.svg", "/apple-icon.png"])(
     "LAND-01 LAND-07 %s is public (exact match only)",
     (p) => {
       expect(isPublicPath(p)).toBe(true);
