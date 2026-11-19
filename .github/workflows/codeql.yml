@@ -1,0 +1,57 @@
+# CodeQL code scanning (ENV-15, D26, #183): static analysis of the JavaScript/TypeScript code and
+# the GitHub Actions workflows, on pull requests, pushes to `main` and weekly. Results appear in
+# the repository's Security tab. No secrets: the workflow only reads the repository and uploads
+# SARIF results with the job's own token.
+
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, Monday 04:23 UTC (off the hour, away from the other scheduled checks).
+    - cron: "23 4 * * 1"
+
+# Least privilege (ENV-09, ENV-15): the workflow only reads the repository by default.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # security-events: write uploads the SARIF results; actions: read lets CodeQL read the
+    # workflow files it analyzes. Nothing else is granted.
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      # Actions are pinned to full commit SHAs (ENV-09); the comment shows the release tag.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No build step: the default `none` build mode extracts the code without compiling it.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
