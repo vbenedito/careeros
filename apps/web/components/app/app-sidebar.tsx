@@ -20,7 +20,7 @@ export function AppSidebar({ email }: { email: string }) {
       <SidebarSection className="h-14 flex-row items-center px-3">
         <Logo />
         <span className="font-semibold tracking-tight group-data-[state=collapsed]/sidebar:sr-only">
-          CareerOS
+          Career<span className="text-primary">OS</span>
         </span>
       </SidebarSection>
       <nav aria-label="Pages" className="flex-1">

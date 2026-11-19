@@ -23,17 +23,19 @@ export default async function SignInPage({
         <div className="flex flex-col gap-2 text-center">
           <h1 className="flex items-center justify-center gap-2.5 text-xl font-semibold tracking-tight">
             <svg aria-hidden="true" viewBox="0 0 512 512" className="size-8 shrink-0">
-              <rect width="512" height="512" rx="80" className="fill-brand" />
+              <rect width="512" height="512" rx="96" className="fill-brand" />
               <path
-                d="M306.9 339.2A112 112 0 1 1 306.9 172.8"
+                d="M326.2 333.6A116 116 0 1 1 326.2 178.4"
                 fill="none"
                 className="stroke-brand-foreground"
-                strokeWidth="84"
+                strokeWidth="64"
                 strokeLinecap="round"
               />
-              <circle cx="396" cy="256" r="58" className="fill-brand-foreground" />
+              <circle cx="382" cy="256" r="38" className="fill-brand-foreground" />
             </svg>
-            CareerOS
+            <span>
+              Career<span className="text-primary">OS</span>
+            </span>
           </h1>
           <p className="text-sm text-muted-foreground">
             Track how much you study for technical interviews — automatically and privately.

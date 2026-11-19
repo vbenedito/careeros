@@ -42,7 +42,7 @@ describe("landing page (LAND)", () => {
     expect(html).toContain('<html lang="en">');
     expect(html).toContain('<link rel="icon" href="/icon.svg" type="image/svg+xml">');
     expect(html).toMatch(
-      /<a class="brand" href="\/"><svg class="mark" aria-hidden="true"[^>]*>.*<\/svg>CareerOS<\/a>/,
+      /<a class="brand" href="\/"><svg class="mark" aria-hidden="true"[^>]*>.*<\/svg><span>Career<span class="os">OS<\/span><\/span><\/a>/,
     );
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-icon.png">');
     expect(html.toLowerCase()).toContain("study time tracker");
