@@ -4,6 +4,9 @@
 # Not included on purpose: private.link_requests (rate-limit state) and auth sessions (every
 # user signs in and connects the extension again after a restore to a new project), and
 # public.plans (configuration owned by the migrations, restored with the schema).
+# public.admins IS dumped: it holds only user ids, and losing it would silently lock the admin out
+# (rows are added by hand, so the migrations cannot recreate them). It references auth.users,
+# which is dumped too, and pg_dump writes auth.users first (foreign-key order).
 # pg_dump writes table data in foreign-key order (study_sessions before study_session_problems);
 # backup-restore-test.sh proves the round trip in CI.
 # Usage: PGURL=<postgres-url> scripts/ops/db-dump.sh
@@ -18,4 +21,5 @@ docker run --rm --network host -e PGURL "$image" \
   sh -c 'pg_dump "$PGURL" --data-only --no-owner --no-privileges \
     --table=auth.users --table=auth.identities \
     --table=public.tracked_domains --table=public.study_sessions \
-    --table=public.account_settings --table=public.study_session_problems'
+    --table=public.account_settings --table=public.study_session_problems \
+    --table=public.admins'

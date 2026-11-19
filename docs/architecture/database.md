@@ -67,6 +67,7 @@ erDiagram
 | `public.account_settings` | One row per user; `track_problems` (off by default, no row = off) | Written only by `set_problem_tracking` | DATA-13, PRB-01 |
 | `public.study_session_problems` | LeetCode problem slug of an interval, deletable while the interval stays | Composite FK `(session_id, user_id, domain)` → `study_sessions (id, user_id, domain)` cascade; `domain = 'leetcode.com'`; slug ≤ 100 chars matching `PROBLEM_SLUG_PATTERN`. Inserted only by ingest v2, deleted only by `set_problem_tracking` (or the account cascade) | DATA-16, PRB-05, PRB-16 |
 | `public.plans` | One row per plan, one column per limit; v1 has `free` with `max_tracked_domains = 12`. Changed only by a migration (`update public.plans set ... where id = 'free'`) | `id` primary key, `max_tracked_domains > 0` | ENT-01 |
+| `public.admins` | Users who may open `/admin`. A row means admin; rows are added **by hand in the Supabase SQL editor** by the project owner (no client role can write; no seed, no user id in the repository) | `user_id` primary key → `auth.users` on delete cascade | ADM-01, ADM-02 |
 | `private.link_requests` | Rate-limit log for extension links | Rows older than 1 hour pruned on each call | AUTH-08 |
 
 `packages/shared/src/db-parity.test.ts` fails if the `hostname` regex or limits drift from `isValidDomain()` in `packages/shared/src/domain.ts`, (ENT-11) if the `free` row set by the last migration differs from `ENTITLEMENTS` in `packages/shared`, and (PRB-05) if the slug pattern, length or domain differ from `PROBLEMS`.
@@ -79,6 +80,7 @@ Deny by default: the first migration revokes every client privilege and forces R
 |---|---|---|
 | `tracked_domains` | `select`, `delete`, `insert (domain)` only | `*_select_own`, `*_insert_own`, `*_delete_own`: `user_id = (select auth.uid())`; restrictive `tracked_domains_no_anonymous` |
 | `plans` | `select` only (no write grant, no write policy) | `plans_select_all` (`using (true)`: no user data); restrictive `plans_no_anonymous` |
+| `admins` | `select` only (no write grant, no write policy) | `admins_select_own`: `user_id = (select auth.uid())`; restrictive `admins_no_anonymous` |
 | `study_sessions` | `select` only | `study_sessions_select_own`; restrictive `study_sessions_no_anonymous` |
 | `account_settings` | `select` only | `account_settings_select_own`; restrictive `account_settings_no_anonymous` |
 | `study_session_problems` | `select` only | `study_session_problems_select_own`; restrictive `study_session_problems_no_anonymous` |
@@ -159,6 +161,7 @@ Append-only; never edit an applied migration (AGENTS.md).
 | `20261112100000_tracked_domain_limit_12.sql` | Site limit 50 → 12; existing rows kept (#145) |
 | `20261117100000_entitlements.sql` | `plans` (`free` = 12), `private.plan_of`, site-limit trigger reads the plan and raises the error with `detail` (#177) |
 | `20261118100000_ingest_v2.sql` | `account_settings`, `study_session_problems`, `private.ingest_sessions` behind `ingest_study_sessions` and the new `ingest_study_sessions_v2`, caps only for new rows, `set_problem_tracking`, `get_problem_totals`; drops `parse_study_session` (#178, ADR-0011) |
+| `20261118110000_admins.sql` | `admins` (ADM-01): own-row read only, no client write, rows added by hand (#213, ADR-0013) |
 
 How they reach production: [release process](../process/release.md#database-migrations).
 
@@ -180,7 +183,8 @@ How they reach production: [release process](../process/release.md#database-migr
 | `090_rls_policies` | Every policy ties access to the caller; `plans` is the one read-only reference exception (SEC-07, ENT-01) |
 | `100_entitlements` | `plans`, `plan_of`, limit from the plan, error code, hint and details, changed `free` row (ENT-01..06) |
 | `110_ingest_v2` | ADR-0011 compatibility plan items 1–3, 6, 7: old contract, v2 reasons and slugs, shared rules and caps for pure retries, grants, setting and history delete, problem totals (DATA-06b, DATA-09b, DATA-13..17) |
+| `120_admins` | `admins`: own row only, no client insert, update or delete, anonymous refusal, cascade (ADM-01) |
 
 ## Backups
 
-Weekly data-only dump of `auth.users`, `auth.identities`, `tracked_domains`, `study_sessions`, `account_settings` and `study_session_problems` (`plans` comes from the migrations), encrypted with age; restore = migrations + dump. Procedure and checks: [operations §4](../operations.md#4-backups).
+Weekly data-only dump of `auth.users`, `auth.identities`, `tracked_domains`, `study_sessions`, `account_settings`, `study_session_problems` and `admins` (`plans` comes from the migrations), encrypted with age; restore = migrations + dump. Procedure and checks: [operations §4](../operations.md#4-backups).
