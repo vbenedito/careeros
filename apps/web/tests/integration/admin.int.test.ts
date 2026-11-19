@@ -37,7 +37,8 @@ describe("admin page (integration)", () => {
     expect(html).toContain("<h1");
     expect(html).toContain("Sessions");
     // The canary token (integration.sh) is rejected by GitHub: 401, and the token stays hidden (ADM-08).
-    expect(html).toContain("Ledger unavailable (HTTP 401)");
+    // React separates adjacent text parts with <!-- --> in server HTML.
+    expect(html.replaceAll("<!-- -->", "")).toContain("Ledger unavailable (HTTP 401)");
     const canary = process.env.OPS_LEDGER_TOKEN;
     if (canary) expect(html).not.toContain(canary);
     expect(html).toContain('name="robots" content="noindex, nofollow"');
