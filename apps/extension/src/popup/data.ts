@@ -25,6 +25,7 @@ import {
 } from "../lib/popup-messages";
 import type { PopupInput } from "../lib/popup-view";
 import { parseSyncState, SYNC_STATE_KEY } from "../lib/sync-state";
+import { validLimit } from "./messages";
 
 const KEYS = {
   engine: ENGINE_STATE_KEY,
@@ -125,10 +126,7 @@ export function createChromePopupData(): PopupData {
         input,
       });
       if (reply?.ok) return { ok: true };
-      const limit =
-        typeof reply?.limit === "number" && Number.isInteger(reply.limit) && reply.limit > 0
-          ? reply.limit
-          : undefined;
+      const limit = validLimit(reply?.limit);
       const error = reply?.error ?? "UNAVAILABLE";
       return limit === undefined ? { ok: false, error } : { ok: false, error, limit };
     },

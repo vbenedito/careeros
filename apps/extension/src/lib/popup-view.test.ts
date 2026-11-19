@@ -265,4 +265,16 @@ describe("problem line and dropped overlap (EXT-UI-11, PRB-14, SYNC-05c)", () =>
     expect(at(90).overlapDroppedS).toBe(90);
     expect(at(90, false).overlapMinutes).toBeNull();
   });
+
+  it("PRB-14 SYNC-12 an interval that crosses local midnight counts only its part of today", () => {
+    const view = buildPopupView(
+      input({
+        todayIntervals: [{ ...iv("leetcode.com", TODAY - 10 * 60_000, 25), problem: "two-sum" }],
+        engine: problemOpen("two-sum", NOW - 5 * 60_000),
+      }),
+    );
+    // 15 of the 25 minutes are after midnight, plus the 5 open minutes.
+    expect(view.current?.problem?.seconds).toBe(20 * 60);
+    expect(view.todaySeconds).toBe(20 * 60);
+  });
 });

@@ -16,7 +16,10 @@ export const ERROR_MESSAGES: Record<string, string> = {
  * `limit` is the number from the server's limit error (ENT-07, ENT-09). It is never taken from a
  * shared constant at run time.
  */
+export const validLimit = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+
 export const errorMessage = (code: string, limit?: number): string =>
   code === "LIMIT_REACHED" && limit !== undefined
-    ? `You can track up to ${limit} sites.`
+    ? `You can track up to ${limit} ${limit === 1 ? "site" : "sites"}.`
     : (ERROR_MESSAGES[code] ?? "Couldn't reach CareerOS. Try again in a moment.");
