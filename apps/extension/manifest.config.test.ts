@@ -47,6 +47,13 @@ describe("manifest", () => {
     expect(EXTENSION_PAGES_CSP).not.toMatch(/unsafe-eval|unsafe-inline|https?:/);
   });
 
+  it.each(["development", "production"] as BuildMode[])(
+    "STORE-07 %s build sets minimum_chrome_version to 120",
+    (mode) => {
+      expect(buildManifest(mode, config).minimum_chrome_version).toBe("120");
+    },
+  );
+
   it("AUTH-06 only the configured dashboard origin may message the extension", () => {
     const manifest = buildManifest("development", config);
     expect(manifest.externally_connectable.matches).toEqual(["http://localhost:3000/*"]);

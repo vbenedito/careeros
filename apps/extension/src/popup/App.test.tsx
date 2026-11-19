@@ -106,7 +106,7 @@ const renderApp = (data: PopupData) => render(<App data={data} now={() => NOW} /
 afterEach(cleanup);
 
 describe("popup main view (EXT-UI-01..05b, 09)", () => {
-  it("EXT-UI-01 EXT-UI-04 tracking: today total, current session, top sites, footer", async () => {
+  it("EXT-UI-01 EXT-UI-04 EXT-UI-05b tracking: today total, current session, top sites, footer with version", async () => {
     renderApp(fixture({ engine: tracking }));
     expect(await screen.findByTestId("status")).toHaveProperty("dataset.state", "tracking");
     expect(screen.getByText("Tracking")).toBeTruthy();
@@ -443,9 +443,11 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     );
   });
 
-  it("EXT-UI-08 no account section when not connected; Back returns to the main view", async () => {
+  it("EXT-UI-08 EXT-UI-08a no account section when not connected; the connect prompt; Back returns to the main view", async () => {
     const data = fixture({ auth: { connected: false, email: null } });
     await openSettings(data);
+    expect(screen.getByRole("switch", { name: /Tracking/ })).toBeTruthy();
+    expect(screen.getByText("Connect your account to manage your tracked sites.")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Account" })).toBeNull();
     // No site list or Add form that could only fail; a way to connect instead.
     expect(screen.queryByText("Loading your sites…")).toBeNull();

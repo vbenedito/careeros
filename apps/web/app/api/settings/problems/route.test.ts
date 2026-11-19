@@ -85,7 +85,7 @@ describe("PUT /api/settings/problems (DASH-16, PRB-02)", () => {
     expect(state.rpcCalls).toEqual([]);
   });
 
-  it("DASH-16 a body that is not JSON or has the wrong shape is 400", async () => {
+  it("DASH-16 SEC-10 a body that is not JSON or has the wrong shape is 400", async () => {
     expect((await put("not json")).status).toBe(400);
     expect((await put({ enabled: "yes" })).status).toBe(400);
     expect((await put({})).status).toBe(400);
