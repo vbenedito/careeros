@@ -223,6 +223,36 @@ describe("landing responsive layout (TEST-01)", () => {
     });
   }
 
+  it("TEST-01 landing header is one row at phone widths, also with wide text (content.md 4.1)", async () => {
+    for (const width of PHONE_WIDTHS) {
+      const page = await open(width);
+      for (const ls of ["normal", WIDE_TEXT]) {
+        await page.evaluate((v) => {
+          document.body.style.letterSpacing = v;
+        }, ls);
+        const rows = await page.locator(".top .brand, .top .nav > a").evaluateAll((els) =>
+          els
+            .filter((e) => e.checkVisibility())
+            .map((e) => {
+              const r = e.getBoundingClientRect();
+              return { text: (e.textContent ?? "").trim(), top: r.top, bottom: r.bottom };
+            }),
+        );
+        const label = `header @ ${width}px, letter-spacing ${ls}: ${JSON.stringify(rows)}`;
+        // Wordmark and Sign in only: every visible item overlaps the wordmark's row.
+        expect(
+          rows.map((r) => r.text).filter((t) => !["CareerOS", "Sign in"].includes(t)),
+          label,
+        ).toEqual([]);
+        const [brand] = rows;
+        for (const r of rows) {
+          expect(r.top < (brand?.bottom ?? 0) && r.bottom > (brand?.top ?? 0), label).toBe(true);
+        }
+        await assertResponsive(page, { ...CHECKS, label: `landing header, ${ls}` });
+      }
+    }
+  });
+
   it("TEST-01 landing animations at phone widths keep the layout (LAND-08)", async () => {
     for (const width of PHONE_WIDTHS) {
       const page = await open(width);

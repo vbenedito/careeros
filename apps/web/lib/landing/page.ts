@@ -58,6 +58,7 @@ a:focus-visible,summary:focus-visible,.sr:focus-visible+.chip{outline:2px solid 
 .brand .mark{flex:none}.brand .os{color:var(--primary)}
 .nav{display:flex;align-items:center;gap:24px;font-size:14px;flex-wrap:wrap}
 .nav a{color:var(--muted);text-decoration:none}
+@media (max-width:640px){.nav{flex-wrap:nowrap}.nav a:not(.btn){display:none}.brand{white-space:nowrap}}
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none}
 .btn-primary{background:var(--primary);color:var(--on-primary)}.btn-primary:hover{color:var(--on-primary);background:oklch(0.78 0.12 265)}
 .btn-ghost{border:1px solid var(--line2);color:var(--fg);font-weight:500}.btn-ghost:hover{color:var(--fg);border-color:var(--primary)}
