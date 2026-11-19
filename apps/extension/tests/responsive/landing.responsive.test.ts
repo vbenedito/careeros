@@ -41,7 +41,7 @@ const CHECKS: ResponsiveOptions = { ...STATIC_CHECKS, ignore: [".belt"] };
 const CTA_GROUPS = [".hero .ctas", ".final .ctas"] as const;
 /** At or below this width the CTA buttons stack full-width (page CSS, max-width:480px). */
 const STACKED_MAX_WIDTH = 480;
-const PHONE_WIDTHS = [360, 390, 402, 430, 460, 481] as const;
+const PHONE_WIDTHS = [360, 390, 402, 430, 460, 481, 540] as const;
 /** iPhone 17: 402×874 CSS px, 3x, touch (#224). */
 const IPHONE_17 = { width: 402, height: 874 } as const;
 /**
