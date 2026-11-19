@@ -1,8 +1,11 @@
 /**
  * TEST-01 (#142): layout of the dashboard's pages at every width in real Chromium — privacy and
  * sign-in signed out; dashboard (week and month, with sample data) and settings signed in; the
- * mobile drawer closed and open at 390 px. Full-page screenshots go to responsive-screenshots/.
+ * mobile drawer closed and open at 390 px; for an account with problem tracking on, the dashboard's
+ * LeetCode problems card (PRB-11, DASH-17) and Settings' "Also delete your problem history?" dialog
+ * (PRB-16, DASH-16). Full-page screenshots go to responsive-screenshots/.
  */
+import { randomUUID } from "node:crypto";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -25,6 +28,17 @@ function mondayUtc(): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** PRB-05 maximum: 100 characters, no hyphen, so the name cannot wrap at a break point. */
+const LONG_SLUG = "a".repeat(100);
+/** Problems seeded for the tracking-on account: [slug, minutes], all on this week's Monday. */
+const PROBLEMS: ReadonlyArray<readonly [string, number]> = [
+  [LONG_SLUG, 25],
+  ["longest-substring-without-repeating-characters", 20],
+  ["median-of-two-sorted-arrays", 15],
+  ["two-sum", 10],
+  ["3sum", 5],
+];
+
 const PAGES = [
   { name: "privacy", path: "/privacy", signedIn: false },
   { name: "sign-in", path: "/sign-in", signedIn: false },
@@ -35,11 +49,21 @@ const PAGES = [
 
 describe("app pages responsive layout (TEST-01)", () => {
   let browser: Browser;
-  let cookies: Array<{ name: string; value: string }>;
+  type Cookies = Array<{ name: string; value: string }>;
+  let cookies: Cookies;
+  /** Session of the account with problem tracking on and stored problems (PRB-11, PRB-16). */
+  let problemCookies: Cookies;
   const contexts: BrowserContext[] = [];
-  const email = `e2e-responsive-${Date.now()}@example.test`;
+  const stamp = Date.now();
+  const email = `e2e-responsive-${stamp}@example.test`;
+  const problemsEmail = `e2e-responsive-problems-${stamp}@example.test`;
 
-  const open = async (path: string, width: number, signedIn: boolean): Promise<Page> => {
+  const open = async (
+    path: string,
+    width: number,
+    signedIn: boolean,
+    jar: Cookies = cookies,
+  ): Promise<Page> => {
     const context = await browser.newContext({
       viewport: { width, height: 800 },
       deviceScaleFactor: 1,
@@ -48,7 +72,7 @@ describe("app pages responsive layout (TEST-01)", () => {
     contexts.push(context);
     if (signedIn) {
       await context.addCookies([
-        ...cookies.map((c) => ({ ...c, url: DASHBOARD_URL })),
+        ...jar.map((c) => ({ ...c, url: DASHBOARD_URL })),
         { name: "tz", value: "UTC", url: DASHBOARD_URL },
       ]);
     }
@@ -73,8 +97,25 @@ describe("app pages responsive layout (TEST-01)", () => {
                    '${monday}T12:00:00Z'::timestamptz,
                    '${monday}T12:00:00Z'::timestamptz + interval '${10 + i * 8} minutes')`);
     }
+    // Second account: problem tracking on (clients can't write it, so seed it as postgres), with
+    // problems on leetcode.com this week, one of them with the longest slug PRB-05 allows.
+    const problemsUserId = createOAuthUser(problemsEmail);
+    sql(`insert into public.tracked_domains (user_id, domain)
+         values ('${problemsUserId}', 'leetcode.com');
+         insert into public.account_settings (user_id, track_problems)
+         values ('${problemsUserId}', true)`);
+    for (const [slug, minutes] of PROBLEMS) {
+      const id = randomUUID();
+      sql(`insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
+           values ('${id}', '${problemsUserId}', gen_random_uuid(), 'leetcode.com',
+                   '${monday}T12:00:00Z'::timestamptz,
+                   '${monday}T12:00:00Z'::timestamptz + interval '${minutes} minutes');
+           insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
+           values ('${id}', '${problemsUserId}', 'leetcode.com', '${slug}')`);
+    }
     browser = await chromium.launch({ channel: "chromium", headless: true });
     ({ cookies } = await dashboardSession(email));
+    ({ cookies: problemCookies } = await dashboardSession(problemsEmail));
   }, MIDNIGHT_MARGIN_MS + 60_000);
 
   afterAll(async () => {
@@ -90,6 +131,42 @@ describe("app pages responsive layout (TEST-01)", () => {
         await assertResponsive(page, { label: name });
       });
     }
+  }
+
+  for (const width of WIDTHS) {
+    it(`TEST-01 PRB-11 DASH-17 problems card at ${width}px: no overflow, touch targets`, async () => {
+      const page = await open("/dashboard?view=week", width, true, problemCookies);
+      const card = page.getByTestId("problems-card");
+      await card.waitFor();
+      // Every seeded problem is listed, the 100-character one with its full name (PRB-12).
+      expect(await page.getByTestId("problems-list").locator("li").count()).toBe(PROBLEMS.length);
+      await expect.poll(() => card.getByText(`A${"a".repeat(99)}`).count()).toBe(1);
+      await saveScreenshot(page, `dashboard-problems-${width}`);
+      await assertResponsive(page, { label: "dashboard with problems card" });
+    });
+
+    it(`TEST-01 PRB-16 DASH-16 history dialog at ${width}px: no overflow, touch targets`, async () => {
+      const page = await open("/settings", width, true, problemCookies);
+      const toggle = page.getByRole("switch", { name: "Track LeetCode problems" });
+      const dialog = page.getByRole("dialog", { name: "Also delete your problem history?" });
+      expect(await toggle.getAttribute("aria-checked")).toBe("true");
+      // Stored problems exist, so turning the switch off asks first. A click before React has
+      // hydrated does nothing, so click again until the dialog is up.
+      await expect
+        .poll(
+          async () => {
+            if (!(await dialog.isVisible())) await toggle.click();
+            return dialog.isVisible();
+          },
+          { timeout: 15_000 },
+        )
+        .toBe(true);
+      for (const name of ["Turn off and keep history", "Turn off and delete history", "Cancel"]) {
+        expect(await dialog.getByRole("button", { name }).isVisible()).toBe(true);
+      }
+      await saveScreenshot(page, `settings-problems-dialog-${width}`);
+      await assertResponsive(page, { label: "settings, history dialog open" });
+    });
   }
 
   it("TEST-01 DASH-02 the mobile drawer at 390px, closed and open", async () => {
