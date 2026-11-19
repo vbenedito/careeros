@@ -39,14 +39,28 @@ const CHECKS: ResponsiveOptions = { ...STATIC_CHECKS, ignore: [".belt"] };
  * is left-aligned, but on a phone its buttons must stack at one width, so each row is centred.
  */
 const CTA_GROUPS = [".hero .ctas", ".final .ctas"] as const;
-const PHONE_WIDTHS = [360, 390, 402, 430] as const;
+/** At or below this width the CTA buttons stack full-width (page CSS, max-width:480px). */
+const STACKED_MAX_WIDTH = 480;
+const PHONE_WIDTHS = [360, 390, 402, 430, 460, 481] as const;
 /** iPhone 17: 402×874 CSS px, 3x, touch (#224). */
 const IPHONE_17 = { width: 402, height: 874 } as const;
 /**
- * iOS draws the text wider than the Chromium font in CI, so lines wrap at other points. This
- * stretches every glyph by 0.06em (style attribute, allowed by the landing CSP) to stand in for it.
+ * iOS draws the text wider than the Chromium font in CI, so lines wrap at other points.
+ * `widenText` adds 0.06em of letter-spacing to the computed value of every element (style
+ * attributes are allowed by the landing CSP), including those with their own negative tracking.
  */
 const WIDE_TEXT = "0.06em";
+const widenText = (page: Page, extra: string = WIDE_TEXT) =>
+  page.evaluate((add) => {
+    const els = [...document.querySelectorAll<HTMLElement>("*")];
+    const base = els.map((e) => {
+      const v = getComputedStyle(e).letterSpacing;
+      return v === "normal" ? "0px" : v;
+    });
+    els.forEach((e, i) => {
+      e.style.letterSpacing = `calc(${base[i]} + ${add})`;
+    });
+  }, extra);
 
 /** CSS-only toggles: the input id and the label text a visitor taps. */
 const TOGGLES = [
@@ -196,9 +210,7 @@ describe("landing responsive layout (TEST-01)", () => {
       touch: true,
     });
     await assertResponsive(page, { ...phoneChecks, label: "landing, iPhone 17" });
-    await page.evaluate((ls) => {
-      document.body.style.letterSpacing = ls;
-    }, WIDE_TEXT);
+    await widenText(page);
     await assertResponsive(page, { ...phoneChecks, label: "landing, iPhone 17, wide text" });
   });
 
@@ -206,14 +218,17 @@ describe("landing responsive layout (TEST-01)", () => {
     it(`TEST-01 landing at ${width}px: both CTA groups centred, also with wide text and reduced motion`, async () => {
       for (const motion of ["no-preference", "reduce"] as const) {
         const page = await open(width, motion);
-        const checks = motion === "reduce" ? { ...phoneChecks, ignore: [] } : phoneChecks;
+        // Up to 480 px the CTA buttons stack at one width. Wider, the hero pair fits one row
+        // beside its left-aligned text, so only the final pair is held to centring.
+        const stacked = width <= STACKED_MAX_WIDTH;
+        const groups = stacked ? CTA_GROUPS : ([".final .ctas"] as const);
+        const base = { ...phoneChecks, centred: [...(CHECKS.centred ?? []), ...groups] };
+        const checks = motion === "reduce" ? { ...base, ignore: [] } : base;
         await assertResponsive(page, { ...checks, label: `landing, ${motion}` });
-        await page.evaluate((ls) => {
-          document.body.style.letterSpacing = ls;
-        }, WIDE_TEXT);
+        await widenText(page);
         await assertResponsive(page, { ...checks, label: `landing, ${motion}, wide text` });
         // The two buttons of a group stack at one width, so no row looks ragged.
-        for (const group of CTA_GROUPS) {
+        for (const group of stacked ? CTA_GROUPS : []) {
           const widths = await page
             .locator(`${group} > a`)
             .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
@@ -227,21 +242,23 @@ describe("landing responsive layout (TEST-01)", () => {
     for (const width of PHONE_WIDTHS) {
       const page = await open(width);
       for (const ls of ["normal", WIDE_TEXT]) {
-        await page.evaluate((v) => {
-          document.body.style.letterSpacing = v;
-        }, ls);
+        if (ls !== "normal") await widenText(page);
         const rows = await page.locator(".top .brand, .top .nav > a").evaluateAll((els) =>
           els
             .filter((e) => e.checkVisibility())
             .map((e) => {
               const r = e.getBoundingClientRect();
-              return { text: (e.textContent ?? "").trim(), top: r.top, bottom: r.bottom };
+              return {
+                text: (e.textContent ?? "").replace(/\s+/g, ""),
+                top: r.top,
+                bottom: r.bottom,
+              };
             }),
         );
         const label = `header @ ${width}px, letter-spacing ${ls}: ${JSON.stringify(rows)}`;
-        // Wordmark and Sign in only: every visible item overlaps the wordmark's row.
+        // Wordmark (whole .brand box, any mark inside) and Sign in only, all on the wordmark's row.
         expect(
-          rows.map((r) => r.text).filter((t) => !["CareerOS", "Sign in"].includes(t)),
+          rows.map((r) => r.text).filter((t) => !["CareerOS", "Signin"].includes(t)),
           label,
         ).toEqual([]);
         const [brand] = rows;
