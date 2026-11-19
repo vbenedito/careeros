@@ -99,17 +99,19 @@ describe("public repo reads (ADM-12)", () => {
     expect(down).toEqual({ status: "unavailable", httpStatus: null });
   });
 
-  it("ADM-12 a failing check-runs read makes the panel unavailable instead of guessing", async () => {
+  it("ADM-12 a failing check-runs read marks that PR 'checks unknown' and keeps the panel", async () => {
     const fetcher = async (url: string) =>
       url.includes("check-runs")
         ? json({}, 403)
         : url.includes("/issues?")
           ? json(issuesBody)
           : json(pullsBody);
-    expect(await loadRepo({ token: TOKEN, fetcher })).toEqual({
-      status: "unavailable",
-      httpStatus: 403,
-    });
+    const load = await loadRepo({ token: TOKEN, fetcher });
+    expect(load.status).toBe("ok");
+    if (load.status === "ok") {
+      expect(load.checksUnknown).toEqual([10]);
+      expect(load.checks).toEqual({});
+    }
   });
 
   it("ADM-12 a full page asks for the next one, up to MAX_PAGES", async () => {

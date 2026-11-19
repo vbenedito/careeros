@@ -101,3 +101,16 @@ describe("v1 progress (ADM-12)", () => {
     expect(all.map((i) => i.number).sort()).toEqual([1, 2, 3]);
   });
 });
+
+describe("required check names (ADM-12)", () => {
+  it("ADM-12 both REQUIRED_CHECKS are job names in .github/workflows/ci.yml", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const ci = readFileSync(
+      join(__dirname, "..", "..", "..", "..", ".github", "workflows", "ci.yml"),
+      "utf8",
+    );
+    for (const name of REQUIRED_CHECKS)
+      expect(ci).toMatch(new RegExp(`^\\s+name: ${name.replace(/[()]/g, "\\$&")}\\s*$`, "m"));
+  });
+});

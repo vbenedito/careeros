@@ -63,7 +63,9 @@ export function DiagramPanel() {
             >
               <Node>{e.from}</Node>
               <span className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                <span aria-hidden="true">↓ </span>
+                <span aria-hidden="true" className="sm:hidden">
+                  ↓{" "}
+                </span>
                 <span className="sr-only">to, carrying </span>
                 {e.label}
                 <span aria-hidden="true" className="hidden sm:inline">

@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GROUP_LABELS, PROGRESS_GROUPS, type ProgressView } from "@/lib/admin/progress-view";
 
 type Props =
-  | { view: ProgressView; unavailableNote?: undefined }
-  | { view?: undefined; unavailableNote: string | null };
+  | { view: ProgressView; checksUnknown?: number[]; unavailableNote?: undefined }
+  | { view?: undefined; checksUnknown?: undefined; unavailableNote: string | null };
 
 /** ADM-12: v1 issues in four groups, with counts and the list. */
 export function ProgressPanel(props: Props) {
@@ -18,6 +18,12 @@ export function ProgressPanel(props: Props) {
           <Unavailable what="GitHub" note={props.unavailableNote} />
         ) : (
           <>
+            {props.checksUnknown !== undefined && props.checksUnknown.length > 0 && (
+              <p className="text-sm" role="status">
+                Checks unknown for PR {props.checksUnknown.map((n) => `#${n}`).join(", ")}; counted
+                as open.
+              </p>
+            )}
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {PROGRESS_GROUPS.map((g) => (
                 <div key={g} className="flex flex-col gap-0.5">

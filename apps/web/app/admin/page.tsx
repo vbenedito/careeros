@@ -61,7 +61,10 @@ export default async function AdminPage() {
         <ReviewsPanel unavailableNote={ledgerNote} />
       )}
       {repo.status === "ok" ? (
-        <ProgressPanel view={buildProgress(repo.issues, repo.prs, repo.checks)} />
+        <ProgressPanel
+          view={buildProgress(repo.issues, repo.prs, repo.checks)}
+          checksUnknown={repo.checksUnknown}
+        />
       ) : (
         <ProgressPanel unavailableNote={repoNote} />
       )}

@@ -125,6 +125,7 @@ describe("admin page (ADM-02, ADM-08, ADM-09)", () => {
         },
       ],
       checks: {},
+      checksUnknown: [],
     };
     const markup = html(await AdminPage());
     expect(markup).toContain("Fixture open issue");

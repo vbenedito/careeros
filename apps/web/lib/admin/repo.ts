@@ -76,6 +76,8 @@ export type RepoLoad =
       issues: RepoIssue[];
       prs: RepoPr[];
       checks: Record<string, CheckRun[]>;
+      /** PRs whose check runs could not be read (counted as not waiting). */
+      checksUnknown: number[];
     }
   | { status: "unavailable"; httpStatus: number | null; reason?: "unreadable" };
 
@@ -160,17 +162,14 @@ export async function loadRepo(deps: Deps = {}): Promise<RepoLoad> {
       res: await readChecks(token, pr.headSha, fetcher),
     })),
   );
+  // One PR whose check runs cannot be read is "checks unknown": it counts as open, not waiting,
+  // and the rest of the panel still shows. One page (100 runs) is enough: CI has two required jobs.
+  const checksUnknown: number[] = [];
   for (const { sha, res } of runs) {
-    if (!res.ok) {
-      return {
-        status: "unavailable",
-        httpStatus: res.httpStatus,
-        ...(res.reason ? { reason: res.reason } : {}),
-      };
-    }
-    checks[sha] = res.runs;
+    if (res.ok) checks[sha] = res.runs;
+    else checksUnknown.push(...candidates.filter((c) => c.headSha === sha).map((c) => c.number));
   }
-  return { status: "ok", issues, prs, checks };
+  return { status: "ok", issues, prs, checks, checksUnknown };
 }
 
 async function readChecks(

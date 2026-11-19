@@ -106,3 +106,21 @@ describe("admin panels render", () => {
     for (const w of ["<form", "<button"]) expect(markup).not.toContain(w);
   });
 });
+
+describe("admin static content is public-safe (ADM-07)", () => {
+  it("ADM-07 fixtures, docs map and diagram hold no email, URL or token-like text", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const root = join(__dirname, "..", "..");
+    const text = [
+      readFileSync(join(root, "lib/admin/fixtures.ts"), "utf8"),
+      readFileSync(join(root, "app/admin/docs-map.ts"), "utf8"),
+      JSON.stringify(DIAGRAM_EDGES),
+      JSON.stringify(DOCS_MAP),
+      html(<DiagramPanel />),
+    ].join("\n");
+    expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/); // email
+    expect(text).not.toMatch(/https?:\/\//i); // URL
+    expect(text).not.toMatch(/ghp_|github_pat_|\bsk-|eyJ/); // token-like
+  });
+});

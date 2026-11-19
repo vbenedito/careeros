@@ -30,6 +30,7 @@ export function buildReviewRows(
     number,
     { rounds: number; high: number; medium: number; models: Set<LedgerModel> }
   >();
+  // Records with `pr: null` are not shown: a review row needs a PR to name.
   for (const s of sessions) {
     for (const a of s.agents) {
       if (a.work !== "review" || a.pr === null) continue;
