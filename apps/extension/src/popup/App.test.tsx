@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { DATA } from "@careeros/shared";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../engine/engine";
@@ -73,6 +72,9 @@ function fixture(over: Partial<Omit<PopupInput, "now">> = {}) {
     },
     holdFocus: () => () => {},
     refreshSites: async () => {},
+    dismissOverlap: async (shownS) => {
+      calls.push(`dismiss:${shownS}`);
+    },
     addSite: async (input) => {
       added.push(input);
       return data.addReply.shift() ?? { ok: true };
@@ -125,14 +127,20 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
     await waitFor(() => expect(data.added).toEqual(["neetcode.io"]));
   });
 
-  it("shows the server's error when adding fails", async () => {
+  it("ENT-09 the limit message says the number from the server's error", async () => {
+    const data = fixture({ activeTabUrl: "https://neetcode.io/" });
+    data.addSite = async () => ({ ok: false, error: "LIMIT_REACHED", limit: 25 });
+    renderApp(data);
+    fireEvent.click(await screen.findByRole("button", { name: "Add neetcode.io" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("You can track up to 25 sites.");
+  });
+
+  it("ENT-07 a limit error without a number shows the message without one", async () => {
     const data = fixture({ activeTabUrl: "https://neetcode.io/" });
     data.addSite = async () => ({ ok: false, error: "LIMIT_REACHED" });
     renderApp(data);
     fireEvent.click(await screen.findByRole("button", { name: "Add neetcode.io" }));
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      `You can track up to ${DATA.MAX_TRACKED_DOMAINS} sites.`,
-    );
+    expect((await screen.findByRole("alert")).textContent).toBe("You've reached the site limit.");
   });
 
   it.each([
@@ -505,5 +513,58 @@ describe("popup settings view (EXT-UI-06..08, AUTH-12)", () => {
     renderApp(fixture({ trackingEnabled: false }));
     fireEvent.click(await screen.findByRole("button", { name: "Turn on in Settings" }));
     expect(screen.getByRole("switch", { name: /Tracking/ })).toBeTruthy();
+  });
+});
+
+describe("problem line and clock-moved-back line (EXT-UI-11, PRB-14, SYNC-05c)", () => {
+  const withProblem: EngineState = {
+    ...INITIAL_ENGINE_STATE,
+    open: {
+      id: "00000000-0000-4000-8000-0000000000ff",
+      domain: "leetcode.com",
+      startedAt: (NOW - 10 * 60_000) / 1000,
+      problem: "two-sum",
+    },
+  };
+  const earlier = (problem?: string, minutes = 8) => ({
+    id: `00000000-0000-4000-8000-${Math.random().toString().slice(2, 14).padEnd(12, "0")}`,
+    device_id: "00000000-0000-4000-8000-00000000d001",
+    domain: "leetcode.com",
+    started_at: new Date(TODAY + 1000).toISOString().slice(0, 19) + "Z",
+    ended_at: new Date(TODAY + 1000 + minutes * 60_000).toISOString().slice(0, 19) + "Z",
+    ...(problem ? { problem } : {}),
+  });
+
+  it("EXT-UI-11 PRB-14 the problem name and its time today under the current session", async () => {
+    renderApp(fixture({ engine: withProblem, todayIntervals: [earlier("two-sum"), earlier()] }));
+    expect((await screen.findByTestId("current-problem")).textContent).toBe("Two Sum · 18m today");
+  });
+
+  it("EXT-UI-11 no problem, no second line", async () => {
+    renderApp(fixture({ engine: tracking }));
+    await screen.findByTestId("current-session");
+    expect(screen.queryByTestId("current-problem")).toBeNull();
+  });
+
+  it("SYNC-05c the line shows whole minutes rounded up and is not an error", async () => {
+    renderApp(
+      fixture({ sync: { ...INITIAL_SYNC_STATE, lastOutcome: "ok", overlapDroppedS: 601 } }),
+    );
+    const notice = await screen.findByRole("region", { name: "Time not saved" });
+    expect(notice.textContent).toContain("11 min not saved: your computer's clock moved back");
+    expect(screen.getByTestId("sync-label").textContent).not.toContain("Sync error");
+  });
+
+  it("SYNC-05c nothing is shown without dropped time", async () => {
+    renderApp(fixture());
+    await screen.findByTestId("sync-label");
+    expect(screen.queryByTestId("overlap-notice")).toBeNull();
+  });
+
+  it("SYNC-05c dismiss sends the seconds that were shown", async () => {
+    const data = fixture({ sync: { ...INITIAL_SYNC_STATE, overlapDroppedS: 90 } });
+    renderApp(data);
+    fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+    await waitFor(() => expect(data.calls).toContain("dismiss:90"));
   });
 });

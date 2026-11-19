@@ -151,7 +151,7 @@ describe("tracked-domain sync (real Chromium)", () => {
     expect(state.signals.trackedDomains).toEqual(["docs.python.org", "leetcode.com"]);
   });
 
-  it("SYNC-10a at the 12-site limit, re-adding a tracked site is a no-op (#54)", async () => {
+  it("SYNC-10a ENT-07 at the 12-site limit, re-adding a tracked site is a no-op (#54); the error carries the limit", async () => {
     const fill = Array.from({ length: 10 }, (_, i) => `('${userId}', 'limit${i}.dev')`).join(",");
     sql(`insert into public.tracked_domains (user_id, domain) values ${fill}`);
     // Stale cache on purpose: the server's limit error is checked against its list.
@@ -164,6 +164,7 @@ describe("tracked-domain sync (real Chromium)", () => {
     expect(await send(popup, { type: "DOMAINS_ADD", input: "one-more.dev" }, false)).toEqual({
       ok: false,
       error: "LIMIT_REACHED",
+      limit: 12, // the free plan's max_tracked_domains (ENT-01), from the error details
     });
     sql(`delete from public.tracked_domains where user_id = '${userId}' and domain like 'limit%'`);
   });

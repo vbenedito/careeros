@@ -5,6 +5,7 @@
 import {
   type PopupAuthStatus,
   type PopupDisconnectResult,
+  type PopupDismissResult,
   type PopupForgetResult,
   type PopupNotConfigured,
   PopupRequestSchema,
@@ -29,6 +30,8 @@ export function createInternalMessageHandler(deps: {
   disconnect: (discardUnsynced: boolean) => Promise<PopupDisconnectResult>;
   /** AUTH-11 explicit discard while not connected (#113). */
   forgetLocalData: () => Promise<PopupForgetResult>;
+  /** SYNC-05c: subtracts what the popup showed from the dropped-overlap seconds. */
+  dismissOverlap: (shownS: number) => Promise<void>;
 }) {
   return async function handle(
     message: unknown,
@@ -38,6 +41,7 @@ export function createInternalMessageHandler(deps: {
     | PopupAuthStatus
     | PopupDisconnectResult
     | PopupForgetResult
+    | PopupDismissResult
     | PopupTrackingResult
     | PopupNotConfigured
     | null
@@ -70,6 +74,9 @@ export function createInternalMessageHandler(deps: {
         return deps.disconnect(request.discardUnsynced);
       case "FORGET_LOCAL_DATA":
         return deps.forgetLocalData();
+      case "OVERLAP_DISMISS":
+        await deps.dismissOverlap(request.shownS);
+        return { ok: true };
     }
   };
 }

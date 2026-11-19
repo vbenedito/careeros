@@ -70,7 +70,7 @@ describe("popup view (EXT-UI-01..05, SYNC-12)", () => {
     const view = buildPopupView(
       input({ todayIntervals: [first], engine: open("leetcode.com", NOW - 10 * 60_000) }),
     );
-    expect(view.current).toEqual({ domain: "leetcode.com", seconds: 40 * 60 });
+    expect(view.current).toEqual({ domain: "leetcode.com", seconds: 40 * 60, problem: null });
   });
 
   it("status: tracking, idle, untracked (with the normalized host to add), no sites, disabled, disconnected", () => {
@@ -204,5 +204,77 @@ describe("isSyncing (SYNC-02c)", () => {
       notBefore: 5,
       lastOutcome: "offline",
     });
+  });
+});
+
+describe("problem line and dropped overlap (EXT-UI-11, PRB-14, SYNC-05c)", () => {
+  const problemOpen = (problem: string | undefined, fromMs: number): EngineState => ({
+    ...INITIAL_ENGINE_STATE,
+    open: {
+      id: "00000000-0000-4000-8000-0000000000ff",
+      domain: "leetcode.com",
+      startedAt: fromMs / 1000,
+      ...(problem ? { problem } : {}),
+    },
+  });
+
+  it("PRB-14 EXT-UI-11 problem time today = its closed intervals of today + the open one", () => {
+    const view = buildPopupView(
+      input({
+        todayIntervals: [
+          { ...iv("leetcode.com", TODAY + 3600_000, 8), problem: "two-sum" },
+          { ...iv("leetcode.com", TODAY + 2 * 3600_000, 30), problem: "lru-cache" },
+          iv("leetcode.com", TODAY + 3 * 3600_000, 5),
+        ],
+        engine: problemOpen("two-sum", NOW - 10 * 60_000),
+      }),
+    );
+    expect(view.current?.problem).toEqual({ name: "Two Sum", seconds: 18 * 60 });
+    expect(view.todaySeconds).toBe((8 + 30 + 5 + 10) * 60);
+  });
+
+  it("PRB-14 yesterday's time on the problem is not counted", () => {
+    const view = buildPopupView(
+      input({
+        todayIntervals: [{ ...iv("leetcode.com", TODAY - 3600_000, 30), problem: "two-sum" }],
+        engine: problemOpen("two-sum", NOW - 5 * 60_000),
+      }),
+    );
+    expect(view.current?.problem?.seconds).toBe(5 * 60);
+  });
+
+  it("EXT-UI-11 no problem on the open interval: no problem line", () => {
+    const view = buildPopupView(input({ engine: problemOpen(undefined, NOW - 60_000) }));
+    expect(view.current?.problem).toBeNull();
+    expect(buildPopupView(input()).current).toBeNull();
+  });
+
+  it("SYNC-05c minutes are whole, rounded up, at least 1; none without dropped time", () => {
+    const at = (overlapDroppedS: number, connected = true) =>
+      buildPopupView(
+        input({
+          auth: { connected, email: null },
+          sync: { ...INITIAL_SYNC_STATE, overlapDroppedS },
+        }),
+      );
+    expect(at(0).overlapMinutes).toBeNull();
+    expect(at(1).overlapMinutes).toBe(1);
+    expect(at(60).overlapMinutes).toBe(1);
+    expect(at(61).overlapMinutes).toBe(2);
+    expect(at(720).overlapMinutes).toBe(12);
+    expect(at(90).overlapDroppedS).toBe(90);
+    expect(at(90, false).overlapMinutes).toBeNull();
+  });
+
+  it("PRB-14 SYNC-12 an interval that crosses local midnight counts only its part of today", () => {
+    const view = buildPopupView(
+      input({
+        todayIntervals: [{ ...iv("leetcode.com", TODAY - 10 * 60_000, 25), problem: "two-sum" }],
+        engine: problemOpen("two-sum", NOW - 5 * 60_000),
+      }),
+    );
+    // 15 of the 25 minutes are after midnight, plus the 5 open minutes.
+    expect(view.current?.problem?.seconds).toBe(20 * 60);
+    expect(view.todaySeconds).toBe(20 * 60);
   });
 });

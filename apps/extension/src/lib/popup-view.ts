@@ -2,7 +2,7 @@
  * The popup's main view as a pure function of what is in storage (EXT-UI-01..05, SYNC-12).
  * The popup only renders this; every rule lives here and is unit-tested.
  */
-import { hostnameFromUrl, type Interval, matchTrackedDomain } from "@careeros/shared";
+import { hostnameFromUrl, type Interval, matchTrackedDomain, problemName } from "@careeros/shared";
 import type { EngineState } from "../engine/engine";
 import { isSyncing, type SyncState } from "./sync-state";
 
@@ -47,7 +47,12 @@ export interface DomainTime {
 export interface PopupView {
   status: PopupStatus;
   todaySeconds: number;
-  current: { domain: string; seconds: number } | null;
+  current: {
+    domain: string;
+    seconds: number;
+    /** PRB-14, EXT-UI-11: the open interval's problem and its time today on this device. */
+    problem: { name: string; seconds: number } | null;
+  } | null;
   top: DomainTime[];
   syncLabel: string;
   quarantined: number;
@@ -60,6 +65,13 @@ export interface PopupView {
   clockAheadMinutes: number | null;
   /** SYNC-05a: of `pending`, how many wait for the server's clock to pass their end. */
   deferred: number;
+  /**
+   * SYNC-05c (EXT-UI): seconds dropped after the clock moved back, exactly as in the sync
+   * status (what the dismiss button sends back), or 0 for no line. Not shown when disconnected.
+   */
+  overlapDroppedS: number;
+  /** Whole minutes of `overlapDroppedS`, rounded up, at least 1; null for no line. */
+  overlapMinutes: number | null;
 }
 
 const ms = (iso: string) => Date.parse(iso);
@@ -70,12 +82,15 @@ export function buildPopupView(input: PopupInput): PopupView {
 
   // SYNC-12: closed intervals of today + the open interval, clipped to today.
   const perDomain = new Map<string, number>();
-  const add = (domain: string, from: number, to: number) => {
+  // PRB-14: the same intervals, summed by problem (same local data as the today total).
+  const perProblem = new Map<string, number>();
+  const add = (domain: string, problem: string | null | undefined, from: number, to: number) => {
     const seconds = Math.max(0, (Math.min(to, now) - Math.max(from, startOfToday)) / 1000);
     perDomain.set(domain, (perDomain.get(domain) ?? 0) + seconds);
+    if (problem) perProblem.set(problem, (perProblem.get(problem) ?? 0) + seconds);
   };
-  for (const i of input.todayIntervals) add(i.domain, ms(i.started_at), ms(i.ended_at));
-  if (open) add(open.domain, open.startedAt * 1000, now);
+  for (const i of input.todayIntervals) add(i.domain, i.problem, ms(i.started_at), ms(i.ended_at));
+  if (open) add(open.domain, open.problem, open.startedAt * 1000, now);
   const todaySeconds = [...perDomain.values()].reduce((a, b) => a + b, 0);
 
   const top = [...perDomain.entries()]
@@ -88,16 +103,28 @@ export function buildPopupView(input: PopupInput): PopupView {
       share: todaySeconds > 0 ? seconds / todaySeconds : 0,
     }));
 
+  const overlapDroppedS = input.auth.connected ? input.sync.overlapDroppedS : 0;
+
   return {
     status: statusOf(input),
     todaySeconds,
-    current: open ? { domain: open.domain, seconds: currentRunSeconds(input) } : null,
+    current: open
+      ? {
+          domain: open.domain,
+          seconds: currentRunSeconds(input),
+          problem: open.problem
+            ? { name: problemName(open.problem), seconds: perProblem.get(open.problem) ?? 0 }
+            : null,
+        }
+      : null,
     top,
     syncLabel: syncLabel(input),
     quarantined: input.counts.quarantined,
     syncing: input.auth.connected && isSyncing(input.sync, now),
     clockAheadMinutes: clockAheadMinutes(input),
     deferred: input.counts.deferred ?? 0,
+    overlapDroppedS,
+    overlapMinutes: overlapDroppedS > 0 ? Math.max(1, Math.ceil(overlapDroppedS / 60)) : null,
   };
 }
 

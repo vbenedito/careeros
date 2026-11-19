@@ -19,7 +19,7 @@ export function SitesSetting(props: {
     const result = await task();
     setBusy(false);
     if (result.ok) onSuccess?.();
-    else setError(errorMessage(result.error));
+    else setError(errorMessage(result.error, result.limit));
   }
 
   function submit(event: FormEvent) {

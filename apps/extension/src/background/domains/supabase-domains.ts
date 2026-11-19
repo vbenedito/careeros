@@ -1,4 +1,6 @@
 /** DomainsApi over PostgREST; RLS limits every call to the signed-in user (SEC-07). */
+
+import { ENTITLEMENTS, parseLimitErrorDetails } from "@careeros/shared";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { type DomainsApi, DomainsApiError } from "./domain-service";
 
@@ -12,7 +14,11 @@ export function toError(error: PostgrestError | null, status: number): DomainsAp
   if (status === 401 || error.code === "PT401" || error.code === "23503") {
     return new DomainsApiError("UNAUTHORIZED");
   }
-  if (error.hint === "DATA-01") return new DomainsApiError("LIMIT_REACHED");
+  // ENT-07: new databases send `details` with the limit and the plan; an older one (or a proxy
+  // that drops it) still sends the hint (ENT-06), which gives the error without a number.
+  const details = parseLimitErrorDetails(error.details);
+  if (details) return new DomainsApiError("LIMIT_REACHED", details.limit);
+  if (error.hint === ENTITLEMENTS.LIMIT_ERROR_HINT) return new DomainsApiError("LIMIT_REACHED");
   return new DomainsApiError("UNAVAILABLE");
 }
 

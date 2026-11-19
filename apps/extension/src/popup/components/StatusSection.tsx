@@ -36,7 +36,7 @@ export function StatusSection({
     setError(null);
     const result = await data.addSite(host);
     setAdding(false);
-    if (!result.ok) setError(errorMessage(result.error));
+    if (!result.ok) setError(errorMessage(result.error, result.limit));
   }
   const addButton = (host: string | null, label: string) =>
     host ? (
