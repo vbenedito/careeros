@@ -56,3 +56,19 @@ describe("proxy: landing query strings (SEC-15, LAND-01)", () => {
     expect((await proxy(request("/?code=1", "POST"))).status).not.toBe(307);
   });
 });
+
+describe("proxy: /admin (ADM-02)", () => {
+  it("ADM-02 a signed-out /admin is not redirected to sign-in: the layout answers 404", async () => {
+    for (const path of ["/admin", "/admin/anything"]) {
+      const res = await proxy(request(path));
+      expect(res.status, path).toBe(200);
+      expect(res.headers.get("location"), path).toBeNull();
+    }
+  });
+
+  it("ADM-02 other signed-out pages still redirect to sign-in", async () => {
+    const res = await proxy(request("/administrator"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/sign-in");
+  });
+});

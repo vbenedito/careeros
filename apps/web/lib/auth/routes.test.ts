@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isApiPath, isAuthProvider, isPublicPath, safeNextPath } from "./routes";
+import { isAdminPath, isApiPath, isAuthProvider, isPublicPath, safeNextPath } from "./routes";
 
 describe("isPublicPath", () => {
   it.each([
@@ -91,5 +91,16 @@ describe("isAuthProvider", () => {
     expect(isAuthProvider("github")).toBe(true);
     expect(isAuthProvider("email")).toBe(false);
     expect(isAuthProvider(undefined)).toBe(false);
+  });
+});
+
+describe("isAdminPath", () => {
+  it("ADM-02 matches /admin and its sub-paths only, and /admin is not a public path", () => {
+    expect(isAdminPath("/admin")).toBe(true);
+    expect(isAdminPath("/admin/x")).toBe(true);
+    for (const p of ["/administrator", "/admin-x", "/settings/admin", "/"]) {
+      expect(isAdminPath(p), p).toBe(false);
+    }
+    expect(isPublicPath("/admin")).toBe(false);
   });
 });

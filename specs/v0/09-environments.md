@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Related ADRs: 0001 (monorepo), 0008 (Docker-based local backend)
 
+Amended 2026-11-18 (#214): ENV-05b `OPS_LEDGER_TOKEN` (optional, server-only).
+
 Amended 2026-11-11 (#131): repository layout, Node version, environment variables (ENV-05b), CI jobs (ENV-08) and the backup workflow, to match the repository.
 
 Amended 2026-11-12 (#142): ENV-08 runs the responsive layout checks (TEST-01) and uploads their screenshots.
@@ -72,11 +74,12 @@ careeros/
 | `VERCEL_PROJECT_PRODUCTION_URL` | web (set by Vercel) | Fallback for build-time pages only, see `SITE_URL` |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | web | Required; public |
 | `SUPABASE_SECRET_KEY` | web (server only) | Required for the link route and account deletion; never `NEXT_PUBLIC_` (SEC-07) |
+| `OPS_LEDGER_TOKEN` | web (server only) | Optional. Fine-grained GitHub token with read-only Contents access to the private ledger repository, for `/admin` (ADM-08). Production scope only. Without it `/admin` says "Ledger unavailable". Never `NEXT_PUBLIC_` (SEC-07): a production build fails when `NEXT_PUBLIC_OPS_LEDGER_TOKEN` exists. Never logged |
 | `NEXT_PUBLIC_EXTENSION_ID` | web | Required; ID of the extension build this dashboard talks to (AUTH-06) |
 | `GOOGLE_SITE_VERIFICATION` | web | Optional. Google Search Console meta-tag token on the landing page (LAND-09); read at build time |
 | `EXTENSION_INSTALL_URL` | web | Optional; must be https. The landing page's install link; without it, the Chrome Web Store search for CareerOS |
 | `PRIVACY_CONTROLLER`, `PRIVACY_CONTACT_EMAIL`, `DATA_REGION` | web | Shown on `/privacy` (SEC-13). Optional locally (a "not configured" marker is shown); `next.config.ts` fails the build when any is missing and `VERCEL_ENV=production` |
-| Production build check | web | Amended 2026-11-12 (grill H3). When `VERCEL_ENV=production`, `next.config.ts` (`lib/env-check.ts`) fails the build unless: `SITE_URL` is https; `NEXT_PUBLIC_EXTENSION_ID` matches `^[a-p]{32}$`; `NEXT_PUBLIC_SUPABASE_URL` is https; `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is set; `EXTENSION_INSTALL_URL` is an https `chromewebstore.google.com/detail/…` URL (so the store search fallback is for non-production builds only); and the `PRIVACY_*`/`DATA_REGION` values above exist. Each message names the variable and says to set it in the Vercel project that builds production, Production scope. Preview, CI and local builds are not checked |
+| Production build check | web | Amended 2026-11-12 (grill H3). When `VERCEL_ENV=production`, `next.config.ts` (`lib/env-check.ts`) fails the build unless: `SITE_URL` is https; `NEXT_PUBLIC_EXTENSION_ID` matches `^[a-p]{32}$`; `NEXT_PUBLIC_SUPABASE_URL` is https; `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is set; `EXTENSION_INSTALL_URL` is an https `chromewebstore.google.com/detail/…` URL (so the store search fallback is for non-production builds only); and the `PRIVACY_*`/`DATA_REGION` values above exist; and no `NEXT_PUBLIC_OPS_LEDGER_TOKEN` is set (#214). Each message names the variable and says to set it in the Vercel project that builds production, Production scope. Preview, CI and local builds are not checked |
 | `VITE_DASHBOARD_ORIGIN` | extension | Required; an origin without path, https in production builds |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | extension | Required (https URL, `sb_publishable_…` key) in production builds; development builds may omit them and report "not configured". Values that look like secrets fail the build |
 

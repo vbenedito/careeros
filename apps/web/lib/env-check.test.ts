@@ -76,4 +76,12 @@ describe("production build validation (ENV-05b)", () => {
     expect(() => assertProductionEnv({})).toThrow(/SITE_URL[\s\S]*EXTENSION_INSTALL_URL/);
     expect(() => assertProductionEnv({})).toThrow(/Vercel project[\s\S]*Production scope/);
   });
+
+  it("ADM-08 OPS_LEDGER_TOKEN is optional; a NEXT_PUBLIC_ twin fails the build", () => {
+    expect(productionEnvProblems(valid)).toEqual([]);
+    expect(productionEnvProblems({ ...valid, OPS_LEDGER_TOKEN: "github_pat_x" })).toEqual([]);
+    expect(names({ ...valid, NEXT_PUBLIC_OPS_LEDGER_TOKEN: "github_pat_x" })).toEqual([
+      "NEXT_PUBLIC_OPS_LEDGER_TOKEN",
+    ]);
+  });
 });
