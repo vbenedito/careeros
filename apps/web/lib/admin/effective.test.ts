@@ -31,4 +31,9 @@ describe("ledger corrections (ADM-05)", () => {
     expect(view.rows).toHaveLength(1);
     expect(view.rows[0]?.sessions).toBe(1);
   });
+
+  it("ADM-05 a file that names itself in corrects still counts", () => {
+    const self = session({ session: "2030-01-05-a", corrects: "2030-01-05-a" });
+    expect(effectiveSessions([self])).toEqual([self]);
+  });
 });

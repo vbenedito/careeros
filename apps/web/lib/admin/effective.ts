@@ -8,6 +8,7 @@ import type { LedgerSession } from "@careeros/shared";
 
 export function effectiveSessions(sessions: readonly LedgerSession[]): LedgerSession[] {
   const corrected = new Set<string>();
-  for (const s of sessions) if (s.corrects) corrected.add(s.corrects);
+  // A file that names itself is ignored as a correction (it would otherwise drop itself).
+  for (const s of sessions) if (s.corrects && s.corrects !== s.session) corrected.add(s.corrects);
   return sessions.filter((s) => !corrected.has(s.session));
 }
