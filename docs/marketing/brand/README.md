@@ -53,7 +53,7 @@ Hex values are the sRGB conversion of the OKLCH tokens in `packages/shared/theme
 
 - Minimum size: mark 32 px (use the small mark from 16 to 31 px; never below 16 px). Lockup: 120 px wide.
 - Clear space: one quarter of the tile height on every side, and keep other logos, text and edges out of it.
-- Do not recolour, rotate, stretch, add shadows, or put the light-variant tile on a dark surface (use the dark files).
+- Do not recolour, rotate, stretch, add shadows, or put the light-variant tile on a dark surface (use the dark files). Exception: toolbar and store icons are a fixed light variant (Chrome cannot follow the theme); glyph contrast stays 9:1 or more.
 
 ## Wordmark font
 
