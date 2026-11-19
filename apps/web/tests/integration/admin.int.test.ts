@@ -16,6 +16,35 @@ async function body(res: Response): Promise<string> {
   return nonce ? text.replaceAll(nonce, "NONCE") : text;
 }
 
+/**
+ * The body in a form two renders of the same 404 can be compared in. React streams the flight
+ * data (`self.__next_f.push`) in chunks whose boundaries and order follow timing (a signed-in
+ * request waits for the database, a signed-out one does not), so the chunks are joined and their
+ * rows sorted. That is per-request noise, not per-user state: the rows themselves must be equal.
+ */
+function comparable(text: string): string {
+  const flight =
+    /<script nonce="NONCE">self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)<\/script>/g;
+  const rows = [...text.matchAll(flight)]
+    .map((m) => m[1] ?? "")
+    .join("")
+    .split("\\n")
+    .filter(Boolean)
+    .sort();
+  return `${text.replace(flight, "")}\n${rows.join("\n")}`;
+}
+
+/** Fails with the first differing position and 80 characters around it, not the whole page. */
+function expectSame(actual: string, expected: string) {
+  if (actual === expected) return;
+  let i = 0;
+  while (i < actual.length && actual[i] === expected[i]) i++;
+  const around = (t: string) => t.slice(Math.max(0, i - 80), i + 80);
+  throw new Error(
+    `bodies differ at ${i}:\n  actual:   ${around(actual)}\n  expected: ${around(expected)}`,
+  );
+}
+
 describe("admin page (integration)", () => {
   it("ADM-02 acceptance 1: signed out, not admin, admin answer 404, 404, 200", async () => {
     const stamp = Date.now();
@@ -52,7 +81,7 @@ describe("admin page (integration)", () => {
     expect(unknown.status).toBe(404);
     const unknownBody = await body(unknown);
     const signedOutBody = await body(signedOut);
-    expect(await body(notAdmin)).toBe(signedOutBody);
+    expectSame(comparable(await body(notAdmin)), comparable(signedOutBody));
     for (const text of [signedOutBody, unknownBody]) {
       expect(text).toContain("Page not found");
       expect(text).toContain('name="robots" content="noindex, nofollow"');
