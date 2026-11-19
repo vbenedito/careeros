@@ -1,6 +1,6 @@
 # ADR-0013 — Admin access by table, ledger in a private repository
 
-Status: Proposed · Date: 2026-11-18 · Issue: #208 · Spec: [ADM](../../specs/v1/03-admin.md)
+Status: Accepted · Date: 2026-11-18 · Issue: #208 · Spec: [ADM](../../specs/v1/03-admin.md)
 
 ## Context
 The product owner wants one private page, `/admin`, that shows how CareerOS is built: sessions, agents, tokens, review rounds, v1 progress (A1–A8). Constraints:
