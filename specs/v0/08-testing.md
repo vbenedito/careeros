@@ -12,6 +12,8 @@ Amended 2026-11-12 (#155, #156): §5 CI gates add the Markdown link check and th
 
 Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
 
+Amended 2026-11-19 (#224): TEST-01 adds an iPhone 17 viewport (402×874, 3x, touch), phone widths 360/390/402/430 with wide text, the hero CTA pair as a centred group, and animation checks (LAND-08).
+
 Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and auth modules (TEST-03), account-erasure, concurrent-ingest and RLS-policy tests (TEST-04, TEST-05, TEST-07), the integration server readiness check (TEST-06), database constant parity (TEST-08), and polling instead of fixed sleeps (§6).
 
 ## 1. Principles
@@ -39,8 +41,10 @@ Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and aut
   1. the document scrolls horizontally (`scrollWidth` > viewport width);
   2. a visible element extends beyond the viewport. Exempt only: content of a clipping box (`overflow` hidden/clip) or horizontal scroller (`overflow` auto/scroll) that itself fits the viewport, and visually hidden `.sr` / `.sr-only` elements. Fixed elements are always held to the viewport;
   3. text is clipped, by its own box or by a clipping ancestor (an ellipsis on the text's own box and scrollers are allowed). The landing site belt is skipped while it scrolls (a marquee) and checked with reduced motion;
-  4. a group meant to be centred is not: each line of its children is centred in its parent's content box ±2 px (landing: the final CTA pair);
+  4. a group meant to be centred is not: each line of its children is centred in its parent's content box ±2 px (landing: the final CTA pair; at phone widths also the hero CTA pair, whose two buttons stack at one width);
   5. at widths ≤ 768 px, a button, `a.btn`, `[role=button]` or the label of a checkbox/radio toggle is under 44 px tall.
+
+  6. landing only, at 360, 390, 402 and 430 px and an iPhone 17 viewport (402×874, 3x, touch), with normal and reduced motion and with text widened by 0.06em to stand in for iOS fonts: checks 1–4 above hold, the two buttons of each CTA pair are equally wide, no animation moves or resizes any box while frozen at points of the 12 s demo loop, and with reduced motion no animation runs (LAND-08). WebKit is not run: Playwright's WebKit build could not be installed in the authoring sandbox (its CDN is blocked), so the engine difference is covered by the wide-text check only.
 
   Each check saves full-page PNGs to `responsive-screenshots/`; CI uploads them as the artifacts `responsive-screenshots-landing` and `responsive-screenshots-app` (14 days).
 
