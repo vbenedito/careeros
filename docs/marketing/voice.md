@@ -113,7 +113,7 @@ Use one of these forms. They match the brand profile (sections 1, 2 and 6).
 Say this, and no more than this (brand profile, section 6; SEC-01):
 
 - It counts only on sites you choose, up to 12.
-- It stores only the site name and the start and end times.
+- It stores only the site name and the start and end times. If you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum.
 - It never stores full web addresses, page titles, page content or keystrokes.
 - It never tracks incognito windows.
 - It has no ad trackers.

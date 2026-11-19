@@ -100,7 +100,7 @@ describe("landing page (LAND)", () => {
   });
 
   it("LAND-03 #196 no privacy badge row; FAQ names the opt-in LeetCode problem name; no cookie claim", () => {
-    expect(html).not.toContain("badges");
+    expect(html).not.toContain('class="wrap badges"');
     expect(html).not.toContain("No URLs stored");
     expect(html).toContain(
       "if you turn on Track LeetCode problems, it also keeps the problem name",

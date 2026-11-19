@@ -6,7 +6,7 @@ Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10
 >
 > **Update 2026-11-19 (#196, product owner):** the privacy badge row (§4.2a′) is removed. FAQ 1 and the hero demo label now name the optional LeetCode problem name (PRB). Page order: header · hero · site belt · problem · bento · how it works · study hours · the rules · FAQ · final CTA · footer.
 >
-> **Update 2026-11-11 (#140, product owner):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2a′). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
+> **Update 2026-11-11 (#140, product owner; badge row superseded 2026-11-19):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2a′). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
 
 Every claim below is checked against the v0 specs (IDs in brackets). Anything not in v0 stays off the page: no goals, streaks, AI insights, mobile apps, user counts or testimonials.
 

@@ -110,7 +110,7 @@ Why these four. The platform study found white space for "measure your real stud
 
 **May use.** Only brand profile section 6 and the voice page "Privacy, exactly" and "Idle rules, exactly":
 - Counts only on sites you choose, up to 12.
-- About your study time, it stores only the site name and the start and end times. (Your account email and sign-in provider are stored too. Say so if asked.)
+- About your study time, it stores only the site name and the start and end times. If you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum. (Your account email and sign-in provider are stored too. Say so if asked.)
 - Never stores full web addresses, page titles, page content or keystrokes.
 - Never tracks incognito windows. No ad trackers.
 - Permissions: `tabs`, `idle`, `alarms`, `storage`. It does not read page content (SEC-01, SEC-03).

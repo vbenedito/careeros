@@ -50,7 +50,7 @@ Only true, checkable facts. Each one comes from a spec or a public page.
 | Counts only on sites you choose, up to 12; subdomains included | TRK-03, DATA-01 |
 | Pauses after 60 seconds without keyboard or mouse input | TRK-05 |
 | Keeps counting while the study tab plays sound, for up to 15 minutes without input | TRK-05, TRK-06 |
-| Stores only the site name and start and end times | SEC-01 |
+| Stores only the site name and start and end times (plus the LeetCode problem name, only if the user turns on Track LeetCode problems) | SEC-01, PRB-15 |
 | Never stores full web addresses, page titles, page content or keystrokes | SEC-01 |
 | No content scripts; permissions are only `tabs`, `idle`, `alarms`, `storage` | SEC-01, SEC-03 |
 | Never tracks incognito windows | SEC-01 |

@@ -64,7 +64,7 @@ Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11
 | **A. Study time tracking** | Commercial (find a tool) | Landing `/` | **study time tracker** | study hours tracker, study tracker, study time tracker app, track study hours |
 | **B. Interview prep and platforms** | Commercial | Landing `/` (subline, how it works, FAQ) | coding interview prep (context) | technical interview preparation, leetcode tracker, leetcode timer, neetcode |
 | **C. The extension** | Transactional (install) | Chrome Web Store listing; landing secondary CTA | time tracker chrome extension | website time tracker, study time tracker chrome extension |
-| **D. Privacy** | Trust | Landing privacy badges (under the hero), `/privacy` | — (no measurable demand; a conversion point, not a search target) | private time tracker |
+| **D. Privacy** | Trust | Landing FAQ 1, `/privacy` | — (no measurable demand; a conversion point, not a search target) | private time tracker |
 | **E. Alternatives and guides** | Comparison / informational | Future pages (§7); "how many hours to study" also as an `h2` on the landing page (#140) | rescuetime alternative, wakatime alternative | how much to study for interviews |
 
 Rules: one cluster per page (no two pages targeting the same terms); clusters A, B and D share the landing page because it is the only marketing page; C belongs to the store listing.
