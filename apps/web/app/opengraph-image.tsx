@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOCKUP_DARK_SVG } from "@/lib/brand/lockup-dark";
 
 /** LAND-07: the social preview image, built at build time (no external fonts or images). */
 export const alt = "CareerOS: see where your study time really goes";
@@ -19,7 +20,14 @@ export default function OpengraphImage() {
         color: "#f6f6f6",
       }}
     >
-      <div style={{ fontSize: 36, fontWeight: 700 }}>CareerOS</div>
+      {/* Lockup (mark + wordmark with "OS" in the accent), 391x96 scaled to 80 px high. */}
+      {/* biome-ignore lint/performance/noImgElement: ImageResponse renders plain img elements */}
+      <img
+        src={`data:image/svg+xml;base64,${Buffer.from(LOCKUP_DARK_SVG).toString("base64")}`}
+        width={326}
+        height={80}
+        alt="CareerOS"
+      />
       <div style={{ fontSize: 80, fontWeight: 700, lineHeight: 1.05, letterSpacing: -2 }}>
         See where your study time really goes
       </div>

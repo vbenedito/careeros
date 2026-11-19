@@ -20,7 +20,7 @@ export function AppSidebar({ email }: { email: string }) {
       <SidebarSection className="h-14 flex-row items-center px-3">
         <Logo />
         <span className="font-semibold tracking-tight group-data-[state=collapsed]/sidebar:sr-only">
-          CareerOS
+          Career<span className="text-primary">OS</span>
         </span>
       </SidebarSection>
       <nav aria-label="Pages" className="flex-1">
@@ -46,26 +46,19 @@ export function AppSidebar({ email }: { email: string }) {
   );
 }
 
+/** #225: the logo mark (direction C, small cut for 28 px); colours come from the brand tokens. */
 function Logo() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 128 128" className="size-7 shrink-0">
-      <rect width="128" height="128" rx="28" className="fill-primary" />
-      <circle
-        cx="64"
-        cy="64"
-        r="36"
-        fill="none"
-        className="stroke-primary-foreground"
-        strokeWidth="12"
-      />
+    <svg aria-hidden="true" viewBox="0 0 512 512" className="size-7 shrink-0">
+      <rect width="512" height="512" rx="80" className="fill-brand" />
       <path
-        d="M64 40 V64 L80 76"
+        d="M306.9 339.2A112 112 0 1 1 306.9 172.8"
         fill="none"
-        className="stroke-primary-foreground"
-        strokeWidth="12"
+        className="stroke-brand-foreground"
+        strokeWidth="84"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
+      <circle cx="396" cy="256" r="58" className="fill-brand-foreground" />
     </svg>
   );
 }

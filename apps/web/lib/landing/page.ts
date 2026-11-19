@@ -54,7 +54,8 @@ a:focus-visible,summary:focus-visible,.sr:focus-visible+.chip{outline:2px solid 
 .wrap{max-width:1152px;margin:0 auto;padding:0 24px}
 .top{border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:16px}
-.brand{font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--fg);text-decoration:none}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--fg);text-decoration:none}
+.brand .mark{flex:none}.brand .os{color:var(--primary)}
 .nav{display:flex;align-items:center;gap:24px;font-size:14px;flex-wrap:wrap}
 .nav a{color:var(--muted);text-decoration:none}
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none}
@@ -283,6 +284,7 @@ export function renderLanding({
 <meta name="theme-color" content="#0c0d10">
 <link rel="preload" href="/fonts/mona-sans-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(TITLE)}">
 <meta property="og:description" content="${esc(DESCRIPTION)}">
@@ -297,7 +299,8 @@ export function renderLanding({
 </head>
 <body>
 <header class="top"><div class="wrap">
-<a class="brand" href="/">CareerOS</a>
+<!-- The mark uses the dark-variant hex values: this page is dark only and static, with no design tokens. -->
+<a class="brand" href="/"><svg class="mark" aria-hidden="true" viewBox="0 0 512 512" width="28" height="28"><rect width="512" height="512" rx="80" fill="#79a1fc"/><path d="M306.9 339.2A112 112 0 1 1 306.9 172.8" fill="none" stroke="#102252" stroke-width="84" stroke-linecap="round"/><circle cx="396" cy="256" r="58" fill="#102252"/></svg><span>Career<span class="os">OS</span></span></a>
 <nav class="nav" aria-label="Main"><a href="#how">How it works</a><a href="/privacy">Privacy</a><a href="#faq">FAQ</a><a class="btn btn-ghost btn-sm" href="/sign-in">Sign in</a></nav>
 </div></header>
 <input type="checkbox" id="pause" class="sr"><div class="wrap pausebar"><label for="pause" class="chip">Pause animations</label></div>

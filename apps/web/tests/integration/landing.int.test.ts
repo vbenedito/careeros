@@ -48,6 +48,9 @@ describe("landing page (integration)", () => {
     const icon = await get("/icon.svg");
     expect(icon.status).toBe(200);
     expect(icon.headers.get("content-type")).toContain("image/svg+xml");
+    const apple = await get("/apple-icon.png");
+    expect(apple.status).toBe(200);
+    expect(apple.headers.get("content-type")).toContain("image/png");
     const og = await get("/opengraph-image");
     expect(og.status).toBe(200);
     expect(og.headers.get("content-type")).toContain("image/png");

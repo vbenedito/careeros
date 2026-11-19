@@ -26,7 +26,7 @@ The browser never calls Supabase. Every Supabase call runs on the server with th
 | `PUT /api/settings/problems` | Route handler | Session, same origin | Turns **Track LeetCode problems** on or off; `deleteHistory` only with `enabled: false`; calls `set_problem_tracking` | DASH-16, PRB-16, DATA-17 |
 | `POST /api/account/delete` | Route handler (form, sent with `fetch` by Settings) | Session, same origin, sign-in < 10 min | `admin.deleteUser`, clears cookies; Settings follows its redirect, or goes to sign-in on the proxy's 401 (#78) | DASH-14, AUTH-13, 14 |
 | `/robots.txt`, `/sitemap.xml` | `app/robots.ts`, `app/sitemap.ts` | Public | Disallow `/api/`, `/auth/`; sitemap lists `/` and `/privacy` | LAND-07 |
-| `/opengraph-image`, `/icon.svg`, `/fonts/*` | Generated image, static files | Public | Share image, favicon, self-hosted fonts | LAND-04, 07 |
+| `/opengraph-image`, `/icon.svg`, `/apple-icon.png`, `/fonts/*` | Generated image, static files | Public | Share image, favicon (logo mark), Apple touch icon, self-hosted fonts | LAND-04, 07 |
 
 Public paths are listed in `lib/auth/routes.ts` (`PUBLIC_PATHS`, `PUBLIC_EXACT_PATHS`). App pages carry `noindex` (`app/layout.tsx`).
 

@@ -85,4 +85,20 @@ describe("chart colour contrast (#76)", () => {
       expect(media).toContain(`--${chart}: oklch(${l} ${c} ${h});`);
     }
   });
+
+  for (const [name, tokens] of Object.entries(themes)) {
+    it(`${name}: the logo glyph (--brand-foreground) is at least 3:1 against its tile (--brand), #225`, () => {
+      expect(
+        contrast(tokens["brand-foreground"] as Oklch, tokens.brand as Oklch),
+      ).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it("the OS-dark fallback repeats the .dark logo values", () => {
+    const media = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
+    for (const t of ["brand", "brand-foreground"]) {
+      const [l, c, h] = themes.dark[t] as Oklch;
+      expect(media).toContain(`--${t}: oklch(${l} ${c} ${h});`);
+    }
+  });
 });

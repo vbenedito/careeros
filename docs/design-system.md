@@ -15,6 +15,7 @@ dashboard's shadcn components use them as they are.
 | `muted` / `muted-foreground` | Secondary surfaces (bar tracks) and secondary text |
 | `border`, `input`, `ring` | Dividers, field borders, focus outline |
 | `primary` / `primary-foreground` | Main actions, links, bars |
+| `brand` / `brand-foreground` | The logo mark only (#225): tile and glyph. Light: navy tile, pale-blue glyph. Dark: `primary` tile, navy glyph. Not for buttons or text |
 | `destructive` | Deleting or discarding data (Delete account, Remove a site, Disconnect and delete unsynced time) |
 | `success`, `warning` | Status only ("Tracking", "Not connected") |
 | `chart-1` … `chart-6` | Categorical chart colours (donut slices; `chart-6` is "Other"); ≥ 3:1 against `card`, never a status colour (below) |

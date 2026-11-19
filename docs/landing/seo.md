@@ -2,7 +2,7 @@
 
 Status: **Decided** (tech lead, by delegation from the product owner) · 2026-11-10 · Part of #102.
 
-> **As built (2026-11-11, #131):** see [LAND-04..07](../../specs/landing/00-landing.md). Differences from the plan below: there is no `/landing/` folder or redirect (`robots.txt` disallows only `/api/` and `/auth/`); `/icon.svg` exists and is the favicon of every page; there is no web manifest or `llms.txt` yet; headings use Mona Sans, self-hosted under `/fonts` (`font-src 'self'`), so fonts are not only the system stack; the page has no hero image to preload.
+> **As built (2026-11-11, #131):** see [LAND-04..07](../../specs/landing/00-landing.md). Differences from the plan below: there is no `/landing/` folder or redirect (`robots.txt` disallows only `/api/` and `/auth/`); `/icon.svg` exists and is the favicon of every page (the logo's small mark since #225, plus `/apple-icon.png`); there is no web manifest or `llms.txt` yet; headings use Mona Sans, self-hosted under `/fonts` (`font-src 'self'`), so fonts are not only the system stack; the page has no hero image to preload.
 >
 > **Update 2026-11-11 (#140):** the informational keyword "how many hours to study for coding interviews" (§1, cluster E) is now covered on the landing page by one `h2`, "How many hours should you study for coding interviews?", with a short honest answer (no target number). It does not replace a future guide (§7). The privacy section was removed; privacy (cluster D) is a badge row under the hero plus `/privacy`.
 

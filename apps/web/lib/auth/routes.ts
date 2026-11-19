@@ -21,6 +21,7 @@ export const PUBLIC_EXACT_PATHS = [
   "/sitemap.xml",
   "/opengraph-image",
   "/icon.svg",
+  "/apple-icon.png",
   // Error reports from the error pages, which also show to signed-out visitors (ENV-11).
   "/api/client-error",
 ] as const;

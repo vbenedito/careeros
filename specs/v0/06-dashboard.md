@@ -33,7 +33,7 @@ Answers three questions: *how much did I study, how was it spread across days, o
 | `/api/account/delete` (POST) | Account deletion (DASH-14) | required |
 | `/api/client-error` (POST) | Error-page report to the server log (ENV-11) | public |
 
-No other pages or navigation items in v0. The landing page's search files (`/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`) are public too (LAND-07).
+No other pages or navigation items in v0. The landing page's search files (`/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`, `/apple-icon.png`) are public too (LAND-07).
 
 - `/sign-in` shows a message for `?error=oauth` (cancelled, or no verified email), `?error=callback` (code exchange failed; also the fallback for unknown values) and `?error=provider` (provider not available). After account deletion it shows `?deleted=1`: "Your account and all of its data were deleted."
 - `app/error.tsx` is the friendly fallback for an error in a page ("Something went wrong", **Try again**); `app/global-error.tsx` covers a failure of the root layout itself. Neither shows error details.
