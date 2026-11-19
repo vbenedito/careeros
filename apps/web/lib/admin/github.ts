@@ -18,7 +18,7 @@ export interface GithubRequest {
   init: CachedRequestInit;
 }
 
-const headers = (token: string, accept: string) => ({
+export const githubHeaders = (token: string, accept: string) => ({
   Accept: accept,
   Authorization: `Bearer ${token}`,
   "X-GitHub-Api-Version": "2022-11-28",
@@ -29,7 +29,7 @@ export function treeRequest(token: string): GithubRequest {
   return {
     url: `${GITHUB_API}/repos/${LEDGER_REPO}/git/trees/main?recursive=1`,
     init: {
-      headers: headers(token, "application/vnd.github+json"),
+      headers: githubHeaders(token, "application/vnd.github+json"),
       cache: "force-cache",
       next: { revalidate: GITHUB_CACHE_S, tags: ["ledger-tree"] },
     },
@@ -42,7 +42,7 @@ export function blobRequest(token: string, sha: string): GithubRequest {
     url: `${GITHUB_API}/repos/${LEDGER_REPO}/git/blobs/${sha}`,
     init: {
       // The raw media type returns the file's own bytes instead of base64 JSON.
-      headers: headers(token, "application/vnd.github.raw+json"),
+      headers: githubHeaders(token, "application/vnd.github.raw+json"),
       cache: "force-cache",
       next: { revalidate: false, tags: ["ledger-blob"] },
     },

@@ -19,7 +19,12 @@ function sources(dir: string): string[] {
 
 describe("ledger token stays on the server (ADM-08, SEC-07)", () => {
   it("ADM-08 the modules that read the ledger import server-only", () => {
-    for (const file of ["lib/admin/github.ts", "lib/admin/ledger.ts", "lib/admin/guard.ts"]) {
+    for (const file of [
+      "lib/admin/github.ts",
+      "lib/admin/ledger.ts",
+      "lib/admin/guard.ts",
+      "lib/admin/repo.ts",
+    ]) {
       expect(read(file), file).toMatch(/^import "server-only";$/m);
     }
   });
