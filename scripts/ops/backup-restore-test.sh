@@ -24,6 +24,7 @@ psql_local "insert into auth.users (instance_id, id, aud, role, email, email_con
   values ('$uid', '$uid', gen_random_uuid(), 'leetcode.com',
           now() - interval '1 hour', now() - interval '40 minutes');
   insert into public.account_settings (user_id, track_problems) values ('$uid', true);
+  insert into public.admins (user_id) values ('$uid');
   insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
   values ('$uid', '$uid', 'leetcode.com', 'two-sum');" >/dev/null
 
@@ -32,6 +33,7 @@ fingerprint() {
     || ',' || (select count(*) from public.tracked_domains) || ',' || (select count(*) || ':'
     || coalesce(sum(duration_s), 0) from public.study_sessions)
     || ',' || (select count(*) filter (where track_problems) from public.account_settings)
+    || ',' || (select count(*) from public.admins)
     || ',' || (select count(*) || ':' || coalesce(string_agg(problem_slug, '|' order by session_id), '')
     from public.study_session_problems)"
 }

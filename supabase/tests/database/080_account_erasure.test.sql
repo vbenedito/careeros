@@ -23,6 +23,8 @@ insert into private.link_requests (user_id)
 values (tests.user_id('erased')), (tests.user_id('kept'));
 insert into public.account_settings (user_id, track_problems)
 values (tests.user_id('erased'), true), (tests.user_id('kept'), true);
+insert into public.admins (user_id)
+values (tests.user_id('erased')), (tests.user_id('kept'));
 insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
 values
   ('e0000000-0000-4000-8000-000000000001', tests.user_id('erased'), 'leetcode.com', 'two-sum'),

@@ -8,7 +8,8 @@ select tests.create_user('gina');
 select tests.create_user('hugo');
 select tests.create_user('iris');
 
--- Rows are added by the project owner (superuser in the SQL editor), never by a client.
+-- Rows are added by the project owner in the SQL editor. The `postgres` role is not a superuser on
+-- hosted Supabase: it can add the row because it owns the table and has BYPASSRLS. Never a client.
 insert into public.admins (user_id) values (tests.user_id('gina')), (tests.user_id('hugo'));
 
 -- =============================================================================================
