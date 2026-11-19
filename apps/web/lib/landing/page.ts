@@ -7,7 +7,6 @@
 
 import { ANALYTICS_SCRIPT_PATH } from "@/lib/analytics/config";
 import {
-  BADGES,
   DESCRIPTION,
   ENGINE_LOG,
   FAQ,
@@ -178,10 +177,6 @@ details p{margin:6px 0 0;font-size:15px;color:var(--muted)}
 .howgrid .steps li{display:grid;grid-template-columns:36px 1fr;gap:12px}
 .howgrid .steps .n,.tips .n{width:32px;height:32px;border-radius:16px;background:var(--raise);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
 .howgrid .steps h3{font-size:17px;font-weight:650}.howgrid .steps p{margin:2px 0 0;font-size:14px;color:var(--muted)}
-.hero.split{padding-bottom:48px}
-.badges{list-style:none;margin:0 auto;padding-bottom:96px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-.badges li{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--line2);background:oklch(0.17 0.012 265 / .8);font-size:14px;color:var(--fg)}
-.badges li::before{content:"";flex:none;width:9px;height:5px;border-left:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:translateY(-2px) rotate(-45deg)}
 .hours .copy{gap:20px}
 .tips{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px}
 .tips li{display:grid;grid-template-columns:36px 1fr;gap:12px}
@@ -250,7 +245,6 @@ export function renderLanding({
         `<li><span class="n">${i + 1}</span><div><h3>${esc(p.t)}</h3><p>${esc(p.d)}</p></div></li>`,
     )
     .join("");
-  const badges = BADGES.map((b) => `<li>${esc(b)}</li>`).join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
   const faq = FAQ.map(
     (f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`,
@@ -315,7 +309,7 @@ export function renderLanding({
 <div class="ctas"><a class="btn btn-primary" href="/sign-in">Get started — it's free</a><a class="btn btn-ghost" href="${esc(installUrl)}">Add to Chrome</a></div>
 <p class="small">Sign in with Google or GitHub. Chrome on desktop.</p>
 </div>
-<div class="demo" role="img" aria-label="Demo: the timer counts on leetcode.com, stops on youtube.com, and resumes on neetcode.io. Only the site and the start and end times are saved.">
+<div class="demo" role="img" aria-label="Demo: the timer counts on leetcode.com, stops on youtube.com, and resumes on neetcode.io. By default, only the site and the start and end times are saved.">
 <div class="tabs" aria-hidden="true"><span class="lights"><i></i><i></i><i></i></span><span class="t1">leetcode.com</span><span class="t2">youtube.com</span><span class="t3">neetcode.io</span></div>
 <div class="demo-body" aria-hidden="true">
 <div class="status"><span class="s1"><i class="dot"></i>Counting · study site</span><span class="s2"><i class="dot idle"></i>Not a study site · nothing recorded</span><span class="s3"><i class="dot"></i>Counting · study site</span></div>
@@ -325,7 +319,7 @@ export function renderLanding({
 </div>
 </div>
 </section>
-<ul class="wrap badges" role="list" aria-label="Privacy">${badges}</ul></div>
+</div>
 
 <section class="belt" aria-label="Examples of study sites">
 <div class="belt-track"><span>leetcode.com</span><span>neetcode.io</span><span>greatfrontend.com</span><span>docs.python.org</span><span>developer.mozilla.org</span><span>react.dev</span><span>coursera.org</span><span>github.com</span><span aria-hidden="true">leetcode.com</span><span aria-hidden="true">neetcode.io</span><span aria-hidden="true">greatfrontend.com</span><span aria-hidden="true">docs.python.org</span><span aria-hidden="true">developer.mozilla.org</span><span aria-hidden="true">react.dev</span><span aria-hidden="true">coursera.org</span><span aria-hidden="true">github.com</span></div>

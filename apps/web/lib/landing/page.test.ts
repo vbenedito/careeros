@@ -99,14 +99,13 @@ describe("landing page (LAND)", () => {
     expect(html.match(/href="\/privacy">Privacy<\/a>/g)).toHaveLength(2); // header and footer
   });
 
-  it("LAND-03 #140 the privacy badge row sits under the hero, as a list, with no cookie claim", () => {
-    const row = /<ul class="wrap badges" role="list" aria-label="Privacy">(.*?)<\/ul>/.exec(html);
-    expect(row).not.toBeNull();
-    const items = [...(row?.[1] ?? "").matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1]);
-    expect(items).toEqual(["Never reads page content", "No ad trackers"]);
+  it("LAND-03 #196 no privacy badge row; FAQ names the opt-in LeetCode problem name; no cookie claim", () => {
+    expect(html).not.toContain("badges");
     expect(html).not.toContain("No URLs stored");
-    expect(html.indexOf('class="wrap badges"')).toBeGreaterThan(html.indexOf("</h1>"));
-    expect(html.indexOf('class="wrap badges"')).toBeLessThan(html.indexOf('class="belt"'));
+    expect(html).toContain(
+      "if you turn on Track LeetCode problems, it also keeps the problem name",
+    );
+    expect(html).toContain("By default, only the site and the start and end times are saved.");
     expect(html.toLowerCase()).not.toContain("cookie");
   });
 

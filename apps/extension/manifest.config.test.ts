@@ -154,6 +154,7 @@ describe("Chrome Web Store package (STORE)", () => {
   it("STORE-02 the description fits the store summary (≤ 132) and claims no more than SEC-01", () => {
     expect(STORE_DESCRIPTION.length).toBeLessThanOrEqual(132);
     expect(prod.description).toBe(STORE_DESCRIPTION);
-    expect(STORE_DESCRIPTION).toContain("no URLs");
+    expect(STORE_DESCRIPTION).toContain("Never reads page content");
+    expect(STORE_DESCRIPTION).not.toContain("no URLs"); // PRB-17: a LeetCode problem name can be stored
   });
 });

@@ -49,7 +49,7 @@ export const RULES = [
 export const FAQ = [
   {
     q: "Does CareerOS read the pages I visit?",
-    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. Because of this, Chrome describes the permission as reading your browsing history.",
+    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. One exception, which you control: if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address (for example two-sum). Because it reads the address, Chrome describes the permission as reading your browsing history.",
   },
   {
     q: "Which sites can I track?",
@@ -77,14 +77,6 @@ export const FAQ = [
     a: 'Settings → Delete account removes your account and all study records right away (encrypted backups expire within 90 days). When the extension is no longer connected, its "Forget local data" clears what\'s left on that computer.',
   },
 ] as const;
-
-/**
- * Privacy badges under the hero (LAND-03, #140). Two remain (amended 2026-11-17, #176, product
- * owner): "No URLs stored" is gone because v1 can store a LeetCode problem slug (PRB). The
- * extension never reads page content, and the site has no ad trackers (SEC-15). No "no cookies"
- * claim: the dashboard uses session cookies. The texts are rethought in #196.
- */
-export const BADGES = ["Never reads page content", "No ad trackers"] as const;
 
 /**
  * "How many hours should you study" explainer (LAND-03, #140): no target numbers, no studies.

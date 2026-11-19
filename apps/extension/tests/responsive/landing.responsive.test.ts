@@ -31,7 +31,7 @@ const FONT = readFileSync(
  * a marquee: its text scrolls through a clipped band on purpose, so it is skipped while it
  * moves; with reduced motion it wraps and is checked.
  */
-const STATIC_CHECKS: ResponsiveOptions = { centred: [".final .ctas", ".badges"] };
+const STATIC_CHECKS: ResponsiveOptions = { centred: [".final .ctas"] };
 const CHECKS: ResponsiveOptions = { ...STATIC_CHECKS, ignore: [".belt"] };
 
 /** CSS-only toggles: the input id and the label text a visitor taps. */
