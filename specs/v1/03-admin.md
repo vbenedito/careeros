@@ -2,6 +2,8 @@
 
 Status: **Accepted (2026-11-18, gate 5, #209)** · Issue: #208 · Source: product-owner decisions A1–A10 (2026-11-18, below) · Related ADRs: [0013](../../docs/adr/0013-admin-access.md) (admin access and private ledger)
 
+Amended 2026-11-18 (#214): ADM-02 and acceptance 1: the 404 has the same status, the same "Page not found" content and `noindex` as an unknown path, and signed-out and non-admin responses are identical; exact HTML equality with an unmatched path is not required (Next.js 16 renders a matched route's `notFound()` as an error shell that shows the same page on the client).
+
 ## 1. Objective
 
 Give the product owner one private page that shows how the project is built: what each Claude session and agent did, what it cost in tokens, how many review rounds it needed, where v1 stands, which docs agents read, and how the parts connect. It must be **secure** and **cost little** to build and to run (A8).
@@ -39,7 +41,7 @@ Only the product owner sees it. For everyone else the page does not exist (404).
 **Access (ADR-0013)**
 
 - **ADM-01** A table `admins (user_id uuid primary key references auth.users on delete cascade, created_at timestamptz not null default now())`. RLS is on. The only policy lets a signed-in user **select their own row**. No role gets insert, update or delete grants; rows are added only by the project owner in the SQL editor. No user id is ever in the repository.
-- **ADM-02** Every request under `ADMIN_PATH` is checked **on the server**, before any data is read: the user is signed in (`getClaims()`, AUTH-02) **and** has a row in `admins`, read with the user's own session (no secret key). Otherwise the answer is the normal **404** page, the same as for an unknown path: no redirect to sign-in, no "forbidden", no different timing on purpose.
+- **ADM-02** Every request under `ADMIN_PATH` is checked **on the server**, before any data is read: the user is signed in (`getClaims()`, AUTH-02) **and** has a row in `admins`, read with the user's own session (no secret key). Otherwise the answer is the normal **404** page: the same status, the same "Page not found" content and `noindex` as for an unknown path, and the same response for a signed-out visitor and a signed-in non-admin (exact HTML equality with an unmatched path is not required): no redirect to sign-in, no "forbidden", no different timing on purpose.
 - **ADM-03** The admin pages carry `noindex` and are not in the sitemap. They are not linked from the sidebar or anywhere else; the product owner opens the address directly.
 - **ADM-04** The admin pages only **read**. They offer no action that writes to the database, GitHub or Vercel.
 
@@ -98,7 +100,7 @@ Social media control (A9: scheduled and posted posts, views, link clicks), live 
 
 ## 5. Acceptance criteria
 
-1. Signed out, signed in without an `admins` row, and signed in with one: `/admin` answers 404, 404, 200. The 404 is the same page as for `/does-not-exist`.
+1. Signed out, signed in without an `admins` row, and signed in with one: `/admin` answers 404, 404, 200. The 404 has the same status, "Page not found" content and `noindex` as `/does-not-exist`, and the signed-out and non-admin responses are identical.
 2. A signed-in user cannot insert, update or delete a row in `admins`, and cannot read another user's row (pgTAP).
 3. With a ledger of two sessions (fixture), the sessions, cost-per-issue and reviews panels show the expected sums; an invalid file is listed as invalid and changes no sum.
 4. Without `OPS_LEDGER_TOKEN`, the page renders with "Ledger unavailable"; the token never appears in the HTML, in client bundles or in logs (test on the built output).

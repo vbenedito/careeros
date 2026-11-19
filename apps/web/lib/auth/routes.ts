@@ -25,12 +25,24 @@ export const PUBLIC_EXACT_PATHS = [
   "/api/client-error",
 ] as const;
 
+/** The only admin route (ADM-02, spec constant `ADMIN_PATH`). */
+export const ADMIN_PATH = "/admin";
+
 /** Where signed-in visitors land (LAND-02). */
 export const DASHBOARD_PATH = "/dashboard";
 
 export function isPublicPath(pathname: string): boolean {
   if ((PUBLIC_EXACT_PATHS as readonly string[]).includes(pathname)) return true;
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+/**
+ * ADM-02: `/admin` and everything under it. The proxy lets a signed-out request through (no
+ * redirect to /sign-in), because the admin layout answers everyone who is not an admin with the
+ * same 404 as an unknown path; a redirect would show that the page exists.
+ */
+export function isAdminPath(pathname: string): boolean {
+  return pathname === ADMIN_PATH || pathname.startsWith(`${ADMIN_PATH}/`);
 }
 
 export function isApiPath(pathname: string): boolean {

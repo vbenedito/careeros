@@ -63,6 +63,13 @@ export function productionEnvProblems(env: Env): string[] {
       `EXTENSION_INSTALL_URL must be the Chrome Web Store listing (https://${STORE_HOST}/detail/…), not the store search; ${WHERE}`,
     );
   }
+  // ADM-08: OPS_LEDGER_TOKEN is optional (without it /admin says "Ledger unavailable"), but a
+  // NEXT_PUBLIC_ twin would be inlined into the browser bundle: fail the build instead.
+  if (get("NEXT_PUBLIC_OPS_LEDGER_TOKEN")) {
+    problems.push(
+      "NEXT_PUBLIC_OPS_LEDGER_TOKEN must not exist: the ledger token is server-only and a NEXT_PUBLIC_ value is sent to every browser (ADM-08, SEC-07); rename it to OPS_LEDGER_TOKEN, scoped to Production",
+    );
+  }
   return problems;
 }
 

@@ -16,6 +16,7 @@ The browser never calls Supabase. Every Supabase call runs on the server with th
 | `/connect` | Server Component + client `connect-extension.tsx` | Session | Connects the extension (PING → link → CONNECT) | AUTH-06..09 |
 | `/sign-in` | Page | Public; signed-in → `/dashboard` | Google and GitHub buttons | AUTH-01 |
 | `/privacy` | Page | Public | Privacy notice from `PRIVACY_*` env | SEC-13 |
+| `/admin` | Server Component `app/admin` (layout guard, `force-dynamic`) | Signed in **and** a row in `admins`; everyone else gets the 404 page, never a redirect | Sessions panel from the private ledger; read-only, `noindex`, not in the sitemap, linked from nowhere | ADM-02..09, [ADR-0013](../adr/0013-admin-access.md) |
 | `POST /auth/sign-in` | Route handler | Public, same origin | Starts OAuth PKCE; GitHub asks for `user:email` | AUTH-01, 05 |
 | `GET /auth/callback` | Route handler | Public | Exchanges the code for cookies; `next` via `safeNextPath` | AUTH-01..03 |
 | `POST /auth/sign-out` | Route handler | Same origin | `scope=local`, or `global` for all devices | AUTH-04, 12a |
@@ -39,7 +40,7 @@ flowchart TD
   N --> C["Supabase server client:<br/>getClaims() verifies the JWT, refreshes cookies"]
   C --> Q{"Signed in?"}
   Q -- "no, /api/*" --> A401["401 NOT_AUTHENTICATED"]
-  Q -- "no, not public" --> RS["Redirect to /sign-in?next=…<br/>(307 for GET/HEAD, 303 otherwise)"]
+  Q -- "no, not public and not /admin" --> RS["Redirect to /sign-in?next=…<br/>(307 for GET/HEAD, 303 otherwise)"]
   Q -- "yes, /sign-in" --> RD["Redirect to /dashboard"]
   Q -- "yes, /" --> RD2["Redirect to /dashboard + query"]
   Q -- "otherwise" --> NX["Continue: x-nonce + CSP<br/>forwarded to Server Components"]
@@ -83,6 +84,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 |---|---|---|---|
 | Server client (per request) | `lib/supabase/server.ts` | Publishable key + user cookies | Server Components and route handlers; RLS applies |
 | Proxy client | `proxy.ts` | Publishable key + request cookies | Session refresh only |
+| Admin guard | `lib/admin/guard.ts` (`server-only`) | Publishable key + user cookies | `/admin` layout and page: `getClaims()`, then the user's own `admins` row (RLS); no secret key |
 | Admin client | `lib/supabase/admin.ts` (`server-only`) | `SUPABASE_SECRET_KEY` | `/api/extension/link` (`generateLink`), `/api/account/delete` (`deleteUser`) |
 
 | Call | From | Database object |
@@ -92,6 +94,7 @@ Why two policies: [ADR-0009](../adr/0009-landing-route-and-rendering.md). "With 
 | `account_settings` (select own row; none = off), `study_session_problems` (`exists` query, only the boolean reaches the browser), `get_problem_totals`, `set_problem_tracking` | `lib/problems/data.ts`, `/api/settings/problems` | Table reads under RLS, RPCs (`get_problem_totals` invoker, `set_problem_tracking` definer), DATA-13..17 |
 | `tracked_domains` insert / delete | `/api/sites`, `/api/sites/[id]` | Table, RLS, 12-site trigger |
 | `consume_extension_link_quota` | `/api/extension/link` | RPC, `security definer` |
+| `admins` select (own row) | `lib/admin/guard.ts` | Table, RLS (ADM-01, ADM-02) |
 | `auth.getClaims()` | Proxy, pages | Verifies the JWT locally |
 | `auth.getUser()` | Link route, account deletion | Confirms the session still exists on the server |
 
@@ -123,6 +126,12 @@ Vercel Web Analytics (SEC-15, [ADR-0010](../adr/0010-web-analytics.md)), only wh
 | Landing `/` | `renderLanding({ analytics: true })` adds the script tag; `buildLandingCsp(…, site)` allows it | None (no script of our own); the proxy redirects a signed-out `/?…` to `/` keeping only `utm_*` (`lib/landing/clean-url.ts`, 307), so the beacon sees clean URLs (S1); only `/` |
 
 `/_vercel` is a public path (`lib/auth/routes.ts`), so page views of signed-out visitors are never redirected to sign-in should the proxy see them. The extension has no analytics.
+
+## Admin page (`/admin`)
+
+[ADR-0013](../adr/0013-admin-access.md), [spec ADM](../../specs/v1/03-admin.md). The proxy does not redirect `/admin` (`isAdminPath`); `app/admin/layout.tsx` calls `requireAdmin()` and `app/admin/page.tsx` calls it again before it reads anything, because a layout does not hold back its page's data loading (the call is memoized per request). It ends in `notFound()` for a signed-out visitor, a user without an `admins` row and any error. Next.js renders that 404 as an error shell that shows `app/not-found.tsx` on the client, while a path that matches no route is prerendered; the two are the same page for a visitor, and a signed-out request cannot be told from a signed-in non-admin one.
+
+The ledger is read by `lib/admin/ledger.ts` through `lib/admin/github.ts` (plain `fetch`, `server-only`): the tree listing is cached `GITHUB_CACHE_S` (600 s), each file is fetched by blob SHA and cached with no expiry, and `OPS_LEDGER_TOKEN` (read only in `lib/env.ts`) appears only in the `Authorization` header. Files are validated with `LedgerSessionSchema` (`packages/shared/src/ledger.ts`, strict); an invalid file is listed by name and skipped. The panel's props are plain view-model values from `lib/admin/sessions-view.ts`.
 
 ## Configuration
 

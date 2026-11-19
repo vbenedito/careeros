@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Related ADRs: 0003 (extension session handoff)
 
+Amended 2026-11-18 (#214): AUTH-03 the proxy lets signed-out requests for `/admin` through (ADM-02).
+
 Amended 2026-11-11 (#131): AUTH-03 public paths and redirects, AUTH-07b error codes, AUTH-11 discard path, to match the code.
 
 Amended 2026-11-12 (#58, #65, #54; review of #150): AUTH-10a temporary refresh failures never sign out; AUTH-12 waits for a running upload and the popup's confirmation counts rejected sessions (AUTH-12b); AUTH-11 a different user never sees the previous user's cached sites.
@@ -22,6 +24,7 @@ Self-service sign-up/sign-in with Google or GitHub on the dashboard, and a secur
 
   The proxy (`apps/web/proxy.ts`) applies the rules:
   - Unauthenticated page requests redirect to `/sign-in?next=<path and query>`: `307` for `GET`/`HEAD`, `303` for other methods (so a `POST` is not re-sent).
+  - Exception, `/admin` and `/admin/*` (ADM-02): an unauthenticated request is not redirected; the admin layout answers it with the 404 page, as for anyone who is not an admin (`isAdminPath`).
   - Unauthenticated `/api` and `/api/*` requests get `401` JSON `{ "error": "NOT_AUTHENTICATED" }`, never a redirect.
   - A signed-in visitor at `/sign-in` is redirected to `/dashboard`; at `/` to `/dashboard` with the query string kept (LAND-02).
   - `safeNextPath` honors only same-origin relative `next` values. It falls back to `/dashboard` for anything else: absolute or protocol-relative URLs, backslashes, control characters, and public paths other than `/` and `/privacy`.

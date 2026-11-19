@@ -48,6 +48,15 @@ export function privacyConfig() {
 }
 
 /**
+ * Read-only token for the private ledger repository (ADM-08). Server-only: it has no
+ * `NEXT_PUBLIC_` twin and must never be logged or passed to a client component. Optional:
+ * without it the admin page says "Ledger unavailable".
+ */
+export function opsLedgerToken(): string | null {
+  return process.env.OPS_LEDGER_TOKEN?.trim() || null;
+}
+
+/**
  * Origin for pages built at build time (landing, robots, sitemap: LAND-04/07), where SITE_URL
  * may be absent (CI builds, preview deployments). Falls back to Vercel's production domain,
  * then localhost. Never used for security decisions: those use siteUrl().
