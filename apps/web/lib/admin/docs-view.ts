@@ -2,6 +2,7 @@
  * ADM-13 (b): the files and skills each issue's agents were given, from the ledger.
  */
 import type { LedgerSession } from "@careeros/shared";
+import { effectiveSessions } from "./effective";
 
 export interface IssueDocsRow {
   issue: number;
@@ -12,7 +13,7 @@ export interface IssueDocsRow {
 /** Union of `files` and of `skills` over every agent record with that issue; issues ascending. */
 export function buildIssueDocs(sessions: readonly LedgerSession[]): IssueDocsRow[] {
   const byIssue = new Map<number, { files: Set<string>; skills: Set<string> }>();
-  for (const s of sessions) {
+  for (const s of effectiveSessions(sessions)) {
     for (const a of s.agents) {
       if (a.issue === null) continue;
       const entry = byIssue.get(a.issue) ?? { files: new Set(), skills: new Set() };

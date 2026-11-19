@@ -4,7 +4,7 @@ Status: **Accepted (2026-11-18, gate 5, #209)** · Issue: #208 · Source: produc
 
 Amended 2026-11-18 (#214): ADM-02 and acceptance 1: the 404 has the same status, the same "Page not found" content and `noindex` as an unknown path, and signed-out and non-admin responses are identical; exact HTML equality with an unmatched path is not required (Next.js 16 renders a matched route's `notFound()` as an error shell that shows the same page on the client).
 
-Amended 2026-11-19 (#215): ADM-11 findings are summed over the PR's review records. `findings` holds the first-round HIGH and MEDIUM counts of that review (ADM-06); a re-review record stores the new round's HIGH and MEDIUM in the same field, so the sum counts every round that was recorded.
+Amended 2026-11-19 (#215): ADM-05 — a file with `corrects` replaces the named session's records in every total (cost, reviews, docs); the Sessions panel still lists both (product owner). ADM-11 findings are summed over the PR's review records. `findings` holds the first-round HIGH and MEDIUM counts of that review (ADM-06); a re-review record stores the new round's HIGH and MEDIUM in the same field, so the sum counts every round that was recorded.
 
 ## 1. Objective
 

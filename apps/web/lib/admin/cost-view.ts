@@ -2,6 +2,7 @@
  * ADM-10: view model of the cost-per-issue panel. Pure functions; the component only renders.
  */
 import { LEDGER_MODELS, type LedgerModel, type LedgerSession } from "@careeros/shared";
+import { effectiveSessions } from "./effective";
 import { formatTokens } from "./sessions-view";
 
 export interface CostRow {
@@ -27,7 +28,7 @@ export function buildCostView(sessions: readonly LedgerSession[]): CostView {
   >();
   let main = 0;
   let notMeasured = 0;
-  for (const s of sessions) {
+  for (const s of effectiveSessions(sessions)) {
     if (s.main.tokens === null) notMeasured += 1;
     else main += s.main.tokens;
     for (const a of s.agents) {

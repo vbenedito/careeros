@@ -2,6 +2,7 @@
  * ADM-11: view model of the reviews panel: one row per PR that has review records.
  */
 import { LEDGER_MODELS, type LedgerModel, type LedgerSession } from "@careeros/shared";
+import { effectiveSessions } from "./effective";
 
 /** Merge state read from GitHub (ADM-12); `unknown` when GitHub could not be read or has no such PR. */
 export type MergeState = "merged" | "open" | "draft" | "closed" | "unknown";
@@ -31,7 +32,7 @@ export function buildReviewRows(
     { rounds: number; high: number; medium: number; models: Set<LedgerModel> }
   >();
   // Records with `pr: null` are not shown: a review row needs a PR to name.
-  for (const s of sessions) {
+  for (const s of effectiveSessions(sessions)) {
     for (const a of s.agents) {
       if (a.work !== "review" || a.pr === null) continue;
       const row = byPr.get(a.pr) ?? { rounds: 0, high: 0, medium: 0, models: new Set() };
