@@ -238,6 +238,10 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 
 `chrome.idle.setDetectionInterval(60)` is set on every worker start (TRK-19).
 
+## Icons
+
+The logo (direction C, #229): `scripts/icon.svg` (standard cut) and `scripts/icon-small.svg` (small cut) are copies of `docs/marketing/brand/careeros-mark.svg` and `-mark-small.svg`. `node scripts/icons.ts` renders `public/icons/icon-16/32/48/128.png` (small cut at 16 and 32 px, standard from 48 px, light variant, transparent corners). `node scripts/store-assets.ts` renders the store icon (96 px artwork inside 16 px transparent padding) and puts the lockup on the promo tiles and screenshot 1. Both need Playwright's Chromium. The popup header draws the mark inline with the `brand` / `brand-foreground` tokens.
+
 ## Build modes and manifest
 
 `manifest.config.ts` builds `manifest.json` per mode; `vite.config.ts` injects the public build config (`__CAREEROS_CONFIG__`).

@@ -59,6 +59,6 @@ Hex values are the sRGB conversion of the OKLCH tokens in `packages/shared/theme
 
 "CareerOS" is set in Inter Display Bold (SIL Open Font License) and converted to SVG paths. No font needs to be installed. Font credit: Inter, © The Inter Project Authors, SIL OFL 1.1, outlined; no font file is shipped. Spacing is the font's own with -1% tracking; "OS" takes the accent colour.
 
-## Open question for the product owner
+## Where the mark is used
 
-The website switched to this mark in #225 (favicon is `careeros-mark-small.svg`; sidebar and sign-in use the `brand` / `brand-foreground` tokens). The Chrome extension icon (`docs/chrome-web-store/assets/`, `apps/extension`) still uses the old clock icon; whether it follows is a separate issue (it needs a store update). If it follows, use `careeros-mark-small.svg` for 16 and 32 px.
+The website switched to this mark in #225 (favicon is `careeros-mark-small.svg`; sidebar and sign-in use the `brand` / `brand-foreground` tokens). The Chrome extension icons (`apps/extension/public/icons`, rendered by `apps/extension/scripts/icons.ts`) and the store images (`docs/chrome-web-store/assets/`, `apps/extension/scripts/store-assets.ts`) switched to this mark in #229: small cut at 16 and 32 px, standard cut from 48 px, light variant. A toolbar icon cannot follow the browser theme, so the light variant is used on both: on a dark toolbar (`#202124`, `#35363a`) the navy tile is nearly invisible (1.05:1 and 1.27:1) but the pale-blue glyph reads (9:1 or more), and on white the tile is 15.3:1. The dark variant would read on both toolbars (6.4:1 and 4.8:1 on dark, 2.5:1 on white) and is the alternative if the product owner prefers a visible tile on dark.

@@ -14,7 +14,7 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 | Summary | Automatic study time tracker for interview prep. Counts only on the sites you choose. Never reads page content. (from the manifest, 111 characters; changed in 0.3.0, PRB-17) |
 | Category | Productivity → Workflow & planning (alternative: Education) |
 | Language | English |
-| Store icon | `assets/icon-128.png` |
+| Store icon | `assets/icon-128.png` (new logo, 96 px artwork with 16 px padding; **upload the new icon, tiles and screenshot 1 with the 0.3.0 package**, STORE-09) |
 | Screenshots (1280×800) | `assets/screenshot-1-dashboard-week.png`, `assets/screenshot-2-how-it-works.png` (plus a popup screenshot if you take one, see below) |
 | Small promo tile (440×280) | `assets/promo-small-440x280.png` |
 | Marquee (1400×560, optional) | `assets/promo-marquee-1400x560.png` |

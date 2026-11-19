@@ -48,7 +48,12 @@ export function App({ data, now = () => Date.now() }: { data: PopupData; now?: (
       <header className="flex items-center justify-between">
         {screen === "main" ? (
           <>
-            <span className="text-base font-semibold tracking-tight">CareerOS</span>
+            <span className="flex items-center gap-2 text-base font-semibold tracking-tight">
+              <Logo />
+              <span>
+                Career<span className="text-primary">OS</span>
+              </span>
+            </span>
             <Button
               variant="ghost"
               size="icon"
@@ -79,6 +84,23 @@ export function App({ data, now = () => Date.now() }: { data: PopupData; now?: (
         />
       )}
     </main>
+  );
+}
+
+/** #229: the logo mark (direction C, small cut for 28 px and below); colours come from the brand tokens. */
+function Logo() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 512 512" className="size-6 shrink-0">
+      <rect width="512" height="512" rx="80" className="fill-brand" />
+      <path
+        d="M306.9 339.2A112 112 0 1 1 306.9 172.8"
+        fill="none"
+        className="stroke-brand-foreground"
+        strokeWidth="84"
+        strokeLinecap="round"
+      />
+      <circle cx="396" cy="256" r="58" className="fill-brand-foreground" />
+    </svg>
   );
 }
 
