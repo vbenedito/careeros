@@ -8,6 +8,8 @@ Amended 2026-11-12 (#58, #83, #56, #65, #54; review of #150): Disconnect waits f
 
 Amended 2026-11-17 (#176): extensions from 0.3.0 upload through the ingest v2 RPC next to the current one (SYNC-03a, [ADR-0011](../../docs/adr/0011-ingest-v2.md), proposed); overlap rejections are reported apart, dropped and counted, and kept out of the SYNC-05b check (SYNC-05c, grill E3); pure retries are confirmed at the ingest caps (DATA-09b, grill E5); the site-list refresh also reads the problem setting (SYNC-09d).
 
+Amended 2026-11-19 (#233, proposal): SYNC-03a and SYNC-09d: the slug and the setting cover `neetcode.io` too (the setting is **Track coding problems**, [PRB-22](../v1/01-problems.md)). The upload contract and the setting read are unchanged. Status: **Proposed**.
+
 Amended 2026-11-18 (#179): SYNC-03a, SYNC-05c and SYNC-09d implemented in the extension, no longer proposed. The extension calls only `ingest_study_sessions_v2` (no fallback, ADR-0011). A `future` rejection without a `Date` header is deferred with the `DEFERRED_RETRY_CAP_MIN` fallback due time (the reason replaces the header guess; SYNC-05a's "quarantined without a `Date` header" applied to the guess only). An unconfirmed id the reply does not list, or a reason the client does not know, counts as `invalid`. The setting is cached in the site-list cache (`trackProblems`), so it is written and removed with it.
 
 Amended 2026-11-12 (grill E1/E2/H5/A3): a skipped final sync replies "still syncing" (SYNC-02a, AUTH-12c); unexpected errors record a coarse error kind (SYNC-06b); a token request blocked by the auth lock backs off (AUTH-10c).

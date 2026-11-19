@@ -8,6 +8,8 @@ Amended 2026-11-12 (#56): TRK-17a generation counter for timed-out slots, timeou
 
 Amended 2026-11-17 (#176): TRK-02 and TRK-08 — on `leetcode.com`, the problem slug may also be read from the path, and a problem change closes the interval ([PRB](../v1/01-problems.md), proposed).
 
+Amended 2026-11-19 (#233, proposal): the TRK-02 exception and the TRK-08 problem change also apply to `neetcode.io` (`PROBLEM_DOMAINS`, [PRB-18](../v1/01-problems.md)). TRK-03 is unchanged: the matched tracked domain must itself be `neetcode.io`, so `www.neetcode.io` counts and `neetcode.io.evil.com` never does. Status: **Proposed**.
+
 Amended 2026-11-18 (#179): the TRK-02 exception and the TRK-08 problem change are implemented in the extension engine, no longer proposed. The open interval carries its problem (PRB-08); with the setting off the engine behaves as in 0.2.3.
 
 Amended 2026-11-18 (#179, product owner): TRK-10 — intervals opened or closed by a problem split (PRB-08) are exempt from the `MIN_INTERVAL_S` discard.

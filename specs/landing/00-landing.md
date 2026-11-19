@@ -6,6 +6,8 @@ Amended 2026-11-19 (#225, product owner): LAND-07 — `/icon.svg` is the new log
 
 Amended 2026-11-19 (#196): LAND-03 — the privacy badge row is removed (product owner); LAND-06 no longer refers to it.
 
+Amended 2026-11-19 (#233, proposal): LAND-03 content: FAQ 1 and the hero demo label name LeetCode and NeetCode and the setting **Track coding problems**; wording is the product owner's ([PRB-22](../v1/01-problems.md)). Status: **Proposed**.
+
 Amended 2026-11-17 (#176): LAND-03 — the badge "No URLs stored" is removed (product owner), since v1 can store a LeetCode problem slug (PRB). Two badges remain. Implemented in #181; the landing texts are rethought in #196.
 
 Amended 2026-11-12 (grill S1): LAND-01 query parameters other than `utm_*` are removed by a redirect.
