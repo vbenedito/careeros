@@ -75,7 +75,7 @@ $$;
 select is(
   (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables
    where schema_name || '.' || table_name <> all (array[
-     'private.link_requests', 'public.account_settings', 'public.study_session_problems',
+     'private.link_requests', 'public.account_settings', 'public.admins', 'public.study_session_problems',
      'public.study_sessions', 'public.tracked_domains'])),
   null::text[],
   'TEST-04 DATA-12 every user-owned table found has a seed row in this test (add one for a new table)'
@@ -83,7 +83,7 @@ select is(
 
 select ok(
   (select array_agg(schema_name || '.' || table_name order by schema_name, table_name) from user_tables)
-    @> array['private.link_requests', 'public.account_settings', 'public.study_session_problems',
+    @> array['private.link_requests', 'public.account_settings', 'public.admins', 'public.study_session_problems',
      'public.study_sessions', 'public.tracked_domains'],
   'TEST-04 DATA-12 discovery finds the known user-owned tables'
 );
@@ -107,7 +107,7 @@ select is(
 );
 select ok(
   pg_temp.tables_holding(tests.user_id('kept'))
-    @> array['private.link_requests', 'public.account_settings', 'public.study_session_problems',
+    @> array['private.link_requests', 'public.account_settings', 'public.admins', 'public.study_session_problems',
      'public.study_sessions', 'public.tracked_domains'],
   'TEST-04 DATA-12 deleting one user leaves another user''s rows untouched'
 );
