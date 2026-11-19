@@ -2,6 +2,8 @@
 
 Status: **Proposed (2026-11-17)** · Issue: #176 · Source: [v1 discovery](00-discovery.md) D22, D23, D24; [grill report](../../docs/history/grill-report-2026-11-12.md) A1, A2 · Related ADRs: [0012](../../docs/adr/0012-entitlements.md) (entitlements)
 
+Amended 2026-11-18 (#180): ENT-07 and ENT-09 implemented in the extension: the site-limit error reads `limit` from `details` (`parseLimitErrorDetails`); the popup message uses it. With no valid details the hint still gives `LIMIT_REACHED` and the message is "You've reached the site limit." (EXT-UI-07).
+
 ## 1. Objective
 
 Give every business limit **one owner**: the server. Today the 12-site limit is a number inside a SQL function, a shared constant only drives messages, and the landing page types "12" by hand (grill A1). Both clients find the limit error by a hard-coded `hint === "DATA-01"` (grill A2).

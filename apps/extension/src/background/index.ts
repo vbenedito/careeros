@@ -213,6 +213,13 @@ const handleInternal = createInternalMessageHandler({
       return { ok: false, code: "FAILED" };
     }
   },
+  dismissOverlap: async (shownS) => {
+    try {
+      await sync?.dismissOverlap(shownS);
+    } catch (error) {
+      log.warn("sync.dismiss_failed", { kind: errorKind(error) });
+    }
+  },
   forgetLocalData: async () => {
     if (!auth) return { ok: false, code: "FAILED" };
     try {

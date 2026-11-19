@@ -163,6 +163,17 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
     expect(s.cache()).toEqual(before);
   });
 
+  it("ENT-07 ENT-09 the limit from the server's error reaches the popup reply", async () => {
+    const s = setup();
+    await s.service.refresh();
+    s.fail(new DomainsApiError("LIMIT_REACHED", 25));
+    expect(await s.service.add("neetcode.io")).toEqual({
+      ok: false,
+      error: "LIMIT_REACHED",
+      limit: 25,
+    });
+  });
+
   it("SYNC-11 remove deletes on the server and from the cache", async () => {
     const s = setup({ server: ["leetcode.com", "neetcode.io"] });
     expect(await s.service.remove("neetcode.io")).toEqual({ ok: true, domains: ["leetcode.com"] });

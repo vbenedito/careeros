@@ -20,14 +20,21 @@ export interface DomainsApi {
 
 /** Errors the API reports in a way the service can act on. */
 export class DomainsApiError extends Error {
-  constructor(readonly code: "UNAUTHORIZED" | "LIMIT_REACHED" | "UNAVAILABLE") {
+  constructor(
+    readonly code: "UNAUTHORIZED" | "LIMIT_REACHED" | "UNAVAILABLE",
+    /** ENT-07: the limit from the error details; absent when the server sent none. */
+    readonly limit?: number,
+  ) {
     super(code);
     this.name = "DomainsApiError";
   }
 }
 
 export type DomainsError = "NOT_CONNECTED" | "INVALID_DOMAIN" | "LIMIT_REACHED" | "UNAVAILABLE";
-export type DomainsResult = { ok: true; domains: string[] } | { ok: false; error: DomainsError };
+export type DomainsResult =
+  | { ok: true; domains: string[] }
+  /** `limit` (ENT-07, ENT-09): the number from the server's limit error, when it sent one. */
+  | { ok: false; error: DomainsError; limit?: number };
 
 export function createDomainService(deps: {
   api: DomainsApi;
@@ -51,7 +58,8 @@ export function createDomainService(deps: {
         await deps.sessionRejected();
         return { ok: false, error: "NOT_CONNECTED" };
       }
-      return { ok: false, error: code };
+      const limit = error instanceof DomainsApiError ? error.limit : undefined;
+      return limit === undefined ? { ok: false, error: code } : { ok: false, error: code, limit };
     }
   }
 

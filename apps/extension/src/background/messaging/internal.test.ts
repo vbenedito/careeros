@@ -28,6 +28,9 @@ const handle = createInternalMessageHandler({
     calls.push("forget");
     return { ok: true };
   },
+  dismissOverlap: async (shownS) => {
+    calls.push(`dismiss:${shownS}`);
+  },
 });
 
 describe("popup → worker messages (EXT-UI-05a)", () => {
@@ -57,6 +60,16 @@ describe("popup → worker messages (EXT-UI-05a)", () => {
     });
   });
 
+  it("SYNC-05c routes the dismiss with the seconds shown; bad values are ignored", async () => {
+    expect(await handle({ type: "OVERLAP_DISMISS", shownS: 90 }, OWN)).toEqual({ ok: true });
+    expect(calls.at(-1)).toBe("dismiss:90");
+    const before = calls.length;
+    expect(await handle({ type: "OVERLAP_DISMISS", shownS: -5 }, OWN)).toBeNull();
+    expect(await handle({ type: "OVERLAP_DISMISS", shownS: "9" }, OWN)).toBeNull();
+    expect(await handle({ type: "OVERLAP_DISMISS" }, OWN)).toBeNull();
+    expect(calls.length).toBe(before);
+  });
+
   it("SEC-05 ignores other extensions, web pages and malformed messages", async () => {
     calls.length = 0;
     expect(
@@ -82,6 +95,7 @@ describe("builds without Supabase config (#65, EXT-UI-05c)", () => {
     setTracking: async (enabled) => enabled,
     disconnect: async () => ({ ok: false, code: "FAILED" }),
     forgetLocalData: async () => ({ ok: false, code: "FAILED" }),
+    dismissOverlap: async () => {},
   });
 
   it("EXT-UI-05c every popup command gets a reply instead of silence", async () => {

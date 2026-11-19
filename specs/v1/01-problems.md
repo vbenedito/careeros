@@ -8,6 +8,8 @@ Amended 2026-11-18 (#179, product owner): PRB-08 — an interval opened or close
 
 Amended 2026-11-18 (#181): PRB-16 — the dialog also has Cancel; it is shown when the stored-slug check fails.
 
+Amended 2026-11-18 (#180): PRB-14 implemented in the popup (EXT-UI-11): the time is the sum of this device's intervals of today with the same problem, plus the open interval, from the same local data as the today total.
+
 ## 1. Objective
 
 Show how much time the user spends on each LeetCode problem. The problem is read from the address of the active tab. Nothing else about the page is read or kept.

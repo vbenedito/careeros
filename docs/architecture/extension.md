@@ -159,7 +159,7 @@ A deferred interval is due when `now − serverSkewMs ≥ ended_at` (latest meas
 | `lastErrorKind` | Kind of the unexpected error that ended the last cycle (`errorKind`), cleared when a cycle completes; diagnostics only, no personal data (SYNC-06b) |
 | `overlapDroppedS` | Seconds of intervals rejected as `overlap` and dropped (SYNC-05c). Only `SyncService` changes it, one write at a time, so a cycle never writes back an older count; `dismissOverlap(shownS)` subtracts the value the popup showed. Reset with the status (account change, local data cleared) |
 
-`buildPopupView` (`lib/popup-view.ts`) turns these into `syncing` (footer label `Syncing…`), `clockAheadMinutes` (null under 5 min) and `deferred` for the footer and the clock hint (`popup/components/ClockHint.tsx`).
+`buildPopupView` (`lib/popup-view.ts`) turns these into `syncing` (footer label `Syncing…`), `clockAheadMinutes` (null under 5 min) and `deferred` for the footer and the clock hint (`popup/components/ClockHint.tsx`), and `overlapMinutes` (`overlapDroppedS` in whole minutes, rounded up) for the clock-moved-back line (`OverlapNotice.tsx`, SYNC-05c). `current.problem` (name by `problemName`, time today from the same intervals as the today total) feeds the second line of the current session (EXT-UI-11, PRB-14).
 
 ## Message protocol
 
@@ -171,7 +171,8 @@ Validated by `PopupRequestSchema` (`lib/popup-messages.ts`). Accepted only from 
 |---|---|---|
 | `AUTH_STATUS` | — | `{ connected, email, needsReconnect }` (never a token) |
 | `DOMAINS_REFRESH` | — | `{ ok: true, domains }` or `{ ok: false, error }` |
-| `DOMAINS_ADD` | `input` (≤ 2048 chars) | same |
+| `DOMAINS_ADD` | `input` (≤ 2048 chars) | same; a limit error also carries `limit` from the error details (ENT-07) |
+| `OVERLAP_DISMISS` | `shownS` (> 0) | `{ ok: true }`; calls `dismissOverlap(shownS)` (SYNC-05c) |
 | `DOMAINS_REMOVE` | `domain` (≤ 253 chars) | same |
 | `TRACKING_SET` | `enabled` | `{ ok: true, enabled }` (the stored value afterwards; the switch shows it until storage reloads) |
 | `DISCONNECT` | `discardUnsynced` | `{ ok: true }`, `UNSYNCED_DATA` with `pending` (unsynced + quarantined), `unsynced`, `quarantined`, `SYNC_IN_PROGRESS`, or `FAILED` |

@@ -1,6 +1,7 @@
 import type { PopupView } from "../../lib/popup-view";
 import { ClockHint } from "../components/ClockHint";
 import { CurrentSession } from "../components/CurrentSession";
+import { OverlapNotice } from "../components/OverlapNotice";
 import { StatusSection } from "../components/StatusSection";
 import { SyncFooter } from "../components/SyncFooter";
 import { TodayCard } from "../components/TodayCard";
@@ -25,6 +26,12 @@ export function MainView({
       <TopSites sites={view.top} />
       {view.clockAheadMinutes !== null ? (
         <ClockHint minutes={view.clockAheadMinutes} deferred={view.deferred} />
+      ) : null}
+      {view.overlapMinutes !== null ? (
+        <OverlapNotice
+          minutes={view.overlapMinutes}
+          onDismiss={() => void data.dismissOverlap(view.overlapDroppedS)}
+        />
       ) : null}
       <SyncFooter
         syncLabel={view.syncLabel}

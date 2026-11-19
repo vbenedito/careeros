@@ -12,6 +12,8 @@ export const PopupRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("TRACKING_SET"), enabled: z.boolean() }).strict(),
   z.object({ type: z.literal("DISCONNECT"), discardUnsynced: z.boolean() }).strict(),
   z.object({ type: z.literal("FORGET_LOCAL_DATA") }).strict(),
+  /** SYNC-05c: the popup dismissed its clock-moved-back line showing `shownS` seconds. */
+  z.object({ type: z.literal("OVERLAP_DISMISS"), shownS: z.number().positive().finite() }).strict(),
 ]);
 
 export type PopupRequest = z.infer<typeof PopupRequestSchema>;
@@ -49,6 +51,9 @@ export type PopupNotConfigured = { ok: false; error: "NOT_CONFIGURED"; code: "FA
 
 /** Reply to FORGET_LOCAL_DATA (#113): refused while an account is connected. */
 export type PopupForgetResult = { ok: true } | { ok: false; code: "CONNECTED" | "FAILED" };
+
+/** Reply to OVERLAP_DISMISS (SYNC-05c). */
+export type PopupDismissResult = { ok: true };
 
 /** Name of the port the popup keeps open while shown (the worker treats Chrome as focused). */
 export const POPUP_PORT = "careeros.popup";

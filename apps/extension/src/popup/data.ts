@@ -36,7 +36,8 @@ const KEYS = {
   domains: DOMAINS_CACHE_KEY,
 } as const;
 
-export type CommandResult = { ok: true } | { ok: false; error: string };
+/** `limit`: the number from the server's limit error (ENT-07), when it sent one. */
+export type CommandResult = { ok: true } | { ok: false; error: string; limit?: number };
 /** EXT-UI-05c (#65): the switch shows the worker's stored value; no reply is an error. */
 export type TrackingResult = { ok: true; enabled: boolean } | { ok: false; error: string };
 
@@ -58,6 +59,8 @@ export interface PopupData {
   disconnect(discardUnsynced: boolean): Promise<PopupDisconnectResult>;
   /** AUTH-11 explicit discard while no account is connected (#113). */
   forgetLocalData(): Promise<PopupForgetResult>;
+  /** SYNC-05c: dismisses the clock-moved-back line that showed `shownS` seconds. */
+  dismissOverlap(shownS: number): Promise<void>;
   refreshSites(): Promise<void>;
   openDashboard(path?: string): void;
   /** Tells the worker the popup is open (not "left Chrome", TRK-04); returns a closer. */
@@ -117,8 +120,17 @@ export function createChromePopupData(): PopupData {
     },
 
     async addSite(input) {
-      const reply = await send<{ ok: boolean; error?: string }>({ type: "DOMAINS_ADD", input });
-      return reply?.ok ? { ok: true } : { ok: false, error: reply?.error ?? "UNAVAILABLE" };
+      const reply = await send<{ ok: boolean; error?: string; limit?: unknown }>({
+        type: "DOMAINS_ADD",
+        input,
+      });
+      if (reply?.ok) return { ok: true };
+      const limit =
+        typeof reply?.limit === "number" && Number.isInteger(reply.limit) && reply.limit > 0
+          ? reply.limit
+          : undefined;
+      const error = reply?.error ?? "UNAVAILABLE";
+      return limit === undefined ? { ok: false, error } : { ok: false, error, limit };
     },
 
     async removeSite(domain) {
@@ -151,6 +163,10 @@ export function createChromePopupData(): PopupData {
           code: "FAILED",
         }
       );
+    },
+
+    async dismissOverlap(shownS) {
+      await send({ type: "OVERLAP_DISMISS", shownS });
     },
 
     async refreshSites() {
