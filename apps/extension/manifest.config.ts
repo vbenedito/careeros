@@ -110,7 +110,7 @@ export function parseSupabaseConfig(
   return { supabaseUrl, supabasePublishableKey };
 }
 
-/** Toolbar and extensions-page icons (public/icons, rendered from scripts/icon.svg). */
+/** Toolbar and extensions-page icons (public/icons, rendered from scripts/icon.svg and icon-small.svg). */
 export const ICONS = {
   "16": "icons/icon-16.png",
   "32": "icons/icon-32.png",

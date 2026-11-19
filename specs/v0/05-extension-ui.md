@@ -22,7 +22,7 @@ Size: 360 px wide, height fits content (≤ 560 px). Theme follows the OS (`pref
 
 | # | Block | Content |
 |---|---|---|
-| 1 | **Header** | CareerOS wordmark/logo · settings icon button (`aria-label="Settings"`) |
+| 1 | **Header** | Logo mark (small cut, `brand` tokens only) + "Career**OS**" wordmark ("OS" in `primary`) · settings icon button (`aria-label="Settings"`) |
 | 2 | **Status** | Dot + label (see states) and, when relevant, one short hint |
 | 3 | **Today card** (primary) | Total time today, largest type on screen (`2h 14m`), caption "Today on this device" |
 | 4 | **Current session** (secondary) | Current domain + duration of the current run (`leetcode.com · 23m`); hidden when not tracking |

@@ -120,6 +120,17 @@ describe("popup main view (EXT-UI-01..05b, 09)", () => {
     expect(screen.getByText("v0.1.0")).toBeTruthy();
   });
 
+  it("EXT-UI-01 #229 header: logo mark with token classes only, wordmark reads CareerOS", async () => {
+    const { container } = renderApp(fixture());
+    await screen.findByTestId("status");
+    const header = container.querySelector("header");
+    expect(header?.textContent).toContain("CareerOS");
+    const svg = header?.querySelector("svg[aria-hidden='true']");
+    expect(svg?.querySelector("rect")?.getAttribute("class")).toBe("fill-brand");
+    expect(svg?.querySelector("path")?.getAttribute("class")).toBe("stroke-brand-foreground");
+    expect(header?.querySelector("svg [fill^='#'], svg [stroke^='#']")).toBeNull();
+  });
+
   it("EXT-UI-05 SYNC-10 not a study site: offers to add the normalized host", async () => {
     const data = fixture({ activeTabUrl: "https://www.NeetCode.io/roadmap" });
     renderApp(data);

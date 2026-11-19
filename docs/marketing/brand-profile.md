@@ -125,7 +125,7 @@ Full rules live in the [design system](../design-system.md). For marketing:
   - Mark: `brand/careeros-mark.svg` (light), `brand/careeros-mark-dark.svg` (dark), `brand/careeros-mark-small.svg` and `brand/careeros-mark-small-dark.svg` (below 32 px).
   - Lockup: `brand/careeros-lockup.svg` (light), `brand/careeros-lockup-dark.svg` (dark).
   - Social avatars: `brand/careeros-avatar-light-1024.png`, `-400.png`, `brand/careeros-avatar-dark-1024.png`, `-400.png` (and the `careeros-avatar*.svg` sources).
-  - The website uses the mark (#225): favicon, Apple touch icon, sidebar, landing header, sign-in, Open Graph image. The extension icon is unchanged; whether it follows is a separate issue.
+  - The website uses the mark (#225): favicon, Apple touch icon, sidebar, landing header, sign-in, Open Graph image. The extension icons, the popup header and the store assets follow too (#229): small mark at 16 and 32 px, standard mark from 48 px, light variant (the toolbar cannot follow the theme).
 - **Store assets:** icon, screenshots and promo tiles in `docs/chrome-web-store/assets/`.
 - **Rules to keep:** contrast at least WCAG AA; status is never shown by color alone; durations in the app format (`45m`, `1h 05m`); sample data only.
 - **Accessibility:** captions or on-screen text on every video (our videos are text-first anyway); alt text on every image.
