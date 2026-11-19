@@ -34,6 +34,34 @@ const FONT = readFileSync(
 const STATIC_CHECKS: ResponsiveOptions = { centred: [".final .ctas"] };
 const CHECKS: ResponsiveOptions = { ...STATIC_CHECKS, ignore: [".belt"] };
 
+/**
+ * Both CTA pairs, on phones (#224): the hero pair has no centring rule on desktop, where the hero
+ * is left-aligned, but on a phone its buttons must stack at one width, so each row is centred.
+ */
+const CTA_GROUPS = [".hero .ctas", ".final .ctas"] as const;
+/** At or below this width the CTA buttons stack full-width (page CSS, max-width:480px). */
+const STACKED_MAX_WIDTH = 480;
+const PHONE_WIDTHS = [360, 390, 402, 430, 460, 481, 540] as const;
+/** iPhone 17: 402×874 CSS px, 3x, touch (#224). */
+const IPHONE_17 = { width: 402, height: 874 } as const;
+/**
+ * iOS draws the text wider than the Chromium font in CI, so lines wrap at other points.
+ * `widenText` adds 0.06em of letter-spacing to the computed value of every element (style
+ * attributes are allowed by the landing CSP), including those with their own negative tracking.
+ */
+const WIDE_TEXT = "0.06em";
+const widenText = (page: Page, extra: string = WIDE_TEXT) =>
+  page.evaluate((add) => {
+    const els = [...document.querySelectorAll<HTMLElement>("*")];
+    const base = els.map((e) => {
+      const v = getComputedStyle(e).letterSpacing;
+      return v === "normal" ? "0px" : v;
+    });
+    els.forEach((e, i) => {
+      e.style.letterSpacing = `calc(${base[i]} + ${add})`;
+    });
+  }, extra);
+
 /** CSS-only toggles: the input id and the label text a visitor taps. */
 const TOGGLES = [
   ["pause", "Pause animations"],
@@ -51,10 +79,13 @@ describe("landing responsive layout (TEST-01)", () => {
   const open = async (
     width: number,
     reducedMotion: "reduce" | "no-preference" = "no-preference",
+    device: { height?: number; scale?: number; touch?: boolean } = {},
   ): Promise<Page> => {
     const context = await browser.newContext({
-      viewport: { width, height: 800 },
-      deviceScaleFactor: 1,
+      viewport: { width, height: device.height ?? 800 },
+      deviceScaleFactor: device.scale ?? 1,
+      isMobile: device.touch ?? false,
+      hasTouch: device.touch ?? false,
       reducedMotion,
     });
     contexts.push(context);
@@ -163,6 +194,131 @@ describe("landing responsive layout (TEST-01)", () => {
     for (const id of ["v-week", "r-remembered"]) {
       await page.locator(`label[for="${id}"]`).click();
       await assertResponsive(page, { ...CHECKS, label: `landing, ${id} checked` });
+    }
+  });
+
+  /** Every direct CTA button of each group must have its row centred and no row overflow. */
+  const phoneChecks: ResponsiveOptions = {
+    ...CHECKS,
+    centred: [...(CHECKS.centred ?? []), ...CTA_GROUPS],
+  };
+
+  it("TEST-01 landing on an iPhone 17 (402x874, 3x, touch): centred CTA groups, no overflow", async () => {
+    const page = await open(IPHONE_17.width, "no-preference", {
+      height: IPHONE_17.height,
+      scale: 3,
+      touch: true,
+    });
+    await assertResponsive(page, { ...phoneChecks, label: "landing, iPhone 17" });
+    await widenText(page);
+    await assertResponsive(page, { ...phoneChecks, label: "landing, iPhone 17, wide text" });
+  });
+
+  for (const width of PHONE_WIDTHS) {
+    it(`TEST-01 landing at ${width}px: both CTA groups centred, also with wide text and reduced motion`, async () => {
+      for (const motion of ["no-preference", "reduce"] as const) {
+        const page = await open(width, motion);
+        // Up to 480 px the CTA buttons stack at one width. Wider, the hero pair fits one row
+        // beside its left-aligned text, so only the final pair is held to centring.
+        const stacked = width <= STACKED_MAX_WIDTH;
+        const groups = stacked ? CTA_GROUPS : ([".final .ctas"] as const);
+        const base = { ...phoneChecks, centred: [...(CHECKS.centred ?? []), ...groups] };
+        const checks = motion === "reduce" ? { ...base, ignore: [] } : base;
+        await assertResponsive(page, { ...checks, label: `landing, ${motion}` });
+        await widenText(page);
+        await assertResponsive(page, { ...checks, label: `landing, ${motion}, wide text` });
+        // The two buttons of a group stack at one width, so no row looks ragged.
+        for (const group of stacked ? CTA_GROUPS : []) {
+          const widths = await page
+            .locator(`${group} > a`)
+            .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+          expect(new Set(widths).size, `${group} button widths ${widths} @ ${width}px`).toBe(1);
+        }
+      }
+    });
+  }
+
+  it("TEST-01 landing header is one row at phone widths, also with wide text (content.md 4.1)", async () => {
+    for (const width of PHONE_WIDTHS) {
+      const page = await open(width);
+      for (const ls of ["normal", WIDE_TEXT]) {
+        if (ls !== "normal") await widenText(page);
+        const rows = await page.locator(".top .brand, .top .nav > a").evaluateAll((els) =>
+          els
+            .filter((e) => e.checkVisibility())
+            .map((e) => {
+              const r = e.getBoundingClientRect();
+              return {
+                text: (e.textContent ?? "").replace(/\s+/g, ""),
+                top: r.top,
+                bottom: r.bottom,
+              };
+            }),
+        );
+        const label = `header @ ${width}px, letter-spacing ${ls}: ${JSON.stringify(rows)}`;
+        // Wordmark (whole .brand box, any mark inside) and Sign in only, all on the wordmark's row.
+        expect(
+          rows.map((r) => r.text).filter((t) => !["CareerOS", "Signin"].includes(t)),
+          label,
+        ).toEqual([]);
+        const [brand] = rows;
+        for (const r of rows) {
+          expect(r.top < (brand?.bottom ?? 0) && r.bottom > (brand?.top ?? 0), label).toBe(true);
+        }
+        await assertResponsive(page, { ...CHECKS, label: `landing header, ${ls}` });
+      }
+    }
+  });
+
+  it("TEST-01 landing animations at phone widths keep the layout (LAND-08)", async () => {
+    for (const width of PHONE_WIDTHS) {
+      const page = await open(width);
+      await page.evaluate(() => {
+        // Freeze the clock-driven animations at points of the 12 s demo loop and compare the
+        // vertical layout of every box: an animation must not move or resize anything.
+        const snapshot = () =>
+          [...document.body.querySelectorAll<HTMLElement>("*")]
+            .filter((e) => !e.closest(".track"))
+            .map((e) => `${e.offsetTop}/${e.offsetHeight}`)
+            .join(",");
+        const times = [0, 3000, 4600, 5200, 7400, 9000, 11900];
+        const clock = document
+          .getAnimations()
+          .filter((a) => a.timeline instanceof DocumentTimeline);
+        const seen = new Map<number, string>();
+        for (const t of times) {
+          for (const a of clock) {
+            a.pause();
+            a.currentTime = t;
+          }
+          seen.set(t, snapshot());
+        }
+        const first = seen.get(0);
+        const moved = times.filter((t) => seen.get(t) !== first);
+        (window as unknown as { __moved: number[] }).__moved = moved;
+        (window as unknown as { __count: number }).__count = clock.length;
+      });
+      const { moved, count } = await page.evaluate(() => ({
+        moved: (window as unknown as { __moved: number[] }).__moved,
+        count: (window as unknown as { __count: number }).__count,
+      }));
+      expect(count, `clock animations found @ ${width}px`).toBeGreaterThan(5);
+      expect(moved, `layout moved while animating @ ${width}px at ms`).toEqual([]);
+      await assertResponsive(page, { ...CHECKS, label: `landing, animations frozen mid-loop` });
+    }
+  });
+
+  it("TEST-01 landing with reduced motion at phone widths: nothing animates (LAND-08)", async () => {
+    for (const width of PHONE_WIDTHS) {
+      const page = await open(width, "reduce");
+      const running = await page.evaluate(() =>
+        document
+          .getAnimations()
+          .filter((a) => a.playState === "running")
+          .map((a) => (a.effect as KeyframeEffect | null)?.target?.className ?? "?"),
+      );
+      expect(running, `running animations @ ${width}px`).toEqual([]);
+      await assertResponsive(page, { ...STATIC_CHECKS, label: `landing, reduced motion` });
     }
   });
 

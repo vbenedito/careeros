@@ -58,6 +58,7 @@ a:focus-visible,summary:focus-visible,.sr:focus-visible+.chip{outline:2px solid 
 .brand .mark{flex:none}.brand .os{color:var(--primary)}
 .nav{display:flex;align-items:center;gap:24px;font-size:14px;flex-wrap:wrap}
 .nav a{color:var(--muted);text-decoration:none}
+@media (max-width:640px){.nav{flex-wrap:nowrap}.nav a:not(.btn){display:none}.brand{white-space:nowrap}}
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none}
 .btn-primary{background:var(--primary);color:var(--on-primary)}.btn-primary:hover{color:var(--on-primary);background:oklch(0.78 0.12 265)}
 .btn-ghost{border:1px solid var(--line2);color:var(--fg);font-weight:500}.btn-ghost:hover{color:var(--fg);border-color:var(--primary)}
@@ -78,11 +79,12 @@ h3{margin:0}
 .hero .copy{gap:24px;flex:1.2 1 480px}
 .hero .lede{font-size:18px}
 .ctas{display:flex;gap:12px;flex-wrap:wrap}
+@media (max-width:480px){.ctas .btn{flex:1 1 100%;justify-content:center;text-align:center}}
 .small{margin:0;font-size:13px;color:var(--muted)}
 .demo{flex:1 1 460px;min-width:0;border-radius:16px;border:1px solid var(--line);background:var(--panel);overflow:hidden}
 .tabs{display:flex;gap:4px;padding:10px 10px 0;border-bottom:1px solid var(--line);font-size:13px;overflow:hidden}
 .tabs span{padding:8px 14px;border-radius:8px 8px 0 0;white-space:nowrap;color:var(--muted)}
-@media (max-width:420px){.tabs{font-size:12px}.tabs .lights{display:none}.tabs span{padding:8px 9px}}
+@media (max-width:560px){.tabs{font-size:12px}.tabs .lights{display:none}.tabs span{padding:8px 6px}}
 .demo-body{padding:24px;display:flex;flex-direction:column;gap:20px}
 .status{position:relative;height:24px;font-size:15px;font-weight:600}
 .status span{position:absolute;inset:0;display:flex;align-items:center;gap:8px}
