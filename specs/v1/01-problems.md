@@ -24,7 +24,7 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 
 | Name | Value | Notes |
 |---|---|---|
-| `PROBLEM_DOMAINS` | `leetcode.com`, `neetcode.io` | The tracked domains whose tabs can carry a problem (TRK-03 match). *Amended 2026-11-19 (#233, proposal):* a list; was the single constant `PROBLEM_DOMAIN = leetcode.com`, removed in the shared+extension issue (section 6) |
+| `PROBLEM_DOMAIN` | `leetcode.com` | The tracked domain whose tabs can carry a problem (TRK-03 match). *Amended 2026-11-19 (#233, proposal):* becomes the list `PROBLEM_DOMAINS` = `leetcode.com`, `neetcode.io` (PRB-18) in the shared+extension issue (section 6), which also moves this row and its parity test; until then the code and this row keep the single domain |
 | `PROBLEM_PATH_PREFIX` | `/problems/` | The path must start with it, on every domain of `PROBLEM_DOMAINS` (both sites use it, #233). A site with another prefix would need a prefix per domain: that is a new amendment, not part of #233 |
 | `PROBLEM_SLUG_PATTERN` | `^[a-z0-9]+(?:-[a-z0-9]+)*$` | Lowercase letters and digits, single hyphens between them |
 | `PROBLEM_SLUG_MAX` | 100 | Characters |
