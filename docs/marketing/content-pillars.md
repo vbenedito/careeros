@@ -122,7 +122,7 @@ Why these four. The platform study found white space for "measure your real stud
 - Say "100% private", "no cookies", "no data collected", "fully anonymous", "open source", "never sees".
 - Name or mock another tool, or quote its reviews.
 - Show real browsing, emails or a real account.
-- Mention the LeetCode per-problem feature or its stored problem name until it ships (brand profile section 11).
+- Promote the LeetCode per-problem feature until extension 0.3.0 is live in the Chrome Web Store (brand profile section 11). The privacy line about the opt-in problem name (above) is always allowed, because it is true.
 - Answer a question we cannot check. Say "We are not sure" first (voice, section 2).
 
 **Success signal (for #190 and #191).** Saves, and clicks on the profile link and the UTM link. A privacy post that gets saves but no clicks still builds trust; judge it at the review.

@@ -32,7 +32,7 @@ Every example below uses only true product facts (brand profile, section 6) or i
 
 - **Is:** a number, a name or a rule where other brands use an adjective. It says what is stored and what is not.
 - **Is not:** vague, rounded up, or bigger than the truth.
-- **Example:** "It stores the site name and the start and end times. Nothing else about your browsing."
+- **Example:** "It stores the site name and the start and end times. Nothing else about your browsing, unless you turn on Track LeetCode problems."
 - **Not this:** "Your privacy is our top priority."
 
 ### Respectful
