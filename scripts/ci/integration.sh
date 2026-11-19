@@ -31,7 +31,18 @@ scripts/ci/wait-for-server.sh http://localhost:3000/sign-in "$server" web-integr
 export DASHBOARD_URL=$SITE_URL API_URL PUBLISHABLE_KEY SECRET_KEY DB_CONTAINER=supabase_db_careeros
 pnpm --filter @careeros/web test:integration
 # The admin test rendered /admin as an admin with the canary token configured (its HTML is checked there).
-if grep -rqF -- "$OPS_LEDGER_TOKEN" apps/web/.next web-integration-server.log; then
+# A missing build or an empty log must fail, not pass as "no leak" (grep exit 2 = error).
+test -d apps/web/.next && test -s web-integration-server.log || {
+  echo "Canary check: apps/web/.next or the server log is missing" >&2
+  exit 1
+}
+canary_rc=0
+grep -rqF -- "$OPS_LEDGER_TOKEN" apps/web/.next web-integration-server.log || canary_rc=$?
+if [ "$canary_rc" -gt 1 ]; then
+  echo "Canary check: grep failed (exit $canary_rc)" >&2
+  exit 1
+fi
+if [ "$canary_rc" -eq 0 ]; then
   echo "OPS_LEDGER_TOKEN canary found in the build output or the server log" >&2
   exit 1
 fi
