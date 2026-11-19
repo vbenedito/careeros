@@ -29,7 +29,7 @@ export const MANIFEST_KEYS: Record<BuildMode, { key: string; id: string }> = {
 
 /** Short description: manifest and Chrome Web Store summary (≤ 132 characters, STORE-02). */
 export const STORE_DESCRIPTION =
-  "Automatic study time tracker for interview prep. Counts only on the sites you choose: no URLs, no page content.";
+  "Automatic study time tracker for interview prep. Counts only on the sites you choose. Never reads page content.";
 
 /**
  * STORE-01: the Chrome Web Store assigns the extension ID itself and rejects a manifest `key`,

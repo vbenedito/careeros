@@ -11,7 +11,7 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 | Field | Value |
 |---|---|
 | Name | CareerOS (from the manifest) |
-| Summary | Automatic study time tracker for interview prep. Counts only on the sites you choose: no URLs, no page content. (from the manifest, 111 characters) |
+| Summary | Automatic study time tracker for interview prep. Counts only on the sites you choose. Never reads page content. (from the manifest, 111 characters; changed in 0.3.0, PRB-17) |
 | Category | Productivity → Workflow & planning (alternative: Education) |
 | Language | English |
 | Store icon | `assets/icon-128.png` |
@@ -29,6 +29,8 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Release 0.2.2 (2026-11-12): sync and sign-in reliability (#150), popup states (#151). Same permissions and description as 0.2.1; if 0.2.1 is still in review, 0.2.2 replaces it.
 
+> Release 0.3.0 (PRB-17, #182): LeetCode problem tracking. New summary (in the package), description bullets below, and in the **Privacy practices** tab the `tabs` justification and the "Web history" row. **Change the description and privacy answers in the store dashboard when you upload the 0.3.0 package.** Same permissions as 0.2.3.
+
 > Release 0.2.3 (2026-11-17): reliability from the v0 grill review (#163): token refresh timeout, cross-account guard, Disconnect while syncing, protocol forward-compatibility. Same permissions and description as 0.2.2.
 
 ```
@@ -42,9 +44,10 @@ HOW IT WORKS
 • Step away and it pauses after 60 seconds. A study tab playing sound (a video, not muted) keeps counting for up to 15 minutes without input.
 • Sessions are saved on your computer first and uploaded every few minutes; offline, they wait up to 30 days.
 • See your week on the web dashboard: time per day and per platform, across every computer you use.
+• Optional: turn on Track LeetCode problems in Settings to see your time per problem.
 
 PRIVATE BY DESIGN
-• For your study it keeps only the site name, when you started and stopped, and a random ID for the computer.
+• For your study it keeps only the site name, when you started and stopped, and a random ID for the computer. If you turn on Track LeetCode problems (off by default), it also keeps the problem name from a LeetCode address, for example two-sum.
 • It reads the active tab's address only to get the site name. It never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
 • No ads, nothing sold. The extension sends no analytics. Delete your account and your data anytime (see the privacy policy).
 
@@ -64,7 +67,7 @@ CareerOS measures how much time the user spends on the study websites they choos
 
 | Permission | Justification |
 |---|---|
-| `tabs` | Read the active tab's address to get its site name and check whether it is one of the user's chosen study sites. The address is never stored or sent; only the name of a chosen site is recorded. |
+| `tabs` | Read the active tab's address to get its site name and check whether it is one of the user's chosen study sites. The address is never stored or sent; only the name of a chosen site is recorded, and, if the user turns on LeetCode problem tracking, the problem name from a leetcode.com address. |
 | `idle` | Pause tracking when the user has not used the keyboard or mouse for 60 seconds, so idle time is not counted as study. |
 | `alarms` | Run a periodic check that keeps tracking accurate after sleep or browser restarts, and upload finished sessions every few minutes. |
 | `storage` | Keep the user's sign-in, settings, chosen sites and not-yet-uploaded sessions on their computer, so no study time is lost offline. |
@@ -77,7 +80,7 @@ CareerOS measures how much time the user spends on the study websites they choos
 |---|---|---|
 | Personally identifiable information | Yes | The account email, shown in the popup and used to sign in |
 | Authentication information | Yes | The extension's own sign-in session (access and refresh tokens), stored locally |
-| Web history | Yes | Only the site name of the user's chosen study sites, with start and end times. No full addresses, no other sites |
+| Web history | Yes | Only the site name of the user's chosen study sites, with start and end times, and, only if the user turns it on, the LeetCode problem name (for example two-sum). No full addresses, no other sites |
 | Health, financial, personal communications, location, user activity, website content | No | — |
 
 **Certifications (all three):** data is not sold to third parties; not used or transferred for purposes unrelated to the single purpose; not used or transferred to determine creditworthiness or for lending.

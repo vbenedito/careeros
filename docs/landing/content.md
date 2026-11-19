@@ -4,7 +4,9 @@ Status: **Decided** (tech lead, by delegation from the product owner, 2026-11-10
 
 > **Status 2026-11-11 (#131):** implemented and live at `/` (#125, #127). The binding content rules are LAND-03; the approved design and the shipped page may word sections differently from this plan.
 >
-> **Update 2026-11-11 (#140, product owner):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2a′). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
+> **Update 2026-11-19 (#196, product owner):** the privacy badge row (§4.2a′) is removed. FAQ 1 and the hero demo label now name the optional LeetCode problem name (PRB). Page order: header · hero · site belt · problem · bento · how it works · study hours · the rules · FAQ · final CTA · footer.
+>
+> **Update 2026-11-11 (#140, product owner; badge row superseded 2026-11-19):** the privacy section (§4.6) is removed; privacy is now a badge row under the hero (§4.2a′). A new study-hours section follows How it works (§4.3a). Page order: header · hero · privacy badges · site belt · problem · bento (three cards) · how it works · study hours · the rules · FAQ · final CTA · footer.
 
 Every claim below is checked against the v0 specs (IDs in brackets). Anything not in v0 stays off the page: no goals, streaks, AI insights, mobile apps, user counts or testimonials.
 
@@ -21,7 +23,7 @@ Every claim below is checked against the v0 specs (IDs in brackets). Anything no
 Supporting points:
 1. **Automatic:** no timer to start or stop. It counts while a chosen site is the tab you're looking at and you're active, pauses after 60 seconds without input, and keeps counting while the study tab plays sound (a video, unmuted), for up to 15 minutes without input (TRK-01..07).
 2. **Only your study sites:** you pick the sites (up to 12 today, built from `ENTITLEMENTS`, ENT-10); everything else is ignored (TRK-03, DATA-01).
-3. **Private by design:** for your study, it stores only the site name and the start and end times. It reads the tab's address only to get the site name, and never stores or sends the address, page titles, page content or other sites; no incognito; no ad trackers, only cookieless page analytics on the website (SEC-15, amended 2026-11-11, #137; the dashboard uses session cookies for sign-in, so the page never says "no cookies"); delete your account anytime (TRK-02, SEC-01, SEC-15, DASH-14).
+3. **Private by design:** for your study, it stores only the site name and the start and end times, plus the LeetCode problem name (for example `two-sum`) if you turn on Track LeetCode problems (PRB-06, PRB-15). It reads the tab's address only to get the site name, and never stores or sends the address, page titles, page content or other sites; no incognito; no ad trackers, only cookieless page analytics on the website (SEC-15, amended 2026-11-11, #137; the dashboard uses session cookies for sign-in, so the page never says "no cookies"); delete your account anytime (TRK-02, SEC-01, SEC-15, DASH-14).
 4. **A clear picture:** time per day and per platform, week by week or month by month, in light or dark (DASH-04..10).
 5. **Built not to lose or double-count time:** works offline and uploads later; browser restarts and sleep don't double-count (SYNC-01..08, TRK-12..15). (Sessions the server refuses are kept and shown as not synced; disconnecting asks before discarding unsynced time.)
 
@@ -54,8 +56,8 @@ Alternatives for the H1, to choose with the design (#100):
 ### 4.2a Site belt (below the hero)
 Monospace, scrolling: leetcode.com · neetcode.io · greatfrontend.com · docs.python.org · developer.mozilla.org · react.dev · coursera.org · github.com. Note under it: "Examples. Any site you study on works; you choose."
 
-### 4.2a′ Privacy badges (directly under the hero, #140)
-One line of two pills, a list: **Never reads page content** · **No ad trackers**. (Amended 2026-11-17, #176: "No URLs stored" removed by the product owner; implemented in #181; texts rethought in #196.) No "no cookies" claim (the dashboard uses session cookies).
+### 4.2a′ Privacy badges (removed 2026-11-19, #196, product owner; kept for the record)
+Was: one line of two pills, a list: **Never reads page content** · **No ad trackers**. (Amended 2026-11-17, #176: "No URLs stored" removed by the product owner; implemented in #181; texts rethought in #196.) No "no cookies" claim (the dashboard uses session cookies).
 
 ### 4.2b Engine log (in How it works, beside the steps)
 Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session never exceeds 30 minutes (TRK-08):
@@ -97,7 +99,7 @@ Sample times; each line is a real rule (TRK-03/05, SYNC-01/02); a saved session 
 - **Link:** Read the privacy policy →
 
 ### 4.7 FAQ
-1. **Does CareerOS read the pages I visit?** No. It reads the active tab's address only to get the site name (for example `leetcode.com`) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. (Because of this, Chrome describes the permission as reading your browsing history.)
+1. **Does CareerOS read the pages I visit?** No. It reads the active tab's address only to get the site name (for example `leetcode.com`) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. One exception, which you control: if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address (for example `two-sum`). (Because it reads the address, Chrome describes the permission as reading your browsing history.)
 2. **Which sites can I track?** Any site you add, up to 12 (built from `ENTITLEMENTS`, ENT-10). Subdomains count too: adding `python.org` also covers `docs.python.org`.
 3. **What happens when I step away?** After 60 seconds without keyboard or mouse input, tracking pauses. If the study tab in front of you is playing sound (a video, not muted), it keeps counting for up to 15 minutes without input.
 4. **Does it work offline?** Yes. Time is saved on your computer and uploaded when you're back online.

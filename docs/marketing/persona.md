@@ -61,7 +61,7 @@ Answers come from the brand profile (sections 2, 3 and 6). Do not go beyond them
 
 | Objection | Honest answer |
 |---|---|
-| "Privacy: will it watch everything I do?" | No. It counts only on sites you choose, up to 12. It stores only the site name and the start and end times. It never stores full web addresses, page titles, page content or keystrokes. It never tracks incognito windows. The code is public on GitHub. |
+| "Privacy: will it watch everything I do?" | No. It counts only on sites you choose, up to 12. It stores the site name and the start and end times. Only if you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum. It never stores full web addresses, page titles, page content or keystrokes. It never tracks incognito windows. The code is public on GitHub. |
 | "The tab permission. It sounds like it can read my tabs." | The extension asks for four permissions: `tabs`, `idle`, `alarms` and `storage`. It has no content scripts and no host permissions, so it does not read page content. The `tabs` permission is used to know the site name of your active tab. Sites you did not choose are ignored. (Say only what SEC-01 and SEC-03 say.) |
 | "Another tool to remember. I already forget timers." | There is no timer to start. You study as usual. It counts while you are active and pauses after 60 seconds without keyboard or mouse input. |
 | "It will count when I am not really studying." | Not fully: it pauses after 60 seconds of no input. It keeps counting while a study tab plays sound, for up to 15 minutes without input. Say this plainly. It measures active time on chosen sites, not focus or learning. |

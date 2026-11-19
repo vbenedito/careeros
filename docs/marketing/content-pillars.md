@@ -110,7 +110,7 @@ Why these four. The platform study found white space for "measure your real stud
 
 **May use.** Only brand profile section 6 and the voice page "Privacy, exactly" and "Idle rules, exactly":
 - Counts only on sites you choose, up to 12.
-- About your study time, it stores only the site name and the start and end times. (Your account email and sign-in provider are stored too. Say so if asked.)
+- About your study time, it stores only the site name and the start and end times. If you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum. (Your account email and sign-in provider are stored too. Say so if asked.)
 - Never stores full web addresses, page titles, page content or keystrokes.
 - Never tracks incognito windows. No ad trackers.
 - Permissions: `tabs`, `idle`, `alarms`, `storage`. It does not read page content (SEC-01, SEC-03).
@@ -122,7 +122,7 @@ Why these four. The platform study found white space for "measure your real stud
 - Say "100% private", "no cookies", "no data collected", "fully anonymous", "open source", "never sees".
 - Name or mock another tool, or quote its reviews.
 - Show real browsing, emails or a real account.
-- Mention the LeetCode per-problem feature or its stored problem name until it ships (brand profile section 11).
+- Promote the LeetCode per-problem feature until extension 0.3.0 is live in the Chrome Web Store (brand profile section 11). The privacy line about the opt-in problem name (above) is always allowed, because it is true.
 - Answer a question we cannot check. Say "We are not sure" first (voice, section 2).
 
 **Success signal (for #190 and #191).** Saves, and clicks on the profile link and the UTM link. A privacy post that gets saves but no clicks still builds trust; judge it at the review.

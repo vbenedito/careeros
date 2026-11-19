@@ -39,7 +39,7 @@ Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and aut
   1. the document scrolls horizontally (`scrollWidth` > viewport width);
   2. a visible element extends beyond the viewport. Exempt only: content of a clipping box (`overflow` hidden/clip) or horizontal scroller (`overflow` auto/scroll) that itself fits the viewport, and visually hidden `.sr` / `.sr-only` elements. Fixed elements are always held to the viewport;
   3. text is clipped, by its own box or by a clipping ancestor (an ellipsis on the text's own box and scrollers are allowed). The landing site belt is skipped while it scrolls (a marquee) and checked with reduced motion;
-  4. a group meant to be centred is not: each line of its children is centred in its parent's content box ±2 px (landing: the final CTA pair and the privacy badge row);
+  4. a group meant to be centred is not: each line of its children is centred in its parent's content box ±2 px (landing: the final CTA pair);
   5. at widths ≤ 768 px, a button, `a.btn`, `[role=button]` or the label of a checkbox/radio toggle is under 44 px tall.
 
   Each check saves full-page PNGs to `responsive-screenshots/`; CI uploads them as the artifacts `responsive-screenshots-landing` and `responsive-screenshots-app` (14 days).
