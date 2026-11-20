@@ -8,6 +8,8 @@ Amended 2026-11-12 (#58, #65): "Syncing…" footer state and the clock hint (pro
 
 Amended 2026-11-12 (#60, #65): the popup renders these states with exact texts ("Syncing…", the clock hint, the Disconnect confirmation with **Try syncing again**), a note on broad sites under Add site, "today" rolling over at midnight while open, Add-site errors cleared when the status changes, visible errors for `NOT_CONFIGURED` and unanswered commands, and Zod without its JIT probe (CSP).
 
+Amended 2026-11-19 (#233, proposal): EXT-UI-11: the problem is identified by domain + slug ([PRB-14](../v1/01-problems.md), PRB-19); the displayed line does not change. Status: **Proposed**.
+
 Amended 2026-11-17 (#176): for v1 — the current LeetCode problem under the current session (EXT-UI-11, [PRB](../v1/01-problems.md)); the site-limit message uses the number from the server (EXT-UI-07, [ENT](../v1/02-entitlements.md)); a line for time dropped after the clock moved back (SYNC-05c).
 
 Amended 2026-11-18 (#180): EXT-UI-11, the site-limit message (EXT-UI-07) and the clock-moved-back line implemented in the popup, no longer proposed. The line's dismiss button shows "✕" (`aria-label="Dismiss"`); it is shown only while an account is connected. The limit error carries `limit` from the error details to the popup (`DOMAINS_ADD` reply); the popup command `OVERLAP_DISMISS { shownS }` calls `dismissOverlap`.

@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-17)** — shared understanding confirmed; gate 5 issue list approved · Owner: product owner · Tech lead: Claude · Started: 2026-11-17
 
+Amended 2026-11-19 (#233, proposal): D11 (and D15, D16, D20 where they say LeetCode) now also cover **NeetCode** (`neetcode.io`), by product-owner decision of 2026-11-19 on issue #233: NeetCode ships in extension 0.3.1 after 0.3.0 (LeetCode only, as built); one account setting for both sites, renamed (label "Track coding problems" approved 2026-11-19); the dashboard lists problems per site (domain + slug) with no merging across sites. Proposal in [01-problems](01-problems.md) (PRB-18..22). Status of the amended decisions: **Proposed** until the product owner approves the PR.
+
 This page records the v1 discovery session: each question, the tech lead's recommendation, the product owner's answer, and open points. It is not a spec. Specs, ADRs and issues come after the product owner confirms a shared understanding (gate 5).
 
 ## Settled decisions
@@ -18,11 +20,11 @@ This page records the v1 discovery session: each question, the tech lead's recom
 | D8 | Social media runs as a **CareerOS brand account** (no personal face). | 2026-11-17 |
 | D9 | Platforms: the wish is all platforms, but the choice comes **after a study** of which platforms fit best (first step of the marketing process). | 2026-11-17 |
 | D10 | Marketing language: **English**. | 2026-11-17 |
-| D11 | LeetCode detection in v1: **time per problem from the URL** only (option a). No solved status, no difficulty or topics in v1. Changes SEC-01 (problem slug stored, LeetCode only). | 2026-11-17 |
+| D11 | LeetCode detection in v1: **time per problem from the URL** only (option a). No solved status, no difficulty or topics in v1. Changes SEC-01 (problem slug stored, LeetCode only). *Amended 2026-11-19 (#233, proposal): LeetCode and NeetCode, see the line under the status; D15, D16 and D20 follow.* | 2026-11-17 |
 | D12 | Marketing documents are **public** (in the repo). Drafts and the calendar stay outside the repo (D17). | 2026-11-17 |
 | D13 | Videos start as **text on screen + music** (no voice); test an **AI voice** later. The tech lead picks the marketing skills, finds examples and the cheapest way to start. | 2026-11-17 |
 | D14 | **Free tools only** at the start; fewer posts, good quality; the goal is to measure. | 2026-11-17 |
-| D15 | LeetCode problems are shown in the **dashboard** (list per week/month: name, total time, last day) **and the popup** (current problem, time today). | 2026-11-17 |
+| D15 | *(#233, proposal: LeetCode and NeetCode problems, per site)* LeetCode problems are shown in the **dashboard** (list per week/month: name, total time, last day) **and the popup** (current problem, time today). | 2026-11-17 |
 | D17 | `docs/marketing/` holds persona, voice, platform study and video formats. Drafts and the content calendar stay **outside the repo**. | 2026-11-17 |
 | D18 | Marketing process approved: brand-profile → audience-research (persona) → voice-builder → competitor-analysis + social-strategy (platform study) → content-pillars → short-form-video-script + capcut (formats, example scripts) → goals-and-kpis → content-calendar. The product owner approves each document before the next step. | 2026-11-17 |
 | D19 | Marketing starts **now**, without waiting for the custom domain. The product owner decides on the domain; if it is ready before the social accounts are created, they use it. | 2026-11-17 |

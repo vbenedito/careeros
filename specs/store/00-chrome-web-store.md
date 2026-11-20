@@ -6,6 +6,8 @@ Amended 2026-11-11 (#131): STORE-01 and STORE-05 reworded so they read together;
 
 Amended 2026-11-12 (#156): STORE-08 checks the store package in CI.
 
+Amended 2026-11-19 (#233, proposal): the same check applies before extension 0.3.1 (NeetCode, [PRB-21](../v1/01-problems.md)): listing text and privacy answers name NeetCode; permissions unchanged. Status: **Proposed**.
+
 Amended 2026-11-17 (#176): before the release with LeetCode problems (#182), the listing text and the privacy answers are checked and updated for the problem slug ([PRB-17](../v1/01-problems.md)).
 
 - **STORE-01** The store package is the production build without the manifest `key`: the store rejects a `key` in an upload and assigns the ID itself. `pnpm --filter @careeros/extension release:store` produces `careeros-extension-<version>-store.zip`. Unpacked development and production builds keep their pinned keys (ENV-05); for production that key is the store item's own public key (STORE-05), so both share one ID.
