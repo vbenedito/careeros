@@ -825,18 +825,18 @@ describe("LeetCode problems (specs/v1/01-problems.md PRB-04..09)", () => {
     expect(sim.state.open?.problem).toBe("two-sum");
   });
 
-  it("PRB-05 the tab must belong to the tracked domain leetcode.com itself", () => {
+  it("PRB-05 PRB-18 the tab must belong to a tracked domain of PROBLEM_DOMAINS itself", () => {
     const sim = new Sim();
     sim.send(0, { type: "START" });
     sim.send(0, { type: "AUTH", connected: true });
     sim.send(0, { type: "SETTINGS", trackingEnabled: true });
     sim.send(0, { type: "PROBLEMS", enabled: true });
-    sim.send(0, { type: "DOMAINS", domains: ["leetcode.cn", "neetcode.io"] });
+    sim.send(0, { type: "DOMAINS", domains: ["leetcode.cn", "app.neetcode.io"] });
     sim.send(0, { type: "IDLE", state: "active" });
     sim.send(0, { type: "TAB", tab: tab("https://leetcode.cn/problems/two-sum/") });
     expect(sim.state.open).toMatchObject({ domain: "leetcode.cn", problem: null });
-    sim.send(10, { type: "TAB", tab: tab("https://neetcode.io/problems/two-sum/") });
-    expect(sim.state.open).toMatchObject({ domain: "neetcode.io", problem: null });
+    sim.send(10, { type: "TAB", tab: tab("https://app.neetcode.io/problems/two-sum/") });
+    expect(sim.state.open).toMatchObject({ domain: "app.neetcode.io", problem: null });
   });
 
   it("PRB-04 PRB-08 a pause or a disconnect closes the interval; no problem without a target", () => {
@@ -867,5 +867,103 @@ describe("LeetCode problems (specs/v1/01-problems.md PRB-04..09)", () => {
     sim.state = { ...sim.state, open: legacyOpen };
     sim.send(60, { type: "HEARTBEAT", tab: LEETCODE, idle: "active", mediaIdle: "active" });
     expect(sim.emitted()).toEqual([]);
+  });
+});
+
+describe("NeetCode problems (specs/v1/01-problems.md PRB-05, PRB-08, PRB-18, PRB-19)", () => {
+  const NC = tab("https://www.neetcode.io/problems/two-integer-sum/question");
+  const NC_PLAIN = tab("https://neetcode.io/problems/two-integer-sum");
+  const LC = tab("https://leetcode.com/problems/two-sum/description/");
+  const NEWS_TAB = tab("https://news.example/today");
+
+  /** Connected, enabled, the given tracked domains, setting on (or as given), on `at` at t=0. */
+  function browsing(domains: string[], at: TabSnapshot, setting: boolean | "unread" = true): Sim {
+    const sim = new Sim();
+    sim.send(0, { type: "START" });
+    sim.send(0, { type: "AUTH", connected: true });
+    sim.send(0, { type: "SETTINGS", trackingEnabled: true });
+    sim.send(0, { type: "DOMAINS", domains });
+    sim.send(0, { type: "IDLE", state: "active" });
+    if (setting !== "unread") sim.send(0, { type: "PROBLEMS", enabled: setting });
+    sim.send(0, { type: "TAB", tab: at });
+    return sim;
+  }
+  const problems = (sim: Sim) => sim.emitted().map((i) => i.problem ?? null);
+
+  it("PRB-05 acceptance 8 PRB-06 600 s on a NeetCode problem page are stored under neetcode.io with the slug only (with and without /question)", () => {
+    for (const page of [NC, NC_PLAIN]) {
+      const sim = browsing(["neetcode.io"], page);
+      sim.heartbeats(0, 600, page, "active");
+      sim.send(600, { type: "TAB", tab: NEWS_TAB });
+      expect(sim.intervals()).toEqual([["neetcode.io", 0, 600]]);
+      expect(problems(sim)).toEqual(["two-integer-sum"]);
+      const everything = JSON.stringify([sim.state, sim.effects]);
+      expect(everything).not.toMatch(/problems|question|www\.|news\.example/);
+      for (const i of sim.emitted()) expect(IntervalSchema.safeParse(i).success).toBe(true);
+    }
+  });
+
+  it("PRB-05 acceptance 9 lookalike hosts give no problem and no time on neetcode.io", () => {
+    for (const host of ["neetcode.io.evil.com", "notneetcode.io", "neetcode.com"]) {
+      const lookalike = tab(`https://${host}/problems/two-integer-sum/question`);
+      const sim = browsing(["neetcode.io"], lookalike);
+      sim.heartbeats(0, 300, lookalike, "active");
+      sim.send(300, { type: "TAB", tab: NEWS_TAB });
+      expect(sim.emitted(), host).toEqual([]);
+    }
+  });
+
+  it("PRB-05 acceptance 9 PRB-18 only app.neetcode.io tracked: the time is kept, with no problem", () => {
+    const sim = browsing(["app.neetcode.io"], NC);
+    sim.heartbeats(
+      0,
+      300,
+      tab("https://app.neetcode.io/problems/two-integer-sum/question"),
+      "active",
+    );
+    sim.send(300, { type: "TAB", tab: NEWS_TAB });
+    expect(sim.emitted().every((i) => i.domain === "app.neetcode.io" && !("problem" in i))).toBe(
+      true,
+    );
+  });
+
+  it("PRB-05 PRB-18 an uppercase slug gives no problem (time kept)", () => {
+    const upper = tab("https://neetcode.io/problems/Two-Integer-Sum/question");
+    const sim = browsing(["neetcode.io"], upper);
+    sim.heartbeats(0, 300, upper, "active");
+    sim.send(300, { type: "TAB", tab: NEWS_TAB });
+    expect(sim.intervals()).toEqual([["neetcode.io", 0, 300]]);
+    expect(problems(sim)).toEqual([null]);
+  });
+
+  it("PRB-05 acceptance 12 PRB-07 setting off or not read: NeetCode time without a problem", () => {
+    for (const setting of [false, "unread"] as const) {
+      const sim = browsing(["neetcode.io"], NC, setting);
+      sim.heartbeats(0, 600, NC, "active");
+      sim.send(600, { type: "TAB", tab: NEWS_TAB });
+      expect(sim.intervals()).toEqual([["neetcode.io", 0, 600]]);
+      expect(sim.emitted().map((i) => "problem" in i)).toEqual([false]);
+    }
+  });
+
+  it("PRB-05 acceptance 12 neetcode.io not tracked: no problem even with the setting on", () => {
+    const sim = browsing(["leetcode.com"], NC);
+    sim.heartbeats(0, 300, NC, "active");
+    sim.send(300, { type: "TAB", tab: NEWS_TAB });
+    expect(sim.emitted()).toEqual([]);
+  });
+
+  it("PRB-08 PRB-19 the same slug on another site is a problem change: the interval splits", () => {
+    const sim = browsing(["leetcode.com", "neetcode.io"], LC);
+    const sameSlugOnNeetCode = tab("https://neetcode.io/problems/two-sum/question");
+    sim.heartbeats(0, 120, LC, "active");
+    sim.send(120, { type: "TAB", tab: sameSlugOnNeetCode });
+    sim.heartbeats(120, 300, sameSlugOnNeetCode, "active");
+    sim.send(300, { type: "TAB", tab: NEWS_TAB });
+    expect(sim.intervals()).toEqual([
+      ["leetcode.com", 0, 120],
+      ["neetcode.io", 120, 300],
+    ]);
+    expect(problems(sim)).toEqual(["two-sum", "two-sum"]);
   });
 });

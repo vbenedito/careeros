@@ -10,7 +10,7 @@ import {
   DomainSchema,
   type Interval,
   IntervalSchema,
-  PROBLEMS,
+  isProblemDomain,
   ProblemSlugSchema,
 } from "@careeros/shared";
 import { z } from "zod";
@@ -55,7 +55,7 @@ export const EngineStateSchema = z.object({
       splitOpened: z.boolean().default(false),
       startedAt: epoch,
     })
-    .refine((o) => o.problem === null || o.domain === PROBLEMS.PROBLEM_DOMAIN)
+    .refine((o) => o.problem === null || isProblemDomain(o.domain))
     .nullable(),
   lastHeartbeatAt: nullableEpoch,
   lastInputAt: nullableEpoch,
@@ -67,6 +67,21 @@ export function parseEngineState(value: unknown): EngineState {
   return parsed.success ? parsed.data : INITIAL_ENGINE_STATE;
 }
 
+/**
+ * PRB-20: an interval whose `problem` sits on a domain outside PROBLEM_DOMAINS (for example a
+ * NeetCode interval queued by 0.3.1 and read by 0.3.0 after a rollback) keeps its time and
+ * loses only the problem; it is never dropped for that reason. Nothing is logged.
+ */
+export function parseIntervalTolerant(item: unknown): Interval | null {
+  const parsed = IntervalSchema.safeParse(item);
+  if (parsed.success) return parsed.data;
+  if (typeof item !== "object" || item === null || !("problem" in item)) return null;
+  const { problem: _problem, ...rest } = item as Record<string, unknown>;
+  if (typeof rest.domain !== "string" || isProblemDomain(rest.domain)) return null;
+  const again = IntervalSchema.safeParse(rest);
+  return again.success ? again.data : null;
+}
+
 /** Valid intervals only: a corrupted entry must never block the queue. */
 export function parseOutbox(value: unknown): Interval[] {
   return parseOutboxCounted(value).items;
@@ -76,8 +91,8 @@ export function parseOutbox(value: unknown): Interval[] {
 export function parseOutboxCounted(value: unknown): { items: Interval[]; invalid: number } {
   if (!Array.isArray(value)) return { items: [], invalid: 0 };
   const items = value.flatMap((item) => {
-    const parsed = IntervalSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
+    const interval = parseIntervalTolerant(item);
+    return interval ? [interval] : [];
   });
   return { items, invalid: value.length - items.length };
 }
@@ -92,7 +107,7 @@ export interface DeferredInterval {
 }
 
 const DeferredSchema = z.object({
-  interval: IntervalSchema,
+  interval: z.unknown(),
   retryAt: epoch,
   attempts: z.number().int().positive(),
 });
@@ -102,7 +117,9 @@ export function parseDeferred(value: unknown): { items: DeferredInterval[]; inva
   if (!Array.isArray(value)) return { items: [], invalid: 0 };
   const items = value.flatMap((item) => {
     const parsed = DeferredSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
+    if (!parsed.success) return [];
+    const interval = parseIntervalTolerant(parsed.data.interval);
+    return interval ? [{ ...parsed.data, interval }] : [];
   });
   return { items, invalid: value.length - items.length };
 }

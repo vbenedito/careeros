@@ -9,8 +9,8 @@
 export const EXTENSION_FEATURES = {
   /** PRB-01..23: the extension reads the setting and attaches problem slugs (#179, 0.3.0). */
   problemTracking: "0.3.0",
-  // NC-b/NC-c (#233, #237): NeetCode support needs 0.3.1; the NeetCode issues add its own minimum
-  // here (for example `problemTrackingNeetCode: "0.3.1"`) and gate their copy and UI with it.
+  /** PRB-18..22: problem tracking on NeetCode needs extension 0.3.1 (#233, NC-b). */
+  problemTrackingNeetCode: "0.3.1",
 } as const;
 
 export type ExtensionFeature = keyof typeof EXTENSION_FEATURES;

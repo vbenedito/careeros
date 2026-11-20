@@ -49,7 +49,7 @@ export interface Signals {
   focusedDomain: string | null;
   /**
    * PRB-05: the problem slug of that tab, or null. Set only while `trackProblems` is true and
-   * the tab's tracked domain is PROBLEM_DOMAIN; the URL itself is never kept (PRB-06).
+   * the tab's tracked domain is one of PROBLEM_DOMAINS (the slug belongs to focusedDomain, PRB-19); the URL itself is never kept (PRB-06).
    */
   focusedProblem: string | null;
   /**

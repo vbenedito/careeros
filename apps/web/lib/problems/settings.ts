@@ -38,7 +38,8 @@ export const EXTENSION_FOLLOWS_NOTE = `The extension updates within about ${SYNC
 
 /** DASH-16: the card needs the problem domain itself in the tracked sites (PRB-05). */
 export function isProblemDomainTracked(domains: readonly string[]): boolean {
-  return domains.includes(PROBLEMS.PROBLEM_DOMAIN);
+  // Behaviour kept for LeetCode (NC-b); the per-site check and message are NC-c (DASH-16).
+  return domains.includes(PROBLEMS.PROBLEM_DOMAINS[0]);
 }
 
 export function problemSettingErrorMessage(code: string | undefined, status: number | null) {

@@ -73,8 +73,7 @@ export const ENTITLEMENTS = {
  * and the length in study_session_problems and ingest v2; db-parity.test.ts keeps them equal.
  */
 export const PROBLEMS = {
-  PROBLEM_DOMAIN: "leetcode.com",
-  /** PRB-18: every site whose tabs can carry a problem (#233). PROBLEM_DOMAIN goes in NC-b. */
+  /** PRB-18: the one list of sites whose tabs can carry a problem (#233). */
   PROBLEM_DOMAINS: ["leetcode.com", "neetcode.io"],
   PROBLEM_PATH_PREFIX: "/problems/",
   PROBLEM_SLUG_PATTERN: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,

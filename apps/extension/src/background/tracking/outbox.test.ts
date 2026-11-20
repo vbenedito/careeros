@@ -10,6 +10,7 @@ import {
 } from "./keys";
 import { createOutbox, deferredDue } from "./outbox";
 import { createSerialQueue } from "./queue";
+import { parseDeferred, parseOutboxCounted } from "./store";
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0); // local day = UTC day in this test
@@ -23,6 +24,11 @@ function interval(startMs: number, minutes = 10): Interval {
     started_at: iso(startMs),
     ended_at: iso(startMs + minutes * 60_000),
   };
+}
+
+function withoutProblem<T extends { problem?: string }>(item: T): Omit<T, "problem"> {
+  const { problem: _problem, ...rest } = item;
+  return rest;
 }
 
 /** SYNC-05c: the reasons of an ingest v2 reply. */
@@ -39,6 +45,43 @@ function setup(initial: Record<string, unknown> = {}) {
   });
   return { area, outbox };
 }
+
+describe("tolerant outbox parse (PRB-20)", () => {
+  const base = (domain: string) => ({ ...interval(NOW - 3000_000), domain });
+
+  it("PRB-20 an interval whose problem is on a domain outside PROBLEM_DOMAINS keeps its time and loses only the problem", () => {
+    const neet = { ...base("neetcode.io"), problem: "two-integer-sum" };
+    const unknown = { ...base("example.com"), problem: "two-sum" };
+    const lookalike = { ...base("neetcode.io.evil.com"), problem: "two-sum" };
+    const { items, invalid } = parseOutboxCounted([neet, unknown, lookalike]);
+    expect(invalid).toBe(0);
+    expect(items[0]).toEqual(neet); // a listed domain keeps its problem
+    expect(items[1]).toEqual(withoutProblem(unknown));
+    expect(items[2]).toEqual(withoutProblem(lookalike));
+    expect(items.map((i) => i.started_at)).toEqual(
+      [neet, unknown, lookalike].map((i) => i.started_at),
+    );
+  });
+
+  it("PRB-20 an invalid slug or a broken interval is still dropped; only the unknown-domain problem is tolerated", () => {
+    const badSlug = { ...base("leetcode.com"), problem: "Two-Sum" };
+    const broken = { ...base("example.com"), problem: "two-sum", ended_at: "nope" };
+    const { items, invalid } = parseOutboxCounted([badSlug, broken]);
+    expect(items).toEqual([]);
+    expect(invalid).toBe(2);
+  });
+
+  it("PRB-20 a deferred entry with a problem on an unknown domain keeps its interval too", () => {
+    const entry = {
+      interval: { ...base("example.com"), problem: "two-sum" },
+      retryAt: NOW,
+      attempts: 1,
+    };
+    const { items, invalid } = parseDeferred([entry]);
+    expect(invalid).toBe(0);
+    expect(items[0]?.interval).toEqual(withoutProblem(entry.interval));
+  });
+});
 
 describe("local store (SYNC-01, 05, 07, 08)", () => {
   it("SYNC-03 batches are the oldest intervals, at most the batch size", async () => {

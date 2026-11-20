@@ -278,3 +278,28 @@ describe("problem line and dropped overlap (EXT-UI-11, PRB-14, SYNC-05c)", () =>
     expect(view.todaySeconds).toBe(20 * 60);
   });
 });
+
+describe("problem = domain + slug (PRB-14, PRB-19, acceptance 10)", () => {
+  it("PRB-14 PRB-19 acceptance 10 the same slug on two sites is never summed: Two Sum · 5m on NeetCode", () => {
+    const view = buildPopupView(
+      input({
+        todayIntervals: [
+          { ...iv("leetcode.com", TODAY + 3600_000, 20), problem: "two-sum" },
+          { ...iv("neetcode.io", TODAY + 2 * 3600_000, 3), problem: "two-sum" },
+          { ...iv("neetcode.io", TODAY + 3 * 3600_000, 7), problem: "two-integer-sum" },
+        ],
+        engine: {
+          ...INITIAL_ENGINE_STATE,
+          open: {
+            id: "00000000-0000-4000-8000-0000000000fe",
+            domain: "neetcode.io",
+            problem: "two-sum",
+            startedAt: (NOW - 2 * 60_000) / 1000,
+          },
+        },
+      }),
+    );
+    expect(view.current?.domain).toBe("neetcode.io");
+    expect(view.current?.problem).toEqual({ name: "Two Sum", seconds: 5 * 60 });
+  });
+});
