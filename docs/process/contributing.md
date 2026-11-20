@@ -1,6 +1,6 @@
 # Contributing
 
-Type: living · Owner: tech lead · Last reviewed: 2026-11-17
+Type: living · Owner: tech lead · Last reviewed: 2026-11-20
 
 How work moves from an idea to `main`. The rules for agents are in [AGENTS.md](../../AGENTS.md); this page is the full process behind them.
 
@@ -9,7 +9,7 @@ How work moves from an idea to `main`. The rules for agents are in [AGENTS.md](.
 | Role | Decides |
 |---|---|
 | Product owner | Scope, behavior, priorities, gate approvals, merge approval ("approved"), except marketing documents |
-| Specialist review agent | Approves marketing documents in place of the product owner ([agents.md](agents.md) §2, #198) |
+| Specialist review agent | Approves marketing documents (#198) and the wording of user-facing product copy (#239) in place of the product owner ([agents.md](agents.md) §2) |
 | Tech lead | Specs and ADRs drafts, issue breakdown, assignment of parallel work, integration and merge |
 | Reviewer | An agent or person who did not write the change |
 

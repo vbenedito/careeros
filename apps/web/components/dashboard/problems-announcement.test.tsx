@@ -35,6 +35,14 @@ describe("DASH-18 announcement card", () => {
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
   });
 
+  it("DASH-18 from 0.3.1 the text names LeetCode and NeetCode", async () => {
+    stubStorage({ getItem: () => null, setItem: () => {} });
+    await act(async () => void render(<ProblemsAnnouncement neetCode />));
+    expect(
+      screen.getByText("New: see your time per coding problem on LeetCode and NeetCode."),
+    ).toBeTruthy();
+  });
+
   it("DASH-18 Dismiss hides it and writes the localStorage flag", async () => {
     const setItem = vi.fn();
     stubStorage({ getItem: () => null, setItem });

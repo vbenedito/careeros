@@ -14,8 +14,9 @@ import {
   dismissAnnouncement,
   isAnnouncementDismissed,
 } from "@/lib/problems/announcement";
+import { problemsCopy } from "@/lib/problems/copy";
 
-export function ProblemsAnnouncement() {
+export function ProblemsAnnouncement({ neetCode = false }: { neetCode?: boolean }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => setVisible(!isAnnouncementDismissed(browserStorage())), []);
@@ -28,7 +29,7 @@ export function ProblemsAnnouncement() {
       data-testid="problems-announcement"
     >
       <p id="problems-announcement-text" className="flex-1 text-sm font-medium">
-        New: see your time per LeetCode problem.
+        {problemsCopy(neetCode).announcement}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">

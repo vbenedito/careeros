@@ -53,6 +53,10 @@ export const RULES = [
 export const FAQ_PROBLEM_EXCEPTION =
   "One exception, which you control: if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address (for example two-sum).";
 
+/** The same sentence once the store has the extension that tracks NeetCode too (0.3.1, PRB-22). */
+export const FAQ_PROBLEM_EXCEPTION_NEETCODE =
+  "One exception, which you control: if you turn on Track coding problems, it also keeps the problem name from a LeetCode or NeetCode address (for example two-sum).";
+
 /** The hero demo's sentence about what is saved; the first is the pre-#226 text. */
 export const DEMO_SAVED_PLAIN = "Only the site and the start and end times are saved.";
 export const DEMO_SAVED_WITH_PROBLEMS =
@@ -90,15 +94,25 @@ const FAQ_BASE = [
   },
 ] as const;
 
-/** The FAQ; with `problemTracking` false it reads as before #226 (no exception sentence). */
-export function faqEntries(problemTracking: boolean): readonly { q: string; a: string }[] {
+/**
+ * The FAQ; with `problemTracking` false it reads as before #226 (no exception sentence). With
+ * `neetCode` (extension 0.3.1 in the store, ENV-05c) the exception names both sites. The hero
+ * demo label does not name a site, so it needs no such gate.
+ */
+export function faqEntries(
+  problemTracking: boolean,
+  neetCode = false,
+): readonly { q: string; a: string }[] {
   const marker = "never reads page titles or content.";
   return FAQ_BASE.map((f, i) =>
     i === 0 && problemTracking
       ? {
           q: f.q,
           a: f.a
-            .replace(marker, `${marker} ${FAQ_PROBLEM_EXCEPTION}`)
+            .replace(
+              marker,
+              `${marker} ${neetCode ? FAQ_PROBLEM_EXCEPTION_NEETCODE : FAQ_PROBLEM_EXCEPTION}`,
+            )
             .replace("Because of this,", "Because it reads the address,"),
         }
       : f,

@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * DASH-16: the "Track LeetCode problems" switch (PRB-01, PRB-02). Turning it off with stored
- * slugs asks first (PRB-16): keep the history, delete it, or cancel.
+ * DASH-16: the "Track coding problems" switch ("Track LeetCode problems" before extension
+ * 0.3.1) (PRB-01, PRB-02). Turning it off with stored slugs asks first (PRB-16): keep the
+ * history, delete it, or cancel.
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { request } from "@/lib/http/request";
+import { problemsCopy } from "@/lib/problems/copy";
 import {
   EXTENSION_FOLLOWS_NOTE,
   ProblemSettingReplySchema,
@@ -27,13 +29,18 @@ import {
 export function ProblemsSetting({
   enabled,
   hasStoredProblems,
-  leetcodeTracked,
+  siteTracked,
+  neetCode = false,
 }: {
   enabled: boolean;
   /** Only this boolean reaches the browser, never a count or a slug (DASH-16). */
   hasStoredProblems: boolean;
-  leetcodeTracked: boolean;
+  /** A problem site is in the tracked sites (PRB-05). */
+  siteTracked: boolean;
+  /** EXTENSION_FEATURES.problemTrackingNeetCode is live (ENV-05c). */
+  neetCode?: boolean;
 }) {
+  const copy = problemsCopy(neetCode);
   const router = useRouter();
   const labelId = useId();
   const descriptionId = useId();
@@ -79,18 +86,17 @@ export function ProblemsSetting({
         />
         <div className="flex min-w-0 flex-col gap-1">
           <span id={labelId} className="text-sm font-medium">
-            Track LeetCode problems
+            {copy.settingLabel}
           </span>
           <p id={descriptionId} className="text-sm text-muted-foreground">
-            Saves the problem name from LeetCode addresses (like two-sum) with your study time.
-            Nothing else from the address.
+            {copy.settingHelp}
           </p>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">{EXTENSION_FOLLOWS_NOTE}</p>
-      {leetcodeTracked ? null : (
-        <p className="text-sm" data-testid="problems-needs-leetcode">
-          This needs leetcode.com in your tracked sites. Add it above.
+      {siteTracked ? null : (
+        <p className="text-sm" data-testid="problems-needs-site">
+          {copy.needsSite}
         </p>
       )}
       {error ? (

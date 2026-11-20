@@ -1,6 +1,6 @@
 /**
  * PUT /api/settings/problems { enabled, deleteHistory? } → { enabled }
- * Turns "Track LeetCode problems" on or off for the signed-in account (DASH-16, PRB-01). Calls
+ * Turns "Track coding problems" (LeetCode problems before 0.3.1) on or off for the signed-in account (DASH-16, PRB-01). Calls
  * `set_problem_tracking` (DATA-17) under the user's session: the database is the only writer of
  * the setting and the only deleter of slugs. `deleteHistory: true` needs `enabled: false`.
  * Answers 404 while the store extension is older than `EXTENSION_FEATURES.problemTracking` or

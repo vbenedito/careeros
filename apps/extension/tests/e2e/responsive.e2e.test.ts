@@ -2,7 +2,7 @@
  * TEST-01 (#142): layout of the dashboard's pages at every width in real Chromium — privacy and
  * sign-in signed out; dashboard (week and month, with sample data) and settings signed in; the
  * mobile drawer closed and open at 390 px; for an account with problem tracking on, the dashboard's
- * LeetCode problems card (PRB-11, DASH-17) and Settings' "Also delete your problem history?" dialog
+ * coding problems card (PRB-11, DASH-17) and Settings' "Also delete your problem history?" dialog
  * (PRB-16, DASH-16). Full-page screenshots go to responsive-screenshots/.
  */
 import { randomUUID } from "node:crypto";
@@ -147,7 +147,7 @@ describe("app pages responsive layout (TEST-01)", () => {
 
     it(`TEST-01 PRB-16 DASH-16 history dialog at ${width}px: no overflow, touch targets`, async () => {
       const page = await open("/settings", width, true, problemCookies);
-      const toggle = page.getByRole("switch", { name: "Track LeetCode problems" });
+      const toggle = page.getByRole("switch", { name: "Track coding problems" });
       const dialog = page.getByRole("dialog", { name: "Also delete your problem history?" });
       expect(await toggle.getAttribute("aria-checked")).toBe("true");
       // Stored problems exist, so turning the switch off asks first. A click before React has

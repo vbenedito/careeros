@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
 import { isAuthProvider } from "@/lib/auth/routes";
 import { extensionFeatureLive, extensionId } from "@/lib/env";
+import { problemsCopy } from "@/lib/problems/copy";
 import { hasStoredProblems, loadProblemSetting } from "@/lib/problems/data";
 import { isProblemDomainTracked } from "@/lib/problems/settings";
 import { providerLabel } from "@/lib/settings/account";
@@ -30,6 +31,9 @@ export default async function SettingsPage({
   // PRB-23, ENV-05c: read per request (this page is dynamic). Not live in the store = no problems card and no
   // reads for it.
   const released = extensionFeatureLive("problemTracking");
+  // ENV-05c: the NeetCode copy and the per-site check need the later store version.
+  const neetCode = released && extensionFeatureLive("problemTrackingNeetCode");
+  const copy = problemsCopy(neetCode);
   const [{ data: claims }, sites, problemSetting, storedProblems] = await Promise.all([
     supabase.auth.getClaims(),
     supabase.from("tracked_domains").select("id, domain").order("domain"),
@@ -70,7 +74,7 @@ export default async function SettingsPage({
           <Card id="problems" aria-labelledby="problems-title" className="scroll-mt-4">
             <CardHeader>
               <CardTitle id="problems-title" variant="section">
-                LeetCode problems
+                {copy.settingsTitle}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -82,9 +86,15 @@ export default async function SettingsPage({
                 <ProblemsSetting
                   enabled={problemSetting === "on"}
                   hasStoredProblems={storedProblems}
-                  // When the sites could not load, do not claim leetcode.com is missing.
-                  leetcodeTracked={
-                    sites.error ? true : isProblemDomainTracked(sites.data.map((s) => s.domain))
+                  neetCode={neetCode}
+                  // When the sites could not load, do not claim a problem site is missing.
+                  siteTracked={
+                    sites.error
+                      ? true
+                      : isProblemDomainTracked(
+                          sites.data.map((s) => s.domain),
+                          neetCode,
+                        )
                   }
                 />
               )}

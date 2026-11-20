@@ -49,7 +49,9 @@ describe("PUT /api/settings/problems body (DASH-16)", () => {
 });
 
 describe("problems card visibility (PRB-16, DASH-17)", () => {
-  const stored = [{ problem_slug: "two-sum", seconds: 600, last_day: "2026-11-17" }];
+  const stored = [
+    { domain: "leetcode.com", problem_slug: "two-sum", seconds: 600, last_day: "2026-11-17" },
+  ];
 
   it("PRB-16 the card is hidden while the setting is off, or unknown", () => {
     expect(showProblemsCard("off")).toBe(false);
@@ -68,11 +70,33 @@ describe("Settings card text (DASH-16, PRB-03, PRB-05)", () => {
     expect(EXTENSION_FOLLOWS_NOTE).toContain("about 5 minutes");
   });
 
-  it("DASH-16 the feature needs leetcode.com itself in the tracked sites (PRB-05)", () => {
+  it("DASH-16 before 0.3.1 the feature needs leetcode.com itself in the tracked sites (PRB-05)", () => {
     expect(isProblemDomainTracked(["leetcode.com", "neetcode.io"])).toBe(true);
     expect(isProblemDomainTracked(["neetcode.io"])).toBe(false);
     expect(isProblemDomainTracked(["www.leetcode.com"])).toBe(false);
     expect(isProblemDomainTracked([])).toBe(false);
+  });
+
+  it("DASH-16 PRB-22 from 0.3.1 any problem site counts: leetcode.com or neetcode.io, exactly", () => {
+    expect(isProblemDomainTracked(["leetcode.com"], true)).toBe(true);
+    expect(isProblemDomainTracked(["docs.python.org", "neetcode.io"], true)).toBe(true);
+    expect(isProblemDomainTracked([], true)).toBe(false);
+    expect(isProblemDomainTracked(["python.org"], true)).toBe(false);
+  });
+
+  it("DASH-16 lookalikes never count, at either gate level (exact match, not a substring)", () => {
+    const lookalikes = [
+      "www.neetcode.io",
+      "neetcode.io.example.com",
+      "notneetcode.io",
+      "neetcode.ioo",
+      "example.com/neetcode.io",
+      "leetcode.com.evil.com",
+      "myleetcode.com",
+      "leetcode.cn",
+    ];
+    expect(isProblemDomainTracked(lookalikes, true)).toBe(false);
+    expect(isProblemDomainTracked(lookalikes)).toBe(false);
   });
 
   it("DASH-16 error messages: offline, signed out, other", () => {

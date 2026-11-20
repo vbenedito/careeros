@@ -27,12 +27,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const view = (props: { enabled: boolean; stored: boolean; tracked?: boolean }) =>
+const view = (props: {
+  enabled: boolean;
+  stored: boolean;
+  tracked?: boolean;
+  neetCode?: boolean;
+}) =>
   render(
     <ProblemsSetting
       enabled={props.enabled}
       hasStoredProblems={props.stored}
-      leetcodeTracked={props.tracked ?? true}
+      siteTracked={props.tracked ?? true}
+      neetCode={props.neetCode ?? false}
     />,
   );
 const toggle = () => screen.getByRole("switch", { name: "Track LeetCode problems" });
@@ -59,14 +65,30 @@ describe("DASH-16 Track LeetCode problems switch", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("DASH-16 when leetcode.com is not tracked the card says the feature needs it", () => {
+  it("DASH-16 before 0.3.1, when leetcode.com is not tracked the card says the feature needs it", () => {
     view({ enabled: false, stored: false, tracked: false });
-    expect(screen.getByTestId("problems-needs-leetcode").textContent).toContain("leetcode.com");
+    expect(screen.getByTestId("problems-needs-site").textContent).toBe(
+      "This needs leetcode.com in your tracked sites. Add it above.",
+    );
   });
 
-  it("DASH-16 when leetcode.com is tracked there is no such note", () => {
+  it("DASH-16 when a problem site is tracked there is no such note", () => {
     view({ enabled: false, stored: false });
-    expect(screen.queryByTestId("problems-needs-leetcode")).toBeNull();
+    expect(screen.queryByTestId("problems-needs-site")).toBeNull();
+  });
+
+  it("PRB-22 DASH-16 from 0.3.1 the label, help text and sites message are the approved copy", () => {
+    view({ enabled: false, stored: false, tracked: false, neetCode: true });
+    expect(screen.getByRole("switch", { name: "Track coding problems" })).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: "Track LeetCode problems" })).toBeNull();
+    expect(
+      screen.getByText(
+        "Saves the problem name from LeetCode and NeetCode addresses (like two-sum) with your study time. Nothing else from the address.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId("problems-needs-site").textContent).toBe(
+      "This needs leetcode.com or neetcode.io in your tracked sites. Add one above.",
+    );
   });
 
   it("DASH-16 a failed save is announced and the switch keeps its state", async () => {

@@ -44,6 +44,24 @@ function contains(node: unknown, type: unknown): boolean {
   return Object.values(node.props as Record<string, unknown>).some((v) => contains(v, type));
 }
 
+/** The first element of `type` in the tree, so its props can be checked. */
+function find(node: unknown, type: unknown): { props: Record<string, unknown> } | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = find(child, type);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (!isValidElement(node)) return null;
+  if (node.type === type) return node as unknown as { props: Record<string, unknown> };
+  for (const v of Object.values(node.props as Record<string, unknown>)) {
+    const hit = find(v, type);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 const render = async () => DashboardPage({ searchParams: Promise.resolve({}) });
 
 beforeEach(() => {
@@ -92,5 +110,21 @@ describe("dashboard page release flag (PRB-23, DASH-17, DASH-18)", () => {
     const page = await render();
     expect(contains(page, ProblemsCard)).toBe(true);
     expect(contains(page, ProblemsAnnouncement)).toBe(false);
+  });
+
+  it("ENV-05c PRB-22 store version 0.3.0: LeetCode-only copy for the card and the announcement", async () => {
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.0");
+    state.setting = "on";
+    expect(find(await render(), ProblemsCard)?.props.neetCode).toBe(false);
+    state.setting = "off";
+    expect(find(await render(), ProblemsAnnouncement)?.props.neetCode).toBe(false);
+  });
+
+  it("ENV-05c PRB-22 store version 0.3.1 turns the NeetCode copy on, for the card and the announcement", async () => {
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.1");
+    state.setting = "on";
+    expect(find(await render(), ProblemsCard)?.props.neetCode).toBe(true);
+    state.setting = "off";
+    expect(find(await render(), ProblemsAnnouncement)?.props.neetCode).toBe(true);
   });
 });

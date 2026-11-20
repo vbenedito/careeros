@@ -40,6 +40,24 @@ function contains(node: unknown, type: unknown): boolean {
   return Object.values(node.props as Record<string, unknown>).some((v) => contains(v, type));
 }
 
+/** The first element of `type` in the tree, so its props can be checked. */
+function find(node: unknown, type: unknown): { props: Record<string, unknown> } | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = find(child, type);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (!isValidElement(node)) return null;
+  if (node.type === type) return node as unknown as { props: Record<string, unknown> };
+  for (const v of Object.values(node.props as Record<string, unknown>)) {
+    const hit = find(v, type);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 const render = async () => SettingsPage({ searchParams: Promise.resolve({}) });
 
 beforeEach(() => {
@@ -63,5 +81,18 @@ describe("settings page release flag (PRB-23, DASH-16)", () => {
     const page = await render();
     expect(contains(page, ProblemsSetting)).toBe(true);
     expect(state.reads).toBe(2);
+  });
+
+  it("ENV-05c PRB-22 store version 0.3.0: LeetCode-only copy and check (neetCode false)", async () => {
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.0");
+    expect(find(await render(), ProblemsSetting)?.props.neetCode).toBe(false);
+  });
+
+  it("ENV-05c PRB-22 store version 0.3.1: coding problems copy and the per-site check", async () => {
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.1");
+    const setting = find(await render(), ProblemsSetting);
+    expect(setting?.props.neetCode).toBe(true);
+    // No tracked sites in this test: a problem site is missing.
+    expect(setting?.props.siteTracked).toBe(false);
   });
 });
