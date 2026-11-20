@@ -4,10 +4,9 @@
 --
 -- Only widens (expand → deploy → contract):
 --   - the sites whose intervals can carry a problem slug become the list PROBLEM_DOMAINS
---     ('leetcode.com', 'neetcode.io'), written ONCE, in private.problem_domains();
---   - study_session_problems_domain_check and the v2 element parser both read that function, so
---     the table and the ingest validation cannot drift apart (db-parity.test.ts keeps the list
---     equal to packages/shared);
+--     ('leetcode.com', 'neetcode.io'), in private.problem_domains() (read by the v2 parser) and as
+--     a literal in study_session_problems_domain_check; db-parity.test.ts keeps both equal to
+--     packages/shared;
 --   - get_problem_totals_v2 returns the domain per row (DATA-15a). get_problem_totals is NOT
 --     changed here: the deployed dashboard still calls it (dropped later, NC-e).
 -- Old clients: 0.2.3 (v1 ingest, never sends a slug) and 0.3.0 (v2, slug on leetcode.com only)
@@ -18,7 +17,7 @@
 -- ---------------------------------------------------------------------------------------------
 -- PROBLEM_DOMAINS (PRB-18): the one list, in SQL. IMMUTABLE because a CHECK constraint uses it;
 -- changing the list later is a new migration (and an amendment of PRB-18), never an edit.
--- No client needs it: not granted (a CHECK or a definer function evaluates it).
+-- No client needs it: not granted (the definer ingest functions call it).
 -- ---------------------------------------------------------------------------------------------
 create function private.problem_domains()
 returns text[]
@@ -36,11 +35,16 @@ revoke all on function private.problem_domains() from public, anon, authenticate
 -- DATA-16: widen the domain check. Every stored row is on leetcode.com, so the new constraint
 -- is valid for all of them and is added validated. The table is small; the lock is short.
 -- ---------------------------------------------------------------------------------------------
+-- The CHECK holds the list as a literal, not a call to private.problem_domains(): a function in a
+-- CHECK needs EXECUTE for the inserting role (service_role would get 42501), and replacing the
+-- function would never re-validate stored rows. db-parity.test.ts keeps this literal, the
+-- function and PROBLEM_DOMAINS equal.
+set local lock_timeout = '5s';
 alter table public.study_session_problems
   drop constraint study_session_problems_domain_check;
 alter table public.study_session_problems
   add constraint study_session_problems_domain_check
-  check (domain::text = any (private.problem_domains()));
+  check (domain::text in ('leetcode.com', 'neetcode.io'));
 
 -- ---------------------------------------------------------------------------------------------
 -- DATA-06b, PRB-05: the v2 element parser, same body as 20261118100000 except that the slug's

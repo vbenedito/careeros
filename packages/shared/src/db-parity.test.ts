@@ -254,9 +254,10 @@ describe("database parity: problems", () => {
     expect(PROBLEMS.PROBLEM_DOMAINS).toContain(PROBLEMS.PROBLEM_DOMAIN);
   });
 
-  it("PRB-18 DATA-16 the table CHECK and the ingest parser read the list, with no domain literal of their own", () => {
-    expect(domainCheck).toContain("private.problem_domains()");
-    expect(listed(domainCheck)).toEqual([]);
+  it("PRB-18 DATA-16 the table CHECK literal, private.problem_domains() and PROBLEM_DOMAINS are equal; the parser has no literal", () => {
+    expect(domainCheck).not.toContain("problem_domains");
+    expect(listed(domainCheck)).toEqual([...PROBLEMS.PROBLEM_DOMAINS]);
+    expect(listed(domainCheck)).toEqual(listed(/array\[([^\]]+)\]/.exec(domainsFn)?.[1] ?? ""));
     expect(parser).toContain("private.problem_domains()");
     const code = parser.replace(/--[^\n]*/g, "");
     for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(code).not.toContain(`'${domain}'`);

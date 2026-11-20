@@ -19,11 +19,11 @@ select ok(not has_function_privilege('authenticated', 'private.problem_domains()
   and not has_function_privilege('anon', 'private.problem_domains()', 'execute'),
   'PRB-18 clients cannot call private.problem_domains()');
 select ok(
-  (select convalidated and position('problem_domains' in pg_get_constraintdef(oid)) > 0
+  (select convalidated and position('neetcode.io' in pg_get_constraintdef(oid)) > 0
    from pg_constraint
    where conrelid = 'public.study_session_problems'::regclass
      and conname = 'study_session_problems_domain_check'),
-  'DATA-16 the domain check exists, is validated and reads the one list');
+  'DATA-16 the domain check exists and is validated');
 
 -- Direct inserts run as the test superuser (clients cannot insert at all).
 insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
@@ -132,7 +132,9 @@ select is(
       || '{"problem": "two-integer-sum"}',
     tests.session('13000000-0000-4000-8000-000000000008', 'leetcode.cn', interval '13 hours', interval '10 minutes')
       || '{"problem": "two-sum"}',
-    tests.session('13000000-0000-4000-8000-000000000009', 'neetcode.com', interval '12 hours', interval '10 minutes')
+    tests.session('13000000-0000-4000-8000-000000000009', 'neetcode.com', interval '12 hours', interval '10 minutes'),
+    tests.session('13000000-0000-4000-8000-00000000000a', 'NeetCode.io', interval '11 hours', interval '10 minutes')
+      || '{"problem": "two-integer-sum"}'
   )),
   jsonb_build_object(
     'confirmed', jsonb_build_array(
@@ -143,8 +145,9 @@ select is(
       jsonb_build_object('id', '13000000-0000-4000-8000-000000000005', 'reason', 'invalid'),
       jsonb_build_object('id', '13000000-0000-4000-8000-000000000006', 'reason', 'invalid'),
       jsonb_build_object('id', '13000000-0000-4000-8000-000000000007', 'reason', 'invalid'),
-      jsonb_build_object('id', '13000000-0000-4000-8000-000000000008', 'reason', 'invalid'))),
-  'PRB-05 DATA-06b a neetcode.io slug is kept; a slug on neetcode.com, notneetcode.io, neetcode.io.evil.com, app.neetcode.io or leetcode.cn makes only that element invalid; the same domains without a slug are stored (PRB-07)'
+      jsonb_build_object('id', '13000000-0000-4000-8000-000000000008', 'reason', 'invalid'),
+      jsonb_build_object('id', '13000000-0000-4000-8000-00000000000a', 'reason', 'invalid'))),
+  'PRB-05 DATA-06b a neetcode.io slug is kept; a slug on neetcode.com, notneetcode.io, neetcode.io.evil.com, app.neetcode.io or leetcode.cn or NeetCode.io (case) makes only that element invalid; the same domains without a slug are stored (PRB-07)'
 );
 select results_eq(
   $$ select session_id::text, domain::text, problem_slug from public.study_session_problems order by 1 $$,
