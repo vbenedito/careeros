@@ -22,7 +22,7 @@ Nothing here is new content. Videos 1 and 2 are scripts 1 and 2 of [video format
 The logo shipped in #195, so the placeholder in [video formats](video-formats.md) section 1.3 is replaced (updated in the same PR):
 
 - Both videos use the dark template (`_template-dark.kdenlive`). The mark is `brand/careeros-mark-dark.svg` (the dark variant is for dark surfaces, [brand README](brand/README.md)).
-- Mark 160 px high, centred, above the word `CareerOS` (88 px bold, `primary`). Clear space: at least 40 px (one quarter of the mark height) around the mark.
+- Mark 160 px high, centred, above the word `CareerOS` (88 px bold, `primary`). Clear space: at least 40 px (one quarter of the mark height) around the mark; the word sits outside that space. The word is typed text in the video font (Mona Sans), a deliberate pairing with the mark; the Inter lockup files are for static images.
 - Do not recolour, stretch or add a shadow to the mark.
 - Video 1 end screen: `Free Chrome extension.` / mark / `CareerOS` / small line `Link in profile`.
 - Video 2 end screen (pillar 2): mark / `CareerOS` only. No "Link in profile", no feature.
@@ -153,7 +153,7 @@ Assumption: a TikTok business account shows the Website field without a follower
 
 ## 7. Problem tracking in posts
 
-Extension 0.3.0 (LeetCode problem names, off by default) is live in the store since 2026-11-20. Videos 1 and 2 do not mention it, and the bios do not either. Recommended: wait until extension 0.3.1 is live before any post about problem tracking, because 0.3.1 adds NeetCode and renames the setting to "Track coding problems" (PRB-22). A post made now would need new copy in a few weeks. The privacy line in [voice](voice.md) ("Privacy, exactly") stays allowed, because it is true.
+Extension 0.3.0 (LeetCode problem names, off by default) is live in the store since 2026-11-20. Videos 1 and 2 do not mention it, and the bios do not either. Recommended: wait until extension 0.3.1 is live before any post about problem tracking, because 0.3.1 adds NeetCode and renames the setting to "Track coding problems" (PRB-22). A post made now would need new copy in a few weeks. The privacy lines in [voice](voice.md) ("Privacy, exactly") stay allowed. A post that lists what is stored includes the opt-in clause about problem names, so it stays exact now that 0.3.0 is live.
 
 ## 8. Week-0 checklist
 
@@ -161,8 +161,8 @@ Extension 0.3.0 (LeetCode problem names, off by default) is live in the store si
 |---|---|---|
 | Fri 2026-11-20 | Product owner | Choose the handle (check it is free on YouTube, TikTok and LinkedIn, with 2 fallbacks) and the account email (D19). |
 | Sat 2026-11-21 | Product owner | Create the YouTube brand channel and the TikTok business account. Upload the light avatar. Paste the bios (section 5) and links (section 6). |
-| Sat 2026-11-21 | Product owner | One-time Kdenlive setup if not done ([video formats](video-formats.md) section 4.2). Pick the two Pixabay tracks and fill the license records (section 3.3). |
-| Sun 2026-11-22 | Product owner | Edit videos 1 and 2. Export. Watch each on the phone, sound off, then at half volume. Run the pre-publish checklist (video formats section 4.6). |
+| Sat 2026-11-21 | Product owner | One-time Kdenlive setup if not done ([video formats](video-formats.md) section 4.2, about 90 minutes). |
+| Sun 2026-11-22 | Product owner | Pick the two Pixabay tracks and fill the license records (video formats section 3.3). Edit videos 1 and 2. Export. Watch each on the phone, sound off, then at half volume. Run the pre-publish checklist (video formats section 4.6). |
 | Sun 2026-11-22 | Product owner | Phone test of both bio links (section 6). |
 | Mon 2026-11-23 | Product owner | Confirm or change the thresholds in [goals and KPIs](goals-and-kpis.md) section 7. After today they are locked. Check the Vercel referrer list for the phone-test visits. |
 | Mon 2026-11-23 | Product owner | Write the week-0 numbers in the calendar: installs (store dashboard), sign-ups, site visitors (Vercel) for 2026-11-16 to 2026-11-22. |

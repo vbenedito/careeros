@@ -51,7 +51,7 @@ Last 3 to 4 seconds. Same background as screen 1, so the video loops cleanly int
 | LinkedIn | Same two lines. No "Link in profile". | The link goes in the post only in the link test weeks (platform study, section 8). |
 | Pillar 2 videos (all platforms) | `CareerOS` only | Pillar 2 posts mention no feature (content pillars, section 3). |
 
-- **Logo (#195, updated 2026-11-20, #246):** the mark sits above the word `CareerOS` (88 px bold, `primary`). Mark 160 px high, centred, with at least 40 px clear space. Dark background: `brand/careeros-mark-dark.svg`; light background: `brand/careeros-mark.svg` ([brand README](brand/README.md)). Do not recolour, stretch or add a shadow.
+- **Logo (#195, updated 2026-11-20, #246):** the mark sits above the word `CareerOS` (88 px bold, `primary`). Mark 160 px high, centred, with at least 40 px clear space; the word sits outside it and is typed in the video font (a deliberate pairing; the Inter lockup files are for static images). Dark background: `brand/careeros-mark-dark.svg`; light background: `brand/careeros-mark.svg` ([brand README](brand/README.md)). Do not recolour, stretch or add a shadow.
 - Wording follows the voice: "Free Chrome extension" and the name. No "Download now", no "Try it today", no "stays free".
 - Never more than one call to action per video.
 - The end screen is exempt from the 3-word line rule: the name stands alone on its line.
