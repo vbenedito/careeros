@@ -4,6 +4,8 @@ Status: **Current** (product owner, 2026-11-12) · Owner: tech lead · Applies t
 
 Amended 2026-11-18 (#212): §6 ledger rule (ADM-14) and the "Skills used" rule (#199).
 
+Amended 2026-11-20 (#239, product owner): user-facing product copy is approved by a specialist copy review agent, like marketing documents (§2).
+
 The goal is the same or better quality for fewer tokens. Pick the model by the **risk and kind of thinking** a task needs, not by how important the project is.
 
 ## 1. Which model
@@ -24,6 +26,7 @@ Replaces the blanket "independent review by a different agent" rule (AGENTS.md �
 | Change | Review |
 |---|---|
 | Marketing documents (`docs/marketing/`, brand assets) | One specialist review agent (marketing or brand reviewer, Sonnet). It **approves instead of the product owner** (product owner decision, 2026-11-17, #198): if nothing HIGH or MEDIUM is left, the tech lead merges |
+| User-facing product copy (dashboard and extension texts, privacy page, landing page, store listing) | One specialist copy review agent (UX writing or privacy-copy reviewer, Sonnet). It **approves the wording instead of the product owner** (product owner decision, 2026-11-20, #239). It checks the texts against the specs and the [voice](../marketing/voice.md). The product owner still decides behaviour, scope and anything that changes what the product claims to store or do; the code PR still needs the product owner's "approved" |
 | Docs, copy, version bumps, config with no behaviour change | CI + the tech lead's own check; no review agent (spec changes to product behaviour: one Sonnet review) |
 | Normal code (UI, dashboard, tests, tooling) | One Sonnet review |
 | Sync, auth, security, database migrations, CI workflows that hold secrets | One Opus deep review |

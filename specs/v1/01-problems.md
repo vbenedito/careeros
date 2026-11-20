@@ -20,6 +20,8 @@ Amended 2026-11-20 (#238, NC-b): implemented in packages/shared and apps/extensi
 
 Amended 2026-11-20 (#239, NC-c): implemented in apps/web: PRB-11, 12 (per site), 13, 15 (privacy page), 19 (dashboard), 22 (copy approved by the product owner 2026-11-20), acceptance 10 (dashboard); NeetCode copy gated by EXTENSION_FEATURES.problemTrackingNeetCode (0.3.1).
 
+Amended 2026-11-20 (#239, product owner): PRB-22 — all NC-c wording is approved (settings, card, announcement, privacy page, landing FAQ 1). From now on, the wording of user-facing copy is approved by a specialist copy review agent ([agents.md](../../docs/process/agents.md) §2); PRB-21 store text included.
+
 ## 1. Objective
 
 Show how much time the user spends on each coding problem on LeetCode and NeetCode. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
