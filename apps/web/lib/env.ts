@@ -3,6 +3,12 @@
  * runtime error deep inside the Supabase client.
  */
 
+import {
+  type ExtensionFeature,
+  isExtensionFeatureLive,
+  parseExtensionVersion,
+} from "@careeros/shared";
+
 function required(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(`Missing environment variable ${name} (see apps/web/.env.example)`);
@@ -54,6 +60,24 @@ export function privacyConfig() {
  */
 export function opsLedgerToken(): string | null {
   return process.env.OPS_LEDGER_TOKEN?.trim() || null;
+}
+
+/**
+ * ENV-05c (#242): the extension version live in the Chrome Web Store (`EXTENSION_STORE_VERSION`,
+ * server-only, strict `major.minor.patch`). Missing, empty or invalid = null: every gated feature
+ * is hidden (safe default). An invalid value never breaks a request and is never echoed or logged
+ * (the production build check fails on it, so it only reaches here in preview and local runs).
+ * Read on every call, so the server-rendered pages and routes (dynamic) see a changed value after
+ * a redeploy; static pages (landing, privacy) read it at build time.
+ */
+export function extensionStoreVersion(): string | null {
+  const raw = process.env.EXTENSION_STORE_VERSION?.trim();
+  return raw && parseExtensionVersion(raw) ? raw : null;
+}
+
+/** ENV-05c: is a dashboard feature that needs a newer extension live for store users? */
+export function extensionFeatureLive(feature: ExtensionFeature): boolean {
+  return isExtensionFeatureLive(feature, extensionStoreVersion());
 }
 
 /**

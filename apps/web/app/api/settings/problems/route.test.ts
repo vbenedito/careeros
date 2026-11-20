@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   sameOrigin: true,
@@ -38,9 +38,22 @@ beforeEach(() => {
   state.user = { id: "u1" };
   state.rpcError = null;
   state.rpcCalls = [];
+  vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.0");
 });
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("PUT /api/settings/problems (DASH-16, PRB-02)", () => {
+  it("PRB-23 with the store extension older than 0.3.0 or the version unset the route answers 404 and changes nothing", async () => {
+    for (const value of ["0.2.3", "", undefined]) {
+      vi.stubEnv("EXTENSION_STORE_VERSION", value);
+      const res = await put({ enabled: true });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "NOT_FOUND" });
+    }
+    expect(state.rpcCalls).toEqual([]);
+  });
+
   it("SEC-08 a request from another origin is refused before anything runs", async () => {
     state.sameOrigin = false;
     expect((await put({ enabled: true })).status).toBe(403);

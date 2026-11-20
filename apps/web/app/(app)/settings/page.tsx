@@ -7,11 +7,14 @@ import { TrackedSites } from "@/components/settings/tracked-sites";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
 import { isAuthProvider } from "@/lib/auth/routes";
-import { extensionId } from "@/lib/env";
+import { extensionFeatureLive, extensionId } from "@/lib/env";
 import { hasStoredProblems, loadProblemSetting } from "@/lib/problems/data";
 import { isProblemDomainTracked } from "@/lib/problems/settings";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
+
+// ENV-05c: the gate reads EXTENSION_STORE_VERSION per request; never prerender this page.
+export const dynamic = "force-dynamic";
 
 /**
  * DASH-12..14. Data is loaded with the user's session (DASH-15, RLS applies).
@@ -24,11 +27,14 @@ export default async function SettingsPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
+  // PRB-23, ENV-05c: read per request (this page is dynamic). Not live in the store = no problems card and no
+  // reads for it.
+  const released = extensionFeatureLive("problemTracking");
   const [{ data: claims }, sites, problemSetting, storedProblems] = await Promise.all([
     supabase.auth.getClaims(),
     supabase.from("tracked_domains").select("id, domain").order("domain"),
-    loadProblemSetting(supabase),
-    hasStoredProblems(supabase),
+    released ? loadProblemSetting(supabase) : Promise.resolve("unknown" as const),
+    released ? hasStoredProblems(supabase) : Promise.resolve(false),
   ]);
   const user = claims?.claims;
   if (!user) redirect("/sign-in");
@@ -60,29 +66,31 @@ export default async function SettingsPage({
             )}
           </CardContent>
         </Card>
-        <Card id="problems" aria-labelledby="problems-title" className="scroll-mt-4">
-          <CardHeader>
-            <CardTitle id="problems-title" variant="section">
-              LeetCode problems
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {problemSetting === "unknown" ? (
-              <p role="alert" className="text-sm">
-                Couldn't load this setting. Reload the page to try again.
-              </p>
-            ) : (
-              <ProblemsSetting
-                enabled={problemSetting === "on"}
-                hasStoredProblems={storedProblems}
-                // When the sites could not load, do not claim leetcode.com is missing.
-                leetcodeTracked={
-                  sites.error ? true : isProblemDomainTracked(sites.data.map((s) => s.domain))
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
+        {released ? (
+          <Card id="problems" aria-labelledby="problems-title" className="scroll-mt-4">
+            <CardHeader>
+              <CardTitle id="problems-title" variant="section">
+                LeetCode problems
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {problemSetting === "unknown" ? (
+                <p role="alert" className="text-sm">
+                  Couldn't load this setting. Reload the page to try again.
+                </p>
+              ) : (
+                <ProblemsSetting
+                  enabled={problemSetting === "on"}
+                  hasStoredProblems={storedProblems}
+                  // When the sites could not load, do not claim leetcode.com is missing.
+                  leetcodeTracked={
+                    sites.error ? true : isProblemDomainTracked(sites.data.map((s) => s.domain))
+                  }
+                />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
         <Card aria-labelledby="extension-title">
           <CardHeader>
             <CardTitle id="extension-title" variant="section">

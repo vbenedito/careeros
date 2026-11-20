@@ -84,4 +84,19 @@ describe("production build validation (ENV-05b)", () => {
       "NEXT_PUBLIC_OPS_LEDGER_TOKEN",
     ]);
   });
+
+  it("ENV-05c EXTENSION_STORE_VERSION is optional: missing, empty and major.minor.patch pass", () => {
+    for (const value of [undefined, "", "0.2.3", " 0.3.0 "]) {
+      expect(productionEnvProblems({ ...valid, EXTENSION_STORE_VERSION: value })).toEqual([]);
+    }
+  });
+
+  it("ENV-05c an invalid EXTENSION_STORE_VERSION fails the build check without echoing it", () => {
+    for (const value of ["latest-secret", "9.9", "v9.9.9", "9.9.9-beta"]) {
+      const problems = productionEnvProblems({ ...valid, EXTENSION_STORE_VERSION: value });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toMatch(/^EXTENSION_STORE_VERSION must be/);
+      expect(problems[0]).not.toContain(value);
+    }
+  });
 });

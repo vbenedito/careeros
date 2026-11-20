@@ -13,6 +13,10 @@ export SUPABASE_SECRET_KEY=$SECRET_KEY
 # The development extension build (pinned ID, apps/extension/manifest.config.ts).
 export NEXT_PUBLIC_EXTENSION_ID=jfklbpedlpkginmdfckogdgaggmdmkbk
 export NEXT_TELEMETRY_DISABLED=1
+# ENV-05c, PRB-23 (#242): the dashboard hides features that need a newer extension than the store's. The suites
+# test them against the extension built here, so the "store version" is this package's version.
+EXTENSION_STORE_VERSION=$(node -p "require('./apps/extension/package.json').version")
+export EXTENSION_STORE_VERSION
 # ADM-08, acceptance 4: a random canary in place of the ledger token. GitHub answers 401, so /admin
 # shows "Ledger unavailable (HTTP 401)"; the canary must appear nowhere in the build, the HTML or the log.
 OPS_LEDGER_TOKEN=canary_$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')

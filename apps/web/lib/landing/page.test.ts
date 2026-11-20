@@ -17,6 +17,7 @@ const html = renderLanding({
   siteUrl: "https://careeros.example/",
   installUrl: "https://chromewebstore.google.com/detail/x",
   repositoryUrl: "https://github.com/vbenedito/careeros",
+  problemTracking: true,
 });
 
 describe("landing page (LAND)", () => {
@@ -111,6 +112,19 @@ describe("landing page (LAND)", () => {
     );
     expect(html).toContain("By default, only the site and the start and end times are saved.");
     expect(html.toLowerCase()).not.toContain("cookie");
+  });
+
+  it("PRB-23 LAND-03 without problem tracking in the store, FAQ 1 and the demo label read as before #226", () => {
+    const before = renderLanding({
+      siteUrl: "https://careeros.example/",
+      installUrl: "https://chromewebstore.google.com/detail/x",
+      repositoryUrl: "https://github.com/vbenedito/careeros",
+    });
+    expect(before).not.toContain("Track LeetCode problems");
+    expect(before).not.toContain("One exception");
+    expect(before).not.toContain("By default, only");
+    expect(before).toContain("Only the site and the start and end times are saved.");
+    expect(before).toContain("never reads page titles or content. Because of this, Chrome");
   });
 
   it("LAND-03 #140 the study-hours section: honest copy, example data clearly labelled", () => {

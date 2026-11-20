@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
-import { privacyConfig } from "@/lib/env";
+import { extensionFeatureLive, privacyConfig } from "@/lib/env";
+
+/** Rendered per request so the problem-tracking copy follows EXTENSION_STORE_VERSION (PRB-23). */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Privacy · CareerOS",
@@ -10,8 +13,13 @@ export const metadata: Metadata = {
 
 const UPDATED = "November 18, 2026";
 
-/** SEC-13: plain-language privacy notice (LGPD). Public: no sign-in needed. */
+/**
+ * SEC-13: plain-language privacy notice (LGPD). Public: no sign-in needed. Server-rendered per
+ * request (`next build` lists it as dynamic), so the problem-tracking copy follows
+ * `EXTENSION_STORE_VERSION` of the running deployment (ENV-05c, PRB-23).
+ */
 export default function PrivacyPage() {
+  const problems = extensionFeatureLive("problemTracking");
   const { controller, contactEmail, dataRegion } = privacyConfig();
   const contact = contactEmail ? (
     <a href={`mailto:${contactEmail}`} className="text-primary underline-offset-4 hover:underline">
@@ -76,22 +84,25 @@ export default function PrivacyPage() {
               <Row data="Study periods: tracked site, start and end time, a random device id">
                 Your totals and charts — this is the product
               </Row>
-              <Row data="Only if you turn on Track LeetCode problems: the problem name in a LeetCode address (for example two-sum), saved with the study period">
-                Showing your time per LeetCode problem
-              </Row>
-              <Row data="In your browser only: a small flag (in localStorage) that hides the announcement about LeetCode problems once you dismiss it">
-                A display preference. It stays in that browser and is never sent to CareerOS
-              </Row>
+              {problems ? (
+                <>
+                  <Row data="Only if you turn on Track LeetCode problems: the problem name in a LeetCode address (for example two-sum), saved with the study period">
+                    Showing your time per LeetCode problem
+                  </Row>
+                  <Row data="In your browser only: a small flag (in localStorage) that hides the announcement about LeetCode problems once you dismiss it">
+                    A display preference. It stays in that browser and is never sent to CareerOS
+                  </Row>
+                </>
+              ) : null}
               <Row data="In the extension, on your computer: its sign-in, settings, a random device id, your tracked-site list, today's study periods and periods waiting to upload">
                 Staying connected and not losing time while offline
               </Row>
             </tbody>
           </table>
           <p>
-            Nothing else. Apart from the LeetCode problem name described below, the extension never
-            records full addresses (paths or search terms), page titles or content, keystrokes, form
-            data, passwords or screenshots, and never stores or sends the names of sites you have
-            not chosen. It does not read pages at all, and it never tracks incognito windows.
+            {problems
+              ? "Nothing else. Apart from the LeetCode problem name described below, the extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows."
+              : "Nothing else. The extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows."}
           </p>
           <p>
             The website (this page, the home page, sign-in and the dashboard) uses Vercel Web
@@ -104,19 +115,21 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="LeetCode problems">
-          <p>
-            Track LeetCode problems is off until you turn it on in Settings. When it is on, the
-            extension reads the problem name from the address of a leetcode.com tab (for example
-            two-sum in leetcode.com/problems/two-sum/) and saves only that name with your study
-            time. The rest of the address is never stored or sent.
-          </p>
-          <p>
-            Turning it off stops new problem names. When you turn it off, you can also choose to
-            delete your whole problem history. Your study time stays either way. If you keep the
-            history, the problem names stay until you delete your account.
-          </p>
-        </Section>
+        {problems ? (
+          <Section title="LeetCode problems">
+            <p>
+              Track LeetCode problems is off until you turn it on in Settings. When it is on, the
+              extension reads the problem name from the address of a leetcode.com tab (for example
+              two-sum in leetcode.com/problems/two-sum/) and saves only that name with your study
+              time. The rest of the address is never stored or sent.
+            </p>
+            <p>
+              Turning it off stops new problem names. When you turn it off, you can also choose to
+              delete your whole problem history. Your study time stays either way. If you keep the
+              history, the problem names stay until you delete your account.
+            </p>
+          </Section>
+        ) : null}
 
         <Section title="Legal basis">
           <p>
@@ -166,10 +179,10 @@ export default function PrivacyPage() {
               <strong className="font-medium">Get a copy or correct it:</strong> write to {contact}.
             </li>
             <li>
-              <strong className="font-medium">Delete it:</strong> Settings → Delete account removes
-              your account and all study data, including problem names, immediately. Turning off
-              Track LeetCode problems lets you delete only the problem names. Disconnecting the
-              extension clears your sign-in and study data from your computer.
+              <strong className="font-medium">Delete it:</strong> Settings → Delete account{" "}
+              {problems
+                ? "removes your account and all study data, including problem names, immediately. Turning off Track LeetCode problems lets you delete only the problem names. Disconnecting the extension clears your sign-in and study data from your computer."
+                : "removes your account and all study data immediately. Disconnecting the extension clears your sign-in and study data from your computer."}
             </li>
           </ul>
         </Section>

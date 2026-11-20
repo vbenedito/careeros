@@ -8,6 +8,8 @@
  * inlined at build time, so a redeploy is needed after changing them).
  */
 
+import { parseExtensionVersion } from "@careeros/shared";
+
 type Env = Readonly<Record<string, string | undefined>>;
 
 const WHERE =
@@ -68,6 +70,15 @@ export function productionEnvProblems(env: Env): string[] {
   if (get("NEXT_PUBLIC_OPS_LEDGER_TOKEN")) {
     problems.push(
       "NEXT_PUBLIC_OPS_LEDGER_TOKEN must not exist: the ledger token is server-only and a NEXT_PUBLIC_ value is sent to every browser (ADM-08, SEC-07); rename it to OPS_LEDGER_TOKEN, scoped to Production",
+    );
+  }
+  // ENV-05c: EXTENSION_STORE_VERSION is optional (missing = gated features hidden), but a value that
+  // is not major.minor.patch would make every dashboard request fail: fail the build instead. The
+  // value is never echoed.
+  const storeVersion = get("EXTENSION_STORE_VERSION");
+  if (storeVersion && !parseExtensionVersion(storeVersion)) {
+    problems.push(
+      `EXTENSION_STORE_VERSION must be empty or the extension version live in the Chrome Web Store as major.minor.patch, e.g. 0.3.0 (ENV-05c); ${WHERE}`,
     );
   }
   return problems;

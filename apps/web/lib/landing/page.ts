@@ -7,9 +7,11 @@
 
 import { ANALYTICS_SCRIPT_PATH } from "@/lib/analytics/config";
 import {
+  DEMO_SAVED_PLAIN,
+  DEMO_SAVED_WITH_PROBLEMS,
   DESCRIPTION,
   ENGINE_LOG,
-  FAQ,
+  faqEntries,
   MAX_SITES,
   REMEMBERED_WEEK,
   RULES,
@@ -30,6 +32,11 @@ export interface LandingOptions {
   googleSiteVerification?: string | undefined;
   /** Load the Vercel Web Analytics script (SEC-15, ADR-0010); the CSP must allow it. */
   analytics?: boolean | undefined;
+  /**
+   * ENV-05c, PRB-23: the store has an extension that tracks problems, so the FAQ and the demo
+   * label mention the opt-in problem name. Without it the copy reads as before #226.
+   */
+  problemTracking?: boolean | undefined;
 }
 
 const esc = (s: string) =>
@@ -213,6 +220,7 @@ export function renderLanding({
   repositoryUrl,
   googleSiteVerification,
   analytics,
+  problemTracking = false,
 }: LandingOptions): string {
   const site = new URL(siteUrl).origin;
   const max = Math.max(...SAMPLE_WEEK);
@@ -249,9 +257,9 @@ export function renderLanding({
     )
     .join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
-  const faq = FAQ.map(
-    (f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`,
-  ).join("");
+  const faq = faqEntries(problemTracking)
+    .map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`)
+    .join("");
   const siteRow = (cls: string, name: string) =>
     `<div class="row ${cls}"><span>${name}</span><span class="on">counts</span><span class="off">ignored</span></div>`;
   const jsonLd = JSON.stringify([
@@ -314,7 +322,7 @@ export function renderLanding({
 <div class="ctas"><a class="btn btn-primary" href="/sign-in">Get started — it's free</a><a class="btn btn-ghost" href="${esc(installUrl)}">Add to Chrome</a></div>
 <p class="small">Sign in with Google or GitHub. Chrome on desktop.</p>
 </div>
-<div class="demo" role="img" aria-label="Demo: the timer counts on leetcode.com, stops on youtube.com, and resumes on neetcode.io. By default, only the site and the start and end times are saved.">
+<div class="demo" role="img" aria-label="Demo: the timer counts on leetcode.com, stops on youtube.com, and resumes on neetcode.io. ${problemTracking ? DEMO_SAVED_WITH_PROBLEMS : DEMO_SAVED_PLAIN}">
 <div class="tabs" aria-hidden="true"><span class="lights"><i></i><i></i><i></i></span><span class="t1">leetcode.com</span><span class="t2">youtube.com</span><span class="t3">neetcode.io</span></div>
 <div class="demo-body" aria-hidden="true">
 <div class="status"><span class="s1"><i class="dot"></i>Counting · study site</span><span class="s2"><i class="dot idle"></i>Not a study site · nothing recorded</span><span class="s3"><i class="dot"></i>Counting · study site</span></div>
