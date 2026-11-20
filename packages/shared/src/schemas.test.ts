@@ -53,13 +53,20 @@ describe("IntervalSchema", () => {
     expect(IntervalSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
   });
 
-  it("PRB-08 PRB-15 accepts a valid problem only on leetcode.com", () => {
+  it("PRB-08 PRB-15 PRB-18 accepts a valid problem only on a domain of PROBLEM_DOMAINS", () => {
     expect(IntervalSchema.safeParse({ ...valid, problem: "two-sum" }).success).toBe(true);
     expect(IntervalSchema.safeParse({ ...valid, problem: "Two-Sum" }).success).toBe(false);
     expect(IntervalSchema.safeParse({ ...valid, problem: null }).success).toBe(false);
     expect(
-      IntervalSchema.safeParse({ ...valid, domain: "neetcode.io", problem: "two-sum" }).success,
-    ).toBe(false);
+      IntervalSchema.safeParse({ ...valid, domain: "neetcode.io", problem: "two-integer-sum" })
+        .success,
+    ).toBe(true);
+    for (const domain of ["neetcode.com", "app.neetcode.io", "example.com"]) {
+      expect(
+        IntervalSchema.safeParse({ ...valid, domain, problem: "two-sum" }).success,
+        domain,
+      ).toBe(false);
+    }
   });
 
   it("SEC-01 rejects unknown fields such as a URL or title", () => {

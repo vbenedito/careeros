@@ -89,7 +89,11 @@ describe("constants match the specs", () => {
     );
     const row = (name: string) =>
       new RegExp(`^\\| \`${name}\` \\| \`?([^|\`]+?)\`? \\|`, "m").exec(spec)?.[1];
-    expect(row("PROBLEM_DOMAIN")).toBe(PROBLEMS.PROBLEM_DOMAIN);
+    // A list cell: every backticked token of the value column, in order.
+    const listCell = /^\| `PROBLEM_DOMAINS` \| ([^|]+) \|/m.exec(spec)?.[1] ?? "";
+    expect([...listCell.matchAll(/`([^`]+)`/g)].map((m) => m[1])).toEqual([
+      ...PROBLEMS.PROBLEM_DOMAINS,
+    ]);
     expect(row("PROBLEM_PATH_PREFIX")).toBe(PROBLEMS.PROBLEM_PATH_PREFIX);
     expect(row("PROBLEM_SLUG_PATTERN")).toBe(PROBLEMS.PROBLEM_SLUG_PATTERN.source);
     expect(row("PROBLEM_SLUG_MAX")).toBe(`${PROBLEMS.PROBLEM_SLUG_MAX}`);

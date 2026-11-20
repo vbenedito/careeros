@@ -74,6 +74,9 @@ export interface PopupView {
   overlapMinutes: number | null;
 }
 
+/** PRB-19: a problem is the pair domain + slug; a domain never contains a space. */
+const problemKey = (domain: string, slug: string) => `${domain} ${slug}`;
+
 const ms = (iso: string) => Date.parse(iso);
 
 export function buildPopupView(input: PopupInput): PopupView {
@@ -82,12 +85,15 @@ export function buildPopupView(input: PopupInput): PopupView {
 
   // SYNC-12: closed intervals of today + the open interval, clipped to today.
   const perDomain = new Map<string, number>();
-  // PRB-14: the same intervals, summed by problem (same local data as the today total).
+  // PRB-14, PRB-19: the same intervals, summed by problem = domain + slug (never across sites).
   const perProblem = new Map<string, number>();
   const add = (domain: string, problem: string | null | undefined, from: number, to: number) => {
     const seconds = Math.max(0, (Math.min(to, now) - Math.max(from, startOfToday)) / 1000);
     perDomain.set(domain, (perDomain.get(domain) ?? 0) + seconds);
-    if (problem) perProblem.set(problem, (perProblem.get(problem) ?? 0) + seconds);
+    if (problem) {
+      const key = problemKey(domain, problem);
+      perProblem.set(key, (perProblem.get(key) ?? 0) + seconds);
+    }
   };
   for (const i of input.todayIntervals) add(i.domain, i.problem, ms(i.started_at), ms(i.ended_at));
   if (open) add(open.domain, open.problem, open.startedAt * 1000, now);
@@ -113,7 +119,10 @@ export function buildPopupView(input: PopupInput): PopupView {
           domain: open.domain,
           seconds: currentRunSeconds(input),
           problem: open.problem
-            ? { name: problemName(open.problem), seconds: perProblem.get(open.problem) ?? 0 }
+            ? {
+                name: problemName(open.problem),
+                seconds: perProblem.get(problemKey(open.domain, open.problem)) ?? 0,
+              }
             : null,
         }
       : null,

@@ -3,7 +3,7 @@
  * contract shared by the route and the browser, the decision of when to ask before turning it
  * off, and the messages. Pure.
  */
-import { PROBLEMS, SYNC } from "@careeros/shared";
+import { SYNC } from "@careeros/shared";
 import { z } from "zod";
 
 /** PUT /api/settings/problems. `deleteHistory: true` only makes sense when turning it off. */
@@ -38,7 +38,8 @@ export const EXTENSION_FOLLOWS_NOTE = `The extension updates within about ${SYNC
 
 /** DASH-16: the card needs the problem domain itself in the tracked sites (PRB-05). */
 export function isProblemDomainTracked(domains: readonly string[]): boolean {
-  return domains.includes(PROBLEMS.PROBLEM_DOMAIN);
+  // TODO NC-c (#239): per-site check. Exact element equality (not a substring test on a URL).
+  return domains.some((domain) => domain === "leetcode.com");
 }
 
 export function problemSettingErrorMessage(code: string | undefined, status: number | null) {

@@ -249,9 +249,8 @@ describe("database parity: problems", () => {
     expect(domainsFn).toContain("immutable");
   });
 
-  it("PRB-18 PROBLEM_DOMAINS has no duplicates and still contains PROBLEM_DOMAIN", () => {
+  it("PRB-18 PROBLEM_DOMAINS has no duplicates", () => {
     expect(new Set(PROBLEMS.PROBLEM_DOMAINS).size).toBe(PROBLEMS.PROBLEM_DOMAINS.length);
-    expect(PROBLEMS.PROBLEM_DOMAINS).toContain(PROBLEMS.PROBLEM_DOMAIN);
   });
 
   it("PRB-18 DATA-16 the table CHECK literal, private.problem_domains() and PROBLEM_DOMAINS are equal; the parser has no literal", () => {

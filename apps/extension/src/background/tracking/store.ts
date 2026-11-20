@@ -10,7 +10,7 @@ import {
   DomainSchema,
   type Interval,
   IntervalSchema,
-  PROBLEMS,
+  isProblemDomain,
   ProblemSlugSchema,
 } from "@careeros/shared";
 import { z } from "zod";
@@ -33,6 +33,14 @@ const epoch = z.number().int().nonnegative();
 const nullableEpoch = epoch.nullable().default(null);
 const idle = z.enum(["active", "idle", "locked", "unknown"]);
 
+/** PRB-20: an open interval with a problem on an unknown domain keeps the time, loses the problem. */
+function openProblemTolerant(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const o = value as Record<string, unknown>;
+  if (o.problem == null || typeof o.domain !== "string" || isProblemDomain(o.domain)) return value;
+  return { ...o, problem: null };
+}
+
 export const EngineStateSchema = z.object({
   signals: z.object({
     connected: z.boolean(),
@@ -47,16 +55,19 @@ export const EngineStateSchema = z.object({
     idle,
     mediaHold: z.boolean(),
   }),
-  open: z
-    .object({
-      id: z.uuid(),
-      domain: DomainSchema,
-      problem: ProblemSlugSchema.nullable().default(null),
-      splitOpened: z.boolean().default(false),
-      startedAt: epoch,
-    })
-    .refine((o) => o.problem === null || o.domain === PROBLEMS.PROBLEM_DOMAIN)
-    .nullable(),
+  open: z.preprocess(
+    openProblemTolerant,
+    z
+      .object({
+        id: z.uuid(),
+        domain: DomainSchema,
+        problem: ProblemSlugSchema.nullable().default(null),
+        splitOpened: z.boolean().default(false),
+        startedAt: epoch,
+      })
+      .refine((o) => o.problem === null || isProblemDomain(o.domain))
+      .nullable(),
+  ),
   lastHeartbeatAt: nullableEpoch,
   lastInputAt: nullableEpoch,
   notBefore: nullableEpoch,
@@ -65,6 +76,22 @@ export const EngineStateSchema = z.object({
 export function parseEngineState(value: unknown): EngineState {
   const parsed = EngineStateSchema.safeParse(value);
   return parsed.success ? parsed.data : INITIAL_ENGINE_STATE;
+}
+
+/**
+ * PRB-20: an interval whose `problem` sits on a domain outside PROBLEM_DOMAINS keeps its time and
+ * loses only the problem; it is never dropped for that reason. It covers a later build with
+ * more domains rolled back to 0.3.1 or newer; released 0.3.0 code does not have it (see the
+ * rollback note in specs/v1/01-problems.md section 5). Nothing is logged.
+ */
+export function parseIntervalTolerant(item: unknown): Interval | null {
+  const parsed = IntervalSchema.safeParse(item);
+  if (parsed.success) return parsed.data;
+  if (typeof item !== "object" || item === null || !("problem" in item)) return null;
+  const { problem: _problem, ...rest } = item as Record<string, unknown>;
+  if (typeof rest.domain !== "string" || isProblemDomain(rest.domain)) return null;
+  const again = IntervalSchema.safeParse(rest);
+  return again.success ? again.data : null;
 }
 
 /** Valid intervals only: a corrupted entry must never block the queue. */
@@ -76,8 +103,8 @@ export function parseOutbox(value: unknown): Interval[] {
 export function parseOutboxCounted(value: unknown): { items: Interval[]; invalid: number } {
   if (!Array.isArray(value)) return { items: [], invalid: 0 };
   const items = value.flatMap((item) => {
-    const parsed = IntervalSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
+    const interval = parseIntervalTolerant(item);
+    return interval ? [interval] : [];
   });
   return { items, invalid: value.length - items.length };
 }
@@ -92,7 +119,7 @@ export interface DeferredInterval {
 }
 
 const DeferredSchema = z.object({
-  interval: IntervalSchema,
+  interval: z.unknown(),
   retryAt: epoch,
   attempts: z.number().int().positive(),
 });
@@ -102,7 +129,9 @@ export function parseDeferred(value: unknown): { items: DeferredInterval[]; inva
   if (!Array.isArray(value)) return { items: [], invalid: 0 };
   const items = value.flatMap((item) => {
     const parsed = DeferredSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
+    if (!parsed.success) return [];
+    const interval = parseIntervalTolerant(parsed.data.interval);
+    return interval ? [{ ...parsed.data, interval }] : [];
   });
   return { items, invalid: value.length - items.length };
 }

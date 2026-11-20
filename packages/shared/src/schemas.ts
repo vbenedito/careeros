@@ -3,9 +3,9 @@
  * The database re-validates everything (DATA-07); these schemas are the first boundary.
  */
 import { z } from "zod";
-import { DATA, ENTITLEMENTS, PROBLEMS, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, TRACKING } from "./constants";
 import { isValidDomain } from "./domain";
-import { isValidProblemSlug } from "./problems";
+import { isProblemDomain, isValidProblemSlug } from "./problems";
 
 export const DomainSchema = z
   .string()
@@ -25,8 +25,8 @@ export const ProblemSlugSchema = z
  * TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions_v2`.
  * MIN_INTERVAL_S is not enforced here: the engine discards short intervals before they are
  * stored (TRK-10), and the server only requires a positive duration (DATA-02).
- * PRB-08: `problem` is present only when the interval has one, and only on PROBLEM_DOMAIN
- * (PRB-15); an interval without a problem has exactly the 0.2.3 shape.
+ * PRB-08: `problem` is present only when the interval has one, and only on a domain of
+ * PROBLEM_DOMAINS (PRB-18, PRB-15); an interval without a problem has exactly the 0.2.3 shape.
  */
 export const IntervalSchema = z
   .object({
@@ -39,7 +39,7 @@ export const IntervalSchema = z
   })
   .strict()
   .superRefine((interval, ctx) => {
-    if (interval.problem !== undefined && interval.domain !== PROBLEMS.PROBLEM_DOMAIN) {
+    if (interval.problem !== undefined && !isProblemDomain(interval.domain)) {
       ctx.addIssue({ code: "custom", message: "problem only on the problem domain" });
     }
     const seconds = (Date.parse(interval.ended_at) - Date.parse(interval.started_at)) / 1000;

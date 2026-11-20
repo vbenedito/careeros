@@ -16,6 +16,8 @@ Amended 2026-11-19 (#233, proposal, product owner decisions of the same day): pr
 
 Amended 2026-11-20 (#237, NC-a): implemented in `20261120100000_problem_domains.sql` and `packages/shared` (`PROBLEM_DOMAINS` next to `PROBLEM_DOMAIN`, which stays until NC-b): the database part of PRB-18 (the list in `private.problem_domains()`, read by the domain check and the ingest validation; parity test), PRB-19 and PRB-20 (v1 and 0.3.0 unchanged; `get_problem_totals_v2`), acceptance 9 (database), 11 and 12 (database; pgTAP `130_problem_domains`), and section 5 step 1. Not yet implemented: the parser, extension, dashboard and store parts (NC-b..d) and the contract (NC-e). Status of those: **Proposed**.
 
+Amended 2026-11-20 (#238, NC-b): implemented in packages/shared and apps/extension: PRB-05, 06, 08, 14, 18, 19 (extension part), 20 (tolerant outbox), acceptance 8, 9, 12 (extension), acceptance 10 (popup). PROBLEM_DOMAIN removed; the constants row is now PROBLEM_DOMAINS. Extension version 0.3.1 (not released).
+
 ## 1. Objective
 
 Show how much time the user spends on each coding problem on LeetCode and NeetCode. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
@@ -28,7 +30,7 @@ The feature is **free**, like everything in v0 (D22). It is **off by default** (
 
 | Name | Value | Notes |
 |---|---|---|
-| `PROBLEM_DOMAIN` | `leetcode.com` | The tracked domain whose tabs can carry a problem (TRK-03 match). *Amended 2026-11-19 (#233, proposal):* becomes the list `PROBLEM_DOMAINS` = `leetcode.com`, `neetcode.io` (PRB-18) in the shared+extension issue (section 6), which also moves this row and its parity test; until then the code and this row keep the single domain |
+| `PROBLEM_DOMAINS` | `leetcode.com`, `neetcode.io` | The tracked domains whose tabs can carry a problem (TRK-03 match; PRB-18). One list in `packages/shared`, repeated in the database (parity test). *Amended 2026-11-20 (#238, NC-b):* replaces the single `PROBLEM_DOMAIN` |
 | `PROBLEM_PATH_PREFIX` | `/problems/` | The path must start with it, on every domain of `PROBLEM_DOMAINS` (both sites use it, #233). A site with another prefix would need a prefix per domain: that is a new amendment, not part of #233 |
 | `PROBLEM_SLUG_PATTERN` | `^[a-z0-9]+(?:-[a-z0-9]+)*$` | Lowercase letters and digits, single hyphens between them |
 | `PROBLEM_SLUG_MAX` | 100 | Characters |
@@ -125,7 +127,7 @@ Follows [release.md](../../docs/process/release.md) (expand → deploy → contr
 | (each extension release) | The step that releases an extension ends, after the store approval, by setting `EXTENSION_STORE_VERSION` to the new version and redeploying (ENV-05c, PRB-23, [release.md](../../docs/process/release.md)): `0.3.0` after 0.3.0, `0.3.1` after 0.3.1 (the NeetCode issues add their minimum to `EXTENSION_FEATURES`). Until then the dashboard hides the feature, so nobody can turn on a setting the installed extension does not honour | The dashboard never offers a feature the store version cannot deliver |
 | 4. Contract (later issue) | Drop `get_problem_totals` once no deployed dashboard calls it (the extension never does). No change to `ingest_study_sessions`; its own removal stays as in ADR-0011 | Nothing deployed uses it |
 
-Rollback: step 1 is a widening, so it needs no undo. If 0.3.1 has a problem, the store rollback of release.md applies (rebuild the last good code with a higher version). Rows already stored for `neetcode.io` stay valid. A rollback to 0.3.0 code would reject queued NeetCode intervals whose problem is on an unknown domain (outbox schema check in `apps/extension/src/background/tracking/store.ts`), so NC-b must make the outbox parse tolerant (keep the time, drop a problem on an unknown domain) and test it.
+Rollback: step 1 is a widening, so it needs no undo. If 0.3.1 has a problem, the store rollback of release.md applies (rebuild the last good code with a higher version). Rows already stored for `neetcode.io` stay valid. A rollback build for 0.3.1 is 0.3.1 code with `neetcode.io` removed from `PROBLEM_DOMAINS` (the tolerant parse then keeps the time), or 0.3.0 code plus `parseIntervalTolerant`, released with a higher version number (release.md). A rollback to plain 0.3.0 code would reject queued NeetCode intervals whose problem is on an unknown domain (outbox schema check in `apps/extension/src/background/tracking/store.ts`), so NC-b must make the outbox parse tolerant (keep the time, drop a problem on an unknown domain) and test it.
 
 ## 6. Issues (proposed, #233)
 

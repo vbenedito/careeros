@@ -33,6 +33,13 @@ describe("ENV-05c extension feature gate", () => {
     expect(versionAtLeast("0.3.1", "0.3.2")).toBe(false);
   });
 
+  it("ENV-05c PRB-18 NeetCode problem tracking needs extension 0.3.1", () => {
+    expect(EXTENSION_FEATURES.problemTrackingNeetCode).toBe("0.3.1");
+    expect(isExtensionFeatureLive("problemTrackingNeetCode", "0.3.0")).toBe(false);
+    expect(isExtensionFeatureLive("problemTrackingNeetCode", "0.3.1")).toBe(true);
+    expect(isExtensionFeatureLive("problemTrackingNeetCode", undefined)).toBe(false);
+  });
+
   it("ENV-05c PRB-23 problem tracking is live from 0.3.0; missing or invalid hides it", () => {
     expect(EXTENSION_FEATURES.problemTracking).toBe("0.3.0");
     expect(isExtensionFeatureLive("problemTracking", "0.2.3")).toBe(false);
