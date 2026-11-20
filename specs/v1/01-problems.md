@@ -22,6 +22,8 @@ Amended 2026-11-20 (#239, NC-c): implemented in apps/web: PRB-11, 12 (per site),
 
 Amended 2026-11-20 (#239, product owner): PRB-22 — all NC-c wording is approved (settings, card, announcement, privacy page, landing FAQ 1). From now on, the wording of user-facing copy is approved by a specialist copy review agent ([agents.md](../../docs/process/agents.md) §2); PRB-21 store text included.
 
+Amended 2026-11-20 (#240, NC-d): PRB-21 store text for 0.3.1 written (listing.md); submission waits for the PRB-22 guard count and section 5 step 2 deployed with a green smoke run.
+
 ## 1. Objective
 
 Show how much time the user spends on each coding problem on LeetCode and NeetCode. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
