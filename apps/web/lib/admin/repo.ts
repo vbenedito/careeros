@@ -8,7 +8,7 @@
  */
 import "server-only";
 import { z } from "zod";
-import { opsLedgerToken } from "@/lib/env";
+import { githubApiBase, opsLedgerToken } from "@/lib/env";
 import { GITHUB_API, GITHUB_CACHE_S, PUBLIC_REPO } from "./config";
 import { type CachedRequestInit, type GithubRequest, githubHeaders } from "./github";
 import {
@@ -24,7 +24,7 @@ const PAGE_SIZE = 100;
 export const MAX_PAGES = 5;
 
 const get = (token: string, path: string, tag: string): GithubRequest => ({
-  url: `${GITHUB_API}/repos/${PUBLIC_REPO}/${path}`,
+  url: `${githubApiBase(GITHUB_API)}/repos/${PUBLIC_REPO}/${path}`,
   init: {
     headers: githubHeaders(token, "application/vnd.github+json"),
     cache: "force-cache",

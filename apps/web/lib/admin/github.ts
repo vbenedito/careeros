@@ -6,6 +6,7 @@
  */
 import "server-only";
 import { z } from "zod";
+import { githubApiBase } from "@/lib/env";
 import { GITHUB_API, GITHUB_CACHE_S, LEDGER_DIR, LEDGER_REPO } from "./config";
 
 /** `fetch` options with the Next.js data-cache fields. */
@@ -27,7 +28,7 @@ export const githubHeaders = (token: string, accept: string) => ({
 /** The tree listing: one call per `GITHUB_CACHE_S` (ADM-08). */
 export function treeRequest(token: string): GithubRequest {
   return {
-    url: `${GITHUB_API}/repos/${LEDGER_REPO}/git/trees/main?recursive=1`,
+    url: `${githubApiBase(GITHUB_API)}/repos/${LEDGER_REPO}/git/trees/main?recursive=1`,
     init: {
       headers: githubHeaders(token, "application/vnd.github+json"),
       cache: "force-cache",
@@ -39,7 +40,7 @@ export function treeRequest(token: string): GithubRequest {
 /** One file by its blob SHA: files never change (ADM-05), so the cache never expires. */
 export function blobRequest(token: string, sha: string): GithubRequest {
   return {
-    url: `${GITHUB_API}/repos/${LEDGER_REPO}/git/blobs/${sha}`,
+    url: `${githubApiBase(GITHUB_API)}/repos/${LEDGER_REPO}/git/blobs/${sha}`,
     init: {
       // The raw media type returns the file's own bytes instead of base64 JSON.
       headers: githubHeaders(token, "application/vnd.github.raw+json"),

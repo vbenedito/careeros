@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { extensionFeatureLive, extensionStoreVersion } from "./env";
+import { extensionFeatureLive, extensionStoreVersion, githubApiBase } from "./env";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -39,5 +39,39 @@ describe("EXTENSION_STORE_VERSION (ENV-05c, PRB-23)", () => {
     expect(extensionFeatureLive("problemTrackingNeetCode")).toBe(true);
     vi.stubEnv("EXTENSION_STORE_VERSION", "0.4.0");
     expect(extensionFeatureLive("problemTrackingNeetCode")).toBe(true);
+  });
+});
+
+describe("OPS_GITHUB_API_STUB (TEST-01, #232)", () => {
+  const REAL = "https://api.github.com";
+
+  it("TEST-01 unset, empty or invalid: the real API", () => {
+    for (const value of [undefined, "", "  ", "not a url"]) {
+      vi.stubEnv("OPS_GITHUB_API_STUB", value);
+      expect(githubApiBase(REAL)).toBe(REAL);
+    }
+  });
+
+  it("TEST-01 only plain http on 127.0.0.1 with a port is used", () => {
+    vi.stubEnv("OPS_GITHUB_API_STUB", "http://127.0.0.1:4010/anything");
+    expect(githubApiBase(REAL)).toBe("http://127.0.0.1:4010");
+    for (const value of [
+      "https://127.0.0.1:4010",
+      "http://127.0.0.1",
+      "http://localhost:4010",
+      "http://evil.example:4010",
+      "http://127.0.0.1.evil.example:4010",
+    ]) {
+      vi.stubEnv("OPS_GITHUB_API_STUB", value);
+      expect(githubApiBase(REAL)).toBe(REAL);
+    }
+  });
+
+  it("TEST-01 never on Vercel: any VERCEL_ENV turns the stub off", () => {
+    vi.stubEnv("OPS_GITHUB_API_STUB", "http://127.0.0.1:4010");
+    for (const env of ["production", "preview", "development"]) {
+      vi.stubEnv("VERCEL_ENV", env);
+      expect(githubApiBase(REAL)).toBe(REAL);
+    }
   });
 });

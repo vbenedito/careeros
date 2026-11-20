@@ -77,6 +77,12 @@ describe("production build validation (ENV-05b)", () => {
     expect(() => assertProductionEnv({})).toThrow(/Vercel project[\s\S]*Production scope/);
   });
 
+  it("TEST-01 the CI-only OPS_GITHUB_API_STUB fails the production build", () => {
+    expect(names({ ...valid, OPS_GITHUB_API_STUB: "http://127.0.0.1:4010" })).toEqual([
+      "OPS_GITHUB_API_STUB",
+    ]);
+  });
+
   it("ADM-08 OPS_LEDGER_TOKEN is optional; a NEXT_PUBLIC_ twin fails the build", () => {
     expect(productionEnvProblems(valid)).toEqual([]);
     expect(productionEnvProblems({ ...valid, OPS_LEDGER_TOKEN: "github_pat_x" })).toEqual([]);

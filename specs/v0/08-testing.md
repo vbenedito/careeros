@@ -12,6 +12,7 @@ Amended 2026-11-12 (#155, #156): §5 CI gates add the Markdown link check and th
 
 Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
 
+Amended 2026-11-20 (#232): TEST-01 also covers `/admin`, light and dark, against a CI-only GitHub stub.
 Amended 2026-11-19 (#224): TEST-01 adds an iPhone 17 viewport (402×874, 3x, touch), phone widths 360/390/402/430 with wide text, the hero CTA pair as a centred group, and animation checks (LAND-08).
 
 Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and auth modules (TEST-03), account-erasure, concurrent-ingest and RLS-policy tests (TEST-04, TEST-05, TEST-07), the integration server readiness check (TEST-06), database constant parity (TEST-08), and polling instead of fixed sleeps (§6).
@@ -30,14 +31,14 @@ Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and aut
 | Component | Vitest + **Testing Library** (jsdom, opted in per file) | Popup states (`apps/extension/src/popup`); dashboard components such as the sidebar, redirect form and account settings (`apps/web/components`) | local + CI |
 | Database | **pgTAP** via `supabase test db` (Docker) | RLS isolation, constraints, triggers, RPC idempotency/validation, totals with time zones, cascade delete | local (Docker Desktop) + CI |
 | Integration | Vitest against local Supabase and one built dashboard server (`scripts/ci/integration.sh`) | `apps/web/tests/integration`: dashboard routes over HTTP (auth, dashboard data, settings, link route, privacy, landing). `apps/extension/tests/integration`: the built extension in real Chromium (Playwright library) — connect, `/connect` page, sync, tracked domains, dashboard shell | CI (+ local with Docker) |
-| Responsive | Vitest driving the Playwright library, checks in `apps/extension/tests/support/responsive.ts` | TEST-01: landing (`apps/extension/tests/responsive`, `pnpm test:responsive`, no backend); privacy, sign-in, dashboard and settings (`apps/extension/tests/e2e/responsive.e2e.test.ts`, with the E2E suite) | CI (landing: local too) |
+| Responsive | Vitest driving the Playwright library, checks in `apps/extension/tests/support/responsive.ts` | TEST-01: landing (`apps/extension/tests/responsive`, `pnpm test:responsive`, no backend); privacy, sign-in, dashboard, settings and `/admin` (`apps/extension/tests/e2e/responsive.e2e.test.ts`, with the E2E suite) | CI (landing: local too) |
 | E2E | Vitest driving the **Playwright** library (not `@playwright/test`); all E2E lives in `apps/extension/tests/e2e` | (a) `dashboard.e2e.test.ts`: dashboard with a seeded user and data: sign-in via test session, period navigation, settings domain CRUD, account deletion. (b) `tracking.e2e.test.ts`: extension smoke: load the unpacked development build in Chromium, track on a local test page served under a tracked test domain, popup shows time, outbox syncs to local Supabase. | CI |
 
 `apps/web` has no Playwright dependency; browser tests of the dashboard run from `apps/extension`.
 
 ### 2.1 Responsive layout
 
-- **TEST-01** Every page is checked in Chromium at 360, 390, 768, 1024 and 1440 px wide (`deviceScaleFactor` 1): the landing page (`renderLanding`, served without a backend, plus every CSS-only toggle state at 390 px and reduced motion at 360 px), privacy, sign-in, dashboard (week and month, with sample data) and settings, and the mobile drawer closed and open at 390 px. `assertResponsive` fails, naming the rule, width, element and its box, when:
+- **TEST-01** Every page is checked in Chromium at 360, 390, 768, 1024 and 1440 px wide (`deviceScaleFactor` 1): the landing page (`renderLanding`, served without a backend, plus every CSS-only toggle state at 390 px and reduced motion at 360 px), privacy, sign-in, dashboard (week and month, with sample data), settings and `/admin` (an admin account, in light and dark; its GitHub reads are answered by `scripts/ci/github-stub.ts` with invented sessions, issues and pull requests, so the tables and the diagram render, #232), and the mobile drawer closed and open at 390 px. `assertResponsive` fails, naming the rule, width, element and its box, when:
   1. the document scrolls horizontally (`scrollWidth` > viewport width);
   2. a visible element extends beyond the viewport. Exempt only: content of a clipping box (`overflow` hidden/clip) or horizontal scroller (`overflow` auto/scroll) that itself fits the viewport, and visually hidden `.sr` / `.sr-only` elements. Fixed elements are always held to the viewport;
   3. text is clipped, by its own box or by a clipping ancestor (an ellipsis on the text's own box and scrollers are allowed). The landing site belt is skipped while it scrolls (a marquee) and checked with reduced motion;

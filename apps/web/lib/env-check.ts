@@ -72,6 +72,13 @@ export function productionEnvProblems(env: Env): string[] {
       "NEXT_PUBLIC_OPS_LEDGER_TOKEN must not exist: the ledger token is server-only and a NEXT_PUBLIC_ value is sent to every browser (ADM-08, SEC-07); rename it to OPS_LEDGER_TOKEN, scoped to Production",
     );
   }
+  // TEST-01 (#232): OPS_GITHUB_API_STUB redirects the admin page's GitHub reads (CI only; the code
+  // also ignores it on Vercel). It has no place in a production configuration.
+  if (get("OPS_GITHUB_API_STUB")) {
+    problems.push(
+      "OPS_GITHUB_API_STUB must not exist in production: it is a CI-only test switch for the admin page; remove it",
+    );
+  }
   // ENV-05c: EXTENSION_STORE_VERSION is optional (missing = gated features hidden), but a value that
   // is not major.minor.patch would make every dashboard request fail: fail the build instead. The
   // value is never echoed.
