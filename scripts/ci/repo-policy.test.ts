@@ -49,6 +49,63 @@ describe("repository policy checks", () => {
     expect(read(".github/workflows/health.yml")).toContain("actions: read");
   });
 
+  it("ENV-02 TypeScript is strict in the shared base config and Biome is the only linter", () => {
+    expect(read("tsconfig.base.json")).toMatch(/"strict":\s*true/);
+    expect(existsSync(resolve(root, "biome.json"))).toBe(true);
+    const manifests = ["package.json", "apps/web/package.json", "apps/extension/package.json"];
+    for (const path of manifests) {
+      expect(read(path), path).not.toMatch(/"eslint(-|")/);
+    }
+  });
+
+  it("ENV-03 Node 26 is pinned in .nvmrc and engines, and pnpm comes from packageManager", () => {
+    expect(read(".nvmrc").trim()).toBe("26");
+    const pkg = JSON.parse(read("package.json"));
+    expect(pkg.engines.node).toBe("26.x");
+    expect(pkg.packageManager).toMatch(/^pnpm@\d+\.\d+\.\d+$/);
+  });
+
+  it("AUTH-05a the local Supabase config disables the email provider", () => {
+    const config = read("supabase/config.toml");
+    const section = config.match(/^\[auth\.email\]\n([\s\S]*?)(?=^\[|(?![\s\S]))/m);
+    expect(section, "[auth.email] section").not.toBeNull();
+    expect(section?.[1]).toMatch(/^enabled = false$/m);
+  });
+
+  it("DASH-15 no client-side data cache library is a dependency (dashboard data is read on the server)", () => {
+    const deps = ["package.json", "apps/web/package.json", "packages/shared/package.json"].flatMap(
+      (path) => {
+        const pkg = JSON.parse(read(path));
+        return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+      },
+    );
+    for (const lib of ["swr", "@tanstack/react-query", "react-query", "@apollo/client"]) {
+      expect(deps).not.toContain(lib);
+    }
+  });
+
+  it("STORE-09 the store and extension icons are square PNGs at the sizes the spec lists, with an alpha channel", () => {
+    const png = (path: string) => {
+      const bytes = readFileSync(resolve(root, path));
+      expect(bytes.subarray(1, 4).toString("latin1"), path).toBe("PNG");
+      // IHDR: width and height at bytes 16 and 20, colour type at byte 25 (4 and 6 have alpha).
+      return {
+        width: bytes.readUInt32BE(16),
+        height: bytes.readUInt32BE(20),
+        colorType: bytes[25],
+      };
+    };
+    expect(png("docs/chrome-web-store/assets/icon-128.png")).toMatchObject({
+      width: 128,
+      height: 128,
+    });
+    for (const size of [16, 32, 48, 128]) {
+      const icon = png(`apps/extension/public/icons/icon-${size}.png`);
+      expect(icon).toMatchObject({ width: size, height: size });
+      expect([4, 6], `icon-${size}`).toContain(icon.colorType);
+    }
+  });
+
   it("ENV-09 every action in every workflow is pinned to a full commit SHA", () => {
     for (const name of ["backup", "ci", "health", "migrate", "smoke"]) {
       const text = read(`.github/workflows/${name}.yml`);

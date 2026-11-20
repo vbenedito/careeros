@@ -1,10 +1,13 @@
 {
+  "ADM-14": "Process rule: the main session writes and pushes its ledger before a session ends (docs/process/agents.md §6).",
+  "DASH-10": "CSS grid breakpoint placement with no logic to unit-test; checked by eye in the TEST-01 screenshot artifacts.",
   "ENT-12": "Design note on how a future paid plan plugs in; nothing to assert until that plan exists.",
   "ENV-01": "Tooling decision (pnpm workspaces, no build orchestrator); nothing to assert.",
   "ENV-04": "Decision: there is no staging environment in v0.",
   "ENV-05a": "Release process (GitHub Release with the prod zip); verified by doing a release.",
   "ENV-06": "Local development workflow, documented; not enforced by code.",
   "ENV-07": "Decision: the dashboard is not containerized; nothing to assert.",
+  "ENV-15": "CodeQL workflow (#183/#235); test added when merged.",
   "PRB-17": "Chrome Web Store privacy answers and listing text; checked by a person before the release (#182).",
   "PRD-01": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-02": "Product scope item; covered by the requirement IDs of the specs in its table row.",
