@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   EXTENSION_FEATURES,
   isExtensionFeatureLive,
-  liveProblemSites,
   parseExtensionVersion,
   versionAtLeast,
 } from "./extension-features";
@@ -42,11 +41,5 @@ describe("ENV-05c extension feature gate", () => {
     for (const bad of [undefined, null, "", "nope"]) {
       expect(isExtensionFeatureLive("problemTracking", bad)).toBe(false);
     }
-  });
-
-  it("PRB-23 the live problem sites follow the per-site minimum", () => {
-    expect(liveProblemSites("0.2.3")).toEqual([]);
-    expect(liveProblemSites(undefined)).toEqual([]);
-    expect(liveProblemSites("0.3.0")).toEqual(["leetcode.com"]);
   });
 });

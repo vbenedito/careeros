@@ -13,6 +13,9 @@ import { isProblemDomainTracked } from "@/lib/problems/settings";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
 
+// ENV-05c: the gate reads EXTENSION_STORE_VERSION per request; never prerender this page.
+export const dynamic = "force-dynamic";
+
 /**
  * DASH-12..14. Data is loaded with the user's session (DASH-15, RLS applies).
  * Heading outline (#78): h1 Settings → h2 per card → h3 inside a card (Delete account).

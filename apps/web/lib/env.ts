@@ -64,20 +64,15 @@ export function opsLedgerToken(): string | null {
 
 /**
  * ENV-05c (#242): the extension version live in the Chrome Web Store (`EXTENSION_STORE_VERSION`,
- * server-only, strict `major.minor.patch`). Missing or empty = null: every gated feature is hidden
- * (safe default). An invalid value throws without echoing it (the production build check reports
- * it earlier). Read on every call, so the server-rendered pages and routes (dynamic) see a changed
- * value after a redeploy and nothing depends on it at build time.
+ * server-only, strict `major.minor.patch`). Missing, empty or invalid = null: every gated feature
+ * is hidden (safe default). An invalid value never breaks a request and is never echoed or logged
+ * (the production build check fails on it, so it only reaches here in preview and local runs).
+ * Read on every call, so the server-rendered pages and routes (dynamic) see a changed value after
+ * a redeploy; static pages (landing, privacy) read it at build time.
  */
 export function extensionStoreVersion(): string | null {
   const raw = process.env.EXTENSION_STORE_VERSION?.trim();
-  if (!raw) return null;
-  if (!parseExtensionVersion(raw)) {
-    throw new Error(
-      "Invalid environment variable EXTENSION_STORE_VERSION (see apps/web/.env.example)",
-    );
-  }
-  return raw;
+  return raw && parseExtensionVersion(raw) ? raw : null;
 }
 
 /** ENV-05c: is a dashboard feature that needs a newer extension live for store users? */

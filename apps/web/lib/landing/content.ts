@@ -46,10 +46,22 @@ export const RULES = [
   { v: String(MAX_SITES), d: "study sites per account, subdomains included" },
 ] as const;
 
-export const FAQ = [
+/**
+ * ENV-05c, PRB-23: the sentence of FAQ 1 about the opt-in problem name; shown only while the
+ * store has an extension that tracks problems (`faqEntries(true)`).
+ */
+export const FAQ_PROBLEM_EXCEPTION =
+  "One exception, which you control: if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address (for example two-sum).";
+
+/** The hero demo's sentence about what is saved; the first is the pre-#226 text. */
+export const DEMO_SAVED_PLAIN = "Only the site and the start and end times are saved.";
+export const DEMO_SAVED_WITH_PROBLEMS =
+  "By default, only the site and the start and end times are saved.";
+
+const FAQ_BASE = [
   {
     q: "Does CareerOS read the pages I visit?",
-    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. One exception, which you control: if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address (for example two-sum). Because it reads the address, Chrome describes the permission as reading your browsing history.",
+    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. Because it reads the address, Chrome describes the permission as reading your browsing history.",
   },
   {
     q: "Which sites can I track?",
@@ -77,6 +89,19 @@ export const FAQ = [
     a: 'Settings → Delete account removes your account and all study records right away (encrypted backups expire within 90 days). When the extension is no longer connected, its "Forget local data" clears what\'s left on that computer.',
   },
 ] as const;
+
+/** The FAQ; with `problemTracking` false it reads as before #226 (no exception sentence). */
+export function faqEntries(problemTracking: boolean): readonly { q: string; a: string }[] {
+  const marker = "never reads page titles or content.";
+  return FAQ_BASE.map((f, i) =>
+    i === 0 && problemTracking
+      ? { q: f.q, a: f.a.replace(marker, `${marker} ${FAQ_PROBLEM_EXCEPTION}`) }
+      : f,
+  );
+}
+
+/** Everything shown while problem tracking is live (the full text). */
+export const FAQ = faqEntries(true);
 
 /**
  * "How many hours should you study" explainer (LAND-03, #140): no target numbers, no studies.

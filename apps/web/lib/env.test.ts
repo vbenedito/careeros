@@ -21,13 +21,12 @@ describe("EXTENSION_STORE_VERSION (ENV-05c, PRB-23)", () => {
     expect(extensionFeatureLive("problemTracking")).toBe(true);
   });
 
-  it("ENV-05c an invalid version throws and the message never contains the value", () => {
-    vi.stubEnv("EXTENSION_STORE_VERSION", "latest-secret");
-    expect(() => extensionFeatureLive("problemTracking")).toThrow(/EXTENSION_STORE_VERSION/);
-    try {
-      extensionStoreVersion();
-    } catch (error) {
-      expect(String(error)).not.toContain("latest-secret");
+  it("ENV-05c an invalid version counts as missing: no throw, feature hidden", () => {
+    for (const value of ["latest-secret", "0.3", "v0.3.0", "0.3.0-beta"]) {
+      vi.stubEnv("EXTENSION_STORE_VERSION", value);
+      expect(extensionStoreVersion()).toBeNull();
+      expect(() => extensionFeatureLive("problemTracking")).not.toThrow();
+      expect(extensionFeatureLive("problemTracking")).toBe(false);
     }
   });
 });

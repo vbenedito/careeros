@@ -9,18 +9,11 @@
 export const EXTENSION_FEATURES = {
   /** PRB-01..23: the extension reads the setting and attaches problem slugs (#179, 0.3.0). */
   problemTracking: "0.3.0",
+  // NC-b/NC-c (#233, #237): NeetCode support needs 0.3.1; the NeetCode issues add its own minimum
+  // here (for example `problemTrackingNeetCode: "0.3.1"`) and gate their copy and UI with it.
 } as const;
 
 export type ExtensionFeature = keyof typeof EXTENSION_FEATURES;
-
-/**
- * PRB-18, PRB-23: the first extension version that tracks problems on each site.
- * NC-b/NC-c (#233, #237) add `"neetcode.io": "0.3.1"` here (and move the site list to
- * `PROBLEM_DOMAINS`).
- */
-export const EXTENSION_PROBLEM_SITES: Readonly<Record<string, string>> = {
-  "leetcode.com": "0.3.0",
-};
 
 const VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 
@@ -55,11 +48,4 @@ export function isExtensionFeatureLive(
   storeVersion: string | null | undefined,
 ): boolean {
   return versionAtLeast(storeVersion, EXTENSION_FEATURES[feature]);
-}
-
-/** The problem sites whose extension support is live in the store version. */
-export function liveProblemSites(storeVersion: string | null | undefined): string[] {
-  return Object.entries(EXTENSION_PROBLEM_SITES)
-    .filter(([, minimum]) => versionAtLeast(storeVersion, minimum))
-    .map(([site]) => site);
 }

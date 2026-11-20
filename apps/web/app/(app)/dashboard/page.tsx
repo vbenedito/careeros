@@ -28,6 +28,9 @@ import { loadProblemSetting, loadProblems } from "@/lib/problems/data";
 import { showProblemsCard } from "@/lib/problems/settings";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
+// ENV-05c: the gate reads EXTENSION_STORE_VERSION per request; never prerender this page.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage({
   searchParams,
 }: {
