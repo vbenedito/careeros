@@ -227,13 +227,53 @@ describe("database parity: problems", () => {
     ]);
   });
 
-  it("PRB-05 DATA-16 the problem domain equals PROBLEM_DOMAIN", () => {
-    expect(occurrences(table, /check \(domain = '([^']+)'\)/g)).toEqual([PROBLEMS.PROBLEM_DOMAIN]);
-    expect(occurrences(parser, /domain::text <> '([^']+)'/g)).toEqual([PROBLEMS.PROBLEM_DOMAIN]);
+  // PRB-18 (#237): the list is written once in SQL, in private.problem_domains(); the table
+  // CHECK and the ingest parser call it, so they cannot differ from each other.
+  const domainsFn = latestFunctionSql("private.problem_domains").sql;
+  const domainCheck = (() => {
+    for (const file of readdirSync(migrationsDir).sort().reverse()) {
+      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+      const matches = [
+        ...sql.matchAll(/add constraint study_session_problems_domain_check\s+check \(([^;]+)\);/g),
+      ];
+      const last = matches.at(-1);
+      if (last) return last[1] as string;
+    }
+    throw new Error("study_session_problems_domain_check not found in supabase/migrations");
+  })();
+  const listed = (sql: string) => [...sql.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+
+  it("PRB-18 DATA-16 private.problem_domains() equals PROBLEM_DOMAINS", () => {
+    const array = /array\[([^\]]+)\]/.exec(domainsFn)?.[1] ?? "";
+    expect(listed(array)).toEqual([...PROBLEMS.PROBLEM_DOMAINS]);
+    expect(domainsFn).toContain("immutable");
+  });
+
+  it("PRB-18 PROBLEM_DOMAINS has no duplicates and still contains PROBLEM_DOMAIN", () => {
+    expect(new Set(PROBLEMS.PROBLEM_DOMAINS).size).toBe(PROBLEMS.PROBLEM_DOMAINS.length);
+    expect(PROBLEMS.PROBLEM_DOMAINS).toContain(PROBLEMS.PROBLEM_DOMAIN);
+  });
+
+  it("PRB-18 DATA-16 the table CHECK and the ingest parser read the list, with no domain literal of their own", () => {
+    expect(domainCheck).toContain("private.problem_domains()");
+    expect(listed(domainCheck)).toEqual([]);
+    expect(parser).toContain("private.problem_domains()");
+    const code = parser.replace(/--[^\n]*/g, "");
+    for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(code).not.toContain(`'${domain}'`);
+  });
+
+  it("PRB-18 the shared ingest implementation names no problem domain", () => {
+    const ingest = latestFunctionSql("private.ingest_sessions").sql;
+    for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(ingest).not.toContain(domain);
   });
 
   it("PRB-11 DATA-15 get_problem_totals returns at most PROBLEM_LIST_MAX rows", () => {
     const { sql } = latestFunctionSql("public.get_problem_totals");
+    expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
+  });
+
+  it("PRB-11 DATA-15a get_problem_totals_v2 returns at most PROBLEM_LIST_MAX rows", () => {
+    const { sql } = latestFunctionSql("public.get_problem_totals_v2");
     expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
   });
 });

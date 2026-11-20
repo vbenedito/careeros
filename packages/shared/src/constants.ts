@@ -74,6 +74,8 @@ export const ENTITLEMENTS = {
  */
 export const PROBLEMS = {
   PROBLEM_DOMAIN: "leetcode.com",
+  /** PRB-18: every site whose tabs can carry a problem (#233). PROBLEM_DOMAIN goes in NC-b. */
+  PROBLEM_DOMAINS: ["leetcode.com", "neetcode.io"],
   PROBLEM_PATH_PREFIX: "/problems/",
   PROBLEM_SLUG_PATTERN: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
   PROBLEM_SLUG_MAX: 100,

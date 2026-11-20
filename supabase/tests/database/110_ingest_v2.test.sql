@@ -145,15 +145,15 @@ values
   ('f0000000-0000-4000-8000-000000000001', tests.user_id('jon'), gen_random_uuid(),
    'leetcode.com', now() - interval '3 hours', now() - interval '2 hours 50 minutes'),
   ('f0000000-0000-4000-8000-000000000002', tests.user_id('jon'), gen_random_uuid(),
-   'neetcode.io', now() - interval '3 hours', now() - interval '2 hours 50 minutes');
+   'neetcode.com', now() - interval '3 hours', now() - interval '2 hours 50 minutes');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000001', tests.user_id('ivy'), 'leetcode.com', 'two-sum') $$,
   '23503', null, 'DATA-16 a slug row for another user''s session is refused by the FK');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
-     values ('f0000000-0000-4000-8000-000000000002', tests.user_id('jon'), 'neetcode.io', 'two-sum') $$,
-  '23514', null, 'DATA-16 a slug row for a non-leetcode.com session is refused by the CHECK');
+     values ('f0000000-0000-4000-8000-000000000002', tests.user_id('jon'), 'neetcode.com', 'two-sum') $$,
+  '23514', null, 'DATA-16 a slug row for a session outside PROBLEM_DOMAINS is refused by the CHECK (#237: neetcode.io is inside; 130_problem_domains)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000001', tests.user_id('jon'), 'leetcode.com', 'Two-Sum') $$,
@@ -249,7 +249,7 @@ select is(
       || '{"problem": "two-sum"}',
     tests.session('f2000000-0000-4000-8000-000000000002', 'leetcode.com', interval '8 hours 20 minutes', interval '5 minutes')
       || '{"problem": "Two-Sum"}',
-    tests.session('f2000000-0000-4000-8000-000000000003', 'neetcode.io', interval '8 hours 30 minutes', interval '5 minutes')
+    tests.session('f2000000-0000-4000-8000-000000000003', 'neetcode.com', interval '8 hours 30 minutes', interval '5 minutes')
       || '{"problem": "two-sum"}',
     tests.session('f2000000-0000-4000-8000-000000000004', 'leetcode.com', interval '8 hours 40 minutes', interval '5 minutes')
       || jsonb_build_object('problem', repeat('a', 101)),
@@ -268,7 +268,7 @@ select is(
       jsonb_build_object('id', 'f2000000-0000-4000-8000-000000000004', 'reason', 'invalid'),
       jsonb_build_object('id', 'f2000000-0000-4000-8000-000000000005', 'reason', 'invalid'),
       jsonb_build_object('id', 'f2000000-0000-4000-8000-000000000006', 'reason', 'invalid'))),
-  'PRB-05 DATA-06b a bad slug, a slug off leetcode.com or a non-string problem makes only that element invalid (even when also future); problem null means none'
+  'PRB-05 DATA-06b a bad slug, a slug off PROBLEM_DOMAINS or a non-string problem makes only that element invalid (even when also future); problem null means none'
 );
 select is((select count(*)::int from public.study_session_problems), 0,
   'PRB-01 DATA-14 with no settings row the slug is dropped and the interval stored');

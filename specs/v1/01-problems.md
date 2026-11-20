@@ -12,6 +12,8 @@ Amended 2026-11-18 (#180): PRB-14 implemented in the popup (EXT-UI-11): the time
 
 Amended 2026-11-19 (#233, proposal, product owner decisions of the same day): problem tracking also covers **NeetCode** (`neetcode.io`). The domain becomes a list, `PROBLEM_DOMAINS` (PRB-18); the setting is one account setting for both sites, renamed **Track coding problems** (label approved 2026-11-19, PRB-22); the dashboard lists problems **per site**, a problem being the pair domain + slug (PRB-19); extension **0.3.1** ships it after 0.3.0 (LeetCode only, as built) without breaking 0.3.0 (PRB-20, PRB-21). Changed: PRB-01, 05, 06, 11, 12, 14, 15, 17 and acceptance 1 and 6; new: PRB-18..22, acceptance 8..12 and section 6. **Status of every item amended or added here: Proposed.** Everything not named stays as it was.
 
+Amended 2026-11-20 (#237, NC-a): implemented in `20261120100000_problem_domains.sql` and `packages/shared` (`PROBLEM_DOMAINS` next to `PROBLEM_DOMAIN`, which stays until NC-b): the database part of PRB-18 (the list in `private.problem_domains()`, read by the domain check and the ingest validation; parity test), PRB-19 and PRB-20 (v1 and 0.3.0 unchanged; `get_problem_totals_v2`), acceptance 9 (database), 11 and 12 (database; pgTAP `130_problem_domains`), and section 5 step 1. Not yet implemented: the parser, extension, dashboard and store parts (NC-b..d) and the contract (NC-e). Status of those: **Proposed**.
+
 ## 1. Objective
 
 Show how much time the user spends on each coding problem on LeetCode and NeetCode. The problem is read from the address of the active tab. Nothing else about the page is read or kept.
