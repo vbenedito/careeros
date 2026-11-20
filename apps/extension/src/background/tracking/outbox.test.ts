@@ -1,5 +1,6 @@
 import type { Interval } from "@careeros/shared";
 import { describe, expect, it } from "vitest";
+import { INITIAL_ENGINE_STATE } from "../../engine/engine";
 import { fakeStorage } from "../../test/fakes";
 import {
   DEFERRED_KEY,
@@ -10,7 +11,7 @@ import {
 } from "./keys";
 import { createOutbox, deferredDue } from "./outbox";
 import { createSerialQueue } from "./queue";
-import { parseDeferred, parseOutboxCounted } from "./store";
+import { parseDeferred, parseEngineState, parseOutboxCounted } from "./store";
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 9, 15, 0, 0); // local day = UTC day in this test
@@ -80,6 +81,24 @@ describe("tolerant outbox parse (PRB-20)", () => {
     const { items, invalid } = parseDeferred([entry]);
     expect(invalid).toBe(0);
     expect(items[0]?.interval).toEqual(withoutProblem(entry.interval));
+  });
+});
+
+describe("tolerant engine state (PRB-20)", () => {
+  const open = (domain: string, problem: string | null) => ({
+    ...INITIAL_ENGINE_STATE,
+    open: { id: "00000000-0000-4000-8000-0000000000aa", domain, problem, startedAt: 100 },
+  });
+
+  it("PRB-20 an open interval with a problem on an unknown domain keeps its time and loses the problem", () => {
+    const state = parseEngineState(open("example.com", "two-sum"));
+    expect(state.open).toMatchObject({ domain: "example.com", problem: null, startedAt: 100 });
+  });
+
+  it("PRB-20 an open interval on a listed domain keeps its problem", () => {
+    expect(parseEngineState(open("neetcode.io", "two-integer-sum")).open?.problem).toBe(
+      "two-integer-sum",
+    );
   });
 });
 

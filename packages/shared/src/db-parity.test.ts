@@ -249,7 +249,7 @@ describe("database parity: problems", () => {
     expect(domainsFn).toContain("immutable");
   });
 
-  it("PRB-18 PROBLEM_DOMAINS has no duplicates ", () => {
+  it("PRB-18 PROBLEM_DOMAINS has no duplicates", () => {
     expect(new Set(PROBLEMS.PROBLEM_DOMAINS).size).toBe(PROBLEMS.PROBLEM_DOMAINS.length);
   });
 

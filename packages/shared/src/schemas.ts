@@ -26,7 +26,7 @@ export const ProblemSlugSchema = z
  * MIN_INTERVAL_S is not enforced here: the engine discards short intervals before they are
  * stored (TRK-10), and the server only requires a positive duration (DATA-02).
  * PRB-08: `problem` is present only when the interval has one, and only on a domain of
- * PROBLEM_DOMAINS (PRB-18) * (PRB-15); an interval without a problem has exactly the 0.2.3 shape.
+ * PROBLEM_DOMAINS (PRB-18, PRB-15); an interval without a problem has exactly the 0.2.3 shape.
  */
 export const IntervalSchema = z
   .object({

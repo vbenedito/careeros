@@ -953,7 +953,14 @@ describe("NeetCode problems (specs/v1/01-problems.md PRB-05, PRB-08, PRB-18, PRB
     expect(sim.emitted()).toEqual([]);
   });
 
-  it("PRB-08 PRB-19 the same slug on another site is a problem change: the interval splits", () => {
+  it("PRB-19 TRK-10 a cross-site piece shorter than MIN_INTERVAL_S is still discarded (no split exception)", () => {
+    const sim = browsing(["leetcode.com", "neetcode.io"], LC);
+    sim.send(3, { type: "TAB", tab: tab("https://neetcode.io/problems/two-sum/question") });
+    sim.send(300, { type: "TAB", tab: NEWS_TAB });
+    expect(sim.intervals().map((i) => i[0])).not.toContain("leetcode.com");
+  });
+
+  it("PRB-19 TRK-08 the same slug on another site is a domain change: the interval closes and a new one opens", () => {
     const sim = browsing(["leetcode.com", "neetcode.io"], LC);
     const sameSlugOnNeetCode = tab("https://neetcode.io/problems/two-sum/question");
     sim.heartbeats(0, 120, LC, "active");

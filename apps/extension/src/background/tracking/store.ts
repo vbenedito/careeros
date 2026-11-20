@@ -33,6 +33,14 @@ const epoch = z.number().int().nonnegative();
 const nullableEpoch = epoch.nullable().default(null);
 const idle = z.enum(["active", "idle", "locked", "unknown"]);
 
+/** PRB-20: an open interval with a problem on an unknown domain keeps the time, loses the problem. */
+function openProblemTolerant(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const o = value as Record<string, unknown>;
+  if (o.problem == null || typeof o.domain !== "string" || isProblemDomain(o.domain)) return value;
+  return { ...o, problem: null };
+}
+
 export const EngineStateSchema = z.object({
   signals: z.object({
     connected: z.boolean(),
@@ -47,16 +55,19 @@ export const EngineStateSchema = z.object({
     idle,
     mediaHold: z.boolean(),
   }),
-  open: z
-    .object({
-      id: z.uuid(),
-      domain: DomainSchema,
-      problem: ProblemSlugSchema.nullable().default(null),
-      splitOpened: z.boolean().default(false),
-      startedAt: epoch,
-    })
-    .refine((o) => o.problem === null || isProblemDomain(o.domain))
-    .nullable(),
+  open: z.preprocess(
+    openProblemTolerant,
+    z
+      .object({
+        id: z.uuid(),
+        domain: DomainSchema,
+        problem: ProblemSlugSchema.nullable().default(null),
+        splitOpened: z.boolean().default(false),
+        startedAt: epoch,
+      })
+      .refine((o) => o.problem === null || isProblemDomain(o.domain))
+      .nullable(),
+  ),
   lastHeartbeatAt: nullableEpoch,
   lastInputAt: nullableEpoch,
   notBefore: nullableEpoch,
@@ -68,9 +79,10 @@ export function parseEngineState(value: unknown): EngineState {
 }
 
 /**
- * PRB-20: an interval whose `problem` sits on a domain outside PROBLEM_DOMAINS (for example a
- * NeetCode interval queued by 0.3.1 and read by 0.3.0 after a rollback) keeps its time and
- * loses only the problem; it is never dropped for that reason. Nothing is logged.
+ * PRB-20: an interval whose `problem` sits on a domain outside PROBLEM_DOMAINS keeps its time and
+ * loses only the problem; it is never dropped for that reason. It covers a later build with
+ * more domains rolled back to 0.3.1 or newer; released 0.3.0 code does not have it (see the
+ * rollback note in specs/v1/01-problems.md section 5). Nothing is logged.
  */
 export function parseIntervalTolerant(item: unknown): Interval | null {
   const parsed = IntervalSchema.safeParse(item);
