@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * DASH-16: the "Track coding problems" switch ("Track LeetCode problems" before extension 0.3.1) (PRB-01, PRB-02). Turning it off with stored
- * slugs asks first (PRB-16): keep the history, delete it, or cancel.
+ * DASH-16: the "Track coding problems" switch ("Track LeetCode problems" before extension
+ * 0.3.1) (PRB-01, PRB-02). Turning it off with stored slugs asks first (PRB-16): keep the
+ * history, delete it, or cancel.
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";

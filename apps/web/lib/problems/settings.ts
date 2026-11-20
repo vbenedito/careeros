@@ -1,7 +1,7 @@
 /**
- * The "Track coding problems" setting (LeetCode problems before 0.3.1, see ./copy) in the dashboard (DASH-16, PRB-02, PRB-16): the API
- * contract shared by the route and the browser, the decision of when to ask before turning it
- * off, and the messages. Pure.
+ * The "Track coding problems" setting (LeetCode problems before 0.3.1, see ./copy) in the
+ * dashboard (DASH-16, PRB-02, PRB-16): the API contract shared by the route and the browser,
+ * the decision of when to ask before turning it off, and the messages. Pure.
  */
 import { PROBLEMS, SYNC } from "@careeros/shared";
 import { z } from "zod";
