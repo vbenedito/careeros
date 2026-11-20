@@ -46,7 +46,7 @@ erDiagram
   STUDY_SESSION_PROBLEMS {
     uuid session_id PK "FK with user_id, domain"
     uuid user_id FK
-    hostname domain "leetcode.com only"
+    hostname domain "PROBLEM_DOMAINS only"
     text problem_slug "PRB-05 slug"
   }
   PLANS {
@@ -65,12 +65,12 @@ erDiagram
 | `public.tracked_domains` | Study sites per user | `unique (user_id, domain)`; trigger `tracked_domains_limit` allows at most the number in the user's plan (12 on `free`; advisory lock per user; lists already over the limit are kept, deletes always allowed) | DATA-01, ENT-03, SYNC-09 |
 | `public.study_sessions` | One row per closed interval | `ended_at > started_at`; length ≤ 1830 s; immutable; `unique (id, user_id, domain)` for the slug FK | DATA-02, DATA-03, DATA-16 |
 | `public.account_settings` | One row per user; `track_problems` (off by default, no row = off) | Written only by `set_problem_tracking` | DATA-13, PRB-01 |
-| `public.study_session_problems` | LeetCode problem slug of an interval, deletable while the interval stays | Composite FK `(session_id, user_id, domain)` → `study_sessions (id, user_id, domain)` cascade; `domain = 'leetcode.com'`; slug ≤ 100 chars matching `PROBLEM_SLUG_PATTERN`. Inserted only by ingest v2, deleted only by `set_problem_tracking` (or the account cascade) | DATA-16, PRB-05, PRB-16 |
+| `public.study_session_problems` | LeetCode problem slug of an interval, deletable while the interval stays | Composite FK `(session_id, user_id, domain)` → `study_sessions (id, user_id, domain)` cascade; `domain` in `private.problem_domains()` (`leetcode.com`, `neetcode.io`, #237); slug ≤ 100 chars matching `PROBLEM_SLUG_PATTERN`. Inserted only by ingest v2, deleted only by `set_problem_tracking` (or the account cascade) | DATA-16, PRB-05, PRB-16 |
 | `public.plans` | One row per plan, one column per limit; v1 has `free` with `max_tracked_domains = 12`. Changed only by a migration (`update public.plans set ... where id = 'free'`) | `id` primary key, `max_tracked_domains > 0` | ENT-01 |
 | `public.admins` | Users who may open `/admin`. A row means admin; rows are added **by hand in the Supabase SQL editor** by the project owner (no client role can write; no seed, no user id in the repository) | `user_id` primary key → `auth.users` on delete cascade | ADM-01, ADM-02 |
 | `private.link_requests` | Rate-limit log for extension links | Rows older than 1 hour pruned on each call | AUTH-08 |
 
-`packages/shared/src/db-parity.test.ts` fails if the `hostname` regex or limits drift from `isValidDomain()` in `packages/shared/src/domain.ts`, (ENT-11) if the `free` row set by the last migration differs from `ENTITLEMENTS` in `packages/shared`, and (PRB-05) if the slug pattern, length or domain differ from `PROBLEMS`.
+`packages/shared/src/db-parity.test.ts` fails if the `hostname` regex or limits drift from `isValidDomain()` in `packages/shared/src/domain.ts`, (ENT-11) if the `free` row set by the last migration differs from `ENTITLEMENTS` in `packages/shared`, and (PRB-05, PRB-18) if the slug pattern or length differ from `PROBLEMS`, or `private.problem_domains()` differs from `PROBLEM_DOMAINS` (the table CHECK holds the same list as a literal, a function in a CHECK would need EXECUTE for the inserting role; the parser calls the function and holds no literal).
 
 ## Grants and RLS
 
@@ -94,12 +94,14 @@ There is no `UPDATE` grant anywhere. The two ingest RPCs (one shared implementat
 | Function | Security | Grant | Does | Specs |
 |---|---|---|---|---|
 | `ingest_study_sessions(sessions jsonb) → uuid[]` | `definer`, `search_path = ''` | `authenticated` | Released contract (extension ≤ 0.2.3): `private.ingest_sessions(sessions, false)`, returns only the confirmed ids; ignores a `problem` key | DATA-06..09b, SYNC-04, [ADR-0004](../adr/0004-idempotent-ingest.md), [ADR-0011](../adr/0011-ingest-v2.md) |
-| `ingest_study_sessions_v2(sessions jsonb) → jsonb` | `definer`, `search_path = ''` | `authenticated` | `private.ingest_sessions(sessions, true)`: `{"confirmed": [id], "rejected": [{"id", "reason": "invalid" \| "future" \| "overlap"}]}`; keeps a valid slug of a newly inserted `leetcode.com` interval when the caller's setting is on | DATA-06b, DATA-14, DATA-16 |
+| `ingest_study_sessions_v2(sessions jsonb) → jsonb` | `definer`, `search_path = ''` | `authenticated` | `private.ingest_sessions(sessions, true)`: `{"confirmed": [id], "rejected": [{"id", "reason": "invalid" \| "future" \| "overlap"}]}`; keeps a valid slug of a newly inserted interval on a `PROBLEM_DOMAINS` site (`leetcode.com`, `neetcode.io`) when the caller's setting is on | DATA-06b, DATA-14, DATA-16 |
 | `private.ingest_sessions(sessions jsonb, keep_problem boolean) → jsonb` | invoker (runs as the definer wrappers), `search_path = ''` | none | Shared rules: rejects no user / anonymous (`PT401`), non-array, > 200 items, > 128 kB (`22023`); per-user advisory lock; validates each element and the overlap rule; abuse caps 1,000/h and 3,500/24 h (`ABUSE_LIMIT`, `PT429`) only when the batch has a new row (pure retries pass, DATA-09b); reads the setting after the lock; inserts with `on conflict (id) do nothing` and slug rows only for rows it inserted | DATA-06..09b, DATA-14 |
-| `private.parse_session_element(jsonb, boolean)` | invoker | none | Validates one element (UUIDs, ISO timestamps with whole seconds, domain, length, ≤ 30 days old, ≤ 5 min in the future; with `true` also the `problem` slug and its domain); returns the columns and a reason (`invalid`, `future`, or null when valid). Replaced `parse_study_session` in #178 | DATA-07, DATA-06b, PRB-05 |
+| `private.parse_session_element(jsonb, boolean)` | invoker | none | Validates one element (UUIDs, ISO timestamps with whole seconds, domain, length, ≤ 30 days old, ≤ 5 min in the future; with `true` also the `problem` slug and its domain, which must be in `private.problem_domains()`); returns the columns and a reason (`invalid`, `future`, or null when valid). Replaced `parse_study_session` in #178 | DATA-07, DATA-06b, PRB-05 |
 | `set_problem_tracking(p_enabled, p_delete_history)` | `definer`, `search_path = ''` | `authenticated` | Same per-user lock as ingest; upserts the caller's setting; with `(false, true)` deletes every slug row of the caller; `(true, true)` and nulls refused (`INVALID_ARGUMENT`, `22023`); never touches `study_sessions` | DATA-17, PRB-16 |
 | `get_daily_totals(p_from, p_to, p_tz)` | `invoker` (RLS applies) | `authenticated` | One zero-filled row per local day; range ≤ 92 days; checks the time zone (`INVALID_RANGE`, `INVALID_TIME_ZONE`) | DATA-10 |
 | `get_domain_totals(p_from, p_to, p_tz)` | `invoker` | `authenticated` | Seconds per domain, largest first | DATA-11 |
+| `private.problem_domains() → text[]` | invoker, `immutable`, `search_path = ''` | none | The one SQL list of sites that can carry a problem slug (`PROBLEM_DOMAINS`); read by `private.parse_session_element`; the `study_session_problems_domain_check` CHECK repeats it as a literal (parity test). Changing it is a new migration | PRB-18, DATA-16 |
+| `get_problem_totals_v2(p_from, p_to, p_tz)` | `invoker`, `stable`, `search_path = ''` | `authenticated` | As `get_problem_totals` but grouped by site and slug and returning `domain`; the same slug on two sites is two rows; ties by domain, then slug (byte order); at most 200 rows | DATA-15a, PRB-11, PRB-19 |
 | `get_problem_totals(p_from, p_to, p_tz)` | `invoker` | `authenticated` | Seconds and last local day per slug, largest first, ties by slug (byte order), at most 200 rows; same checks as DATA-10 | DATA-15, PRB-11 |
 | `consume_extension_link_quota() → boolean` | `definer` | `authenticated` | Records one request for `auth.uid()`; false above 5 per minute | AUTH-08 |
 | `private.plan_of(p_user_id uuid) → text` | `invoker`, `search_path = ''` | none | Plan of a user; `'free'` for everyone in v1. A later per-account plan changes only this function | ENT-02, ENT-12 |
@@ -162,6 +164,7 @@ Append-only; never edit an applied migration (AGENTS.md).
 | `20261117100000_entitlements.sql` | `plans` (`free` = 12), `private.plan_of`, site-limit trigger reads the plan and raises the error with `detail` (#177) |
 | `20261118100000_ingest_v2.sql` | `account_settings`, `study_session_problems`, `private.ingest_sessions` behind `ingest_study_sessions` and the new `ingest_study_sessions_v2`, caps only for new rows, `set_problem_tracking`, `get_problem_totals`; drops `parse_study_session` (#178, ADR-0011) |
 | `20261118110000_admins.sql` | `admins` (ADM-01): own-row read only, no client write, rows added by hand (#213, ADR-0013) |
+| `20261120100000_problem_domains.sql` | Expand step of NeetCode problems: `private.problem_domains()`, the widened domain check, the v2 element parser reads the list, `get_problem_totals_v2`; `get_problem_totals` unchanged until the contract step (#237, #233, PRB-18..20) |
 
 How they reach production: [release process](../process/release.md#database-migrations).
 
@@ -184,6 +187,7 @@ How they reach production: [release process](../process/release.md#database-migr
 | `100_entitlements` | `plans`, `plan_of`, limit from the plan, error code, hint and details, changed `free` row (ENT-01..06) |
 | `110_ingest_v2` | ADR-0011 compatibility plan items 1–3, 6, 7: old contract, v2 reasons and slugs, shared rules and caps for pure retries, grants, setting and history delete, problem totals (DATA-06b, DATA-09b, DATA-13..17) |
 | `120_admins` | `admins`: own row only, no client insert, update or delete, anonymous refusal, cascade (ADM-01) |
+| `130_problem_domains` | The widened check and the one list, v2 ingest of `neetcode.io` and of domains outside the list (only that element `invalid`), old clients (0.2.3, 0.3.0), `get_problem_totals_v2` with two sites and its grants (same as `get_problem_totals`), RLS, history delete across sites (PRB-16, PRB-18..20, DATA-15a) |
 
 ## Backups
 
