@@ -38,8 +38,8 @@ export const EXTENSION_FOLLOWS_NOTE = `The extension updates within about ${SYNC
 
 /** DASH-16: the card needs the problem domain itself in the tracked sites (PRB-05). */
 export function isProblemDomainTracked(domains: readonly string[]): boolean {
-  // TODO NC-c (#239): per-site check
-  return domains.includes("leetcode.com");
+  // TODO NC-c (#239): per-site check. Exact element equality (not a substring test on a URL).
+  return domains.some((domain) => domain === "leetcode.com");
 }
 
 export function problemSettingErrorMessage(code: string | undefined, status: number | null) {
