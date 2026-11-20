@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { extensionFeatureLive, privacyConfig } from "@/lib/env";
 
+/** Rendered per request so the problem-tracking copy follows EXTENSION_STORE_VERSION (PRB-23). */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Privacy · CareerOS",
   robots: { index: true, follow: true },

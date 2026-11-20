@@ -124,7 +124,7 @@ describe("landing page (LAND)", () => {
     expect(before).not.toContain("One exception");
     expect(before).not.toContain("By default, only");
     expect(before).toContain("Only the site and the start and end times are saved.");
-    expect(before).toContain("never reads page titles or content. Because it reads the address");
+    expect(before).toContain("never reads page titles or content. Because of this, Chrome");
   });
 
   it("LAND-03 #140 the study-hours section: honest copy, example data clearly labelled", () => {

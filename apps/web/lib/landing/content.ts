@@ -61,7 +61,7 @@ export const DEMO_SAVED_WITH_PROBLEMS =
 const FAQ_BASE = [
   {
     q: "Does CareerOS read the pages I visit?",
-    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. Because it reads the address, Chrome describes the permission as reading your browsing history.",
+    a: "No. It reads the active tab's address only to get the site name (for example leetcode.com) and check whether it is one of your study sites. It never stores or sends the address, and never reads page titles or content. Because of this, Chrome describes the permission as reading your browsing history.",
   },
   {
     q: "Which sites can I track?",
@@ -95,7 +95,12 @@ export function faqEntries(problemTracking: boolean): readonly { q: string; a: s
   const marker = "never reads page titles or content.";
   return FAQ_BASE.map((f, i) =>
     i === 0 && problemTracking
-      ? { q: f.q, a: f.a.replace(marker, `${marker} ${FAQ_PROBLEM_EXCEPTION}`) }
+      ? {
+          q: f.q,
+          a: f.a
+            .replace(marker, `${marker} ${FAQ_PROBLEM_EXCEPTION}`)
+            .replace("Because of this,", "Because it reads the address,"),
+        }
       : f,
   );
 }
