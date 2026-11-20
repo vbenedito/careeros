@@ -15,7 +15,7 @@
 -- every site; it is not changed.
 
 -- ---------------------------------------------------------------------------------------------
--- PROBLEM_DOMAINS (PRB-18): the one list, in SQL. IMMUTABLE because a CHECK constraint uses it;
+-- PROBLEM_DOMAINS (PRB-18): the one list, in SQL. IMMUTABLE so the parser can inline it (the table CHECK holds the same list as a literal, kept equal by db-parity.test.ts);
 -- changing the list later is a new migration (and an amendment of PRB-18), never an edit.
 -- No client needs it: not granted (the definer ingest functions call it).
 -- ---------------------------------------------------------------------------------------------
