@@ -13,6 +13,7 @@ Amended 2026-11-12 (#155, #156): §5 CI gates add the Markdown link check and th
 Amended 2026-11-12 (#82): §6 test reliability rules (day boundaries, sync races, local auth rate limits).
 
 Amended 2026-11-20 (#232): TEST-01 also covers `/admin`, light and dark, against a CI-only GitHub stub.
+
 Amended 2026-11-19 (#224): TEST-01 adds an iPhone 17 viewport (402×874, 3x, touch), phone widths 360/390/402/430 with wide text, the hero CTA pair as a centred group, and animation checks (LAND-08).
 
 Amended 2026-11-13 (grill T3–T6, S3, A4): coverage floors for the sync and auth modules (TEST-03), account-erasure, concurrent-ingest and RLS-policy tests (TEST-04, TEST-05, TEST-07), the integration server readiness check (TEST-06), database constant parity (TEST-08), and polling instead of fixed sleeps (§6).

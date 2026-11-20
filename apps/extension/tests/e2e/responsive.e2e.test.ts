@@ -182,7 +182,9 @@ describe("app pages responsive layout (TEST-01)", () => {
 
   for (const scheme of ["light", "dark"] as const) {
     for (const width of WIDTHS) {
-      it(`TEST-01 ADM-09..15 /admin ${scheme} at ${width}px: no overflow, touch targets`, async () => {
+      // /admin is read-only and has no buttons, so the touch-target rule has nothing to measure
+      // here; the checks that matter are overflow and clipped text (the tables scroll in a box).
+      it(`TEST-01 ADM-09..15 /admin ${scheme} at ${width}px: no overflow`, async () => {
         const page = await open("/admin", width, true, adminCookies, scheme);
         // The stub's sessions (github-stub.ts) are listed, so the tables rendered: not "Ledger
         // unavailable". Its issues and the diagram render too (ADM-12, ADM-15).
@@ -190,6 +192,9 @@ describe("app pages responsive layout (TEST-01)", () => {
         expect(await page.getByText("unavailable").count()).toBe(0);
         expect(await page.locator("table").count()).toBeGreaterThan(0);
         await page.getByRole("heading", { name: "How it connects" }).waitFor();
+        // ADM-08: the server read the ledger with the token; it must not be in the page.
+        const canary = process.env.OPS_LEDGER_TOKEN;
+        if (canary) expect(await page.content()).not.toContain(canary);
         // The theme class is applied by next-themes after load: wait for it, then measure.
         await expect
           .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))

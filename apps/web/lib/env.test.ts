@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extensionFeatureLive, extensionStoreVersion, githubApiBase } from "./env";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -44,6 +44,13 @@ describe("EXTENSION_STORE_VERSION (ENV-05c, PRB-23)", () => {
 
 describe("OPS_GITHUB_API_STUB (TEST-01, #232)", () => {
   const REAL = "https://api.github.com";
+  beforeEach(() => vi.stubEnv("CI", "true"));
+
+  it("TEST-01 without CI the stub is ignored", () => {
+    vi.stubEnv("OPS_GITHUB_API_STUB", "http://127.0.0.1:4010");
+    vi.stubEnv("CI", "");
+    expect(githubApiBase(REAL)).toBe(REAL);
+  });
 
   it("TEST-01 unset, empty or invalid: the real API", () => {
     for (const value of [undefined, "", "  ", "not a url"]) {
