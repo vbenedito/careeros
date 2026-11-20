@@ -40,6 +40,8 @@ export default async function DashboardPage({
   // PRB-23, ENV-05c: read per request (this page is dynamic). Not live in the store = the dashboard as before
   // problem tracking: no announcement, no card, and no setting read.
   const released = extensionFeatureLive("problemTracking");
+  // ENV-05c: the NeetCode copy (title, site on each row) needs the later store version.
+  const neetCode = released && extensionFeatureLive("problemTrackingNeetCode");
   const supabase = await createClient();
   const tzCookie = (await cookies()).get(TZ_COOKIE)?.value;
   let timeZone = resolveTimeZone(tzCookie);
@@ -66,13 +68,14 @@ export default async function DashboardPage({
   // DASH-17: the list comes after the zone is final; while the setting is off the card is hidden.
   const problems =
     released && result.ok && showProblemsCard(problemSetting)
-      ? await loadProblems(supabase, period, timeZone)
+      ? await loadProblems(supabase, period, timeZone, neetCode)
       : null;
   const problemsCard = problems ? (
     <ProblemsCard
       rows={problems.ok ? problems.rows : []}
       {...(problems.ok ? {} : { error: problems.reason })}
       retryHref={periodHref(period.view, period.anchor)}
+      neetCode={neetCode}
     />
   ) : null;
 
@@ -82,7 +85,7 @@ export default async function DashboardPage({
       <PageHeader title="Dashboard" actions={<PeriodSelector period={period} today={today} />} />
       <main className="flex flex-col gap-4 p-4 md:p-6">
         {/* DASH-18: only while the setting is off (not when it is on or could not be read). */}
-        {released && problemSetting === "off" ? <ProblemsAnnouncement /> : null}
+        {released && problemSetting === "off" ? <ProblemsAnnouncement neetCode={neetCode} /> : null}
         <UtcHint />
         {result.ok ? (
           <>

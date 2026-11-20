@@ -37,6 +37,11 @@ export interface LandingOptions {
    * label mention the opt-in problem name. Without it the copy reads as before #226.
    */
   problemTracking?: boolean | undefined;
+  /**
+   * ENV-05c, PRB-22: the store also has the extension that tracks NeetCode (0.3.1); FAQ 1 then
+   * names both sites. Only meaningful with `problemTracking`.
+   */
+  problemTrackingNeetCode?: boolean | undefined;
 }
 
 const esc = (s: string) =>
@@ -221,6 +226,7 @@ export function renderLanding({
   googleSiteVerification,
   analytics,
   problemTracking = false,
+  problemTrackingNeetCode = false,
 }: LandingOptions): string {
   const site = new URL(siteUrl).origin;
   const max = Math.max(...SAMPLE_WEEK);
@@ -257,7 +263,7 @@ export function renderLanding({
     )
     .join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
-  const faq = faqEntries(problemTracking)
+  const faq = faqEntries(problemTracking, problemTracking && problemTrackingNeetCode)
     .map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`)
     .join("");
   const siteRow = (cls: string, name: string) =>

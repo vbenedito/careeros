@@ -12,14 +12,19 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "November 18, 2026";
+/** With the NeetCode copy (extension 0.3.1, ENV-05c) the page changes, so its date does. */
+const UPDATED_NEETCODE = "November 20, 2026";
 
 /**
  * SEC-13: plain-language privacy notice (LGPD). Public: no sign-in needed. Server-rendered per
  * request (`next build` lists it as dynamic), so the problem-tracking copy follows
- * `EXTENSION_STORE_VERSION` of the running deployment (ENV-05c, PRB-23).
+ * `EXTENSION_STORE_VERSION` of the running deployment (ENV-05c, PRB-23). Three states: before
+ * 0.3.0 no problem copy; 0.3.0 the LeetCode copy; 0.3.1 the LeetCode and NeetCode copy (PRB-22).
  */
 export default function PrivacyPage() {
   const problems = extensionFeatureLive("problemTracking");
+  const neetCode = problems && extensionFeatureLive("problemTrackingNeetCode");
+  const setting = neetCode ? "Track coding problems" : "Track LeetCode problems";
   const { controller, contactEmail, dataRegion } = privacyConfig();
   const contact = contactEmail ? (
     <a href={`mailto:${contactEmail}`} className="text-primary underline-offset-4 hover:underline">
@@ -42,7 +47,9 @@ export default function PrivacyPage() {
       <main className="mx-auto flex max-w-2xl flex-col gap-8 p-4 py-8 text-sm leading-relaxed md:p-6 md:py-10">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Privacy</h1>
-          <p className="text-muted-foreground">Last updated {UPDATED}.</p>
+          <p className="text-muted-foreground">
+            Last updated {neetCode ? UPDATED_NEETCODE : UPDATED}.
+          </p>
           <p>
             CareerOS measures how much time you spend studying on the websites you choose. This page
             explains what that involves, in plain language.
@@ -86,10 +93,20 @@ export default function PrivacyPage() {
               </Row>
               {problems ? (
                 <>
-                  <Row data="Only if you turn on Track LeetCode problems: the problem name in a LeetCode address (for example two-sum), saved with the study period">
-                    Showing your time per LeetCode problem
+                  <Row
+                    data={
+                      neetCode
+                        ? "Only if you turn on Track coding problems: the problem name in a LeetCode or NeetCode address (for example two-sum), saved with the study period"
+                        : "Only if you turn on Track LeetCode problems: the problem name in a LeetCode address (for example two-sum), saved with the study period"
+                    }
+                  >
+                    {neetCode
+                      ? "Showing your time per problem"
+                      : "Showing your time per LeetCode problem"}
                   </Row>
-                  <Row data="In your browser only: a small flag (in localStorage) that hides the announcement about LeetCode problems once you dismiss it">
+                  <Row
+                    data={`In your browser only: a small flag (in localStorage) that hides the announcement about ${neetCode ? "coding" : "LeetCode"} problems once you dismiss it`}
+                  >
                     A display preference. It stays in that browser and is never sent to CareerOS
                   </Row>
                 </>
@@ -101,7 +118,7 @@ export default function PrivacyPage() {
           </table>
           <p>
             {problems
-              ? "Nothing else. Apart from the LeetCode problem name described below, the extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows."
+              ? `Nothing else. Apart from the ${neetCode ? "problem name" : "LeetCode problem name"} described below, the extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows.`
               : "Nothing else. The extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows."}
           </p>
           <p>
@@ -116,12 +133,13 @@ export default function PrivacyPage() {
         </Section>
 
         {problems ? (
-          <Section title="LeetCode problems">
+          <Section
+            title={neetCode ? "Coding problems (LeetCode and NeetCode)" : "LeetCode problems"}
+          >
             <p>
-              Track LeetCode problems is off until you turn it on in Settings. When it is on, the
-              extension reads the problem name from the address of a leetcode.com tab (for example
-              two-sum in leetcode.com/problems/two-sum/) and saves only that name with your study
-              time. The rest of the address is never stored or sent.
+              {neetCode
+                ? "Track coding problems is off until you turn it on in Settings. When it is on, the extension reads the problem name from the address of a leetcode.com or neetcode.io tab (for example two-sum in leetcode.com/problems/two-sum/) and saves only that name with your study time. Only these two sites count: lookalike addresses, such as neetcode.io.example.com, never do. The rest of the address is never stored or sent."
+                : "Track LeetCode problems is off until you turn it on in Settings. When it is on, the extension reads the problem name from the address of a leetcode.com tab (for example two-sum in leetcode.com/problems/two-sum/) and saves only that name with your study time. The rest of the address is never stored or sent."}
             </p>
             <p>
               Turning it off stops new problem names. When you turn it off, you can also choose to
@@ -181,7 +199,7 @@ export default function PrivacyPage() {
             <li>
               <strong className="font-medium">Delete it:</strong> Settings → Delete account{" "}
               {problems
-                ? "removes your account and all study data, including problem names, immediately. Turning off Track LeetCode problems lets you delete only the problem names. Disconnecting the extension clears your sign-in and study data from your computer."
+                ? `removes your account and all study data, including problem names, immediately. Turning off ${setting} lets you delete only the problem names. Disconnecting the extension clears your sign-in and study data from your computer.`
                 : "removes your account and all study data immediately. Disconnecting the extension clears your sign-in and study data from your computer."}
             </li>
           </ul>

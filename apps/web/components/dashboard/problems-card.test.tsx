@@ -7,8 +7,8 @@ import { ProblemsCard } from "./problems-card";
 afterEach(cleanup);
 
 const rows = problemRows([
-  { problem_slug: "two-sum", seconds: 4980, last_day: "2026-11-17" },
-  { problem_slug: "lru-cache", seconds: 1500, last_day: "2026-11-16" },
+  { domain: "leetcode.com", problem_slug: "two-sum", seconds: 4980, last_day: "2026-11-17" },
+  { domain: "leetcode.com", problem_slug: "lru-cache", seconds: 1500, last_day: "2026-11-16" },
 ]);
 
 describe("DASH-17 LeetCode problems card", () => {
@@ -21,6 +21,38 @@ describe("DASH-17 LeetCode problems card", () => {
       "Lru Cache25mMon, Nov 16",
     ]);
     expect(items[0]?.querySelector("time")?.getAttribute("datetime")).toBe("2026-11-17");
+  });
+
+  it("DASH-17 before 0.3.1 there is no subtitle and no site on the rows", () => {
+    render(<ProblemsCard rows={rows} retryHref="/dashboard" />);
+    expect(screen.queryByText(/NeetCode/)).toBeNull();
+    expect(screen.getByTestId("problems-list").textContent).not.toContain("leetcode.com");
+  });
+
+  it("PRB-11 DASH-17 from 0.3.1: 'Coding problems', both sites in the subtitle, the site on each row", () => {
+    const perSite = problemRows(
+      [
+        { domain: "leetcode.com", problem_slug: "two-sum", seconds: 1200, last_day: "2026-11-17" },
+        { domain: "neetcode.io", problem_slug: "two-sum", seconds: 300, last_day: "2026-11-16" },
+      ],
+      true,
+    );
+    render(<ProblemsCard rows={perSite} retryHref="/dashboard" neetCode />);
+    expect(screen.getByRole("heading", { level: 2, name: "Coding problems" })).toBeTruthy();
+    expect(screen.getByText(/LeetCode and NeetCode/)).toBeTruthy();
+    const items = within(screen.getByTestId("problems-list")).getAllByRole("listitem");
+    expect(items.map((li) => li.textContent)).toEqual([
+      "Two Sum · leetcode.com20mTue, Nov 17",
+      "Two Sum · neetcode.io5mMon, Nov 16",
+    ]);
+  });
+
+  it("DASH-17 from 0.3.1 the empty and error texts say coding problems", () => {
+    const { unmount } = render(<ProblemsCard rows={[]} retryHref="/dashboard" neetCode />);
+    expect(screen.getByText("No coding problems in this period.")).toBeTruthy();
+    unmount();
+    render(<ProblemsCard rows={[]} error="temporary" retryHref="/dashboard" neetCode />);
+    expect(screen.getByRole("alert").textContent).toContain("Couldn't load your coding problems");
   });
 
   it("DASH-17 an empty period says so", () => {

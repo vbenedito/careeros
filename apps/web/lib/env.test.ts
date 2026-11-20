@@ -29,4 +29,15 @@ describe("EXTENSION_STORE_VERSION (ENV-05c, PRB-23)", () => {
       expect(extensionFeatureLive("problemTracking")).toBe(false);
     }
   });
+
+  it("ENV-05c PRB-22 the NeetCode copy is live only from store 0.3.1: unset, invalid and 0.3.0 hide it", () => {
+    for (const value of [undefined, "", "nope", "0.2.3", "0.3.0"]) {
+      vi.stubEnv("EXTENSION_STORE_VERSION", value);
+      expect(extensionFeatureLive("problemTrackingNeetCode")).toBe(false);
+    }
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.3.1");
+    expect(extensionFeatureLive("problemTrackingNeetCode")).toBe(true);
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.4.0");
+    expect(extensionFeatureLive("problemTrackingNeetCode")).toBe(true);
+  });
 });

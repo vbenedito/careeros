@@ -127,6 +127,29 @@ describe("landing page (LAND)", () => {
     expect(before).toContain("never reads page titles or content. Because of this, Chrome");
   });
 
+  it("PRB-22 LAND-03 store 0.3.1: FAQ 1 names Track coding problems and both sites; 0.3.0 stays LeetCode-only", () => {
+    const base = {
+      siteUrl: "https://careeros.example/",
+      installUrl: "https://chromewebstore.google.com/detail/x",
+      repositoryUrl: "https://github.com/vbenedito/careeros",
+      problemTracking: true,
+    };
+    const v030 = renderLanding(base);
+    const v031 = renderLanding({ ...base, problemTrackingNeetCode: true });
+    expect(v031).toContain(
+      "if you turn on Track coding problems, it also keeps the problem name from a LeetCode or NeetCode address (for example two-sum).",
+    );
+    expect(v031).not.toContain("Track LeetCode problems");
+    expect(v031).toContain("By default, only the site and the start and end times are saved.");
+    expect(v030).toContain(
+      "if you turn on Track LeetCode problems, it also keeps the problem name from a LeetCode address",
+    );
+    expect(v030).not.toContain("Track coding problems");
+    // The NeetCode flag alone, without problem tracking, changes nothing (unset store).
+    const unset = renderLanding({ ...base, problemTracking: false, problemTrackingNeetCode: true });
+    expect(unset).not.toContain("One exception");
+  });
+
   it("LAND-03 #140 the study-hours section: honest copy, example data clearly labelled", () => {
     for (const p of STUDY_HOURS.points) expect(html).toContain(`<h3>${p.t}</h3>`);
     expect(html).toContain("There&#39;s no magic number.");

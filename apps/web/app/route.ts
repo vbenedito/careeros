@@ -22,6 +22,7 @@ export function GET() {
     analytics,
     // ENV-05c, PRB-23: decided at build time too; a redeploy follows a change of EXTENSION_STORE_VERSION.
     problemTracking: extensionFeatureLive("problemTracking"),
+    problemTrackingNeetCode: extensionFeatureLive("problemTrackingNeetCode"),
   });
   return new Response(html, {
     headers: {

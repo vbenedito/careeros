@@ -48,13 +48,17 @@ export type ProblemsResult =
   | { ok: true; rows: ProblemRow[] }
   | { ok: false; reason: LoadErrorKind };
 
-/** DASH-17: `get_problem_totals` for the selected period, in the viewer's time zone (DASH-07). */
+/**
+ * DASH-17: `get_problem_totals_v2` (one row per site and slug, DATA-15a) for the selected period,
+ * in the viewer's time zone (DASH-07). `showSite` follows the NeetCode copy gate (PRB-11).
+ */
 export async function loadProblems(
   supabase: SupabaseClient,
   period: Period,
   timeZone: string,
+  showSite = false,
 ): Promise<ProblemsResult> {
-  const { data, error, status } = await supabase.rpc("get_problem_totals", {
+  const { data, error, status } = await supabase.rpc("get_problem_totals_v2", {
     p_from: period.from,
     p_to: period.to,
     p_tz: timeZone,
@@ -63,5 +67,5 @@ export async function loadProblems(
     logServerError("problems.load_failed", { ...errorFields(error), status });
     return { ok: false, reason: classifyLoadError({ status, code: error.code }) };
   }
-  return { ok: true, rows: problemRows((data ?? []) as ProblemTotalRow[]) };
+  return { ok: true, rows: problemRows((data ?? []) as ProblemTotalRow[], showSite) };
 }
