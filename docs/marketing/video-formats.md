@@ -1,6 +1,6 @@
 # CareerOS video formats and example scripts
 
-Type: living · Owner: product owner · Last reviewed: 2026-11-17
+Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
 This is the sixth marketing document (issue #190, step 6 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns the [content pillars](content-pillars.md) into five repeatable video formats, a visual kit, a music source, a free production workflow and three scripts that are ready to produce. It reads the [brand profile](brand-profile.md) (sections 6 and 10), the [persona](persona.md), the [voice](voice.md) (sections 5 and 7) and the [platform study](platform-study.md) (sections 6 and 9). They win if this page disagrees with them.
 
@@ -47,11 +47,11 @@ Last 3 to 4 seconds. Same background as screen 1, so the video loops cleanly int
 
 | Platform | End screen text | Notes |
 |---|---|---|
-| YouTube Shorts, TikTok | Line 1: `Free Chrome extension.` Line 2: `CareerOS` (logo placeholder). Small line: `Link in profile` | The link lives in the channel and bio profile with `utm_*` (platform study, section 7). There is no clickable link in a Shorts description [V9]. |
+| YouTube Shorts, TikTok | Line 1: `Free Chrome extension.` Line 2: the mark above `CareerOS`. Small line: `Link in profile` | The link lives in the channel and bio profile with `utm_*` (platform study, section 7). There is no clickable link in a Shorts description [V9]. |
 | LinkedIn | Same two lines. No "Link in profile". | The link goes in the post only in the link test weeks (platform study, section 8). |
 | Pillar 2 videos (all platforms) | `CareerOS` only | Pillar 2 posts mention no feature (content pillars, section 3). |
 
-- **Logo placeholder:** CareerOS has no logo yet (#195). Until then the end screen shows the word `CareerOS` in 88 px bold, `primary` color, on the background. Do not draw a temporary logo. When #195 ships, put the logo above the word and update this page.
+- **Logo (#195, updated 2026-11-20, #246):** the mark sits above the word `CareerOS` (88 px bold, `primary`). Mark 160 px high, centred, with at least 40 px clear space. Dark background: `brand/careeros-mark-dark.svg`; light background: `brand/careeros-mark.svg` ([brand README](brand/README.md)). Do not recolour, stretch or add a shadow.
 - Wording follows the voice: "Free Chrome extension" and the name. No "Download now", no "Try it today", no "stays free".
 - Never more than one call to action per video.
 - The end screen is exempt from the 3-word line rule: the name stands alone on its line.
@@ -342,7 +342,7 @@ Other free tools: GIMP or any free image editor for the safe box PNG (optional).
 ### 4.2 One-time setup (week 0, about 90 minutes, outside the weekly budget)
 
 1. Install Kdenlive and Mona Sans (section 2.3). Keep `OFL.txt`.
-2. Make the **template project**: 1080 x 1920, 30 fps; the safe box guide on the top track; the colors of section 2.2 as saved color clips; one title clip style for each size in section 1.5; one end screen with the logo placeholder; one chart row (label, bar, value) that can be duplicated.
+2. Make the **template project**: 1080 x 1920, 30 fps; the safe box guide on the top track; the colors of section 2.2 as saved color clips; one title clip style for each size in section 1.5; one end screen with the mark above the name (section 1.3); one chart row (label, bar, value) that can be duplicated.
 3. Save the template as `_template-dark.kdenlive` and `_template-light.kdenlive`.
 4. Make the three working folders outside the repo (section 4.3).
 5. Make the private test account on each app and upload the template once as a private draft to check the overlays against section 1.4.
@@ -421,7 +421,7 @@ Run it for every video. One "no" means: fix the video first.
 13. Contrast checked with the pairs in section 2.2. Meaning never by color alone.
 14. `Sample data` is on every screen that shows a number. Bars start at zero and use one scale.
 15. **No UI in a non-demo video.** No screenshot or recording of the extension or the dashboard. If the video does show the UI, it is a demo: pillar 4, at most 1 in 10 posts, never two in a row, sample data only, shipped features only.
-16. End screen follows section 1.3. One call to action only. The logo placeholder is used until #195 ships.
+16. End screen follows section 1.3. One call to action only. The mark is above the name (section 1.3).
 17. No watermark. The file name follows section 4.3.
 
 **Music and AI labels (brand profile, section 10)**
@@ -460,7 +460,7 @@ Visual: seven horizontal bars (section 2.4) with the sample day values (section 
 | 5 | 14.5 to 19.0 | The other five days / hold 2h 35m. | The five other bars `primary` with outline; `Thu` and `Sat` turn `chart-6`. |
 | 6 | 19.0 to 23.0 | We think memory / keeps big days. | All bars `primary` again, no outline. |
 | 7 | 23.0 to 26.5 | A count keeps all seven. | Same chart, in the upper half; text below it. |
-| 8 | 26.5 to 30.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. Logo placeholder. No numbers, so no sample label. |
+| 8 | 26.5 to 30.5 | Free Chrome extension. / CareerOS | End screen. Small line: `Link in profile`. Mark above the name. No numbers, so no sample label. |
 
 Check of the numbers (sample): Thu 1h 55m + Sat 2h 10m = 4h 05m (245 minutes, more than half of 400). The other five days: 20m + 30m + 25m + 20m + 1h 00m = 2h 35m. Total = 6h 40m. Word counts: screen 4 has 6 words (4 s), screen 5 has 7 words (4.5 s), screen 3 has 4 words (3 s).
 
@@ -509,7 +509,7 @@ Check of the numbers (sample): Thu 1h 55m + Sat 2h 10m = 4h 05m (245 minutes, mo
 | 4 | 11.0 to 14.0 | Write the total down. | Chip `Step 3`. |
 | 5 | 14.0 to 18.5 | Plan the next week / from that number. | Chip `Step 4`. |
 | 6 | 18.5 to 22.5 | A starting point, / not a score. | No chip. Text in `primary`. |
-| 7 | 22.5 to 25.5 | CareerOS | End screen, name only (logo placeholder). |
+| 7 | 22.5 to 25.5 | CareerOS | End screen, mark above the name only. |
 
 Step 2 uses a generic "count" so the reader can use any method; the end screen names the product only. "Plan" means the reader's own notes. CareerOS has no plan feature and the video does not say it has one.
 
@@ -646,7 +646,7 @@ Notes for the editor:
 4. Kdenlive: confirm no watermark on the first export and read its license (GPL, assumption).
 5. CapCut's own terms were not read. If the product owner wants it, read the commercial-use terms of the free plan first.
 6. The weekly time plan (section 4.4) is an assumption. Replace it with measured minutes after weeks 1 and 2.
-7. Logo and end screen: update sections 1.3 and 2 when #195 ships.
+7. Logo and end screen: done in #246 (section 1.3).
 8. Review this page after the first 10 videos: compare scripts with what was published, and check the hook rules against each app's own retention numbers (platform study, section 8).
 
 ## Sources

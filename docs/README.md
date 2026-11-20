@@ -45,6 +45,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Marketing: content pillars](marketing/content-pillars.md) | living | product owner | Draft; 4 pillars (40/30/20/10); revisit after 8 weeks | 2026-11-17 |
 | [Marketing: video formats](marketing/video-formats.md) | living | product owner | Draft; 5 formats, visual kit, music, free workflow, 3 example scripts | 2026-11-17 |
 | [Marketing: goals and KPIs](marketing/goals-and-kpis.md) | living | product owner | Draft; north star per platform, UTM scheme, decision rules, 8-week review | 2026-11-17 |
+| [Marketing: launch kit, week 1](marketing/launch-kit.md) | living | product owner | Draft; videos 1–2 final, bios, bio links, week-0 checklist | 2026-11-20 |
 | **Process and operations** | | | | |
 | [Contributing](process/contributing.md) | living | tech lead | Current | 2026-11-11 |
 | [Agents: model routing](process/agents.md) | living | tech lead | Current | 2026-11-12 |
