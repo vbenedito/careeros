@@ -30,7 +30,7 @@ insert into public.study_sessions (id, user_id, device_id, domain, started_at, e
 select ('c0000000-0000-4000-8000-00000000000' || n)::uuid, tests.user_id('nia'), gen_random_uuid(), d,
        now() - interval '3 hours', now() - interval '2 hours 50 minutes'
 from (values (1, 'leetcode.com'), (2, 'neetcode.io'), (3, 'neetcode.com'),
-             (4, 'notneetcode.io'), (5, 'neetcode.io.evil.com'), (6, 'app.neetcode.io')) as v(n, d);
+             (4, 'notneetcode.io'), (5, 'neetcode.io.evil.com'), (6, 'app.neetcode.io'), (7, 'neetcode.io')) as v(n, d);
 
 select lives_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
@@ -58,7 +58,7 @@ select throws_ok(
   '23514', null, 'DATA-16 PRB-05 a subdomain such as app.neetcode.io is not in the list: refused by the check');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
-     values ('c0000000-0000-4000-8000-000000000002', tests.user_id('oli'), 'neetcode.io', 'two-sum') $$,
+     values ('c0000000-0000-4000-8000-000000000007', tests.user_id('oli'), 'neetcode.io', 'two-sum') $$,
   '23503', null, 'DATA-16 the composite FK still refuses a neetcode.io slug row for another user''s session');
 
 -- =============================================================================================
@@ -86,8 +86,9 @@ select is(
   (select row(prosecdef, provolatile, proconfig, prolang, proacl)::text from pg_proc
    where oid = 'public.get_problem_totals(date, date, text)'::regprocedure),
   'DATA-15a v2 has the same security mode, volatility, search_path, language and grants (ACL) as get_problem_totals');
-select ok('search_path=""' = any ((select proconfig from pg_proc
-   where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure)),
+select ok(exists (select 1 from pg_proc
+   where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure
+     and 'search_path=""' = any(proconfig)),
   'DATA-15a v2 pins an empty search_path');
 select ok(has_function_privilege('authenticated', 'public.get_problem_totals_v2(date, date, text)', 'execute'),
   'DATA-15a authenticated can call v2');
