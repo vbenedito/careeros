@@ -8,6 +8,8 @@ Amended 2026-11-12 (grill E4, H4, H6): DASH-12 re-adding a tracked site at the l
 
 Amended 2026-11-12 (#68, #70, #76, #78): DASH-02 trigger label before hydration and drawer scroll-lock nonce; DASH-07 first-visit skeleton and UTC hint; DASH-09 chart colour contrast; DASH-11 temporary vs permanent load errors; DASH-14 Settings heading outline and expired session on Delete account.
 
+Amended 2026-11-20 (#242, product owner): DASH-16..18 and the `/api/settings/problems` row apply only while the store has extension 0.3.0 or newer (`EXTENSION_STORE_VERSION`, [PRB-23](../v1/01-problems.md), ENV-05c); otherwise the announcement, the Settings section and the card are not shown and the route answers 404.
+
 Amended 2026-11-19 (#233, proposal): DASH-16..18 and the `/api/settings/problems` row: the setting is **Track coding problems** and covers LeetCode and NeetCode (label approved 2026-11-19; other texts pending, [PRB-22](../v1/01-problems.md)); DASH-17 lists problems per site from `get_problem_totals_v2` (DATA-15a). Status of these changes: **Proposed**.
 
 Amended 2026-11-17 (#176): proposed for v1 — DASH-12 limit error with `limit`/`plan` ([ENT](../v1/02-entitlements.md)); LeetCode problems switch, card and one-time announcement (DASH-16..18, [PRB](../v1/01-problems.md)); route `/api/settings/problems`.

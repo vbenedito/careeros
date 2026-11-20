@@ -57,6 +57,7 @@ flowchart LR
 - [ ] `pnpm check:spec-trace` passes ([TEST-02](../../specs/v0/08-testing.md#22-spec-traceability)). A new spec ID needs a test that names it, or an entry with a one-line reason in [`specs/untested-ids.json`](../../specs/untested-ids.json) when it is not testable by design (process, decisions, external settings).
 - [ ] `pnpm db:test` passes when `supabase/` changed. CI green, including integration, E2E and the backup round trip.
 - [ ] Specs, ADRs and docs updated in the same PR. A changed spec gets a line `Amended <YYYY-MM-DD> (#issue): <what>` under its status line; existing ADRs are updated, not rewritten.
+- [ ] A dashboard feature that needs an extension change (a setting the extension reads, data it sends) declares its minimum extension version in `EXTENSION_FEATURES` ([`packages/shared`](../../packages/shared/src/extension-features.ts), ENV-05c) and is hidden, in the UI and in its API, until the store version reaches it. The release step then sets `EXTENSION_STORE_VERSION` ([release](release.md)).
 - [ ] No secrets, tokens or personal data in code, logs, docs or test fixtures.
 - [ ] New dependency or pattern: one-line reason in the PR.
 - [ ] Independent review done; product owner approved.

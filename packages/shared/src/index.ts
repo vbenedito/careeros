@@ -4,6 +4,7 @@
  */
 export * from "./constants";
 export * from "./domain";
+export * from "./extension-features";
 export * from "./format";
 export * from "./ledger";
 export * from "./problem-name";

@@ -25,7 +25,7 @@ The version is `version` in `apps/extension/package.json`; the manifest takes it
 | Automatic check | Every PR runs `pnpm check:store-package` (STORE-08): it builds the store zip with placeholder public values and fails on a `key`, a permission change, host permissions, a version that differs from `package.json`, a wrong `minimum_chrome_version`, source maps or `.env` files. It builds in a temporary directory, so it can be run locally without touching a release build |
 | 3. GitHub Release | **None since 2026-11-17:** the Chrome Web Store is the only release channel (ENV-05a). The releases v0.1.0 and v0.1.1 stay for history |
 | 4. Chrome Web Store | Upload the `-store.zip` in the Developer Dashboard; the listing text, permission justifications and data disclosures are in [listing.md](../chrome-web-store/listing.md) (STORE-02..06). Submit for review |
-| 5. After publication | Set `EXTENSION_INSTALL_URL` to the listing URL and redeploy the dashboard (LAND-05) |
+| 5. After publication | Set `EXTENSION_INSTALL_URL` to the listing URL and redeploy the dashboard (LAND-05). **Every dashboard feature that needs an extension change declares its minimum version in `EXTENSION_FEATURES` (`packages/shared`, ENV-05c) and stays hidden until the store has that version.** Once the store shows the new version, set `EXTENSION_STORE_VERSION` in Vercel (Production scope) to it (e.g. `0.3.0`) and redeploy (Vercel applies variable changes to new deployments only). Until then leave it as it is (unset hides every gated feature) |
 
 Store updates are practised (0.2.1 → 0.2.3, 2026-11-12..17). Rollback and rejection are still **Proposed**:
 
