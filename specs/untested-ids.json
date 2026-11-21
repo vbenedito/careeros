@@ -9,6 +9,7 @@
   "ENV-07": "Decision: the dashboard is not containerized; nothing to assert.",
   "ENV-15": "CodeQL workflow (#183/#235); test added when merged.",
   "PRB-17": "Chrome Web Store privacy answers and listing text; checked by a person before the release (#182).",
+  "PRB-21": "Release step: the 0.3.1 store text and privacy answers in docs/chrome-web-store/listing.md; checked by the copy review and the product owner's submission, and the permission part by pnpm check:store-package (STORE-08).",
   "PRD-01": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-02": "Product scope item; covered by the requirement IDs of the specs in its table row.",
   "PRD-03": "Product scope item; covered by the requirement IDs of the specs in its table row.",
