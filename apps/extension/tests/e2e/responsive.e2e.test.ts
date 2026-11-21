@@ -3,7 +3,9 @@
  * sign-in signed out; dashboard (week and month, with sample data) and settings signed in; the
  * mobile drawer closed and open at 390 px; for an account with problem tracking on, the dashboard's
  * coding problems card (PRB-11, DASH-17) and Settings' "Also delete your problem history?" dialog
- * (PRB-16, DASH-16). Full-page screenshots go to responsive-screenshots/.
+ * (PRB-16, DASH-16); /admin for an admin account (#232, ADM-09..15), in light and dark, with the
+ * GitHub reads answered by scripts/ci/github-stub.ts (invented sessions, issues and PRs), so the
+ * tables and the diagram render. Full-page screenshots go to responsive-screenshots/.
  */
 import { randomUUID } from "node:crypto";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
@@ -53,21 +55,26 @@ describe("app pages responsive layout (TEST-01)", () => {
   let cookies: Cookies;
   /** Session of the account with problem tracking on and stored problems (PRB-11, PRB-16). */
   let problemCookies: Cookies;
+  /** Session of an account with a row in `admins` (ADM-01), for /admin (#232). */
+  let adminCookies: Cookies;
   const contexts: BrowserContext[] = [];
   const stamp = Date.now();
   const email = `e2e-responsive-${stamp}@example.test`;
   const problemsEmail = `e2e-responsive-problems-${stamp}@example.test`;
+  const adminEmail = `e2e-responsive-admin-${stamp}@example.test`;
 
   const open = async (
     path: string,
     width: number,
     signedIn: boolean,
     jar: Cookies = cookies,
+    colorScheme: "light" | "dark" = "light",
   ): Promise<Page> => {
     const context = await browser.newContext({
       viewport: { width, height: 800 },
       deviceScaleFactor: 1,
       timezoneId: "UTC",
+      colorScheme,
     });
     contexts.push(context);
     if (signedIn) {
@@ -113,9 +120,13 @@ describe("app pages responsive layout (TEST-01)", () => {
            insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
            values ('${id}', '${problemsUserId}', 'leetcode.com', '${slug}')`);
     }
+    // Third account: an admin, seeded like the owner does it, by hand with SQL (ADM-01).
+    const adminId = createOAuthUser(adminEmail);
+    sql(`insert into public.admins (user_id) values ('${adminId}')`);
     browser = await chromium.launch({ channel: "chromium", headless: true });
     ({ cookies } = await dashboardSession(email));
     ({ cookies: problemCookies } = await dashboardSession(problemsEmail));
+    ({ cookies: adminCookies } = await dashboardSession(adminEmail));
   }, MIDNIGHT_MARGIN_MS + 60_000);
 
   afterAll(async () => {
@@ -167,6 +178,31 @@ describe("app pages responsive layout (TEST-01)", () => {
       await saveScreenshot(page, `settings-problems-dialog-${width}`);
       await assertResponsive(page, { label: "settings, history dialog open" });
     });
+  }
+
+  for (const scheme of ["light", "dark"] as const) {
+    for (const width of WIDTHS) {
+      // /admin is read-only and has no buttons, so the touch-target rule has nothing to measure
+      // here; the checks that matter are overflow and clipped text (the tables scroll in a box).
+      it(`TEST-01 ADM-09..15 /admin ${scheme} at ${width}px: no overflow`, async () => {
+        const page = await open("/admin", width, true, adminCookies, scheme);
+        // The stub's sessions (github-stub.ts) are listed, so the tables rendered: not "Ledger
+        // unavailable". Its issues and the diagram render too (ADM-12, ADM-15).
+        await page.getByText("Second fixture session").first().waitFor();
+        expect(await page.getByText("unavailable").count()).toBe(0);
+        expect(await page.locator("table").count()).toBeGreaterThan(0);
+        await page.getByRole("heading", { name: "How it connects" }).waitFor();
+        // ADM-08: the server read the ledger with the token; it must not be in the page.
+        const canary = process.env.OPS_LEDGER_TOKEN;
+        if (canary) expect(await page.content()).not.toContain(canary);
+        // The theme class is applied by next-themes after load: wait for it, then measure.
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+          .toBe(scheme === "dark");
+        await saveScreenshot(page, `admin-${scheme}-${width}`);
+        await assertResponsive(page, { label: `admin (${scheme})` });
+      });
+    }
   }
 
   it("TEST-01 DASH-02 the mobile drawer at 390px, closed and open", async () => {

@@ -28,6 +28,7 @@ Admin: **option 1** (table). Ledger: **option 1** (private repo).
 
 - `admins (user_id)`: RLS on, one `select` policy `user_id = auth.uid()`, no write grants to `anon` or `authenticated`; account deletion cascades (DATA-12 pattern). The `/admin` server layout checks `getClaims()` and the row before rendering or fetching anything, and calls `notFound()` otherwise (ADM-02). Same 404 for signed out and not admin, so the page reveals nothing beyond what the public code already shows.
 - Ledger: `vbenedito/careeros-ops` (private). Token: fine-grained, **Contents: read-only** on that repository only (it also reads public repos, which ADM-12 uses for issues and PRs), stored as the server-only `OPS_LEDGER_TOKEN` in Vercel (Production only), with an expiry the product owner chooses and a calendar reminder to rotate it. Files are fetched by blob SHA and cached forever; only the tree listing and the live GitHub reads are cached for `GITHUB_CACHE_S`.
+- CI only: `OPS_GITHUB_API_STUB` (loopback `http://127.0.0.1:<port>`, needs `CI`, ignored on Vercel, a production build fails if it is set) points the GitHub reads at a local stub with invented data, so TEST-01 can render `/admin` (#232).
 - Writing: each session pushes its own file at the end (ADM-14). No workflow, no database write, no secret in CI.
 
 ## Consequences

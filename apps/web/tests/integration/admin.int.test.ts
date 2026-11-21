@@ -1,6 +1,8 @@
 /**
  * The admin page guard against the running dashboard (ADM-02..04, acceptance 1). CI runs the server with a canary
- * OPS_LEDGER_TOKEN that GitHub rejects, so the admin page shows "Ledger unavailable (HTTP 401)" (ADM-08).
+ * OPS_LEDGER_TOKEN and points its GitHub reads at scripts/ci/github-stub.ts (invented data, TEST-01), which accepts
+ * only that token, so the admin page shows the stub's sessions. "Ledger unavailable (HTTP 401)" is covered by the
+ * unit tests (github.test.ts, repo.test.ts).
  */
 import { describe, expect, it } from "vitest";
 import { createOAuthUser, dashboardSession, env, sql } from "./helpers";
@@ -65,9 +67,10 @@ describe("admin page (integration)", () => {
     const html = await allowed.text();
     expect(html).toContain("<h1");
     expect(html).toContain("Sessions");
-    // The canary token (integration.sh) is rejected by GitHub: 401, and the token stays hidden (ADM-08).
-    // React separates adjacent text parts with <!-- --> in server HTML.
-    expect(html.replaceAll("<!-- -->", "")).toContain("Ledger unavailable (HTTP 401)");
+    // The canary token (integration.sh) is accepted by the stub only if the dashboard sent it as a
+    // Bearer token: the ledger is read, and the token stays hidden (ADM-08).
+    expect(html).toContain("Second fixture session");
+    expect(html).not.toContain("Ledger unavailable");
     const canary = process.env.OPS_LEDGER_TOKEN;
     if (canary) expect(html).not.toContain(canary);
     expect(html).toContain('name="robots" content="noindex, nofollow"');

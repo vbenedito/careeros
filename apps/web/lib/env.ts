@@ -63,6 +63,29 @@ export function opsLedgerToken(): string | null {
 }
 
 /**
+ * Test-only (TEST-01, #232): the base URL of the GitHub REST API the admin page reads. It is the
+ * real `https://api.github.com` unless the CI-only variable `OPS_GITHUB_API_STUB` names a local
+ * stub server, and the stub is used only when ALL of these hold: the variable is set, `CI` is set, the code
+ * does not run on Vercel (`VERCEL_ENV` is set on every Vercel build and runtime, so never in
+ * production or preview), and the URL is plain `http://127.0.0.1:<port>` (the token can only go
+ * to the same machine). Anything else falls back to GitHub. The production build check also
+ * fails when the variable exists (`productionEnvProblems`).
+ */
+export function githubApiBase(fallback: string): string {
+  const stub = process.env.OPS_GITHUB_API_STUB?.trim();
+  if (!stub || !process.env.CI || process.env.VERCEL_ENV) return fallback;
+  try {
+    const url = new URL(stub);
+    if (url.protocol === "http:" && url.hostname === "127.0.0.1" && url.port !== "") {
+      return url.origin;
+    }
+  } catch {
+    // Not a URL: ignored.
+  }
+  return fallback;
+}
+
+/**
  * ENV-05c (#242): the extension version live in the Chrome Web Store (`EXTENSION_STORE_VERSION`,
  * server-only, strict `major.minor.patch`). Missing, empty or invalid = null: every gated feature
  * is hidden (safe default). An invalid value never breaks a request and is never echoed or logged
