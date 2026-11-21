@@ -4,9 +4,9 @@ Status: **Current** (product owner, 2026-11-12) · Owner: tech lead · Applies t
 
 Amended 2026-11-18 (#212): §6 ledger rule (ADM-14) and the "Skills used" rule (#199).
 
-Amended 2026-11-21 (#252, product owner): every sub-agent reports the skills it used (§6).
-
 Amended 2026-11-20 (#239, product owner): user-facing product copy is approved by a specialist copy review agent, like marketing documents (§2).
+
+Amended 2026-11-21 (#252, product owner): every sub-agent reports the skills it used (§6).
 
 The goal is the same or better quality for fewer tokens. Pick the model by the **risk and kind of thinking** a task needs, not by how important the project is.
 
@@ -64,6 +64,6 @@ Saving tokens must not lower quality. Three safeguards:
 
 Each sub-agent reports its token use when it finishes. The tech lead watches for outliers (an agent above ~200k tokens on a well-specified task is a sign the prompt lacked facts). In a session, `/explain-usage` shows where the tokens went.
 
-**Ledger (ADM-14, product owner 2026-11-18).** Before a session ends, the main session writes one JSON file with its records (session goal; per agent: model, work, kind, issue, PR, tokens, minutes, rounds, first-round HIGH/MEDIUM findings, files and skills given) and pushes it to the private repo `vbenedito/careeros-ops` under `ledger/YYYY/` (schema: [spec ADM-06](../../specs/v1/03-admin.md), [ADR-0013](../adr/0013-admin-access.md)). Sub-agent tokens are the exact numbers each agent reports at its last finish; main-session tokens are an estimate unless measured with `/explain-usage`. Files are never edited; a correction is a new file. The ledger never goes in this public repository. If the session cannot push, it says so in its last message to the product owner.
+**Ledger (ADM-14, product owner 2026-11-18).** Before a session ends, the main session writes one JSON file with its records (session goal; per agent: model, work, kind, issue, PR, tokens, minutes, rounds, first-round HIGH/MEDIUM findings, files given and skills used) and pushes it to the private repo `vbenedito/careeros-ops` under `ledger/YYYY/` (schema: [spec ADM-06](../../specs/v1/03-admin.md), [ADR-0013](../adr/0013-admin-access.md)). Sub-agent tokens are the exact numbers each agent reports at its last finish; main-session tokens are an estimate unless measured with `/explain-usage`. Files are never edited; a correction is a new file. The ledger never goes in this public repository. If the session cannot push, it says so in its last message to the product owner.
 
 **Skills used (#199, widened 2026-11-21, #252).** Every sub-agent, build and review alike, loads the skills that match the work and starts its report with `Skills used: …` (or `Skills used: none`). The tech lead puts that line in the PR description and the merge comment, tells the product owner which skills each piece of work used, and records them in the ledger (`skills`, ADM-06).

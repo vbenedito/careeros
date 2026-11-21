@@ -2,6 +2,8 @@
 
 Status: Accepted · Date: 2026-11-18 · Issue: #208 · Spec: [ADM](../../specs/v1/03-admin.md)
 
+Amended 2026-11-21 (#252): the same token also reads the public workflow runs of `PUBLIC_REPO` for the production health card (ADM-18). If GitHub requires "Actions: read" for those calls, the page falls back to the unauthenticated public read (60 per hour per IP address, ADM-16); the build PR confirms this with the real token.
+
 ## Context
 The product owner wants one private page, `/admin`, that shows how CareerOS is built: sessions, agents, tokens, review rounds, v1 progress (A1–A8). Constraints:
 - The repository is **public**: the page code is public, so the page must hold no data and no admin identity.
