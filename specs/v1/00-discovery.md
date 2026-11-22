@@ -4,6 +4,8 @@ Status: **Approved (2026-11-17)** — shared understanding confirmed; gate 5 iss
 
 Amended 2026-11-19 (#233, proposal): D11 (and D15, D16, D20 where they say LeetCode) now also cover **NeetCode** (`neetcode.io`), by product-owner decision of 2026-11-19 on issue #233: NeetCode ships in extension 0.3.1 after 0.3.0 (LeetCode only, as built); one account setting for both sites, renamed (label "Track coding problems" approved 2026-11-19); the dashboard lists problems per site (domain + slug) with no merging across sites. Proposal in [01-problems](01-problems.md) (PRB-18..22). Status of the amended decisions: **Proposed** until the product owner approves the PR.
 
+Amended 2026-11-22 (#263, proposal): the marketing track (D1, D3) gets an automated posts pipeline after the first hand-made post; decisions P1–P5 and requirements in [04-posts-pipeline](04-posts-pipeline.md) (`PST`), why in [ADR-0014](../../docs/adr/0014-posts-pipeline.md). Status: **Proposed** until the product owner accepts the PR.
+
 This page records the v1 discovery session: each question, the tech lead's recommendation, the product owner's answer, and open points. It is not a spec. Specs, ADRs and issues come after the product owner confirms a shared understanding (gate 5).
 
 ## Settled decisions
