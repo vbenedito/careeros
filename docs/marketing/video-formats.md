@@ -3,10 +3,11 @@
 Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
 Amended 2026-11-22 (#258): the per-problem feature is live (extension 0.3.1); checklist item 5 and the "Must never" line now allow it, with the exact privacy line only.
+Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, same file as TikTok; when a week goes over 2 hours, drop Instagram first, then LinkedIn.
 
 This is the sixth marketing document (issue #190, step 6 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns the [content pillars](content-pillars.md) into five repeatable video formats, a visual kit, a music source, a free production workflow and three scripts that are ready to produce. It reads the [brand profile](brand-profile.md) (sections 6 and 10), the [persona](persona.md), the [voice](voice.md) (sections 5 and 7) and the [platform study](platform-study.md) (sections 6 and 9). They win if this page disagrees with them.
 
-Inputs that are already decided: faceless account (D8); text on screen plus music, no voice (D13); free tools only, fewer posts at good quality (D14); start on YouTube Shorts and TikTok with one vertical file of 20 to 45 seconds, LinkedIn as a test slot from week 3; about 2 hours a week.
+Inputs that are already decided: faceless account (D8); text on screen plus music, no voice (D13); free tools only, fewer posts at good quality (D14); start on YouTube Shorts, TikTok and Instagram Reels (from week 1, product owner 2026-11-22) with one vertical file of 20 to 45 seconds, LinkedIn as a test slot from week 3; about 2 hours a week.
 
 How to read it: a fact that comes from a page we read has a source tag like [V3]. The list is at the end. A fact with no tag is a choice we made or an **assumption**, and it says so. Next document: goals and calendar (#191).
 
@@ -368,7 +369,7 @@ Pattern: `YYYY-MM-DD-topic.mp4` (platform study, section 9). Date = planned publ
 
 ### 4.4 Weekly batch (about 2 hours, 2 videos)
 
-The time plan is an assumption. Measure it in weeks 1 and 2. If a week takes more than 2 hours, drop LinkedIn first (platform study, section 1).
+The time plan is an assumption. Measure it in weeks 1 and 2. If a week takes more than 2 hours, drop Instagram first, then LinkedIn (platform study, section 1).
 
 | Step | Minutes | What |
 |---|---|---|
@@ -376,7 +377,7 @@ The time plan is an assumption. Measure it in weeks 1 and 2. If a week takes mor
 | 2. Write | 20 | For each video: 3 hooks, pick 1; write the screens with the timing rule; run the voice checklist (voice, section 7). |
 | 3. Edit | 45 | Duplicate the template, paste the text, draw the bars, add music, fade. About 22 minutes per video. |
 | 4. Export and check | 10 | Export. Watch each video once on a phone with the sound off, then with sound at half volume. |
-| 5. Captions and schedule | 25 | One caption per app; the text version; hashtags checked in the app; schedule on YouTube and TikTok (LinkedIn from week 3). |
+| 5. Captions and schedule | 25 | One caption per app; the text version; hashtags checked in the app; schedule on YouTube, TikTok and Instagram (LinkedIn from week 3). Instagram fits in these 25 minutes (assumption; the week 1 and 2 time log checks it). |
 | 6. Analytics and claims | 10 | Read each app's own numbers and write them in the calendar (platform study, section 8). Check last week's videos for music claims in YouTube Studio. |
 | Total | 120 | |
 
@@ -638,7 +639,7 @@ Notes for the editor:
 - Trending sounds, duets, stitches, templates and effects of an app (not in the first 8 weeks, content pillars, section 8).
 - Paid tools, paid music libraries and paid templates (D14).
 - Any claim about problem features beyond time per problem on LeetCode or NeetCode (brand profile, section 11), or any price, plan or date.
-- Instagram Reels: same master file later; its caption and label rules are in the platform study.
+- Instagram Reels: same master file, from week 1; its caption and label rules are in the platform study.
 
 ## 7. Open points
 

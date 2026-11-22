@@ -2,19 +2,22 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-17
 
+Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, same file as TikTok; when a week goes over 2 hours, drop Instagram first, then LinkedIn.
+
 This is the fourth marketing document (issue #188, step 4 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It answers D9: the wish is "all platforms", and the choice comes from this study. It reads the [brand profile](brand-profile.md), the [persona](persona.md) and the [voice](voice.md) first. They win if this page disagrees with them. Later documents read this page: content pillars (#189), video formats (#190), goals and calendar (#191).
 
 How to read it: facts carry a source tag like [S12]; the Sources list is at the end. A fact with no tag is marked **assumption**. Numbers are quoted only with their source and date. We never use follower counts as a benchmark.
 
 ## 1. The answer in short
 
-**Start with two platforms: YouTube Shorts and TikTok. LinkedIn is a test slot from week 3.**
+**Start with two platforms: YouTube Shorts and TikTok. LinkedIn is a test slot from week 3. Instagram Reels joined from week 1 on 2026-11-22 (same file as TikTok).**
 
 - **YouTube Shorts and TikTok** share one vertical text-and-music video. The file is made once and uploaded twice. This is the cheapest way to start on two platforms (D14).
 - **LinkedIn** is a test slot from week 3: 1 post a week, only if weeks 1 and 2 stayed within the time budget. It gets the same video as a native upload, with a caption written for LinkedIn. It is the best place we found for the working-engineer persona. This is our judgment; the persona has no source for LinkedIn use (persona, "Where they spend time online"). Video is weaker than documents on LinkedIn [S18, S20], so this is a test, not a commitment.
-- **Stop rule:** if a week takes more than 2 hours, drop LinkedIn first.
+- **Stop rule:** if a week takes more than 2 hours, drop Instagram first, then LinkedIn.
 - **LinkedIn admin:** the product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts (section 7).
-- **Wait:** Instagram Reels (first to add, same file), then dev.to or Hashnode, Threads, X, Bluesky. **Reddit:** listen only for now. **Product Hunt:** one launch later, not part of the start set.
+- **Instagram Reels** (amended 2026-11-22): posted from week 1, same file as TikTok.
+- **Wait:** dev.to or Hashnode, Threads, X, Bluesky. **Reddit:** listen only for now. **Product Hunt:** one launch later, not part of the start set.
 - **Revisit after 8 weeks of measured posts** (section 8).
 
 Why not "all platforms": one person with free tools and spare time (D14) cannot keep quality on ten platforms. Each extra platform adds its own rules, labels, captions and checks. Two platforms with one video file is the most we are sure can be held at quality. LinkedIn is added only if the time budget allows.
@@ -185,11 +188,11 @@ Notes on the scores:
 | TikTok | Same video, second audience | Costs one upload. Gives a second read on whether short video works for this persona. |
 | LinkedIn (test slot, from week 3) | Professional reach; tests the persona assumption | Best persona argument we have; native scheduling is free [S17]. Video is weaker than documents here [S18, S20]. 1 post a week. |
 
-**Cadence (assumption; #191 sets the final plan):** 2 new videos per week, each posted on YouTube Shorts and TikTok. From week 3, one of them also goes to LinkedIn, only if weeks 1 and 2 stayed within the time budget. **Stop rule: if a week takes more than 2 hours, drop LinkedIn first.** If it still takes too long, post 1 video per week. Fewer posts at good quality matters more than volume (D14).
+**Cadence (assumption; #191 sets the final plan):** 2 new videos per week, each posted on YouTube Shorts, TikTok and Instagram Reels (Instagram added 2026-11-22). From week 3, one of them also goes to LinkedIn, only if weeks 1 and 2 stayed within the time budget. **Stop rule: if a week takes more than 2 hours, drop Instagram first, then LinkedIn.** If it still takes too long, post 1 video per week. Fewer posts at good quality matters more than volume (D14).
 
 **Why the others wait:**
 
-- **Instagram Reels:** same file, but one more account, one more caption set and the AI-label and originality rules to watch. First to add if the 8-week review shows spare time. Add only if the extra upload takes under 10 minutes (assumption).
+- **Instagram Reels:** same file, but one more account, one more caption set and the AI-label and originality rules to watch. Posted from week 1 (product owner, 2026-11-22). It is the first platform dropped when a week goes over 2 hours. Keep it only if the 8-week review supports it.
 - **dev.to / Hashnode:** needs written articles. A later pillar, maybe one article per month with the same idea as a video.
 - **X, Threads, Bluesky:** text-first, no proven persona fit, and in Bluesky's case a shrinking active base [S24]. Link behavior on X is disputed [S21].
 - **Reddit:** rules unread; risk of a ban. Listen only. If a human later joins in, he or she follows each subreddit's rules and speaks as a person, not as the brand. Brand posts only if a rule read by hand allows it.
@@ -200,7 +203,7 @@ Notes on the scores:
 The product owner decides the handle and the email (D19, brand profile section 13).
 
 - **Handle.** Use the **same handle on every platform**. Check by hand if `careeros` is free on all platforms in use. Prepare 2 or 3 fallbacks before creating anything, so the accounts still match. Display name: "CareerOS" (voice: one word, capital C and OS). Handles and URLs may be lowercase.
-- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram (later): Creator or business, for scheduling [S14]. LinkedIn: a Company Page. **Admin:** a Company Page needs a personal LinkedIn account as admin (assumption, unverified). It is not visible on posts. The product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts.
+- **Account type.** TikTok: a Business account, because the free desktop scheduler needs it [S8, S9]. Instagram: Professional account, type Creator, for scheduling [S14]. LinkedIn: a Company Page. **Admin:** a Company Page needs a personal LinkedIn account as admin (assumption, unverified). It is not visible on posts. The product owner accepted the admin role (Q31, 2026-11-17); the page is created when the week-3 test starts.
 - **Avatar and banner.** CareerOS has no logo yet (#195). Do not make accounts with a temporary avatar if the logo can come first. If one is needed, use plain text on the brand blue. Never an AI-generated person (this is also what Instagram's "AI-generated profile" rule is about [S13]).
 - **Bio text (all platforms).** Use the short form from the voice guide. Example: "Free Chrome extension that counts your study time on the sites you choose." No emoji, no hype words, no "stays free", no result promises.
 - **Bio link with UTM.** Pattern from the voice guide:
@@ -227,7 +230,7 @@ D14 says the goal is to measure. #191 sets the targets. This page sets the check
 - **Revisit trigger: after 8 weeks of measured posts (about 16 videos), or earlier if a platform costs more than 2 hours a week.** The review compares, for each platform: visits to the site from UTM links per hour spent, and views and retention per video. Set the thresholds in #191 before the first post, not after seeing the numbers.
 - **What the review decides:**
   1. Drop the weakest platform, or keep it as repost-only.
-  2. Add one from the waiting list. Reels first. dev.to if the persona's reading habits show up in the data.
+  2. Add one from the waiting list. dev.to if the persona's reading habits show up in the data.
   3. Fix the persona assumption 6 with what we saw (persona, "Assumptions to validate").
   4. Decide whether Product Hunt is ready, and whether any Reddit step is safe after the rules are read.
 - Update this page at that review, and change the date.
