@@ -26,7 +26,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Web app (LLD)](architecture/web.md) | living | tech lead | Current | 2026-11-11 |
 | [Database (LLD)](architecture/database.md) | living | tech lead | Current | 2026-11-11 |
 | [Design system](design-system.md) | living | tech lead | Current | 2026-11-11 |
-| [ADRs](adr/README.md) (0001–0012, [template](adr/template.md)) | living | tech lead | 0001–0010 accepted; 0011, 0012 proposed (#176) | 2026-11-17 |
+| [ADRs](adr/README.md) (0001–0014, [template](adr/template.md)) | living | tech lead | 0001–0011, 0013 accepted; 0012 proposed (#176); 0014 proposed (#263) | 2026-11-22 |
 | [ADR-0011: ingest v2](adr/0011-ingest-v2.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
 | [ADR-0012: entitlements](adr/0012-entitlements.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
 | [ADR-0014: posts pipeline](adr/0014-posts-pipeline.md) | living | tech lead | Proposed (#263) | 2026-11-22 |

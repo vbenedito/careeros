@@ -28,6 +28,7 @@
   "PST-29": "Ops repo README content; written and reviewed in phase b, not in this repository.",
   "PST-30": "Manual pause and override steps for the product owner; operational, not code.",
   "PST-31": "Process rule: a post published outside the pipeline gets a record afterwards.",
+  "PST-32": "Process rule: agents edit .github/ in the ops repo only in an ops-workflow PR with Opus review and the product owner's approval (docs/process/agents.md).",
   "SEC-11": "Supabase Auth dashboard setting (redirect URLs); not in the repository.",
   "STORE-03": "Store listing document and review justification; verified in the store review.",
   "STORE-05": "One-time manual step after the first store upload (public key and item ID).",
