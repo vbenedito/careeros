@@ -377,7 +377,7 @@ The time plan is an assumption. Measure it in weeks 1 and 2. If a week takes mor
 | 2. Write | 20 | For each video: 3 hooks, pick 1; write the screens with the timing rule; run the voice checklist (voice, section 7). |
 | 3. Edit | 45 | Duplicate the template, paste the text, draw the bars, add music, fade. About 22 minutes per video. |
 | 4. Export and check | 10 | Export. Watch each video once on a phone with the sound off, then with sound at half volume. |
-| 5. Captions and schedule | 25 | One caption per app; the text version; hashtags checked in the app; schedule on YouTube, TikTok and Instagram (LinkedIn from week 3). |
+| 5. Captions and schedule | 25 | One caption per app; the text version; hashtags checked in the app; schedule on YouTube, TikTok and Instagram (LinkedIn from week 3). Instagram fits in these 25 minutes (assumption; the week 1 and 2 time log checks it). |
 | 6. Analytics and claims | 10 | Read each app's own numbers and write them in the calendar (platform study, section 8). Check last week's videos for music claims in YouTube Studio. |
 | Total | 120 | |
 
