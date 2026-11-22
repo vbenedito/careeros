@@ -1,22 +1,32 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { buildCostView } from "@/lib/admin/cost-view";
+import { buildDailyCost } from "@/lib/admin/daily-view";
 import { buildIssueDocs } from "@/lib/admin/docs-view";
 import { agent, session, TWO_SESSIONS } from "@/lib/admin/fixtures";
-import { buildProgress } from "@/lib/admin/progress-view";
+import { buildHealth } from "@/lib/admin/health-view";
+import { buildProgress, progressHeadline } from "@/lib/admin/progress-view";
 import { buildReviewRows } from "@/lib/admin/reviews-view";
+import { buildSkills } from "@/lib/admin/skills-view";
 import { CostPanel } from "./cost-panel";
 import { DIAGRAM_EDGES, DiagramPanel } from "./diagram-panel";
 import { DOCS_MAP } from "./docs-map";
 import { DocsPanel } from "./docs-panel";
+import { HealthPanel } from "./health-panel";
 import { ProgressPanel } from "./progress-panel";
 import { ReviewsPanel } from "./reviews-panel";
+import { SkillsPanel } from "./skills-panel";
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<>{node}</>);
+const NOW = new Date("2030-01-04T15:00:00Z");
+const costProps = (sessions: Parameters<typeof buildCostView>[0]) => ({
+  view: buildCostView(sessions),
+  daily: buildDailyCost(sessions, NOW),
+});
 
 describe("admin panels render", () => {
-  it("ADM-10 the cost table scrolls in its own box and the main line sits under it", () => {
-    const markup = html(<CostPanel view={buildCostView(TWO_SESSIONS)} />);
+  it("ADM-10 ADM-10a the cost-per-issue table sits in the Details, scrolls in its own box and the main line sits under it", () => {
+    const markup = html(<CostPanel {...costProps(TWO_SESSIONS)} />);
     expect(markup).toContain("overflow-x-auto");
     expect(markup).toContain("No issue");
     expect(markup).toContain("Main sessions (estimate)");
@@ -99,7 +109,7 @@ describe("admin panels render", () => {
   it("ADM-04 the panels hold no form or button", () => {
     const markup = html(
       <>
-        <CostPanel view={buildCostView([session({ agents: [agent({ issue: 1, tokens: 1 })] })])} />
+        <CostPanel {...costProps([session({ agents: [agent({ issue: 1, tokens: 1 })] })])} />
         <DiagramPanel />
       </>,
     );
@@ -122,5 +132,125 @@ describe("admin static content is public-safe (ADM-07)", () => {
     expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/); // email
     expect(text).not.toMatch(/https?:\/\//i); // URL
     expect(text).not.toMatch(/ghp_|github_pat_|\bsk-|eyJ/); // token-like
+  });
+});
+
+describe("admin charts and Details (ADM-20)", () => {
+  const sessions = [
+    session({
+      session: "2030-01-03-a",
+      date: "2030-01-03",
+      agents: [
+        agent({ model: "haiku", tokens: 10, skills: ["x:one"] }),
+        agent({ model: "sonnet", tokens: 20 }),
+        agent({ model: "opus", tokens: 90, kind: "ideas", skills: ["x:one", "x:two"] }),
+      ],
+    }),
+  ];
+
+  it("ADM-20 ADM-10a ADM-19 ADM-12 ADM-18 every chart is role=img with an aria-label holding its headline", () => {
+    const daily = buildDailyCost(sessions, NOW);
+    const cost = html(<CostPanel {...costProps(sessions)} />);
+    expect(cost).toContain(`role="img" aria-label="${daily.headline}"`);
+    const skills = buildSkills(sessions);
+    expect(html(<SkillsPanel view={skills} />)).toContain(
+      `role="img" aria-label="${skills.headline}"`,
+    );
+    const progress = buildProgress(
+      [{ number: 1, title: "A", state: "closed", labels: ["v1"] }],
+      [],
+      {},
+    );
+    expect(html(<ProgressPanel view={progress} />)).toContain(
+      `role="img" aria-label="${progressHeadline(progress)}"`,
+    );
+    const health = buildHealth(
+      [
+        {
+          file: "smoke.yml",
+          result: {
+            ok: true,
+            run: { status: "completed", conclusion: "success", updatedAt: NOW.toISOString() },
+          },
+        },
+      ],
+      NOW,
+    );
+    expect(html(<HealthPanel view={health} />)).toContain(
+      'role="img" aria-label="Age just now, limit 36 hours"',
+    );
+  });
+
+  it("ADM-20 the charts are inline SVG with a viewBox, token colours only, no script and no fixed pixel width", () => {
+    const markup = [
+      html(<CostPanel {...costProps(sessions)} />),
+      html(
+        <ProgressPanel
+          view={buildProgress([{ number: 1, title: "A", state: "open", labels: ["v1"] }], [], {})}
+        />,
+      ),
+    ].join("\n");
+    expect(markup).toContain("<svg");
+    expect(markup).toContain('viewBox="0 0 140 100"');
+    expect(markup).toContain("fill-chart-1");
+    expect(markup).toContain("fill-chart-2");
+    expect(markup).toContain("fill-chart-3");
+    expect(markup).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(|oklch\(/i);
+    expect(markup).not.toContain("<script");
+    // Cards and charts take their width from their box: no `width="NNN"` on an svg, no w-[NNpx].
+    expect(markup).not.toMatch(/<svg(?![^>]*lucide)[^>]*\swidth="\d+"/); // icons are sized by class
+    expect(markup).not.toMatch(/w-\[\d+px\]/);
+  });
+
+  it("ADM-20 a Details block is a native details with a summary at least 44 px high, closed by default", () => {
+    const markup = html(<CostPanel {...costProps(sessions)} />);
+    expect(markup).toMatch(/<details class="[^"]*">/);
+    expect(markup).not.toMatch(/<details[^>]*\sopen/);
+    expect(markup).toMatch(/<summary class="[^"]*\bmin-h-11\b[^"]*"/); // min-h-11 = 2.75rem = 44 px
+    expect(markup).toContain("focus-visible:outline-2");
+    expect(markup).toContain("Details: tokens per day");
+    expect(markup).toContain("overflow-x-auto");
+  });
+
+  it("ADM-10a empty and error states", () => {
+    expect(html(<CostPanel {...costProps([])} />)).toContain(
+      "No agent records in the last 14 days.",
+    );
+    expect(html(<CostPanel unavailableNote="HTTP 500" />)).toContain(
+      "Ledger unavailable (HTTP 500)",
+    );
+    expect(html(<CostPanel {...costProps(sessions)} />)).toContain(
+      "Main sessions are not in this chart: they are an estimate and not split by model",
+    );
+  });
+
+  it("ADM-19 empty and error states, and a kind without records is shown", () => {
+    expect(html(<SkillsPanel view={buildSkills([])} />)).toContain("No skills recorded yet.");
+    expect(html(<SkillsPanel unavailableNote="HTTP 502" />)).toContain(
+      "Ledger unavailable (HTTP 502)",
+    );
+    const markup = html(<SkillsPanel view={buildSkills(sessions)} />);
+    expect(markup).toContain("No records"); // docs, marketing, video, post
+    expect(markup).toContain("md:grid-cols-2");
+    expect(markup).toContain("Details: skills");
+  });
+
+  it("ADM-18 each row has a word and an icon; no run and an unreadable row read as such", () => {
+    const health = buildHealth(
+      [
+        { file: "smoke.yml", result: { ok: true, run: null } },
+        { file: "health.yml", result: { ok: false, httpStatus: 403 } },
+      ],
+      NOW,
+    );
+    const markup = html(<HealthPanel view={health} />).replaceAll("<!-- -->", "");
+    expect(markup).toContain("No run yet");
+    expect(markup).toContain("Unknown (HTTP 403)");
+    expect(markup).toContain("lucide-triangle-alert");
+    expect(markup).toContain("Runs when a migration is merged");
+    expect(markup).toContain("Details: checks");
+    expect(html(<HealthPanel unavailableNote="HTTP 500" />)).toContain(
+      "GitHub unavailable (HTTP 500)",
+    );
   });
 });

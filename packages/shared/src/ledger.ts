@@ -9,7 +9,8 @@ export const LEDGER_SCHEMA_VERSION = 1;
 
 export const LEDGER_MODELS = ["haiku", "sonnet", "opus"] as const;
 export const LEDGER_WORK = ["author", "review", "fix", "other"] as const;
-export const LEDGER_KINDS = ["code", "docs", "marketing", "video", "post"] as const;
+export const LEDGER_KINDS = ["code", "ideas", "docs", "marketing", "video", "post"] as const;
+export type LedgerKind = (typeof LEDGER_KINDS)[number];
 export const LEDGER_MEASURES = ["estimate", "measured"] as const;
 
 export type LedgerModel = (typeof LEDGER_MODELS)[number];

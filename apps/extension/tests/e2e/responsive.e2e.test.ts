@@ -3,9 +3,10 @@
  * sign-in signed out; dashboard (week and month, with sample data) and settings signed in; the
  * mobile drawer closed and open at 390 px; for an account with problem tracking on, the dashboard's
  * coding problems card (PRB-11, DASH-17) and Settings' "Also delete your problem history?" dialog
- * (PRB-16, DASH-16); /admin for an admin account (#232, ADM-09..15), in light and dark, with the
- * GitHub reads answered by scripts/ci/github-stub.ts (invented sessions, issues and PRs), so the
- * tables and the diagram render. Full-page screenshots go to responsive-screenshots/.
+ * (PRB-16, DASH-16); /admin for an admin account (#232, #252, ADM-09..20), in light and dark, closed
+ * and with every <details> opened in the browser, with the GitHub reads answered by
+ * scripts/ci/github-stub.ts (invented sessions, issues, PRs and workflow runs), so the cards,
+ * charts, tables and the diagram render. Full-page screenshots go to responsive-screenshots/.
  */
 import { randomUUID } from "node:crypto";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
@@ -182,26 +183,52 @@ describe("app pages responsive layout (TEST-01)", () => {
 
   for (const scheme of ["light", "dark"] as const) {
     for (const width of WIDTHS) {
-      // /admin is read-only and has no buttons, so the touch-target rule has nothing to measure
-      // here; the checks that matter are overflow and clipped text (the tables scroll in a box).
-      it(`TEST-01 ADM-09..15 /admin ${scheme} at ${width}px: no overflow`, async () => {
-        const page = await open("/admin", width, true, adminCookies, scheme);
-        // The stub's sessions (github-stub.ts) are listed, so the tables rendered: not "Ledger
-        // unavailable". Its issues and the diagram render too (ADM-12, ADM-15).
-        await page.getByText("Second fixture session").first().waitFor();
-        expect(await page.getByText("unavailable").count()).toBe(0);
-        expect(await page.locator("table").count()).toBeGreaterThan(0);
-        await page.getByRole("heading", { name: "How it connects" }).waitFor();
-        // ADM-08: the server read the ledger with the token; it must not be in the page.
-        const canary = process.env.OPS_LEDGER_TOKEN;
-        if (canary) expect(await page.content()).not.toContain(canary);
-        // The theme class is applied by next-themes after load: wait for it, then measure.
-        await expect
-          .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
-          .toBe(scheme === "dark");
-        await saveScreenshot(page, `admin-${scheme}-${width}`);
-        await assertResponsive(page, { label: `admin (${scheme})` });
-      });
+      // Closed (the page as it loads) and with every <details> opened in the browser: the page has
+      // no query flag for that (ADM-20.6). The stub (github-stub.ts) fills every chart and gives
+      // the health card a mix of statuses, so the cards render with data, not as errors.
+      for (const details of ["closed", "open"] as const) {
+        it(`TEST-01 ADM-17 ADM-20 /admin ${scheme} at ${width}px, Details ${details}: no overflow, touch targets`, async () => {
+          const page = await open("/admin", width, true, adminCookies, scheme);
+          await page.getByRole("heading", { name: "Agent cost" }).waitFor();
+          await page.getByRole("heading", { name: "How it connects" }).waitFor();
+          expect(await page.getByText("unavailable").count()).toBe(0);
+          expect(await page.locator("table").count()).toBeGreaterThan(0);
+          // ADM-18: the stub's six workflows give every status but Unknown.
+          for (const word of ["Passing", "Stale", "Failing", "Cancelled", "No run yet"])
+            await page.getByText(word, { exact: true }).first().waitFor();
+          await page.getByText("last good backup 3 days ago").waitFor();
+          // ADM-20.4: each chart has an aria-label; ADM-20.5: Details are closed by default and
+          // every summary is at least 44 px high.
+          expect(await page.locator("[role=img][aria-label]").count()).toBeGreaterThanOrEqual(4);
+          const total = await page.locator("details").count();
+          expect(total).toBeGreaterThanOrEqual(7);
+          expect(await page.locator("details[open]").count()).toBe(0);
+          const heights = await page
+            .locator("details > summary")
+            .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
+          for (const h of heights) expect(h).toBeGreaterThanOrEqual(43.5);
+          if (details === "open") {
+            await page.evaluate(() => {
+              for (const d of document.querySelectorAll("details")) d.open = true;
+            });
+            expect(await page.locator("details[open]").count()).toBe(total);
+            // The tables inside are now rendered, with the stub's sessions.
+            await page.getByText("Second fixture session").first().waitFor();
+          }
+          // ADM-08: the server read the ledger with the token; it must not be in the page.
+          const canary = process.env.OPS_LEDGER_TOKEN;
+          if (canary) expect(await page.content()).not.toContain(canary);
+          // The theme class is applied by next-themes after load: wait for it, then measure.
+          await expect
+            .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+            .toBe(scheme === "dark");
+          await saveScreenshot(page, `admin-${scheme}-${width}-details-${details}`);
+          await assertResponsive(page, {
+            label: `admin (${scheme}, ${details})`,
+            touchTargets: ["summary"],
+          });
+        });
+      }
     }
   }
 

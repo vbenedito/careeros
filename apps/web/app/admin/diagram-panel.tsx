@@ -50,7 +50,7 @@ function Node({ children }: { children: string }) {
 /** ADM-15: how the parts connect. */
 export function DiagramPanel() {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle variant="section">How it connects</CardTitle>
       </CardHeader>

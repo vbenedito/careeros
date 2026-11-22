@@ -106,3 +106,11 @@ export function mergeStates(prs: readonly RepoPr[]): Map<number, MergeState> {
     ]),
   );
 }
+
+/** ADM-12: "12 of 30 v1 issues are done (40%)"; "No v1 issues yet." when there are none. */
+export function progressHeadline(view: ProgressView): string {
+  const total = PROGRESS_GROUPS.reduce((n, g) => n + view[g].length, 0);
+  if (total === 0) return "No v1 issues yet.";
+  const done = view.done.length;
+  return `${done} of ${total} v1 ${total === 1 ? "issue is" : "issues are"} done (${Math.round((done / total) * 100)}%)`;
+}

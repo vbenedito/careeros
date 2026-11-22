@@ -1,4 +1,4 @@
-import { ScrollTable, TD, TH, TR, Unavailable } from "@/app/admin/panel-parts";
+import { Details, ScrollTable, TD, TH, TR, Unavailable } from "@/app/admin/panel-parts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReviewRow } from "@/lib/admin/reviews-view";
 
@@ -17,7 +17,7 @@ const STATE_LABEL: Record<ReviewRow["state"], string> = {
 /** ADM-11: review rounds, HIGH and MEDIUM findings, reviewer model and merge state per PR. */
 export function ReviewsPanel(props: Props) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle variant="section">Reviews</CardTitle>
       </CardHeader>
@@ -31,30 +31,32 @@ export function ReviewsPanel(props: Props) {
             {props.githubNote !== undefined && (
               <Unavailable what="Merge state" note={props.githubNote} />
             )}
-            <ScrollTable minWidth="min-w-[32rem]">
-              <thead className="text-xs text-muted-foreground">
-                <tr className="border-b border-border">
-                  <th className={TH}>PR</th>
-                  <th className={`${TH} text-right`}>Rounds</th>
-                  <th className={`${TH} text-right`}>HIGH</th>
-                  <th className={`${TH} text-right`}>MEDIUM</th>
-                  <th className={TH}>Reviewer</th>
-                  <th className="py-2 font-medium">Merge state</th>
-                </tr>
-              </thead>
-              <tbody>
-                {props.rows.map((row) => (
-                  <tr key={row.pr} className={TR}>
-                    <td className={TD}>#{row.pr}</td>
-                    <td className={`${TD} text-right tabular-nums`}>{row.rounds}</td>
-                    <td className={`${TD} text-right tabular-nums`}>{row.high}</td>
-                    <td className={`${TD} text-right tabular-nums`}>{row.medium}</td>
-                    <td className={TD}>{row.reviewers.join(", ")}</td>
-                    <td className="py-2 align-top">{STATE_LABEL[row.state]}</td>
+            <Details label="Details: reviews">
+              <ScrollTable minWidth="min-w-[32rem]">
+                <thead className="text-xs text-muted-foreground">
+                  <tr className="border-b border-border">
+                    <th className={TH}>PR</th>
+                    <th className={`${TH} text-right`}>Rounds</th>
+                    <th className={`${TH} text-right`}>HIGH</th>
+                    <th className={`${TH} text-right`}>MEDIUM</th>
+                    <th className={TH}>Reviewer</th>
+                    <th className="py-2 font-medium">Merge state</th>
                   </tr>
-                ))}
-              </tbody>
-            </ScrollTable>
+                </thead>
+                <tbody>
+                  {props.rows.map((row) => (
+                    <tr key={row.pr} className={TR}>
+                      <td className={TD}>#{row.pr}</td>
+                      <td className={`${TD} text-right tabular-nums`}>{row.rounds}</td>
+                      <td className={`${TD} text-right tabular-nums`}>{row.high}</td>
+                      <td className={`${TD} text-right tabular-nums`}>{row.medium}</td>
+                      <td className={TD}>{row.reviewers.join(", ")}</td>
+                      <td className="py-2 align-top">{STATE_LABEL[row.state]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ScrollTable>
+            </Details>
           </>
         )}
       </CardContent>

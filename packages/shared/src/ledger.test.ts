@@ -56,6 +56,14 @@ describe("ledger schema v1 (ADM-06)", () => {
     expect(bad((v) => Object.assign(v, { session: "bad id" }))).toBe(false);
   });
 
+  it("ADM-06 the kind `ideas` is valid, and a version-1 file with each older kind still parses", () => {
+    for (const kind of ["code", "ideas", "docs", "marketing", "video", "post"]) {
+      const value = valid();
+      Object.assign(value.agents[0] ?? {}, { kind });
+      expect(LedgerSessionSchema.safeParse(value).success, kind).toBe(true);
+    }
+  });
+
   it("ADM-06 rejects missing fields", () => {
     for (const key of ["schema", "session", "date", "goal", "corrects", "main", "agents"]) {
       const value: Record<string, unknown> = valid();

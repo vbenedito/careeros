@@ -8,8 +8,16 @@ import {
   type LedgerSession,
 } from "@careeros/shared";
 
-export function formatTokens(tokens: number): string {
-  return new Intl.NumberFormat("en-US").format(tokens);
+/**
+ * Whole numbers with thousands separators ("1,234,567"). `compact` gives "1.2M" for chart
+ * headlines and axis ticks (ADM-10a), where a full number would not fit.
+ */
+export function formatTokens(tokens: number, compact = false): string {
+  return compact
+    ? new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
+        tokens,
+      )
+    : new Intl.NumberFormat("en-US").format(tokens);
 }
 
 /** Sub-agent tokens summed per model; every model is present, zero when unused. */
