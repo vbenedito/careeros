@@ -2,6 +2,8 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-18
 
+Amended 2026-11-22 (#258): coding-problems wording after extension 0.3.1 (live in the Chrome Web Store). Changed: sections 3, 6, 10 and 11 (11 is now "Live in v1").
+
 This is the first marketing document (issue #185, step 1 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). Every later marketing document and every post reads it first: persona (#186), voice (#187), platform study (#188), content pillars (#189), video formats (#190), goals and calendar (#191).
 
 Sources of truth: [v1 discovery](../../specs/v1/00-discovery.md) (D1–D26), [product scope](../../specs/v0/00-product.md), [landing content](../landing/content.md), [security and privacy](../../specs/v0/07-security-privacy.md) (SEC-01), [Chrome Web Store listing](../chrome-web-store/listing.md), [design system](../design-system.md). If this page and a spec disagree, the spec wins and this page is fixed.
@@ -24,7 +26,7 @@ Sources of truth: [v1 discovery](../../specs/v1/00-discovery.md) (D1–D26), [pr
 - Not a screen-time or productivity tracker for your whole day. Sites you did not choose are ignored.
 - Not a tool for teams, bootcamps or mentors (D6). It is for one person.
 - Not a job-offer machine. It cannot promise an interview result.
-- Not (today) a tracker of solved problems, difficulty or topics. v1 adds only time per LeetCode problem, and only if you turn it on (D11, D16).
+- Not (today) a tracker of solved problems, difficulty or topics. The one problem feature is time per problem on LeetCode or NeetCode, and only if you turn on Track coding problems (D11, D16).
 
 ## 4. Audience (short)
 
@@ -44,13 +46,13 @@ Only true, checkable facts. Each one comes from a spec or a public page.
 
 | Claim | Source |
 |---|---|
-| Free. No paid plan today. | Landing FAQ; D22 |
+| Free. No paid plan today. In posts, say only "Free". | Landing FAQ; D22 |
 | On the Chrome Web Store | [Listing](https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek) |
 | Code is public on GitHub (say "public code", not "open source": there is no license) | Landing content §6 |
 | Counts only on sites you choose, up to 12; subdomains included | TRK-03, DATA-01 |
 | Pauses after 60 seconds without keyboard or mouse input | TRK-05 |
 | Keeps counting while the study tab plays sound, for up to 15 minutes without input | TRK-05, TRK-06 |
-| Stores only the site name and start and end times (plus the LeetCode problem name, only if the user turns on Track LeetCode problems) | SEC-01, PRB-15 |
+| Stores only the site name and start and end times (plus the problem name from a leetcode.com or neetcode.io address, only if the user turns on Track coding problems) | SEC-01, PRB-15 |
 | Never stores full web addresses, page titles, page content or keystrokes | SEC-01 |
 | No content scripts; permissions are only `tabs`, `idle`, `alarms`, `storage` | SEC-01, SEC-03 |
 | Never tracks incognito windows | SEC-01 |
@@ -106,14 +108,14 @@ The full voice comes in #187. Until then:
 - **No "stays free" promise in posts.** Posts say only "free".
 - **AI is labeled.** Use the platform's own "AI-generated" label when it offers one. Add "Made with AI" to the caption when a post uses an AI voice or AI images. Royalty-free music needs no label.
 - **No "open source" claim.** Say "public code on GitHub".
-- **No privacy overstatement.** Say exactly what is stored (section 6). When LeetCode time per problem ships, it stores the problem name from the address, LeetCode only, and only if you turn it on (D11, D16). Update this page then.
+- **No privacy overstatement.** Say exactly what is stored (section 6). Time per problem is live: it stores only the problem name from the address (for example two-sum), only for leetcode.com and neetcode.io, and only if you turn on Track coding problems (D11, D16).
 
-## 11. Coming in v1 (say only after it ships)
+## 11. Live in v1 (extension 0.3.1)
 
-- Time per LeetCode problem, from the address only. Off by default; you turn it on in Settings (D11, D16, D20).
+- Time per coding problem on LeetCode or NeetCode, from the address only. Off by default; you turn on Track coding problems in Settings (D11, D16, D20). Only these two sites count.
 - It is free (D22). In posts, say only "free"; no "stays free" promise (section 10).
 
-Until the release is live, posts do not mention it.
+Posts may mention it now, with the exact privacy line above. They do not promise other sites or problem features.
 
 ## 12. Visual basics
 

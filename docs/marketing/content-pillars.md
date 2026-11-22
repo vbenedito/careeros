@@ -2,6 +2,8 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-17
 
+Amended 2026-11-22 (#258): coding-problems feature is live (extension 0.3.1). Changed: sections 4 (privacy line), 5 (must never) and 8 (not now). Pillar strategy is unchanged.
+
 This is the fifth marketing document (issue #189, step 5 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It reads the [brand profile](brand-profile.md) (sections 6, 7, 10 and 11), the [persona](persona.md), the [voice](voice.md) and the [platform study](platform-study.md). If this page disagrees with the brand profile, the brand profile wins.
 
 Next documents: video formats (#190), goals (#191) and the calendar (#191, outside the repo, D17).
@@ -110,7 +112,7 @@ Why these four. The platform study found white space for "measure your real stud
 
 **May use.** Only brand profile section 6 and the voice page "Privacy, exactly" and "Idle rules, exactly":
 - Counts only on sites you choose, up to 12.
-- About your study time, it stores only the site name and the start and end times. If you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum. (Your account email and sign-in provider are stored too. Say so if asked.)
+- About your study time, it stores only the site name and the start and end times. If you turn on Track coding problems (off by default), it also stores the problem name from a leetcode.com or neetcode.io address, for example two-sum. (Your account email and sign-in provider are stored too. Say so if asked.)
 - Never stores full web addresses, page titles, page content or keystrokes.
 - Never tracks incognito windows. No ad trackers.
 - Permissions: `tabs`, `idle`, `alarms`, `storage`. It does not read page content (SEC-01, SEC-03).
@@ -122,7 +124,7 @@ Why these four. The platform study found white space for "measure your real stud
 - Say "100% private", "no cookies", "no data collected", "fully anonymous", "open source", "never sees".
 - Name or mock another tool, or quote its reviews.
 - Show real browsing, emails or a real account.
-- Promote the LeetCode per-problem feature until extension 0.3.0 is live in the Chrome Web Store (brand profile section 11). The privacy line about the opt-in problem name (above) is always allowed, because it is true.
+- Promise other sites or problem features (solved problems, difficulty, topics). Only time per problem on LeetCode or NeetCode is live (brand profile section 11).
 - Answer a question we cannot check. Say "We are not sure" first (voice, section 2).
 
 **Success signal (for #190 and #191).** Saves, and clicks on the profile link and the UTM link. A privacy post that gets saves but no clicks still builds trust; judge it at the review.
@@ -215,7 +217,7 @@ Each post uses the checklist in the voice page (section 7) before publishing.
 
 ## 8. Not now
 
-- **LeetCode time per problem.** No content until it ships (brand profile section 11; D11, D16). Update pillars 1, 3 and 4 then.
+- **Time per coding problem.** Live since extension 0.3.1 (brand profile section 11; D11, D16). Pillars 1, 3 and 4 may mention it (LeetCode or NeetCode, Track coding problems, off by default), with the exact privacy line in section 4. Pillar 2 does not need it.
 - **Solved problems, difficulty, topics.** Not a CareerOS feature today (brand profile section 3).
 - **Interview tips, question walk-throughs, "how to pass" content.** CareerOS measures; it does not teach (brand profile section 3). It would also drift toward job-offer promises.
 - **User stories, testimonials, reviews, user counts, "hours saved".** We have none we can show (brand profile section 6).

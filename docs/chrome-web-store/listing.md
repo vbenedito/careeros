@@ -33,6 +33,8 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Release 0.3.1 (2026-11-20, PRB-21, #240): NeetCode problem tracking. The setting is now called **Track coding problems** (one setting for LeetCode and NeetCode, off by default). Changed: the description (last bullet of HOW IT WORKS and first and second bullets of PRIVATE BY DESIGN), the `tabs` justification and the "Web history" row. Summary unchanged. Permissions unchanged from 0.3.0 (`tabs`, `idle`, `alarms`, `storage`; no host permissions, no content scripts). The 0.3.0 text, for history: "Optional: turn on Track LeetCode problems in Settings to see your time per problem."; "If you turn on Track LeetCode problems (off by default), it also keeps the problem name from a LeetCode address, for example two-sum."; `tabs`: "…and, if the user turns on LeetCode problem tracking, the problem name from a leetcode.com address."; "Web history": "…and, only if the user turns it on, the LeetCode problem name (for example two-sum). No full addresses, no other sites"; second bullet of PRIVATE BY DESIGN: "It reads the active tab's address only to get the site name." **Submit 0.3.1 only after the dashboard release is deployed, its smoke run is green and the guard count of PRB-22 is done. Change the description and privacy answers in the store dashboard when you upload the 0.3.1 package.** The product owner approves this text.
 
+> Updated 2026-11-22 (#258): the last line of the description above changed from "Free, no paid plan." to "Free." (no future-plan hint). **Change it in the store dashboard with the next store text change**, so the edit does not start a review by itself.
+
 > Release 0.2.3 (2026-11-17): reliability from the v0 grill review (#163): token refresh timeout, cross-account guard, Disconnect while syncing, protocol forward-compatibility. Same permissions and description as 0.2.2.
 
 ```
@@ -53,7 +55,7 @@ PRIVATE BY DESIGN
 • It reads the active tab's address only to get the site name and, if you turn on Track coding problems, the problem name. It never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
 • No ads, nothing sold. The extension sends no analytics. Delete your account and your data anytime (see the privacy policy).
 
-Sign in on the dashboard with Google or GitHub, then connect the extension from there. Free, no paid plan.
+Sign in on the dashboard with Google or GitHub, then connect the extension from there. Free.
 
 Privacy policy: https://careeros-taupe.vercel.app/privacy
 ```

@@ -2,6 +2,8 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
+Amended 2026-11-22 (#258): the per-problem feature is live (extension 0.3.1); checklist item 5 and the "Must never" line now allow it, with the exact privacy line only.
+
 This is the sixth marketing document (issue #190, step 6 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns the [content pillars](content-pillars.md) into five repeatable video formats, a visual kit, a music source, a free production workflow and three scripts that are ready to produce. It reads the [brand profile](brand-profile.md) (sections 6 and 10), the [persona](persona.md), the [voice](voice.md) (sections 5 and 7) and the [platform study](platform-study.md) (sections 6 and 9). They win if this page disagrees with them.
 
 Inputs that are already decided: faceless account (D8); text on screen plus music, no voice (D13); free tools only, fewer posts at good quality (D14); start on YouTube Shorts and TikTok with one vertical file of 20 to 45 seconds, LinkedIn as a test slot from week 3; about 2 hours a week.
@@ -407,7 +409,7 @@ Run it for every video. One "no" means: fix the video first.
 2. Every number is a product fact or labeled sample. No user counts, ratings, quotes or "studies show".
 3. Privacy lines are exact: no "100%", "no cookies", "open source", "never sees".
 4. No job-offer promise, no hour target, no shame, no "grind".
-5. No future feature, date or price. "Free" only. Nothing about the LeetCode per-problem feature.
+5. No future feature, date or price. "Free" only. Only the live per-problem feature (Track coding problems, LeetCode or NeetCode), with the exact privacy line, nothing beyond it.
 6. No other tool named or mocked. No real user data, emails or browsing.
 7. Short sentences, "you", no hype words, no exclamation marks, no emoji.
 8. Durations in the app format; "CareerOS" spelled correctly.
@@ -635,7 +637,7 @@ Notes for the editor:
 - Face, hands, a real person or an avatar (D8).
 - Trending sounds, duets, stitches, templates and effects of an app (not in the first 8 weeks, content pillars, section 8).
 - Paid tools, paid music libraries and paid templates (D14).
-- Any content about the LeetCode per-problem feature, or any price, plan or date.
+- Any claim about problem features beyond time per problem on LeetCode or NeetCode (brand profile, section 11), or any price, plan or date.
 - Instagram Reels: same master file later; its caption and label rules are in the platform study.
 
 ## 7. Open points

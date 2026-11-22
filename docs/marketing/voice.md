@@ -2,6 +2,8 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-17
 
+Amended 2026-11-22 (#258): coding-problems wording after extension 0.3.1 (LeetCode and NeetCode, setting **Track coding problems**, live in the Chrome Web Store). Changed: sections 1 (example), 2 (feature row), 3 (privacy line) and 7 (checklist item 5).
+
 This is the third marketing document (issue #187, step 3 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns section 8 of the [brand profile](brand-profile.md) into rules a writer can follow. Read the brand profile (sections 6 and 10) and the [persona](persona.md) first. They win if this page disagrees with them.
 
 Later documents read this page: platform study (#188), content pillars (#189), video formats (#190), and the landing rewrite (#196).
@@ -32,7 +34,7 @@ Every example below uses only true product facts (brand profile, section 6) or i
 
 - **Is:** a number, a name or a rule where other brands use an adjective. It says what is stored and what is not.
 - **Is not:** vague, rounded up, or bigger than the truth.
-- **Example:** "It stores the site name and the start and end times. Nothing else about your browsing, unless you turn on Track LeetCode problems."
+- **Example:** "It stores the site name and the start and end times. Nothing else about your browsing, unless you turn on Track coding problems."
 - **Not this:** "Your privacy is our top priority."
 
 ### Respectful
@@ -96,7 +98,7 @@ Notes for the two harder rows:
 | AI-powered, smart, intelligent | Not what the product is. | Describe the rule: "pauses after 60 seconds without input". |
 | coach, course, question bank, tracker of solved problems | Not what it is (brand profile, section 3). | "It measures; it does not teach." |
 | users love it, trusted by, rated, "studies show" | We have no such facts. | Nothing. Use no social proof. |
-| anything about the LeetCode per-problem feature | Not shipped (brand profile, section 11). | Nothing, until it ships. |
+| future problem features (solved problems, difficulty, topics, other sites) | Not shipped, not promised (brand profile, sections 3 and 10). | Only the live feature: time per problem on LeetCode or NeetCode, if you turn on Track coding problems. |
 | names of other trackers, "better than" | No attacking competitors. | Explain how CareerOS works. |
 | emoji, exclamation marks | Brand profile, section 8. | A plain full stop. |
 
@@ -113,7 +115,7 @@ Use one of these forms. They match the brand profile (sections 1, 2 and 6).
 Say this, and no more than this (brand profile, section 6; SEC-01):
 
 - It counts only on sites you choose, up to 12.
-- It stores only the site name and the start and end times. If you turn on Track LeetCode problems (off by default), it also stores the problem name from a LeetCode address, for example two-sum.
+- It stores only the site name and the start and end times. If you turn on Track coding problems (off by default), it also stores the problem name from a leetcode.com or neetcode.io address, for example two-sum.
 - It never stores full web addresses, page titles, page content or keystrokes.
 - It never tracks incognito windows.
 - It has no ad trackers.
@@ -254,7 +256,7 @@ Run it on every post. If one answer is "no", fix the post first.
 2. Is every number either a product fact or labeled **sample**? No user counts, ratings, quotes or "studies show"?
 3. Are privacy lines exact, with no "100%", "no cookies" or "open source"?
 4. No job-offer promise, no hour target, no shame, no "grind"?
-5. No future feature, date or price? "Free" only, never "stays free"? Nothing about the LeetCode per-problem feature until it ships?
+5. No future feature, date or price? "Free" only, never "stays free"? Only the live per-problem feature (Track coding problems, LeetCode or NeetCode), nothing beyond it?
 6. No other tool named or mocked? No real user data, emails or browsing in text or images?
 7. Short sentences, "you", no hype words, no exclamation mark, no emoji?
 8. Durations in the app format (`45m`, `1h 05m`)? "CareerOS" spelled correctly?
