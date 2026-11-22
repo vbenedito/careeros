@@ -114,7 +114,7 @@ Script 2 of [video formats](video-formats.md) section 5, unchanged except the en
 
 **Instagram Reels**
 
-- Caption: the same as TikTok. Link in bio.
+- Caption: the same as TikTok. No link of its own (pillar 2).
 
 **LinkedIn** (week 3 or later only): use the post text of video formats, script 2, with the link `https://careeros-taupe.vercel.app/?utm_source=linkedin&utm_medium=social&utm_campaign=restart-after-gap` only in a link-test week ([goals and KPIs](goals-and-kpis.md) section 7).
 
@@ -179,6 +179,7 @@ Extension 0.3.0 (LeetCode problem names, off by default) is live in the store si
 | Sat 2026-11-21 | Product owner | One-time Kdenlive setup if not done ([video formats](video-formats.md) section 4.2, about 90 minutes). |
 | Sun 2026-11-22 | Product owner | Pick the two Pixabay tracks and fill the license records (video formats section 3.3). Edit videos 1 and 2. Export. Watch each on the phone, sound off, then at half volume. Run the pre-publish checklist (video formats section 4.6). |
 | Sun 2026-11-22 | Product owner | Phone test of the bio links (section 6), including Instagram. |
+| Mon 2026-11-23 | Product owner | Run the free Vercel CLI test once ([goals and KPIs](goals-and-kpis.md) section 5) and write the result in the calendar. |
 | Mon 2026-11-23 | Product owner | Confirm or change the thresholds in [goals and KPIs](goals-and-kpis.md) section 7. After today they are locked. Check the Vercel referrer list for the phone-test visits. |
 | Mon 2026-11-23 | Product owner | Write the week-0 numbers in the calendar: installs (store dashboard), sign-ups, site visitors (Vercel) for 2026-11-16 to 2026-11-22. |
 | Mon 2026-11-23 | Product owner | Schedule video 1 on YouTube (Studio), TikTok (desktop scheduler) and Instagram Reels (same file as TikTok) for Tue 24; video 2 for Thu 26. Same time of day for both. |

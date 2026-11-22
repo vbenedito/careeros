@@ -19,13 +19,13 @@ How to read it: every number in this page is either a plan we chose (cadence, ti
 
 ## 2. Business goal and SMART objective
 
-**Business goal (8-week test, 2026-11-23 to 2027-01-17).** Learn which platform, if any, is worth the weekly time for CareerOS, by measuring attention on the videos and visits to the site, so the product owner can keep, drop or add platforms with data. This serves the awareness and consideration steps only. We do not claim that social posts cause installs.
+**Business goal (8-week test, 2026-11-23 to 2027-01-17).** Learn which platform, if any, is worth the weekly time for CareerOS, by measuring attention on the videos and visits to the site, so the product owner can keep or drop platforms with data. This serves the awareness and consideration steps only. We do not claim that social posts cause installs.
 
 **SMART objective.**
 
 | Part | Content |
 |---|---|
-| Specific | Publish 16 videos (2 a week on YouTube Shorts, TikTok and Instagram Reels, the same file on all three) and 6 LinkedIn posts (1 a week from week 3). Record each platform's north-star KPI and supporting signals for every post. Decide the keep, drop and add questions in section 9. |
+| Specific | Publish 16 videos (2 a week on YouTube Shorts, TikTok and Instagram Reels, the same file on all three) and 6 LinkedIn posts (1 a week from week 3). Record each platform's north-star KPI and supporting signals for every post. Decide the keep and drop questions in section 9. |
 | Measurable | Posts published against plan (target: at least 14 of 16 videos). Average weekly time (target: 2 hours or less). Baseline written down for each north star. A decision recorded for each question in section 9. |
 | Achievable | The plan fits one person and free tools (D14). The scripts for 3 videos are ready. Missing a post is allowed; catching up is not (section 8). |
 | Relevant | It answers the open assumption that the persona uses short video and LinkedIn for study content (persona, assumption 6; platform study, section 10). |
@@ -41,7 +41,7 @@ The north star is chosen by what each platform rewards (platform study, section 
 |---|---|---|---|
 | YouTube Shorts | A Short is shown more if viewers do not swipe away and stay to the end. Our videos are 20 to 45 s, so retention is readable. | **Average percentage viewed** per Short. | The pillars name "watch time or retention" as the success signal (content pillars, sections 2 and 3). A percentage compares videos of different length. |
 | TikTok | Finishing the video is the strongest sign that the video was worth watching (assumption; not verified for our account). | **Share of views that watched the full video.** | Same file as YouTube, so the same quality shows up as completion. A second platform with a different metric also tells us if the two audiences differ. |
-| Instagram Reels | Watch time is a main ranking signal for Reels (assumption; not verified for our account). The same file as TikTok. | **Average watch time** per Reel. | Chosen like TikTok's: it shows whether people stay with the same file, and we read it next to YouTube and TikTok. Insights may show seconds, not a percentage; compare Reels of similar length only (assumption; confirm in week 1). |
+| Instagram Reels | Watch time is a main ranking signal for Reels (assumption; not verified for our account). The same file as TikTok. | **Average watch time** per Reel. | Chosen like TikTok's: it shows whether people stay with the same file, and we read it next to YouTube and TikTok. Insights may show seconds, not a percentage. In week 1, confirm that Insights shows average watch time per Reel. The comparison assumes all Reels are 20 to 45 seconds long (assumption). |
 | LinkedIn (test slot, from week 3) | A working engineer reads, reacts and visits the link. Video is weaker than documents there (platform study, section 3), so we test the link. | **Link clicks per 1,000 impressions**, on posts that carry the link (link-test weeks only). | The only LinkedIn question we need to answer is whether this audience goes to the site. |
 
 Names in the apps may differ ("average percentage viewed", "watched full video", "clicks", "impressions"). In week 1, write the exact label of each number as the app shows it, in the calendar notes. If an app does not show a number, say so in the notes and use the closest one. Do not calculate a number the app does not give.
@@ -91,7 +91,7 @@ The north star is the same for all pillars on a platform, so pillars can be comp
 
 1. Install it: `npm i -g vercel`.
 2. Log in: `vercel login`.
-3. Link the project: run `vercel link` in a folder of the repo.
+3. Link the project: run `vercel link` only inside the CareerOS repo folder.
 4. Run: `vercel metrics vercel.analytics.page_view.count --group-by utmSource --group-by utmCampaign`
 
 The docs do not say if this returns UTM groups on the Hobby plan. If it does, read per-campaign visits weekly from it and copy them into `weekly-numbers.csv`. If it errors or returns no UTM groups, write that in the calendar and stay on the Referrer list. Never paste tokens anywhere (not in the calendar, the CSV, an issue or a chat).
@@ -124,7 +124,7 @@ This closes the open point in voice (open point 1) and the "final list" left ope
 | YouTube channel profile | `...?utm_source=youtube&utm_medium=social&utm_campaign=bio` | No. Per-post numbers come from YouTube Studio. |
 | TikTok bio | `...?utm_source=tiktok&utm_medium=social&utm_campaign=bio` | No. Per-post numbers come from TikTok analytics. |
 | Instagram bio | `...?utm_source=instagram&utm_medium=social&utm_campaign=bio` | No. Per-post numbers come from Instagram Insights. |
-| Instagram Story link sticker, YouTube video description | `...&utm_campaign=<topic-slug>` | Only if the free CLI test works (section 5); otherwise a referrer count. |
+| Instagram Story link sticker, YouTube video description (manual and optional, not part of the plan; videos 1 and 2 carry no link, and the API cannot post link stickers) | `...&utm_campaign=<topic-slug>` | Only if the free CLI test works (section 5); otherwise a referrer count. |
 | LinkedIn Company Page (website field) | `...?utm_source=linkedin&utm_medium=social&utm_campaign=bio` | No. |
 | LinkedIn post, link-test weeks only | `...?utm_source=linkedin&utm_medium=social&utm_campaign=<topic-slug>` | Only if the free CLI test works (section 5). Otherwise the tags are kept for a later upgrade, and per-post clicks come from LinkedIn analytics. |
 
@@ -195,7 +195,7 @@ The review compares, for each platform: referrer visits to the site per hour spe
 
 | Question | Decide by this rule |
 |---|---|
-| **Keep or drop LinkedIn?** | Keep if (a) no week went over 2 hours because of it, and (b) its referrer visits per hour spent are at least as high as the lowest of the three video platforms. Otherwise drop it, or keep it as repost-only (platform study, section 8). Read the comments too: a few useful replies from working engineers also count for the persona question. If the 6 posts are inconclusive, say so; extend the test for 4 more weeks only if the time held. |
+| **Keep or drop LinkedIn?** | Keep if (a) no week went over 2 hours because of it, and (b) its referrer visits per hour spent are at least as high as the lowest of the three video platforms. If the sample is too small to judge, say so and extend the test. Otherwise drop it, or keep it as repost-only (platform study, section 8). Read the comments too: a few useful replies from working engineers also count for the persona question. If the 6 posts are inconclusive, say so; extend the test for 4 more weeks only if the time held. |
 | **Keep YouTube Shorts and TikTok?** | For each: keep if the median north star of weeks 5 to 8 is at or above B and the time held. If one is clearly weaker on both north star and referrer visits per hour, keep it as repost-only. Weeks 5 and 6 are Christmas and New Year weeks. Views may fall for reasons that are not about the content (assumption). Judge by the trend over 4 or more videos, not by one week. |
 | **Keep Instagram Reels?** | Same rule as the other video platforms: keep if the median north star of weeks 5 to 8 is at or above its B and the time held. If it is clearly weaker on both north star and referrer visits per hour, keep it as repost-only. Instagram is the first platform dropped when a week goes over 2 hours (section 7). |
 | **Refresh pillar 3 (exactly what is stored)?** | It has 3 videos in this test, and its facts run out after about 8 weeks (content pillars, section 4). If its saves and visits are at or above the other pillars' median: keep it, with new hooks on the same facts (do not repost). If they are below and no clicks came: merge its best ideas into pillar 2 or 1, or drop it. Three videos is a small sample; say that when deciding. |
