@@ -8,6 +8,8 @@ Amended 2026-11-20 (#239, product owner): user-facing product copy is approved b
 
 Amended 2026-11-21 (#252, product owner): every sub-agent reports the skills it used (§6).
 
+Amended 2026-11-22 (#267): posts pipeline rules, no agent approves a post record and workflow changes need an `ops-workflow:` PR (§7, PST-08, PST-32).
+
 The goal is the same or better quality for fewer tokens. Pick the model by the **risk and kind of thinking** a task needs, not by how important the project is.
 
 ## 1. Which model
@@ -67,3 +69,10 @@ Each sub-agent reports its token use when it finishes. The tech lead watches for
 **Ledger (ADM-14, product owner 2026-11-18).** Before a session ends, the main session writes one JSON file with its records (session goal; per agent: model, work, kind, issue, PR, tokens, minutes, rounds, first-round HIGH/MEDIUM findings, files given and skills used) and pushes it to the private repo `vbenedito/careeros-ops` under `ledger/YYYY/` (schema: [spec ADM-06](../../specs/v1/03-admin.md), [ADR-0013](../adr/0013-admin-access.md)). Sub-agent tokens are the exact numbers each agent reports at its last finish; main-session tokens are an estimate unless measured with `/explain-usage`. Files are never edited; a correction is a new file. The ledger never goes in this public repository. If the session cannot push, it says so in its last message to the product owner.
 
 **Skills used (#199, widened 2026-11-21, #252).** Every sub-agent, build and review alike, loads the skills that match the work and starts its report with `Skills used: …` (or `Skills used: none`). The tech lead puts that line in the PR description and the merge comment, tells the product owner which skills each piece of work used, and records them in the ledger (`skills`, ADM-06).
+
+## 7. Posts pipeline (PST-08, PST-32)
+
+Spec: [04-posts-pipeline](../../specs/v1/04-posts-pipeline.md). The private ops repo `vbenedito/careeros-ops` holds the post records, state and workflows.
+
+- **No agent approves a post (PST-08).** Claude writes a post record and opens it as a PR in the ops repo. No agent merges, approves or pushes a record to `main`; the product owner's merge is the approval.
+- **Workflow changes (PST-32).** Agents never create or edit anything under `.github/` in the ops repo, except in a PR whose title starts with `ops-workflow:`. That PR is reviewed by Opus (§2) and merged only after the product owner's "approved".
