@@ -13,21 +13,27 @@ export interface CliArgs {
   files: string[];
   now: Date | null;
   skipPast: boolean;
+  postTime: string | null;
 }
 
-/** `--slugs <file.json> [--now <ISO>] [--skip-past] <record.json>...`; throws on a bad call. */
+/** `--slugs <file.json> [--now <ISO>] [--post-time HH:MM] [--skip-past] <record.json>...`; throws on a bad call. */
 export function parseArgs(argv: readonly string[]): CliArgs {
   let slugsFile: string | null = null;
   let now: Date | null = null;
   let skipPast = false;
+  let postTime: string | null = null;
   const files: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
-    if (arg === "--slugs" || arg === "--now") {
+    if (arg === "--slugs" || arg === "--now" || arg === "--post-time") {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} needs a value`);
       if (arg === "--slugs") slugsFile = value;
-      else {
+      else if (arg === "--post-time") {
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value))
+          throw new Error("--post-time must be HH:MM");
+        postTime = value;
+      } else {
         now = new Date(value);
         if (Number.isNaN(now.getTime())) throw new Error("--now must be an ISO 8601 date-time");
       }
@@ -37,7 +43,7 @@ export function parseArgs(argv: readonly string[]): CliArgs {
   }
   if (slugsFile === null) throw new Error("--slugs <file.json> is required");
   if (files.length === 0) throw new Error("give at least one record file");
-  return { slugsFile, files, now, skipPast };
+  return { slugsFile, files, now, skipPast, postTime };
 }
 
 /** The slugs file is a JSON array of strings. */
@@ -66,6 +72,32 @@ export function checkFile(
     return { path, failures: [{ code: "schema", message: "file is not valid JSON" }] };
   }
   return { path, failures: validateRecord(data, { ...context, path }) };
+}
+
+/** The slug of a record text, or null when it is not JSON with a string `slug`. */
+function slugOf(text: string): string | null {
+  try {
+    const data: unknown = JSON.parse(text);
+    const slug = (data as { slug?: unknown } | null)?.slug;
+    return typeof slug === "string" ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Checks several files in one call: a slug shared by two files fails both. */
+export function checkFiles(
+  files: readonly { path: string; text: string }[],
+  context: Omit<ValidateRecordContext, "path">,
+): FileResult[] {
+  const slugs = files.map((file) => slugOf(file.text));
+  return files.map((file, index) => {
+    const others = slugs.filter((slug, i): slug is string => i !== index && slug !== null);
+    return checkFile(file.path, file.text, {
+      ...context,
+      existingSlugs: [...context.existingSlugs, ...others],
+    });
+  });
 }
 
 export function formatResults(results: readonly FileResult[]): string {

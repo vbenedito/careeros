@@ -24,7 +24,11 @@ const valid = () => ({
   timezone: "America/Sao_Paulo",
   pillar: "restart",
   format: "steps",
-  video: { release: "post-2030-01-01-restart-after-gap", asset: "a.mp4", sha256: "a".repeat(64) },
+  video: {
+    release: "post-2030-01-01-restart-after-gap",
+    asset: "2030-01-01-restart-after-gap.mp4",
+    sha256: "a".repeat(64),
+  },
   music_license: "license-ref",
   ai_label: false,
   platforms: {
@@ -55,6 +59,14 @@ const valid = () => ({
     },
   },
 });
+
+/** The same record on another date, with the video names that follow the stem. */
+const onDate = (date: string, over: Record<string, unknown> = {}) => {
+  const record = valid();
+  record.video.release = `post-${date}-restart-after-gap`;
+  record.video.asset = `${date}-restart-after-gap.mp4`;
+  return { ...record, date, ...over };
+};
 
 const context = (over: Partial<ValidateRecordContext> = {}): ValidateRecordContext => ({
   path: "posts/2030/2030-01-01-restart-after-gap.json",
@@ -174,6 +186,24 @@ describe("slot rules (PST-12)", () => {
     expect(slotInstant("2030-01-01", "19:00").toISOString()).toBe("2030-01-01T22:00:00.000Z");
   });
 
+  it("PST-12 settles the offset in a DST zone (second pass)", () => {
+    // New York springs forward on 2030-03-10 at 02:00: 01:30 is still UTC-5.
+    expect(slotInstant("2030-03-10", "01:30", "America/New_York").toISOString()).toBe(
+      "2030-03-10T06:30:00.000Z",
+    );
+    // 03:30 the same day is UTC-4.
+    expect(slotInstant("2030-03-10", "03:30", "America/New_York").toISOString()).toBe(
+      "2030-03-10T07:30:00.000Z",
+    );
+    // Falls back on 2030-11-03: 00:30 is still UTC-4, 12:00 is UTC-5.
+    expect(slotInstant("2030-11-03", "00:30", "America/New_York").toISOString()).toBe(
+      "2030-11-03T04:30:00.000Z",
+    );
+    expect(slotInstant("2030-11-03", "12:00", "America/New_York").toISOString()).toBe(
+      "2030-11-03T17:00:00.000Z",
+    );
+  });
+
   it("PST-12 the window across midnight UTC keeps the local date and weekday", () => {
     // 22:00 São Paulo on Tuesday 2030-01-01 is 01:00 UTC on Wednesday 2030-01-02.
     const late = { ...slot, time: "22:00" };
@@ -225,6 +255,15 @@ describe("validateRecord (PST-09)", () => {
     ).toEqual(["stem"]);
   });
 
+  it("PST-09 fails when video.release or video.asset do not follow the stem", () => {
+    const release = valid();
+    release.video.release = "post-2030-01-01-other";
+    expect(codes(release)).toEqual(["stem"]);
+    const asset = valid();
+    asset.video.asset = "a.mp4";
+    expect(codes(asset)).toEqual(["stem"]);
+  });
+
   it("PST-09 fails on a reused slug", () => {
     expect(codes(valid(), context({ existingSlugs: ["other-idea", "restart-after-gap"] }))).toEqual(
       ["duplicate-slug"],
@@ -265,7 +304,7 @@ describe("validateRecord (PST-09)", () => {
   });
 
   it("PST-09 fails when the date is not a post day or the time is not POST_TIME", () => {
-    const wednesday = { ...valid(), date: "2030-01-02" };
+    const wednesday = onDate("2030-01-02");
     expect(
       codes(wednesday, context({ path: "posts/2030/2030-01-02-restart-after-gap.json" })),
     ).toEqual(["post-day"]);
@@ -300,7 +339,7 @@ describe("validateRecord (PST-09)", () => {
   });
 
   it("PST-09 returns every failure at once", () => {
-    const record = { ...valid(), time: "20:00", date: "2030-01-02" };
+    const record = onDate("2030-01-02", { time: "20:00" });
     expect(codes(record, context({ existingSlugs: ["restart-after-gap"] }))).toEqual([
       "stem",
       "duplicate-slug",

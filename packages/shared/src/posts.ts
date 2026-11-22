@@ -325,6 +325,13 @@ export function validateRecord(input: unknown, context: ValidateRecordContext): 
     fail("stem", `folder must be ${record.date.slice(0, 4)}, found ${folder}`);
   }
 
+  if (record.video.release !== `post-${stem}`) {
+    fail("stem", `video.release must be post-${stem}, found ${record.video.release}`);
+  }
+  if (record.video.asset !== `${stem}.mp4`) {
+    fail("stem", `video.asset must be ${stem}.mp4, found ${record.video.asset}`);
+  }
+
   if (context.existingSlugs.includes(record.slug)) {
     fail("duplicate-slug", `slug ${record.slug} is already used by another record`);
   }
