@@ -126,10 +126,11 @@ describe("agent cost chart view (ADM-10a)", () => {
 
   it("ADM-10a the axis has 0 and two round ticks, written with formatTokens; dates read '21 Nov'", () => {
     expect(axisTicks(2220)).toEqual({ top: 4000, ticks: [0, 2000, 4000] });
+    expect(axisTicks(0)).toEqual({ top: 2, ticks: [0, 1, 2] });
+    expect(axisTicks(1)).toEqual({ top: 2, ticks: [0, 1, 2] });
     expect(axisTicks(1000)).toEqual({ top: 1000, ticks: [0, 500, 1000] });
     expect(axisTicks(1_150_000).top).toBe(2_000_000);
     expect(axisTicks(7).ticks).toEqual([0, 4, 8]);
-    expect(axisTicks(0).top).toBe(1);
     expect(shortDate("2030-11-21")).toBe("21 Nov");
     expect(shortDate("2030-01-05")).toBe("5 Jan");
     expect(buildDailyCost(twenty(), NOW).days[13]?.label).toBe("20 Jan");

@@ -83,7 +83,12 @@ export function buildSkills(sessions: readonly LedgerSession[]): SkillsView {
 
     for (const [skill, n] of [...entries].sort(([a], [b]) => byNameAsc(a, b)))
       table.push({ kind: KIND_LABELS[kind], skill, records: n });
+    // Every value of the bars is in the table too (ADM-20.3): Other, No skill listed, No records.
+    const otherBar = bars.find((b) => b.label === "Other");
+    if (otherBar) table.push({ kind: KIND_LABELS[kind], skill: "Other", records: otherBar.count });
     if (none > 0) table.push({ kind: KIND_LABELS[kind], skill: "No skill listed", records: none });
+    if ((records.get(kind) ?? 0) === 0)
+      table.push({ kind: KIND_LABELS[kind], skill: "No records", records: 0 });
     // Entries are sorted by count then name, and kinds come in order: the first strictly larger wins.
     const top = entries[0];
     if (top && (best === null || top[1] > best.n)) best = { skill: top[0], kind, n: top[1] };

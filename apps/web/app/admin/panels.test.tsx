@@ -153,9 +153,12 @@ describe("admin charts and Details (ADM-20)", () => {
     const cost = html(<CostPanel {...costProps(sessions)} />);
     expect(cost).toContain(`role="img" aria-label="${daily.headline}"`);
     const skills = buildSkills(sessions);
-    expect(html(<SkillsPanel view={skills} />)).toContain(
-      `role="img" aria-label="${skills.headline}"`,
-    );
+    // Skills: the headline is visible text; each bar is an image with its own label, so the
+    // kind names and "No records" stay readable.
+    const skillsMarkup = html(<SkillsPanel view={skills} />);
+    expect(skillsMarkup).toContain(skills.headline);
+    expect(skillsMarkup).toContain('role="img" aria-label="x:one: 1 record"');
+    expect(skillsMarkup).not.toMatch(/<div[^>]*role="img"/);
     const progress = buildProgress(
       [{ number: 1, title: "A", state: "closed", labels: ["v1"] }],
       [],

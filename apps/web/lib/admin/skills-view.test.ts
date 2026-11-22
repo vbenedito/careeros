@@ -114,13 +114,21 @@ describe("skills view (ADM-19)", () => {
         ],
       }),
     ]);
+    // Every skill, then "Other" (the rest after the top 3: here 2) as the bars show it.
     expect(view.table.filter((r) => r.kind === "Code").map((r) => [r.skill, r.records])).toEqual([
       ["alpha", 2],
       ["m", 1],
       ["n", 1],
       ["o", 1],
       ["zeta", 1],
+      ["Other", 2],
     ]);
+    // Kinds without records and records without skills are in the table too.
+    expect(view.table.filter((r) => r.kind === "Video")).toEqual([
+      { kind: "Video", skill: "No records", records: 0 },
+    ]);
+    const none = buildSkills([session({ agents: [rec("code", ["a"]), rec("code", [])] })]);
+    expect(none.table).toContainEqual({ kind: "Code", skill: "No skill listed", records: 1 });
     expect(view.table.find((r) => r.kind === "Ideas")).toEqual({
       kind: "Ideas",
       skill: "b",

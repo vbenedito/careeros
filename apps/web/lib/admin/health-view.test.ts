@@ -123,6 +123,22 @@ describe("production health view (ADM-18)", () => {
     ).toBeNull();
   });
 
+  it("ADM-18 a failing backup with no good run shows no bar and 'No good backup yet'", () => {
+    const r = row(
+      {
+        "backup.yml": {
+          ok: true,
+          run: { status: "completed", conclusion: "failure", updatedAt: ago(2) },
+          lastGood: null,
+        },
+      },
+      "backup.yml",
+    );
+    expect(r?.status).toBe("failing");
+    expect(r?.barPercent).toBeNull();
+    expect(r?.lastGood).toBe("No good backup yet");
+  });
+
   it("ADM-18 headline: all fine, or the count and the names in row order", () => {
     expect(buildHealth(inputs({}), NOW).headline).toBe("All 6 checks are fine");
     const two = buildHealth(

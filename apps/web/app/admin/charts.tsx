@@ -7,6 +7,7 @@
  */
 import { LEDGER_MODELS, type LedgerModel } from "@careeros/shared";
 import { Swatch } from "@/app/admin/panel-parts";
+import { segmentLengths } from "@/lib/admin/chart-geometry";
 import type { DailyCostView } from "@/lib/admin/daily-view";
 import { formatTokens } from "@/lib/admin/sessions-view";
 
@@ -20,6 +21,15 @@ export const MODEL_SWATCH: Record<LedgerModel, string> = {
   sonnet: "bg-chart-2",
   opus: "bg-chart-3",
 };
+
+/**
+ * Smallest drawn size of a segment with a value above 0: 3 px of column height (the chart is
+ * h-40 = 160 px for 100 units, so 1.6 px per unit) or 4 px of bar width, each plus the 2 px
+ * card-colour stroke that eats 1 px on both edges. The bar is measured against a 240 px box,
+ * the narrowest it gets on a phone.
+ */
+const MIN_COLUMN_UNITS = (3 + 2) / 1.6;
+const MIN_BAR_UNITS = ((4 + 2) / 240) * 100;
 
 const GAP = { strokeWidth: 2, vectorEffect: "non-scaling-stroke" } as const;
 
@@ -70,15 +80,18 @@ export function CostChart({ view }: { view: DailyCostView }) {
               />
             ))}
             {view.days.map((day, i) => {
-              let below = 0;
+              const lengths = segmentLengths(
+                LEDGER_MODELS.map((m) => day.byModel[m]),
+                (day.total / view.top) * H,
+                MIN_COLUMN_UNITS,
+              );
+              let top = H;
               return (
                 <g key={day.date}>
-                  {LEDGER_MODELS.map((m) => {
-                    const v = day.byModel[m];
-                    if (v === 0) return null;
-                    const top = y(below + v);
-                    const height = y(below) - top;
-                    below += v;
+                  {LEDGER_MODELS.map((m, k) => {
+                    const height = lengths[k] ?? 0;
+                    if (height === 0) return null;
+                    top -= height;
                     return (
                       <rect
                         key={m}
@@ -89,7 +102,7 @@ export function CostChart({ view }: { view: DailyCostView }) {
                         className={`${MODEL_FILL[m]} stroke-card`}
                         {...GAP}
                       >
-                        <title>{`${day.label}, ${m}: ${formatTokens(v)} tokens`}</title>
+                        <title>{`${day.label}, ${m}: ${formatTokens(day.byModel[m])} tokens`}</title>
                       </rect>
                     );
                   })}
@@ -136,6 +149,11 @@ export interface StackSegment {
 /** ADM-12: one bar split in segments, width = share of the total; the legend repeats every count. */
 export function StackedBar({ segments, label }: { segments: StackSegment[]; label: string }) {
   const total = segments.reduce((n, s) => n + s.count, 0);
+  const widths = segmentLengths(
+    segments.map((s) => s.count),
+    100,
+    MIN_BAR_UNITS,
+  );
   let x = 0;
   return (
     <div className="flex flex-col gap-2">
@@ -146,9 +164,9 @@ export function StackedBar({ segments, label }: { segments: StackSegment[]; labe
         preserveAspectRatio="none"
         className="block h-4 w-full"
       >
-        {segments.map((s) => {
-          if (s.count === 0 || total === 0) return null;
-          const width = (s.count / total) * 100;
+        {segments.map((s, k) => {
+          const width = widths[k] ?? 0;
+          if (s.count === 0 || total === 0 || width === 0) return null;
           const rect = (
             <rect
               key={s.key}
@@ -190,15 +208,18 @@ export function HBar({
   max,
   fill,
   title,
+  label,
 }: {
   value: number;
   max: number;
   fill: string;
   title: string;
+  /** The bar's text alternative, e.g. "x:one: 3 records". */
+  label: string;
 }) {
   const percent = max > 0 ? (value / max) * 100 : 0;
   return (
-    <svg aria-hidden="true" width="100%" height={12} className="block min-w-0 flex-1">
+    <svg role="img" aria-label={label} width="100%" height={12} className="block min-w-0 flex-1">
       <rect width="100%" height={12} rx={2} className="fill-muted" />
       {value > 0 && (
         <rect

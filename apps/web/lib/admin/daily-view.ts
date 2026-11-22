@@ -40,7 +40,8 @@ const NICE = [1, 2, 4, 6, 8, 10];
 
 /** A round top for the axis and the ticks 0, half and top (ADM-10a: 0 and two round ticks). */
 export function axisTicks(max: number): { top: number; ticks: [number, number, number] } {
-  if (max <= 0) return { top: 1, ticks: [0, 0.5, 1] };
+  // All-zero or tiny data: whole-number ticks 0, 1, 2 (never 0.5 tokens).
+  if (max <= 1) return { top: 2, ticks: [0, 1, 2] };
   const base = 10 ** Math.floor(Math.log10(max));
   const top = (NICE.find((n) => n * base >= max) ?? 10) * base;
   return { top, ticks: [0, top / 2, top] };

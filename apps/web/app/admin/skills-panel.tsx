@@ -23,11 +23,7 @@ export function SkillsPanel(props: Props) {
         ) : (
           <>
             <p className="text-sm font-medium">{view.headline}</p>
-            <div
-              role="img"
-              aria-label={view.headline}
-              className="grid gap-x-6 gap-y-4 md:grid-cols-2"
-            >
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
               {view.kinds.map((k) => (
                 <div key={k.kind} className="flex min-w-0 flex-col gap-2">
                   <h3 className="text-sm font-medium">
@@ -49,6 +45,7 @@ export function SkillsPanel(props: Props) {
                               max={view.max}
                               fill={b.neutral ? "fill-chart-6" : "fill-chart-1"}
                               title={`${b.label}: ${b.count}`}
+                              label={`${b.label}: ${b.count} ${b.count === 1 ? "record" : "records"}`}
                             />
                             <span className="min-w-[2ch] text-right text-sm tabular-nums">
                               {b.count}

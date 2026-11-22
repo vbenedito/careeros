@@ -174,13 +174,20 @@ function buildRow(spec: WorkflowSpec, result: WorkflowResult | undefined, now: D
   const goodAge = good === null ? null : ageMs(good, now);
   const barAge = goodAge ?? age;
   const sameRun = good !== null && good.updatedAt === run.updatedAt;
+  // A backup that is not passing and has no good run at all: no bar to draw (it would show the
+  // failed run's age as if it were freshness).
+  const noGoodBackup =
+    spec.file === BACKUP_FILE && result.lastGood === null && status !== "passing";
   return row(status, {
     age: formatAge(age),
     finished: finishedText(run),
     barPercent:
-      limitMs === null ? null : Math.round(Math.min(100, Math.max(0, (barAge / limitMs) * 100))),
-    lastGood:
-      good !== null && goodAge !== null && !sameRun
+      limitMs === null || noGoodBackup
+        ? null
+        : Math.round(Math.min(100, Math.max(0, (barAge / limitMs) * 100))),
+    lastGood: noGoodBackup
+      ? "No good backup yet"
+      : good !== null && goodAge !== null && !sameRun
         ? `last good backup ${formatAge(goodAge)}`
         : null,
   });

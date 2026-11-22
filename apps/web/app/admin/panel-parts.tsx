@@ -31,7 +31,7 @@ export function Unavailable({ what, note }: { what: string; note: string | null 
 export function Details({ label, children }: { label: string; children: ReactNode }) {
   return (
     <details className="group border-t border-border">
-      <summary className="flex min-h-11 list-none items-center gap-2 rounded-md text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none px-2 items-center gap-2 rounded-md text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
         <ChevronRight
           aria-hidden="true"
           className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
