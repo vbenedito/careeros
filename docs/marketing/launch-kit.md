@@ -4,6 +4,8 @@ Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
 Amended 2026-11-22 (#258): section 7: extension 0.3.1 is live.
 
+Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, the same file as TikTok (sections 1, 5, 6 and 8).
+
 Issue #246. Everything needed to publish the first two videos and to set up the profiles: the final scripts for videos 1 and 2, the bios, the bio links with `utm_*` tags, and the week-0 checklist. It reads the [brand profile](brand-profile.md), the [voice](voice.md), the [platform study](platform-study.md), the [video formats](video-formats.md) and the [goals and KPIs](goals-and-kpis.md). If this page disagrees with them, they win and this page is fixed.
 
 Nothing here is new content. Videos 1 and 2 are scripts 1 and 2 of [video formats](video-formats.md) section 5, with the dates, file names and logo end screen added. The calendar with drafts and numbers stays outside the repo (D17).
@@ -12,8 +14,8 @@ Nothing here is new content. Videos 1 and 2 are scripts 1 and 2 of [video format
 
 | Video | Publish | Pillar, format | File stem | Platforms |
 |---|---|---|---|---|
-| 1. Which two days did the work? | Tue 2026-11-24 | Pillar 1, chart | `2026-11-24-which-two-days` | YouTube Shorts, TikTok |
-| 2. Restarting after a gap | Thu 2026-11-26 | Pillar 2, steps | `2026-11-26-restart-after-gap` | YouTube Shorts, TikTok (LinkedIn from week 3) |
+| 1. Which two days did the work? | Tue 2026-11-24 | Pillar 1, chart | `2026-11-24-which-two-days` | YouTube Shorts, TikTok, Instagram Reels |
+| 2. Restarting after a gap | Thu 2026-11-26 | Pillar 2, steps | `2026-11-26-restart-after-gap` | YouTube Shorts, TikTok, Instagram Reels (LinkedIn from week 3) |
 
 - Two videos a week, Tuesday and Thursday, as in [goals and KPIs](goals-and-kpis.md) section 2 (last post Thursday 2027-01-14).
 - Post both videos at the same local time. Pick the time once, write it in the calendar, and keep it for the 8 weeks, so time of day is not a second variable.
@@ -69,6 +71,10 @@ Script 1 of [video formats](video-formats.md) section 5, unchanged except the en
   ```
 - Text version in the first comment. Link in bio.
 
+**Instagram Reels**
+
+- Caption: the same as TikTok. Text version in the first comment. Link in bio.
+
 **Alt text:** "Seven horizontal bars show a sample study week, Monday to Sunday: 20m, 30m, 25m, 1h 55m, 20m, 2h 10m, 1h 00m. Total 6h 40m. Thursday and Saturday together are 4h 05m. Sample data."
 
 ## 4. Video 2: Restarting after a gap
@@ -106,6 +112,10 @@ Script 2 of [video formats](video-formats.md) section 5, unchanged except the en
   #studyplan #codinginterview #softwareengineer
   ```
 
+**Instagram Reels**
+
+- Caption: the same as TikTok. Link in bio.
+
 **LinkedIn** (week 3 or later only): use the post text of video formats, script 2, with the link `https://careeros-taupe.vercel.app/?utm_source=linkedin&utm_medium=social&utm_campaign=restart-after-gap` only in a link-test week ([goals and KPIs](goals-and-kpis.md) section 7).
 
 **Alt text:** "Four steps on a plain background: study one ordinary week, count the time per day, write the total down, plan the next week from that number. A starting point, not a score. CareerOS."
@@ -114,12 +124,12 @@ Script 2 of [video formats](video-formats.md) section 5, unchanged except the en
 
 Same display name and the same handle on every platform ([platform study](platform-study.md) section 7). The handle and the account email are the product owner's choice (D19); `<handle>` below is that choice.
 
-| Field | YouTube | TikTok |
-|---|---|---|
-| Account | Brand channel, name `CareerOS`, handle `@<handle>` | Business account, name `CareerOS`, handle `@<handle>` |
-| Profile picture | `brand/careeros-avatar-light-1024.png` | same |
-| Bio | Channel description below | `Free Chrome extension that counts your study time on the sites you choose.` (74 characters; TikTok allows 80) |
-| Link | Channel **Links**: title `Free Chrome extension`, URL in section 6 | **Website** field, URL in section 6 |
+| Field | YouTube | TikTok | Instagram |
+|---|---|---|---|
+| Account | Brand channel, name `CareerOS`, handle `@<handle>` | Business account, name `CareerOS`, handle `@<handle>` | Professional account, type Creator (free Insights), name `CareerOS`, handle `@<handle>` |
+| Profile picture | `brand/careeros-avatar-light-1024.png` | same | same |
+| Bio | Channel description below | `Free Chrome extension that counts your study time on the sites you choose.` (74 characters; TikTok allows 80) | Same line as TikTok (74 characters; Instagram allows 150) |
+| Link | Channel **Links**: title `Free Chrome extension`, URL in section 6 | **Website** field, URL in section 6 | **Links** field in the profile, URL in section 6 |
 
 **YouTube channel description:**
 
@@ -143,6 +153,7 @@ From [goals and KPIs](goals-and-kpis.md) section 6. Copy them exactly; lowercase
 |---|---|
 | YouTube channel Links | `https://careeros-taupe.vercel.app/?utm_source=youtube&utm_medium=social&utm_campaign=bio` |
 | TikTok Website field | `https://careeros-taupe.vercel.app/?utm_source=tiktok&utm_medium=social&utm_campaign=bio` |
+| Instagram profile link | `https://careeros-taupe.vercel.app/?utm_source=instagram&utm_medium=social&utm_campaign=bio` |
 | LinkedIn Company Page website (week 3) | `https://careeros-taupe.vercel.app/?utm_source=linkedin&utm_medium=social&utm_campaign=bio` |
 
 **Phone test, for each link (before Tue 24):**
@@ -150,6 +161,8 @@ From [goals and KPIs](goals-and-kpis.md) section 6. Copy them exactly; lowercase
 1. On the phone, open the app, go to the CareerOS profile, and tap the link from inside the app.
 2. The CareerOS landing page opens, signed out. The address still shows the three `utm_*` parameters, or only them after a redirect (SEC-15 drops any other parameter the app adds).
 3. Next day, in Vercel → Analytics → Referrers, check that a visit from that platform appears. Write the result in the calendar. If no referrer appears, note it: in-app browsers can hide the referrer, so the count is a lower bound ([goals and KPIs](goals-and-kpis.md) section 7).
+
+Per-post link format, for a post that carries its own link (for example an Instagram Story link sticker or a YouTube description): `https://careeros-taupe.vercel.app/?utm_source=<source>&utm_medium=social&utm_campaign=<topic-slug>`. The topic slug is the topic part of the file stem, for example `restart-after-gap`. Copy it from the calendar. Videos 1 and 2 carry no link of their own.
 
 Assumption: a TikTok business account shows the Website field without a follower minimum. If the field is not there, write it in the calendar and tell the tech lead before Tue 24: the TikTok upload of video 1 then needs an end screen without `Link in profile`.
 
@@ -161,14 +174,14 @@ Extension 0.3.0 (LeetCode problem names, off by default) is live in the store si
 
 | Day | Who | What |
 |---|---|---|
-| Fri 2026-11-20 | Product owner | Choose the handle (check it is free on YouTube, TikTok and LinkedIn, with 2 fallbacks) and the account email (D19). |
-| Sat 2026-11-21 | Product owner | Create the YouTube brand channel and the TikTok business account. Upload the light avatar. Paste the bios (section 5) and links (section 6). |
+| Fri 2026-11-20 | Product owner | Choose the handle (check it is free on YouTube, TikTok, Instagram and LinkedIn, with 2 fallbacks) and the account email (D19). |
+| Sat 2026-11-21 | Product owner | Create the YouTube brand channel, the TikTok business account and the Instagram Professional account (type Creator). Upload the light avatar. Paste the bios (section 5) and links (section 6). |
 | Sat 2026-11-21 | Product owner | One-time Kdenlive setup if not done ([video formats](video-formats.md) section 4.2, about 90 minutes). |
 | Sun 2026-11-22 | Product owner | Pick the two Pixabay tracks and fill the license records (video formats section 3.3). Edit videos 1 and 2. Export. Watch each on the phone, sound off, then at half volume. Run the pre-publish checklist (video formats section 4.6). |
-| Sun 2026-11-22 | Product owner | Phone test of both bio links (section 6). |
+| Sun 2026-11-22 | Product owner | Phone test of the bio links (section 6), including Instagram. |
 | Mon 2026-11-23 | Product owner | Confirm or change the thresholds in [goals and KPIs](goals-and-kpis.md) section 7. After today they are locked. Check the Vercel referrer list for the phone-test visits. |
 | Mon 2026-11-23 | Product owner | Write the week-0 numbers in the calendar: installs (store dashboard), sign-ups, site visitors (Vercel) for 2026-11-16 to 2026-11-22. |
-| Mon 2026-11-23 | Product owner | Schedule video 1 on YouTube (Studio) and TikTok (desktop scheduler) for Tue 24; video 2 for Thu 26. Same time of day for both. |
+| Mon 2026-11-23 | Product owner | Schedule video 1 on YouTube (Studio), TikTok (desktop scheduler) and Instagram Reels (same file as TikTok) for Tue 24; video 2 for Thu 26. Same time of day for both. |
 | Tue 2026-11-24 | Product owner | Video 1 goes live. Answer the TikTok Music Usage Confirmation if asked. |
 | Wed 2026-11-25 | Product owner | YouTube Studio: check video 1 for a copyright or Content ID notice (video formats section 3.1). |
 
