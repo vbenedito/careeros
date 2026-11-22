@@ -1,3 +1,4 @@
+import { Details } from "@/app/admin/panel-parts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SessionRow } from "@/lib/admin/sessions-view";
 
@@ -8,7 +9,7 @@ type Props =
 /** ADM-09: one row per session, newest first. Props are plain view-model values. */
 export function SessionsPanel(props: Props) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle variant="section">Sessions</CardTitle>
       </CardHeader>
@@ -33,57 +34,62 @@ export function SessionsPanel(props: Props) {
             {props.rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No sessions in the ledger yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[40rem] text-left text-sm">
-                  <thead className="text-xs text-muted-foreground">
-                    <tr className="border-b border-border">
-                      <th className="py-2 pr-3 font-medium">Date</th>
-                      <th className="py-2 pr-3 font-medium">Goal</th>
-                      <th className="py-2 pr-3 font-medium">Main tokens</th>
-                      <th className="py-2 pr-3 font-medium">Agent tokens by model</th>
-                      <th className="py-2 font-medium">Agents</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {props.rows.map((row) => (
-                      <tr key={row.id} className="border-b border-border align-top last:border-b-0">
-                        <td className="py-2 pr-3 tabular-nums">{row.date}</td>
-                        <td className="py-2 pr-3">
-                          {row.goal}
-                          {row.corrects && (
-                            <span className="block text-xs text-muted-foreground">
-                              Corrects {row.corrects}
-                            </span>
-                          )}
-                          {row.correctedBy.length > 0 && (
-                            <span className="block text-xs text-muted-foreground">
-                              Corrected by {row.correctedBy.join(", ")}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {row.mainTokens === null ? (
-                            "Not measured"
-                          ) : (
-                            <>
-                              {row.mainTokens}{" "}
-                              <span className="text-xs text-muted-foreground">
-                                {row.mainMeasure}
-                              </span>
-                            </>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {row.agentTokens.length === 0
-                            ? "None"
-                            : row.agentTokens.map((t) => `${t.model} ${t.tokens}`).join(" · ")}
-                        </td>
-                        <td className="py-2 tabular-nums">{row.agentCount}</td>
+              <Details label="Details: sessions">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[40rem] text-left text-sm">
+                    <thead className="text-xs text-muted-foreground">
+                      <tr className="border-b border-border">
+                        <th className="py-2 pr-3 font-medium">Date</th>
+                        <th className="py-2 pr-3 font-medium">Goal</th>
+                        <th className="py-2 pr-3 font-medium">Main tokens</th>
+                        <th className="py-2 pr-3 font-medium">Agent tokens by model</th>
+                        <th className="py-2 font-medium">Agents</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {props.rows.map((row) => (
+                        <tr
+                          key={row.id}
+                          className="border-b border-border align-top last:border-b-0"
+                        >
+                          <td className="py-2 pr-3 tabular-nums">{row.date}</td>
+                          <td className="py-2 pr-3">
+                            {row.goal}
+                            {row.corrects && (
+                              <span className="block text-xs text-muted-foreground">
+                                Corrects {row.corrects}
+                              </span>
+                            )}
+                            {row.correctedBy.length > 0 && (
+                              <span className="block text-xs text-muted-foreground">
+                                Corrected by {row.correctedBy.join(", ")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 pr-3 tabular-nums">
+                            {row.mainTokens === null ? (
+                              "Not measured"
+                            ) : (
+                              <>
+                                {row.mainTokens}{" "}
+                                <span className="text-xs text-muted-foreground">
+                                  {row.mainMeasure}
+                                </span>
+                              </>
+                            )}
+                          </td>
+                          <td className="py-2 pr-3 tabular-nums">
+                            {row.agentTokens.length === 0
+                              ? "None"
+                              : row.agentTokens.map((t) => `${t.model} ${t.tokens}`).join(" · ")}
+                          </td>
+                          <td className="py-2 tabular-nums">{row.agentCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Details>
             )}
           </>
         )}
