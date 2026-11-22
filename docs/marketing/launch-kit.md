@@ -2,6 +2,8 @@
 
 Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
+Amended 2026-11-22 (#258): section 7: extension 0.3.1 is live.
+
 Issue #246. Everything needed to publish the first two videos and to set up the profiles: the final scripts for videos 1 and 2, the bios, the bio links with `utm_*` tags, and the week-0 checklist. It reads the [brand profile](brand-profile.md), the [voice](voice.md), the [platform study](platform-study.md), the [video formats](video-formats.md) and the [goals and KPIs](goals-and-kpis.md). If this page disagrees with them, they win and this page is fixed.
 
 Nothing here is new content. Videos 1 and 2 are scripts 1 and 2 of [video formats](video-formats.md) section 5, with the dates, file names and logo end screen added. The calendar with drafts and numbers stays outside the repo (D17).
@@ -153,7 +155,7 @@ Assumption: a TikTok business account shows the Website field without a follower
 
 ## 7. Problem tracking in posts
 
-Extension 0.3.0 (LeetCode problem names, off by default) is live in the store since 2026-11-20. Videos 1 and 2 do not mention it, and the bios do not either. Recommended: wait until extension 0.3.1 is live before any post about problem tracking, because 0.3.1 adds NeetCode and renames the setting to "Track coding problems" (PRB-22). A post made now would need new copy in a few weeks. The privacy lines in [voice](voice.md) ("Privacy, exactly") stay allowed. A post that lists what is stored includes the opt-in clause about problem names, so it stays exact now that 0.3.0 is live.
+Extension 0.3.0 (LeetCode problem names, off by default) is live in the store since 2026-11-20. Videos 1 and 2 do not mention it, and the bios do not either. Extension 0.3.1 is live since 2026-11-22. It adds NeetCode and renames the setting to "Track coding problems" (PRB-22). Posts about problem tracking may now use the wording of the [brand profile](brand-profile.md) section 11, with the exact privacy line in [voice](voice.md) ("Privacy, exactly"). A post that lists what is stored includes the opt-in clause about problem names.
 
 ## 8. Week-0 checklist
 

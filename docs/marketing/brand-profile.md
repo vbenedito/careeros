@@ -46,7 +46,7 @@ Only true, checkable facts. Each one comes from a spec or a public page.
 
 | Claim | Source |
 |---|---|
-| Free. No paid plan today. | Landing FAQ; D22 |
+| Free. No paid plan today. In posts, say only "Free". | Landing FAQ; D22 |
 | On the Chrome Web Store | [Listing](https://chromewebstore.google.com/detail/pddbflgidjmnhidineoejneeipaicgek) |
 | Code is public on GitHub (say "public code", not "open source": there is no license) | Landing content §6 |
 | Counts only on sites you choose, up to 12; subdomains included | TRK-03, DATA-01 |
