@@ -42,7 +42,7 @@ Proposed (#176). The v1 specs add to v0; the v0 specs they change carry an `Amen
 | 01 | [LeetCode time per problem](v1/01-problems.md) | `PRB` |
 | 02 | [Entitlements (plans and limits)](v1/02-entitlements.md) | `ENT` |
 | 03 | [Internal admin dashboard](v1/03-admin.md) | `ADM` |
-| 04 | [Automated social posts pipeline](v1/04-posts-pipeline.md) (proposed, #263) | `PST` |
+| 04 | [Automated social posts pipeline](v1/04-posts-pipeline.md) (accepted, #264) | `PST` |
 
 ## Later specifications
 

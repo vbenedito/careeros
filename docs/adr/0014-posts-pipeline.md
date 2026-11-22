@@ -1,6 +1,6 @@
 # ADR-0014 — Posts pipeline: public code, private data and secrets, GitHub Actions scheduler
 
-Status: Proposed · Date: 2026-11-22 · Issue: #263 · Spec: [PST](../../specs/v1/04-posts-pipeline.md)
+Status: Accepted · Date: 2026-11-22 · Issue: #263 · Spec: [PST](../../specs/v1/04-posts-pipeline.md)
 
 Revised 2026-11-22 after the Opus deep review of PR #264 (tech-lead decisions T1–T9 in the spec, under the product owner's delegation): YouTube auto-publish, Instagram `video_url`, the trust boundary of the ops repo, and stricter install, approval and concurrency rules.
 
