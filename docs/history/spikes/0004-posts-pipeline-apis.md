@@ -1,6 +1,6 @@
 # Spike 0004 — Posts pipeline platform APIs
 
-Issue #266 · Spec [PST](../../../specs/v1/04-posts-pipeline.md) (phase a, Q2, Q3, Q8) · ADR-0014 · Date: 2026-11-24 · Result: **success on all three platforms**
+Issue #266 · Spec [PST](../../../specs/v1/04-posts-pipeline.md) (phase a, Q2, Q3, Q8) · ADR-0014 · Date: 2026-11-24 · Result: **success on all three platforms; open: YouTube Studio check by the product owner, Instagram token lifetime and refresh (PST-c)**
 
 ## Question
 
@@ -14,7 +14,7 @@ Three manual workflows in the private ops repo (`spike-instagram.yml`, `spike-yo
 
 | Platform | Path tested | Result |
 |---|---|---|
-| Instagram | Reel container from `video_url` = GitHub's short-lived signed release-asset URL; status poll; **no `media_publish`** | `IN_PROGRESS` at 12 s, `FINISHED` at 22 s. Meta fetches the URL at once. No Facebook Page, no PPA step |
+| Instagram | Reel container from `video_url` = GitHub's short-lived signed release-asset URL; status poll; **no `media_publish`** | `IN_PROGRESS` at 12 s, `FINISHED` at 22 s. Meta fetches the URL at once. No Facebook Page, no PPA (Page Publishing Authorization) step |
 | YouTube | Refresh → resumable `videos.insert` from our unverified project, `privacyStatus=unlisted` | Kept `unlisted` (not locked private). `videos.list` with only `youtube.upload` → **403 insufficientPermissions** |
 | TikTok | Sandbox app, unaudited: refresh → inbox upload (`FILE_UPLOAD`, one chunk) → status poll | PUT `201`, status `SEND_TO_USER_INBOX` in about 15 s. The draft shows in the **phone app** inbox (not on the website) |
 
@@ -29,3 +29,7 @@ Three manual workflows in the private ops repo (`spike-instagram.yml`, `spike-yo
 ## Incidents
 
 - A screenshot of the OAuth Playground showed the YouTube client secret and part of a refresh token in chat. The product owner rotated the client secret, removed the old grant and made a new refresh token the same day. Rule kept: never screenshot pages that show secrets.
+
+## Sources
+
+The run results, the secret names, the phone-app TikTok inbox, the release-asset 403 and the open items come from the comments of issue #266 (tech lead, session 2026-11-22-a).
