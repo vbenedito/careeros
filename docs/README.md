@@ -58,6 +58,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | **History** ([index](history/README.md)) | | | | |
 | [v0 backlog](history/backlog/v0.md) | snapshot | product owner | Frozen | 2026-11-11 |
 | [Spike 0003: auth handoff](history/spikes/0003-auth-handoff.md) | snapshot | tech lead | Frozen | 2026-11-11 |
+| [Spike 0004: posts pipeline APIs](history/spikes/0004-posts-pipeline-apis.md) | snapshot | tech lead | Frozen | 2026-11-24 |
 | [Security review v0](history/security-review-v0.md) | snapshot | tech lead | Frozen | 2026-11-11 |
 | [Security audit v0](history/security-audit-v0.md) | snapshot | tech lead | Frozen | 2026-11-11 |
 | [Codebase review (grill) 2026-11-12](history/grill-report-2026-11-12.md) | snapshot | tech lead | Frozen | 2026-11-12 |
