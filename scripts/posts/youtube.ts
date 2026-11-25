@@ -4,7 +4,13 @@
  * the caller masks it and keeps it in memory only. No `publishAt`; `containsSyntheticMedia` is not
  * sent (the PST-15 guard keeps `ai_label: true` posts away from this client).
  */
-import { ApiError, type FetchLike, readErrorCode } from "./mask.ts";
+import {
+  ApiError,
+  type FetchLike,
+  readErrorCode,
+  timeoutSignal,
+  UPLOAD_TIMEOUT_MS,
+} from "./mask.ts";
 
 export const TOKEN_URL = "https://oauth2.googleapis.com/token";
 export const UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos";
@@ -60,6 +66,7 @@ export class YoutubeClient implements YoutubeApi {
   async accessToken(): Promise<string> {
     const response = await this.#o.fetch(TOKEN_URL, {
       method: "POST",
+      signal: timeoutSignal(),
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: this.#o.clientId,
@@ -82,6 +89,7 @@ export class YoutubeClient implements YoutubeApi {
   ): Promise<string> {
     const response = await this.#o.fetch(`${UPLOAD_URL}?uploadType=resumable&part=snippet,status`, {
       method: "POST",
+      signal: timeoutSignal(),
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json; charset=UTF-8",
@@ -102,6 +110,7 @@ export class YoutubeClient implements YoutubeApi {
   async upload(sessionUri: string, bytes: Uint8Array): Promise<string> {
     const response = await this.#o.fetch(sessionUri, {
       method: "PUT",
+      signal: timeoutSignal(UPLOAD_TIMEOUT_MS),
       headers: { "Content-Type": "video/mp4", "Content-Length": String(bytes.byteLength) },
       body: bytes as unknown as NonNullable<RequestInit["body"]>,
     });
@@ -116,6 +125,7 @@ export class YoutubeClient implements YoutubeApi {
     const query = new URLSearchParams({ part: "status", id: videoId });
     const response = await this.#o.fetch(`${VIDEOS_URL}?${query}`, {
       method: "GET",
+      signal: timeoutSignal(),
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new ApiError("YouTube", response.status, await readErrorCode(response));

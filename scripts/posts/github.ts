@@ -3,7 +3,13 @@
  * the caller (env `GH_TOKEN`) and is only ever sent in the `Authorization` header. Base URL and
  * fetch are injected, so tests run without a network.
  */
-import { ApiError, type FetchLike, readErrorCode } from "./mask.ts";
+import {
+  ApiError,
+  type FetchLike,
+  readErrorCode,
+  timeoutSignal,
+  UPLOAD_TIMEOUT_MS,
+} from "./mask.ts";
 
 export interface CommitInfo {
   sha: string;
@@ -158,7 +164,7 @@ export class GitHubClient implements GitHubApi {
     accept?: string,
     redirect?: "manual" | "follow" | "error",
   ): Promise<Response> {
-    const init: RequestInit = { method, headers: this.#headers(accept) };
+    const init: RequestInit = { method, headers: this.#headers(accept), signal: timeoutSignal() };
     if (redirect) init.redirect = redirect;
     if (body !== undefined) {
       init.body = JSON.stringify(body);
@@ -323,7 +329,10 @@ export class GitHubClient implements GitHubApi {
   async assetBytes(assetId: number, mask: (value: string) => string): Promise<Uint8Array> {
     const url = mask(await this.assetSignedUrl(assetId));
     // The signed URL carries its own authorization: the GitHub token is not sent to that host.
-    const response = await this.#fetch(url, { method: "GET" });
+    const response = await this.#fetch(url, {
+      method: "GET",
+      signal: timeoutSignal(UPLOAD_TIMEOUT_MS),
+    });
     if (!response.ok) throw new ApiError("GitHub", response.status, null);
     return new Uint8Array(await response.arrayBuffer());
   }

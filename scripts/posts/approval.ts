@@ -61,15 +61,15 @@ export async function checkApproval(gh: GitHubApi, input: ApprovalInput): Promis
   // The endpoint also returns open PRs: both fields are checked.
   const merged = pulls.find((p) => p.merge_commit_sha === commit.sha && p.merged_at !== null);
   if (!merged) return { ok: false, reason: "the last commit of the record is not a merged PR" };
-  if (input.approverLogin !== null) {
-    const pull = await gh.getPull(merged.number);
-    if (pull.merged_by?.login !== input.approverLogin) {
-      return { ok: false, reason: "the PR was not merged by the approved login" };
-    }
-    if (input.approverLogin === BOT_LOGIN) {
-      const problem = await checkAutoMergeRun(gh, commit.message);
-      if (problem) return { ok: false, reason: problem };
-    }
+  // M1: an unset or empty POSTS_APPROVER_LOGIN means the bot; the merger is always checked.
+  const approver = input.approverLogin || BOT_LOGIN;
+  const pull = await gh.getPull(merged.number);
+  if (pull.merged_by?.login !== approver) {
+    return { ok: false, reason: "the PR was not merged by the approved login" };
+  }
+  if (approver === BOT_LOGIN) {
+    const problem = await checkAutoMergeRun(gh, commit.message);
+    if (problem) return { ok: false, reason: problem };
   }
   return { ok: true, mergeCommitSha: commit.sha, prNumber: merged.number };
 }

@@ -35,6 +35,11 @@ export function errorInfo(error: unknown): { http_status: number | null; code: s
   return { http_status: null, code: error instanceof Error ? error.name.slice(0, 40) : "unknown" };
 }
 
+/** H1: every request has a timeout; a timeout on a publishing call is an unknown outcome (PST-13). */
+export const API_TIMEOUT_MS = 60_000;
+export const UPLOAD_TIMEOUT_MS = 600_000;
+export const timeoutSignal = (ms: number = API_TIMEOUT_MS): AbortSignal => AbortSignal.timeout(ms);
+
 /** A fetch-like function; tests pass a stub, the CLI passes the global `fetch`. */
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 

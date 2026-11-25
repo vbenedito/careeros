@@ -10,6 +10,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cronLines, POST_DAYS, POST_TIMEZONE } from "../../packages/shared/src/posts.ts";
+import { BOT_LOGIN } from "./approval.ts";
 import { runAutoMerge } from "./automerge-run.ts";
 import { parseCli } from "./cli.ts";
 import { GitHubClient } from "./github.ts";
@@ -94,7 +95,8 @@ async function main(
       files: await readRecords(args.opsDir),
       now: args.now,
       postTime: args.postTime,
-      approverLogin: env.POSTS_APPROVER_LOGIN || null,
+      approverLogin: env.POSTS_APPROVER_LOGIN || BOT_LOGIN,
+      clock: args.nowGiven ? () => args.now : () => new Date(),
       dryRun: args.dryRun,
       out,
     });

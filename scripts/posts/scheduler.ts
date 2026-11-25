@@ -49,11 +49,15 @@ export interface SchedulerDeps {
   probe: VideoProbe;
   files: readonly RecordFile[];
   now: Date;
+  /** The current time, read again right before an irreversible call (H1). Default `() => new Date()`. */
+  clock?: () => Date;
   postTime: string;
   approverLogin: string | null;
   dryRun: boolean;
   out: Out;
 }
+
+type ResolvedDeps = SchedulerDeps & { clock: () => Date };
 
 export interface SchedulerReport {
   lines: string[];
@@ -89,7 +93,8 @@ function textsOf(record: PostRecord, platform: PostPlatform): string {
   return parts.join("\n");
 }
 
-export async function runScheduler(d: SchedulerDeps): Promise<SchedulerReport> {
+export async function runScheduler(deps: SchedulerDeps): Promise<SchedulerReport> {
+  const d: ResolvedDeps = { ...deps, clock: deps.clock ?? (() => new Date()) };
   const report: SchedulerReport = { lines: [], failures: 0, errors: 0 };
   const say = (line: string): void => {
     report.lines.push(line);
@@ -153,7 +158,7 @@ export async function runScheduler(d: SchedulerDeps): Promise<SchedulerReport> {
 
 /** T16: a record PR still open at post time gets one `post-alert` "record not merged". */
 async function alertNotMerged(
-  d: SchedulerDeps,
+  d: ResolvedDeps,
   report: SchedulerReport,
   say: (line: string) => void,
 ): Promise<void> {
@@ -194,7 +199,7 @@ interface PlatformJob {
 }
 
 class PlatformRun {
-  readonly #d: SchedulerDeps;
+  readonly #d: ResolvedDeps;
   readonly #report: SchedulerReport;
   readonly #say: (line: string) => void;
   readonly #mask: (value: string) => string;
@@ -203,7 +208,7 @@ class PlatformRun {
   #state: PostState = emptyState();
 
   constructor(
-    d: SchedulerDeps,
+    d: ResolvedDeps,
     report: SchedulerReport,
     say: (line: string) => void,
     maskValue: (value: string) => string,
@@ -320,7 +325,7 @@ class PlatformRun {
     }
     const token = this.#mask(await this.#d.youtube.accessToken());
     const status = await this.#d.youtube.videoStatus(token, id);
-    if (status?.privacyStatus !== "public") return false;
+    if (status?.privacyStatus !== "public" || status.rejected) return false;
     await this.#published(id, `https://www.youtube.com/shorts/${id}`, this.#cur?.attempts ?? 0);
     return true;
   }
@@ -413,12 +418,12 @@ class PlatformRun {
 
     // PST-18: a `retry` label allows one more attempt.
     const base = retry ? MAX_ATTEMPTS - 1 : (cur?.attempts ?? 0);
-    if (base >= MAX_ATTEMPTS) return;
     const job = {
       prNumber: verdict.prNumber,
       assetId: verdict.assetId,
       bytes: verdict.asset,
-      attempt: base + 1,
+      // L4: a queued platform found at MAX_ATTEMPTS is asked as usual; a failure then ends in the alert.
+      attempt: Math.min(base + 1, MAX_ATTEMPTS),
     };
     if (this.#d.dryRun) {
       this.#log(`would publish (attempt ${job.attempt} of ${MAX_ATTEMPTS})`);
@@ -442,6 +447,24 @@ class PlatformRun {
     });
   }
 
+  /** H1: the window closed before the irreversible call: skipped + alert, never published late. */
+  #lateNow(): boolean {
+    return slotState(this.#j.record, this.#d.clock()) !== "due";
+  }
+
+  async #lateSkip(platformId: string | null): Promise<void> {
+    this.#log("window ended before the publish call, skipped");
+    this.#report.failures++;
+    const issue = await this.#alert({
+      what: `The ${PUBLISH_WINDOW_MIN}-minute window ended before the publish call. It is skipped and never published late.`,
+      next: "A new time needs a new record.",
+    });
+    await this.#commit(
+      { ...(this.#cur ?? blank()), status: "skipped", platform_id: platformId, issue },
+      "skipped",
+    );
+  }
+
   async #published(id: string, url: string | null, attempts: number): Promise<void> {
     await this.#commit(
       {
@@ -450,12 +473,22 @@ class PlatformRun {
         attempts,
         platform_id: id,
         url,
-        published_at: this.#d.now.toISOString(),
+        published_at: this.#d.clock().toISOString(),
         error: null,
       },
       "published",
     );
     this.#log("published");
+    if (url === null) {
+      // L2: no permalink yet; the P2 verification reads it. No extra API call now.
+      this.#log("permalink to read in P2 verification");
+      const open = await findOpenIssue(this.#d.gh, "post-alert", this.#stem, this.#j.platform);
+      if (open && !this.#d.dryRun) {
+        await this.#d.gh.updateIssue(open.number, {
+          body: `${open.body}\nPublished. Permalink to read in P2 verification.`,
+        });
+      }
+    }
   }
 
   /** A failed attempt: state, alert, in the same run (PST-18, PST-25). */
@@ -555,6 +588,8 @@ class PlatformRun {
       // PST-36: the hold is read again right before the irreversible call.
       const held = await checkHold(this.#d.gh, { stem: this.#stem, prNumber: job.prNumber });
       if (held.held) return this.#heldAlert(held.source);
+      // H1: the clock is read again right before the irreversible call.
+      if (this.#lateNow()) return this.#lateSkip(containerId);
       const mediaId = await ig.publish(containerId);
       let url: string | null = null;
       try {
@@ -609,6 +644,7 @@ class PlatformRun {
       await this.#commit(before, "held, restored");
       return this.#heldAlert(held.source);
     }
+    if (this.#lateNow()) return this.#lateSkip(null);
     let id: string;
     try {
       const session = this.#mask(
@@ -648,7 +684,7 @@ class PlatformRun {
       this.#log("would ask YouTube for the status of the stored video id");
       return;
     }
-    const attempt = attempts + 1;
+    const attempt = Math.min(attempts + 1, MAX_ATTEMPTS);
     try {
       const token = this.#mask(await this.#d.youtube.accessToken());
       return await this.#confirmYoutube(token, id, attempt);
@@ -675,7 +711,7 @@ class PlatformRun {
         what: "The YouTube status could not be read.",
       });
     }
-    if (status?.privacyStatus === "public")
+    if (status?.privacyStatus === "public" && !status.rejected)
       return this.#published(id, `https://www.youtube.com/shorts/${id}`, attempt);
     return this.#fail({
       attempt,

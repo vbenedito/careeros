@@ -198,6 +198,7 @@ export class FakeInstagram implements InstagramApi {
   publishFailsButPublishes = false;
   publishFails: Error | null = null;
   onBeforePublish: (() => void) | null = null;
+  onWait: (() => void) | null = null;
   expiredFirst = false;
   #n = 0;
 
@@ -218,6 +219,7 @@ export class FakeInstagram implements InstagramApi {
   }
   async waitUntilReady(id: string): Promise<ContainerStatus> {
     this.calls.push("wait");
+    this.onWait?.();
     if (this.waitFails) throw this.waitFails;
     if (this.expiredFirst) {
       this.expiredFirst = false;
@@ -249,12 +251,15 @@ export class FakeYoutube implements YoutubeApi {
   startFails: Error | null = null;
   uploadFails: Error | null = null;
   privacy = "public";
+  rejected = false;
+  onToken: (() => void) | null = null;
   uploaded: Uint8Array[] = [];
   count(name: string): number {
     return this.calls.filter((c) => c === name).length;
   }
   async accessToken(): Promise<string> {
     this.calls.push("token");
+    this.onToken?.();
     return SECRETS.ytAccess;
   }
   async startUpload(token: string): Promise<string> {
@@ -272,7 +277,7 @@ export class FakeYoutube implements YoutubeApi {
   }
   async videoStatus(): Promise<YoutubeVideoStatus | null> {
     this.calls.push("videoStatus");
-    return { privacyStatus: this.privacy, uploadStatus: "processed", rejected: false };
+    return { privacyStatus: this.privacy, uploadStatus: "processed", rejected: this.rejected };
   }
 }
 

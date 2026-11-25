@@ -3,7 +3,7 @@
  * goes only in the `Authorization` header; bodies are form-encoded so no URL carries a query
  * with a secret. Errors carry the HTTP status and the API error code only.
  */
-import { ApiError, type FetchLike, readErrorCode } from "./mask.ts";
+import { ApiError, type FetchLike, readErrorCode, timeoutSignal } from "./mask.ts";
 
 export const GRAPH_BASE = "https://graph.facebook.com";
 export const GRAPH_VERSION = "v23.0";
@@ -78,6 +78,7 @@ export class InstagramClient implements InstagramApi {
   ): Promise<Record<string, unknown>> {
     const init: RequestInit = {
       method,
+      signal: timeoutSignal(),
       headers: {
         Authorization: `Bearer ${this.#o.token}`,
         ...(form ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),

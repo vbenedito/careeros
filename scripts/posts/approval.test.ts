@@ -63,9 +63,16 @@ describe("PST-10 approval check", () => {
     });
     expect(await checkApproval(gh, input)).toMatchObject({ ok: true });
   });
-  it("PST-10 without POSTS_APPROVER_LOGIN only the merged PR is required", async () => {
-    gh.pulls = [{ ...must(gh.pulls[0]), merged_by: { login: "anyone" } }];
-    expect(await checkApproval(gh, { ...input, approverLogin: null })).toMatchObject({ ok: true });
+  it("PST-10 an empty or unset POSTS_APPROVER_LOGIN still requires the bot and the trailer", async () => {
+    for (const approverLogin of [null, ""]) {
+      expect(await checkApproval(gh, { ...input, approverLogin })).toMatchObject({ ok: true });
+      gh.pulls = [{ ...must(gh.pulls[0]), merged_by: { login: "anyone" } }];
+      expect(await checkApproval(gh, { ...input, approverLogin })).toMatchObject({ ok: false });
+      gh.pulls = [{ ...must(gh.pulls[0]), merged_by: { login: "github-actions[bot]" } }];
+      gh.commit = { sha: "c".repeat(40), message: "no trailer" };
+      expect(await checkApproval(gh, { ...input, approverLogin })).toMatchObject({ ok: false });
+      gh.commit = { sha: "c".repeat(40), message: "x\n\nPosts-Auto-Merge-Run: 555" };
+    }
   });
 });
 

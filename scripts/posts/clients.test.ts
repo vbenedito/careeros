@@ -273,3 +273,28 @@ describe("PST-14a YouTube client", () => {
     );
   });
 });
+
+describe("H1 every request has a timeout", () => {
+  it("PST-13 GitHub, Instagram and YouTube requests carry an abort signal", async () => {
+    const signals: (AbortSignal | null | undefined)[] = [];
+    const fetch: FetchLike = async (_url, init) => {
+      signals.push(init?.signal);
+      return json(
+        { id: "x", status_code: "FINISHED", access_token: "t", items: [], permalink: "p" },
+        200,
+        { Location: "https://u.test/s" },
+      );
+    };
+    const gh = new GitHubClient({ repo: "o/r", token: "t", fetch });
+    await gh.getPull(1);
+    const ig = new InstagramClient({ fetch, token: "t", userId: "1" });
+    await ig.createReelContainer({ videoUrl: "u", caption: "c" });
+    const yt = new YoutubeClient({ fetch, clientId: "a", clientSecret: "b", refreshToken: "c" });
+    await yt.accessToken();
+    await yt.startUpload("t", { title: "T", description: "D", size: 1 });
+    await yt.upload("https://u.test/s", new Uint8Array([1]));
+    await yt.videoStatus("t", "v");
+    expect(signals).toHaveLength(6);
+    for (const signal of signals) expect(signal).toBeInstanceOf(AbortSignal);
+  });
+});

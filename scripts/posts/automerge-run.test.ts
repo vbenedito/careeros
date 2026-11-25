@@ -87,3 +87,21 @@ describe("P6 auto-merge run", () => {
     expect(await run(gh, "2026-11-26T20:15:00Z")).toEqual({ failures: 0, merged: 0 });
   });
 });
+
+describe("P6 auto-merge run keeps going", () => {
+  it("P6 one failed merge does not stop the other PRs and counts as a failure", async () => {
+    const gh = setup();
+    const second = { ...must(gh.openPulls[0]), number: 31, head_sha: HEAD };
+    gh.openPulls = [must(gh.openPulls[0]), second];
+    gh.pulls = gh.openPulls;
+    gh.pullFiles.set(31, [{ filename: RECORD_PATH, status: "added" }]);
+    const attempted: number[] = [];
+    gh.mergePull = async (n) => {
+      attempted.push(n);
+      if (n === 30) throw new Error("conflict");
+    };
+    const result = await run(gh, "2026-11-26T20:15:00Z");
+    expect(attempted).toEqual([30, 31]);
+    expect(result).toEqual({ failures: 1, merged: 1 });
+  });
+});

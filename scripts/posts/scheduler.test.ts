@@ -43,6 +43,7 @@ const run = (
     probe: goodProbe,
     files: [recordFile(record)],
     now: at(minutes),
+    clock: () => at(minutes),
     postTime: "19:00",
     approverLogin: "github-actions[bot]",
     dryRun: false,
@@ -502,5 +503,130 @@ describe("PST-20 secrets in the output", () => {
     ig.createFails = new ApiError("Instagram", 400, "100");
     await run(5);
     expect(log.join("\n")).toContain("http_status=400, code=100");
+  });
+});
+
+describe("H1 the clock is read again before the irreversible call", () => {
+  it("PST-12 a window that closes between the container and media_publish publishes nothing", async () => {
+    let current = at(5);
+    ig.onWait = () => {
+      current = at(95);
+    };
+    await run(
+      5,
+      { clock: () => current },
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect(ig.count("create")).toBe(1);
+    expect(ig.count("publish")).toBe(0);
+    expect((await stateOf())?.instagram).toMatchObject({
+      status: "skipped",
+      platform_id: "container-1",
+    });
+    expect(gh.alertIssues()).toHaveLength(1);
+  });
+  it("PST-12 a window that closes before the YouTube upload starts uploads nothing", async () => {
+    let current = at(5);
+    yt.onToken = () => {
+      current = at(95);
+    };
+    await run(
+      5,
+      { clock: () => current },
+      makeRecord({ platforms: { youtube: must(makeRecord().platforms.youtube) } }),
+    );
+    expect(yt.count("start")).toBe(0);
+    expect(yt.count("upload")).toBe(0);
+    expect((await stateOf())?.youtube?.status).toBe("skipped");
+    expect(gh.alertIssues()).toHaveLength(1);
+  });
+  it("PST-13 published_at comes from the clock at the moment of success", async () => {
+    await run(5, { clock: () => at(7) });
+    expect((await stateOf())?.instagram?.published_at).toBe(at(7).toISOString());
+  });
+});
+
+describe("L1, L2, L4 smaller rules", () => {
+  const ytOnly = () => makeRecord({ platforms: { youtube: must(makeRecord().platforms.youtube) } });
+  it("PST-14a a public video that YouTube rejected is failed with the texts", async () => {
+    yt.rejected = true;
+    await run(5, {}, ytOnly());
+    expect((await stateOf())?.youtube?.status).toBe("failed");
+    expect(gh.alertIssues()[0]?.body).toContain("Title: Restart");
+  });
+  it("PST-13 a queued platform found at MAX_ATTEMPTS is asked, not ignored", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          status: "queued",
+          attempts: 3,
+          platform_id: "container-9",
+          url: null,
+          published_at: null,
+          issue: null,
+          error: null,
+          metrics: null,
+        },
+      },
+    });
+    ig.statuses.set("container-9", "FINISHED");
+    await run(
+      20,
+      {},
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect(ig.count("publish")).toBe(1);
+  });
+  it("PST-25 a queued platform at MAX_ATTEMPTS that cannot finish ends in an alert", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          status: "queued",
+          attempts: 3,
+          platform_id: "container-9",
+          url: null,
+          published_at: null,
+          issue: null,
+          error: null,
+          metrics: null,
+        },
+      },
+    });
+    ig.statuses.set("container-9", "FINISHED");
+    ig.publishFails = new ApiError("Instagram", 500, null);
+    await run(
+      20,
+      {},
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect((await stateOf())?.instagram?.status).toBe("failed");
+    expect(gh.alertIssues()).toHaveLength(1);
+  });
+  it("PST-14 a resumed PUBLISHED container keeps its id, has no url, and says the permalink is read later", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          status: "queued",
+          attempts: 1,
+          platform_id: "container-9",
+          url: null,
+          published_at: null,
+          issue: null,
+          error: null,
+          metrics: null,
+        },
+      },
+    });
+    ig.statuses.set("container-9", "PUBLISHED");
+    await run(
+      20,
+      {},
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect((await stateOf())?.instagram).toMatchObject({ platform_id: "container-9", url: null });
+    expect(log.join("\n")).toContain("permalink to read in P2 verification");
   });
 });

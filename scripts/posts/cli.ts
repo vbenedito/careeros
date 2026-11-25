@@ -7,6 +7,8 @@ export interface Args {
   opsRepo: string | null;
   dryRun: boolean;
   now: Date;
+  /** True when `--now` was given: the clock is then fixed to it. */
+  nowGiven: boolean;
   postTime: string;
 }
 
@@ -18,6 +20,7 @@ export function parseCli(argv: readonly string[], env: Record<string, string | u
     opsRepo: null,
     dryRun: false,
     now: new Date(),
+    nowGiven: false,
     postTime: env.POST_TIME ?? POST_TIME,
   };
   for (let i = 0; i < rest.length; i++) {
@@ -33,6 +36,7 @@ export function parseCli(argv: readonly string[], env: Record<string, string | u
     else if (arg === "--post-time") args.postTime = value;
     else if (arg === "--now") {
       args.now = new Date(value);
+      args.nowGiven = true;
       if (Number.isNaN(args.now.getTime())) throw new Error("--now must be an ISO 8601 date-time");
     } else throw new Error(`unknown option ${arg}`);
   }
