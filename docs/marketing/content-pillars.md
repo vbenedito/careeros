@@ -180,11 +180,12 @@ Use the mix over each 8-week review period. At 2 videos a week (platform study, 
 | 1. Your real week | 40% | 6 to 7 |
 | 2. Steady, not heroic | 30% | 5 |
 | 3. Exactly what is stored | 20% | 3 |
-| 4. CareerOS at work | 10% | 1 to 2 |
+| 4. CareerOS at work | 10% | 1 to 2 *(weeks 1 to 8: 8, one each Tuesday, P10)* |
 
 Product rules.
 - **Definition.** A "demo" is any video that shows the extension or the dashboard UI (a screen recording or a screenshot of the product). It counts toward the product limit, whatever its pillar.
-- **At most 1 in 10 posts is a demo.** Never two demos in a row. *(Amended 2026-11-25, product owner decision P10, spec 04: in the launch phase, weeks 1–8, one of the two weekly videos is an explainer that shows the real product UI with sample data (Tuesday), and the other stays in pillars 1–3 (Thursday). Demos may follow each other across weeks. Every video opens with a clear "what this is / who it is for" line in the first 3 seconds when the topic allows. From week 9 the 1-in-10 rule applies again unless the 8-week review changes it.)*
+- **At most 1 in 10 posts is a demo.** Never two demos in a row. *(From week 9. Weeks 1 to 8: see the next rule.)*
+- **Launch phase, weeks 1 to 8** *(amended 2026-11-25, product owner decision P10, spec 04)*. One video each week is a demo that explains the product. It shows the real UI with sample data. It goes out on Tuesday and belongs to pillar 4. The other video stays in pillars 1 to 3 and goes out on Thursday. So in these weeks a demo can be 1 of every 2 posts. Every video starts with one short line on what CareerOS is and who it is for. It comes in the first 3 seconds when the topic allows.
 - Charts in pillar 1 are plain drawn bars or text lines, labeled "Sample data". They are not app screenshots, so they are not demos.
 - Pillars 1 to 3 may end with one plain line and a link ("Free Chrome extension and dashboard:"). They do not show a product tour.
 - Pillar 3 states product facts by nature. That is allowed, because the facts answer a doubt. It is a demo only if it shows the UI.
@@ -200,7 +201,7 @@ Product rules.
 | 1. Your real week | Core. Sample charts read well with sound off. | Good fit. Pick the ideas marked LI. |
 | 2. Steady, not heroic | Core. Text-only, calm, music bed. | Best fit: the persona is a working engineer. Pick LI ideas. |
 | 3. Exactly what is stored | Core for trust; short lists work as text. | Good fit for careful readers. Pick LI ideas. |
-| 4. CareerOS at work | Only 1 in 10 posts (all demos). | Not in the first weeks. Add later if the LinkedIn test shows interest. |
+| 4. CareerOS at work | Only 1 in 10 posts (all demos); weeks 1 to 8: one each week (P10). | Not in the first weeks. Add later if the LinkedIn test shows interest. |
 
 Weekly rule (2 hours a week, platform study section 8): one pillar per video. Do not mix two pillars in one video. When time is short, drop LinkedIn first.
 

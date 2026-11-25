@@ -11,7 +11,7 @@ After the first post (2026-11-24, by hand), social posts must go out with minimu
 - **Instagram** can auto-publish Reels to our own Professional account (Standard Access). With Instagram Login the video must be at a URL Meta can fetch at the time of the attempt; resumable upload needs Facebook Login for Business.
 - **YouTube**: since 2026-11-02, videos uploaded from unverified API projects are no longer restricted to private (YouTube Data API revision history). The default quota allows 100 `videos.insert` calls a day. Refresh tokens of OAuth apps in "Testing" status expire after 7 days.
 - **TikTok** Direct Post is private-only without an audit; inbox upload may work unaudited (spike). Upload URLs live 1 hour; at most 5 pending shares in 24 hours. **LinkedIn** stays manual.
-- The product owner's merge of a post record is the approval (P3). Records, videos and alerts live in the private repo `vbenedito/careeros-ops` (P3–P5), next to the ledger (ADR-0013).
+- The product owner's merge of a post record is the approval (P3) *(superseded 2026-11-25 by P6: veto window, see option 3)*. Records, videos and alerts live in the private repo `vbenedito/careeros-ops` (P3–P5), next to the ledger (ADR-0013).
 - `vbenedito/careeros` is public. Tokens can publish to our accounts, so they must never be in it.
 - GitHub Free, private repo: about 2,000 Actions minutes a month; **no branch protection, no rulesets and no environment secrets**; any workflow on any branch can read the repository secrets; scheduled runs can start late under load.
 - Platform tokens expire or rotate (Instagram 60 days, refreshable; TikTok access 24 hours, refresh token can be replaced on refresh; YouTube access 1 hour). A new token must be saved.

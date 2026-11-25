@@ -3,6 +3,8 @@
 Type: living · Owner: product owner · Last reviewed: 2026-11-20
 
 Amended 2026-11-22 (#258): the per-problem feature is live (extension 0.3.1); checklist item 5 and the "Must never" line now allow it, with the exact privacy line only.
+Amended 2026-11-25 (product owner P8 and P10, spec 04): videos for automated posts use **music composed in code** (`scripts/video/careeros_music.py`, `music_license` = `original:careeros_music:<seed>`, section 3 sources do not apply to them); weeks 1 to 8 have one explainer demo a week ([content pillars](content-pillars.md) section 6).
+
 Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, same file as TikTok; when a week goes over 2 hours, drop Instagram first, then LinkedIn.
 
 This is the sixth marketing document (issue #190, step 6 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns the [content pillars](content-pillars.md) into five repeatable video formats, a visual kit, a music source, a free production workflow and three scripts that are ready to produce. It reads the [brand profile](brand-profile.md) (sections 6 and 10), the [persona](persona.md), the [voice](voice.md) (sections 5 and 7) and the [platform study](platform-study.md) (sections 6 and 9). They win if this page disagrees with them.
