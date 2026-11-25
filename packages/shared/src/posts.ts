@@ -13,6 +13,12 @@ export const POST_DAYS = ["Tuesday", "Thursday"] as const;
 /** Spec §2 says the value is an ops-repo variable; this is the default used by pure checks. */
 export const POST_TIME = "19:00";
 export const PUBLISH_WINDOW_MIN = 90;
+/** P6 (2026-11-25): the record PR is open at least this long before the post. */
+export const VETO_WINDOW_H = 20;
+/** P6: auto-merge from post time minus this many hours. */
+export const AUTO_MERGE_LEAD_H = 2;
+export const MAX_ATTEMPTS = 3;
+export const SCHEDULER_STEP_MIN = 15;
 export const VIDEO_MIN_S = 20;
 export const VIDEO_MAX_S = 45;
 export const VIDEO_WIDTH = 1080;
@@ -25,6 +31,17 @@ export type PostPlatform = (typeof POST_PLATFORMS)[number];
 export type RecordStatus = "draft" | "ready" | "skipped";
 export type StateStatus = "queued" | "published" | "failed" | "skipped";
 export type EffectiveStatus = RecordStatus | StateStatus;
+
+/** PST-34: name of a render script in `scripts/video/`. */
+const RENDER_NAME = /^v\d{2}_[a-z0-9_]+$/;
+/** P8: music composed in code; the seed is digits. */
+const ORIGINAL_MUSIC = /^original:careeros_music:\d+$/;
+
+/** P8: a non-empty license reference, or the original-music form with a digits seed. */
+export function isValidMusicLicense(value: string): boolean {
+  if (value.trim() === "") return false;
+  return value.startsWith("original:") ? ORIGINAL_MUSIC.test(value) : true;
+}
 
 const Count = z.number().int().nonnegative();
 const HASHTAG = /^#\S+$/;
@@ -64,7 +81,12 @@ export const PostRecordSchema = z
         sha256: z.string().regex(/^[0-9a-f]{64}$/),
       })
       .strict(),
-    music_license: z.string().min(1),
+    /** PST-34: optional render script name, e.g. `v02_restart_after_gap`. */
+    render: z.string().regex(RENDER_NAME).optional(),
+    music_license: z
+      .string()
+      .min(1)
+      .refine(isValidMusicLicense, "use a license reference or original:careeros_music:<digits>"),
     ai_label: z.boolean(),
     /** A platform not used for this post is left out. */
     platforms: z
@@ -257,6 +279,8 @@ export const POST_FAILURE_CODES = [
   "asset-sha256",
   "video-size",
   "video-duration",
+  "render",
+  "music-license",
 ] as const;
 export type PostFailureCode = (typeof POST_FAILURE_CODES)[number];
 
@@ -305,7 +329,12 @@ export function validateRecord(input: unknown, context: ValidateRecordContext): 
   const parsed = PostRecordSchema.safeParse(input);
   if (!parsed.success) {
     return parsed.error.issues.map((issue) => ({
-      code: "schema",
+      code:
+        issue.path[0] === "render"
+          ? "render"
+          : issue.path[0] === "music_license"
+            ? "music-license"
+            : "schema",
       message: `${issue.path.join(".") || "(record)"}: ${issue.message}`,
     }));
   }
@@ -390,4 +419,115 @@ export function validateRecord(input: unknown, context: ValidateRecordContext): 
     }
   }
   return failures;
+}
+
+// --- PST-11: cron lines and their coverage ----------------------------------------------------
+
+/** The cron fires 7 minutes after the window start, then every `SCHEDULER_STEP_MIN`. */
+const CRON_FIRST_OFFSET_MIN = 7;
+
+/** Cron weekday numbers (Sunday = 0) of the weekday names. */
+function cronWeekday(name: string): number {
+  const index = (WEEKDAYS as readonly string[]).indexOf(name);
+  if (index < 0) throw new RangeError(`cronLines: unknown weekday ${name}`);
+  return index;
+}
+
+/**
+ * PST-11, acceptance 4: cron lines (UTC) for the publish window of `postTime` in `timeZone` on
+ * `postDays`, using the offset of `timeZone` at `now`. Fires start at 7 minutes past the window
+ * start, every `SCHEDULER_STEP_MIN`, and stop at the window end. A part of the window after
+ * midnight UTC uses the next weekday. Lines are `minutes hour * * weekdays`.
+ */
+export function cronLines(
+  postTime: string,
+  timeZone: string,
+  postDays: readonly string[],
+  now: Date,
+): string[] {
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(postTime))
+    throw new RangeError("cronLines: bad postTime");
+  const [hour = 0, minute = 0] = postTime.split(":").map(Number);
+  const offsetMin = Math.round(zoneOffsetMs(now, timeZone) / 60_000);
+  const startUtcMin = hour * 60 + minute - offsetMin; // may be outside 0..1439
+  // (weekday, hour) -> minutes of the fires in that hour
+  const buckets = new Map<string, Set<number>>();
+  for (const day of postDays) {
+    const base = cronWeekday(day) * 1440 + startUtcMin;
+    for (let t = CRON_FIRST_OFFSET_MIN; t <= PUBLISH_WINDOW_MIN; t += SCHEDULER_STEP_MIN) {
+      const abs = (((base + t) % 10080) + 10080) % 10080;
+      const dow = Math.floor(abs / 1440);
+      const h = Math.floor((abs % 1440) / 60);
+      const key = `${h}:${dow}`;
+      const set = buckets.get(key) ?? new Set<number>();
+      set.add(abs % 60);
+      buckets.set(key, set);
+    }
+  }
+  // Merge weekdays that share the same hour and minutes.
+  const merged = new Map<string, Set<number>>();
+  for (const [key, minutes] of buckets) {
+    const [h = "0", dow = "0"] = key.split(":");
+    const lineKey = `${[...minutes].sort((a, b) => a - b).join(",")} ${h}`;
+    const days = merged.get(lineKey) ?? new Set<number>();
+    days.add(Number(dow));
+    merged.set(lineKey, days);
+  }
+  return [...merged.entries()]
+    .map(([lineKey, days]) => `${lineKey} * * ${[...days].sort((a, b) => a - b).join(",")}`)
+    .sort();
+}
+
+function cronField(field: string, min: number, max: number): Set<number> | null {
+  if (field === "*") return null;
+  const values = new Set<number>();
+  for (const part of field.split(",")) {
+    const n = Number(part);
+    if (!Number.isInteger(n) || n < min || n > max) throw new RangeError(`bad cron field ${field}`);
+    values.add(n);
+  }
+  return values;
+}
+
+/** True when a line (`m h * * d`, numbers and lists only) fires at the UTC minute of `at`. */
+function cronFires(line: string, at: Date): boolean {
+  const parts = line.trim().split(/\s+/);
+  if (parts.length !== 5 || parts[2] !== "*" || parts[3] !== "*") {
+    throw new RangeError("cron line must be: minutes hours * * weekdays");
+  }
+  const [m, h, , , d] = parts as [string, string, string, string, string];
+  const minutes = cronField(m, 0, 59);
+  const hours = cronField(h, 0, 23);
+  const days = cronField(d, 0, 7);
+  const okDay = days === null || days.has(at.getUTCDay()) || (at.getUTCDay() === 0 && days.has(7));
+  return (
+    okDay &&
+    (minutes === null || minutes.has(at.getUTCMinutes())) &&
+    (hours === null || hours.has(at.getUTCHours()))
+  );
+}
+
+/**
+ * PST-23: the lines cover the slot when, between the slot instant and the window end, some line
+ * fires within `SCHEDULER_STEP_MIN` of the start, no gap between fires is longer than that, and
+ * the last fire is within that step of the window end.
+ */
+export function cronCovers(
+  lines: readonly string[],
+  slot: Date,
+  windowMin: number = PUBLISH_WINDOW_MIN,
+  stepMin: number = SCHEDULER_STEP_MIN,
+): boolean {
+  const startMin = Math.ceil(slot.getTime() / 60_000);
+  let previous = startMin;
+  let fired = false;
+  for (let m = startMin; m <= startMin + windowMin; m++) {
+    const at = new Date(m * 60_000);
+    if (lines.some((line) => cronFires(line, at))) {
+      if (m - previous > stepMin) return false;
+      previous = m;
+      fired = true;
+    }
+  }
+  return fired && startMin + windowMin - previous <= stepMin;
 }
