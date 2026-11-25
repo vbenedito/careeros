@@ -184,7 +184,7 @@ Use the mix over each 8-week review period. At 2 videos a week (platform study, 
 
 Product rules.
 - **Definition.** A "demo" is any video that shows the extension or the dashboard UI (a screen recording or a screenshot of the product). It counts toward the product limit, whatever its pillar.
-- **At most 1 in 10 posts is a demo.** Never two demos in a row.
+- **At most 1 in 10 posts is a demo.** Never two demos in a row. *(Amended 2026-11-25, product owner decision P10, spec 04: in the launch phase, weeks 1–8, one of the two weekly videos is an explainer that shows the real product UI with sample data (Tuesday), and the other stays in pillars 1–3 (Thursday). Demos may follow each other across weeks. Every video opens with a clear "what this is / who it is for" line in the first 3 seconds when the topic allows. From week 9 the 1-in-10 rule applies again unless the 8-week review changes it.)*
 - Charts in pillar 1 are plain drawn bars or text lines, labeled "Sample data". They are not app screenshots, so they are not demos.
 - Pillars 1 to 3 may end with one plain line and a link ("Free Chrome extension and dashboard:"). They do not show a product tour.
 - Pillar 3 states product facts by nature. That is allowed, because the facts answer a doubt. It is a demo only if it shows the UI.
