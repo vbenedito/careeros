@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildUtmLink,
+  cronCovers,
+  cronLines,
   effectiveStatus,
   isInsideWindow,
   isPostDay,
@@ -346,5 +348,75 @@ describe("validateRecord (PST-09)", () => {
       "post-day",
       "post-time",
     ]);
+  });
+});
+
+describe("P7 and P8: render and music_license", () => {
+  it("PST-04 accepts a record with a render name and an original music seed", () => {
+    const record = {
+      ...valid(),
+      render: "v02_restart_after_gap",
+      music_license: "original:careeros_music:42",
+    };
+    expect(PostRecordSchema.safeParse(record).success).toBe(true);
+  });
+  it("PST-04 keeps a record without render valid", () => {
+    expect(PostRecordSchema.safeParse(valid()).success).toBe(true);
+  });
+  it("PST-04 rejects a bad render name with the render code", () => {
+    for (const render of ["V02_x", "v2_x", "v02-x", "v02_X", "../v02_x", "v02_"]) {
+      expect(codes({ ...valid(), render })).toContain("render");
+    }
+  });
+  it("PST-04 rejects a malformed original music license with the music-license code", () => {
+    for (const music_license of [
+      "original:careeros_music:abc",
+      "original:other:1",
+      "original:careeros_music:",
+      "original:",
+      "",
+    ]) {
+      expect(codes({ ...valid(), music_license })).toContain("music-license");
+    }
+  });
+});
+
+describe("PST-11 cronLines and cronCovers", () => {
+  const now = new Date("2026-11-25T12:00:00Z");
+  const days = ["Tuesday", "Thursday"];
+  const zone = "America/Sao_Paulo";
+
+  it("PST-11 for 19:00 Sao Paulo the lines fire on Tue and Thu from 22:07 to 23:22 UTC", () => {
+    expect(cronLines("19:00", zone, days, now)).toEqual([
+      "7,22 23 * * 2,4",
+      "7,22,37,52 22 * * 2,4",
+    ]);
+  });
+  it("PST-11 from 21:00 the part after midnight UTC moves to Wednesday and Friday", () => {
+    expect(cronLines("21:00", zone, days, now)).toEqual(["7,22 1 * * 3,5", "7,22,37,52 0 * * 3,5"]);
+  });
+  it("PST-11 a window that straddles midnight UTC splits across two weekdays", () => {
+    expect(cronLines("20:30", zone, days, now)).toEqual([
+      "37,52 23 * * 2,4",
+      "7,22,37,52 0 * * 3,5",
+    ]);
+  });
+  it("PST-11 the lines cover the next slot", () => {
+    const lines = cronLines("19:00", zone, days, now);
+    expect(cronCovers(lines, slotInstant("2026-11-26", "19:00", zone))).toBe(true);
+    expect(cronCovers(lines, slotInstant("2026-12-01", "19:00", zone))).toBe(true);
+  });
+  it("PST-23 a changed timezone offset makes the coverage check fail", () => {
+    const lines = cronLines("19:00", zone, days, now);
+    // Brazil had daylight saving time (UTC-2) until 2019: the same wall time is 21:00 UTC.
+    expect(cronCovers(lines, slotInstant("2018-12-04", "19:00", zone))).toBe(false);
+  });
+  it("PST-23 a slot on another weekday is not covered", () => {
+    const lines = cronLines("19:00", zone, days, now);
+    expect(cronCovers(lines, slotInstant("2026-11-25", "19:00", zone))).toBe(false);
+  });
+  it("PST-11 rejects an unknown weekday and a bad time", () => {
+    expect(() => cronLines("19:00", zone, ["Funday"], now)).toThrow();
+    expect(() => cronLines("7pm", zone, days, now)).toThrow();
   });
 });
