@@ -8,6 +8,8 @@ Amended 2026-11-20 (#239, product owner): user-facing product copy is approved b
 
 Amended 2026-11-21 (#252, product owner): every sub-agent reports the skills it used (§6).
 
+Amended 2026-11-25 (#268, product owner P6): the auto-merge workflow merges post records after a marketing review agent's approval; the product owner keeps a veto (§7).
+
 Amended 2026-11-22 (#267): posts pipeline rules, no agent approves a post record and workflow changes need an `ops-workflow:` PR (§7, PST-08, PST-32).
 
 The goal is the same or better quality for fewer tokens. Pick the model by the **risk and kind of thinking** a task needs, not by how important the project is.
@@ -74,5 +76,5 @@ Each sub-agent reports its token use when it finishes. The tech lead watches for
 
 Spec: [04-posts-pipeline](../../specs/v1/04-posts-pipeline.md). The private ops repo `vbenedito/careeros-ops` holds the post records, state and workflows.
 
-- **No agent approves a post (PST-08).** Claude writes a post record and opens it as a PR in the ops repo. No agent merges, approves or pushes a record to `main`; the product owner's merge is the approval.
+- **Records are merged only by the auto-merge workflow (PST-08, PST-35; amended 2026-11-25, P6).** Claude writes a post record and opens it as a PR in the ops repo at least 20 h before the post. A **marketing review agent** (Sonnet, §2) checks the texts against `voice.md`, brand profile §6 and §11 and video formats §4.6, and posts the approval comment for the head SHA it read (PST-37). The reviewed workflow `posts-auto-merge` merges at post time − 2 h when the check is green, the approval is there and nothing has the label `hold`. No Claude session merges or pushes a record to `main` itself. The product owner's `hold` label stops a post at any time (PST-36).
 - **Workflow changes (PST-32).** Agents never create or edit anything under `.github/` in the ops repo, except in a PR whose title starts with `ops-workflow:`. That PR is reviewed by Opus (§2) and merged only after the product owner's "approved".

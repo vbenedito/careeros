@@ -4,12 +4,14 @@ Status: Accepted · Date: 2026-11-22 · Issue: #263 · Spec: [PST](../../specs/v
 
 Revised 2026-11-22 after the Opus deep review of PR #264 (tech-lead decisions T1–T9 in the spec, under the product owner's delegation): YouTube auto-publish, Instagram `video_url`, the trust boundary of the ops repo, and stricter install, approval and concurrency rules.
 
+Revised 2026-11-25 (product owner decisions P6–P10, tech-lead decisions T11–T16 in the spec): the approval moves from the product owner's merge to a **veto window** (option 3 below), and the video is rendered by a workflow (PST-34).
+
 ## Context
 After the first post (2026-11-24, by hand), social posts must go out with minimum human interaction, for free (spec P1–P5). Facts and constraints:
 - **Instagram** can auto-publish Reels to our own Professional account (Standard Access). With Instagram Login the video must be at a URL Meta can fetch at the time of the attempt; resumable upload needs Facebook Login for Business.
 - **YouTube**: since 2026-11-02, videos uploaded from unverified API projects are no longer restricted to private (YouTube Data API revision history). The default quota allows 100 `videos.insert` calls a day. Refresh tokens of OAuth apps in "Testing" status expire after 7 days.
 - **TikTok** Direct Post is private-only without an audit; inbox upload may work unaudited (spike). Upload URLs live 1 hour; at most 5 pending shares in 24 hours. **LinkedIn** stays manual.
-- The product owner's merge of a post record is the approval (P3). Records, videos and alerts live in the private repo `vbenedito/careeros-ops` (P3–P5), next to the ledger (ADR-0013).
+- The product owner's merge of a post record is the approval (P3) *(superseded 2026-11-25 by P6: veto window, see option 3)*. Records, videos and alerts live in the private repo `vbenedito/careeros-ops` (P3–P5), next to the ledger (ADR-0013).
 - `vbenedito/careeros` is public. Tokens can publish to our accounts, so they must never be in it.
 - GitHub Free, private repo: about 2,000 Actions minutes a month; **no branch protection, no rulesets and no environment secrets**; any workflow on any branch can read the repository secrets; scheduled runs can start late under load.
 - Platform tokens expire or rotate (Instagram 60 days, refreshable; TikTok access 24 hours, refresh token can be replaced on refresh; YouTube access 1 hour). A new token must be saved.
@@ -26,6 +28,7 @@ Five decisions: **where the code lives and runs**, **how the approval is enforce
 ## Options — enforcing "merge is approval"
 1. **Branch protection, rulesets or environments with required reviewers.** Not available for private repos on GitHub Free.
 2. **Scheduler check through the API**: squash merges only; the record's last commit must be the `merge_commit_sha` of a PR with `merged_at` set (the endpoint also lists open PRs), optionally merged by a given login; then the full validation runs again. Free, works today; it cannot tell two actors apart if both use the same GitHub login.
+3. *(2026-11-25)* **Veto window**: Claude opens the record PR at least 20 h before the post; a marketing review agent posts an approval marker for the head SHA; a reviewed workflow merges with `GITHUB_TOKEN` at post time − 2 h when the check is green, the marker is there and there is no `hold` label; the scheduler checks option 2 with the merger `github-actions[bot]` plus a commit trailer naming a run of that workflow, and reads `hold` again before each publish. No step from the product owner; he keeps a veto.
 
 ## Options — at most once
 1. **State commit before the irreversible step**: write `queued` plus the platform's id, push, then publish; a rerun, or a retry after a timeout, asks the platform about that id first. Uses only git and the platform API.
@@ -44,7 +47,8 @@ Five decisions: **where the code lives and runs**, **how the approval is enforce
 
 ## Decision
 - Code: **option 1**. `scripts/posts/` and `packages/shared/src/posts.ts` in the public repo; workflows, records, state, release assets, issues and secrets in `careeros-ops`. Ops workflows check out the public repo at a **pinned 40-character SHA**, check that it is **reachable from public `main`** (a fork commit can be fetched by SHA), install with `--frozen-lockfile --ignore-scripts` filtered to the posts package, and pin third-party actions by SHA (PST-01..03).
-- Approval: **option 2** plus a process rule: no agent merges, approves or pushes a record to `main` (PST-08, PST-10). If Claude sessions get their own GitHub identity, `POSTS_APPROVER_LOGIN` turns the rule into a hard check (spec Q1).
+- Approval: **option 2** plus a process rule: no agent merges, approves or pushes a record to `main` (PST-08, PST-10). If Claude sessions get their own GitHub identity, `POSTS_APPROVER_LOGIN` turns the rule into a hard check (spec Q1). *(Superseded 2026-11-25 by option 3 on top of option 2, P6: the auto-merge workflow is the only merger of records; `POSTS_APPROVER_LOGIN` = `github-actions[bot]` with the run trailer (T12); the review marker is a comment because sessions share the product owner's login (T13); `hold` is the veto (PST-36).)*
+- Video *(2026-11-25, P7, P8)*: rendered by a job with no platform secrets from a render script in the public `scripts/video/` at the pinned SHA, with code-made music; the job commits the file's SHA-256 into the record on the PR branch, so the merged record names the exact file (T11, PST-34).
 - At most once: **option 1**, with the state in a separate file per post (`posts-state/`), one concurrency group `posts-publish` for the scheduler, the daily job and the merge workflow, a rebase-once rule on a rejected push, and a publish window after which a slot is `skipped`, never posted late (PST-07, PST-11..13). GitHub keeps at most one pending run per concurrency group and cancels the older pending one, so a queued merge or daily run can be dropped silently: every run in the group therefore reconciles (opens missing reminders, does missed daily steps, idempotently) and alerts on any run of the group that ended `cancelled`. The YouTube upload-session URI is a bearer link and is never stored in git; a run that dies mid-upload never re-uploads by itself: the platform is set to `failed` with an alert, and only the product owner's `retry` label uploads again, so a slow uploads list cannot cause a second public video.
 - Tokens: **option 1**, least scopes (PST-21), the secret-writing token used only in the refresh step, every runtime token and signed URL masked, expiry dates (never values) in `posts-state/tokens.json`, expiry-warning issues, and an alert at once if a rotated secret cannot be saved (PST-20, PST-22, PST-23).
 - Instagram: **option 1**, fallback option 2, then reminder mode (T2, PST-14).
@@ -67,6 +71,8 @@ These detect a breach; they do not prevent one. A paid plan with environment sec
 + Free: GitHub Actions minutes (estimate about 310 a month), release assets, issues, YouTube default quota.
 − Two steps for each code change (public PR, then SHA bump PR in the ops repo).
 − The approval is a check plus a rule, not a platform guarantee, while Claude and the product owner may share one login (spec Q1).
+− *(2026-11-25)* Posts go out unless the product owner acts: a wrong text that passes the review agent and the checks is published. The 20-hour window, the PR notification and the `hold` label are the mitigation. Any session on the shared login could write the review marker (T13).
++ *(2026-11-25)* The product owner has no step on the path to a post; the pipeline renders, approves and publishes on its own.
 − Anyone with push access to `careeros-ops` can read its secrets; the trust checks only detect misuse after the fact.
 − `OPS_SECRETS_TOKEN` can overwrite every secret of `careeros-ops`. Accepted: one repo, cannot read values, expiry warned 14 days ahead.
 − The signed URL is a bearer link to an unpublished video for a short time; it is masked and never written to an issue or log.
