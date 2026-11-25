@@ -174,8 +174,12 @@ def make_backgrounds(style: "Style") -> list[Image.Image]:
     if not style.grain:
         return [base]
     frames = []
+    import random
+
+    rng = random.Random(275)  # same grain in every worker and every run
     for k in range(3):
-        noise = Image.effect_noise((W // 2, H // 2), 64).resize((W, H), Image.NEAREST)
+        noise = Image.frombytes("L", (W // 2, H // 2), bytes(max(0, min(255, int(rng.gauss(128, 64)))) for _ in range(W * H // 4)))
+        noise = noise.resize((W, H), Image.NEAREST)
         # map noise (centred at 128) to a +-grain offset
         g = style.grain
         lut = [max(0, min(255, 128 + int((v - 128) * g / 64))) for v in range(256)]
@@ -504,9 +508,16 @@ def encode_scene(frame_fn: Callable[[float], Image.Image], t0: float, t1: float,
         "-r", str(FPS), tmp,
     ]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    for n in range(n0, n1):
-        p.stdin.write(frame_fn(n / FPS).tobytes())
-    p.stdin.close()
+    try:
+        for n in range(n0, n1):
+            p.stdin.write(frame_fn(n / FPS).tobytes())
+        p.stdin.close()
+    except BaseException:
+        p.kill()  # a failed frame must not leave a playable, truncated file
+        p.wait()
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
     if p.wait() != 0:
         raise RuntimeError(f"ffmpeg failed for {out_path}")
     os.replace(tmp, out_path)

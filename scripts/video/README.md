@@ -9,7 +9,7 @@ The rules the videos follow are in [video formats](../../docs/marketing/video-fo
 | File | What it is |
 |---|---|
 | `careeros_video.py` | Engine: colors from the dark tokens, Mona Sans, word animations (`slide`, `pop`, `wipe`), the bar chart, the `Sample data` chip, the logo, encoding and the checks |
-| `v01_which_two_days.py` | Video 1, `2026-11-24-which-two-days` (launch kit section 3). Published in style `pop` |
+| `v01_which_two_days.py` | Video 1, `2026-11-24-which-two-days` (launch kit section 3). Chosen style: `pop` |
 
 For a new video, copy `v01_which_two_days.py`, change the screens (`S`), the text blocks and the chart or end screen, and keep the engine.
 
@@ -33,10 +33,10 @@ python3 v01_which_two_days.py render --out out/     # out/2026-11-24-which-two-d
 
 ## Checks built in
 
-- **Safe box.** Every readable element (text, chip, labels, values, bars, logo) records where it ends up. A frame stops the run when an element is outside x 80–900, y 250–1400 ([video formats](../../docs/marketing/video-formats.md) section 1.4).
-- **Contrast.** `check` measures the text and bar colors against the brightest background pixel in the safe box, grain and glow included: text at least 4.5:1, bars at least 3:1.
+- **Safe box.** Every readable element (text, chip, labels, values, bars, logo) records its resting position. A frame stops the run when one is outside x 80–900, y 250–1400 ([video formats](../../docs/marketing/video-formats.md) section 1.4). In-animations (a word popping in) can overshoot by a few pixels for about 0.1 s; that is not checked.
+- **Contrast.** `check` measures the text and bar colors against the brightest background pixel in the safe box (gradient and grain included; the spotlight band too when the style has one): text at least 4.5:1, bars at least 3:1.
 - **Sample data.** The script asserts that the sample week adds up (400 minutes; Thu + Sat = 245).
 
 ## Output
 
-1080 x 1920, 30 fps, H.264 at 10 Mbit/s, BT.709, plus a silent stereo AAC track. The music is picked in each app's commercial sound library, so the file has none. A stopped render never leaves a playable short file: each part is written as `*.part.mp4` and renamed only when ffmpeg exits 0.
+1080 x 1920, 30 fps, H.264 at 10 Mbit/s, BT.709, plus a silent stereo AAC track. The music is picked in each app's commercial sound library, so the file has none. A failed or stopped render never leaves a finished-looking file: each part is written as `*.part.mp4`, renamed only when ffmpeg exits 0, and deleted when a frame fails.

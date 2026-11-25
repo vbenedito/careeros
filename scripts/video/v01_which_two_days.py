@@ -15,7 +15,7 @@ import sys
 from multiprocessing import Pool
 
 from careeros_video import (
-    C, FPS, H, W, BarChart, BarState, ChartState, Frame, Style, TextBlock, Token,
+    C, FPS, BarChart, BarState, ChartState, Frame, Style, TextBlock, Token,
     clamp01, contrast, draw_chip, draw_logo, draw_text_block, ease_in_out, ease_out_back,
     ease_out_cubic, encode_scene, fmt_minutes, join_scenes, lerp, make_backgrounds, pulse, track,
 )
@@ -84,10 +84,11 @@ def chart_state(t: float, st: Style) -> ChartState:
         b.outline, b.bold, b.dim, b.band = foc, foc, dim, foc
         # glow: steady on focused bars, plus the beats
         g = 0.55 * foc
-        g += pulse(t, 1.75, 0.9 + 0.0) * (0.6 if abs(i - 3) < 4 else 0)  # S1 beat: whole chart breathes
+        g += pulse(t, 1.75, 0.9) * 0.6  # S1 beat: whole chart breathes
         g = max(g, pulse(t, 8.75 + 0.06 * i, 0.8))  # S3 beat: every bar adds to the total
         g = max(g, pulse(t, 12.4, 1.0) if is_big else 0)  # S4 beat
-        g = max(g, pulse(t, 16.4 + 0.08 * [0, 1, 2, 9, 3, 9, 4][i], 0.8) if not is_big else 0)  # S5 ripple
+        rest_order = sorted(REST).index(i) if i in REST else 0  # ripple over the five other days, top to bottom
+        g = max(g, pulse(t, 16.4 + 0.08 * rest_order, 0.8) if not is_big else 0)  # S5 ripple
         g = max(g, pulse(t, 20.5, 1.1) if is_big else 0)  # S6: memory keeps the big days
         g = max(g, pulse(t, 24.3 + 0.12 * i, 0.7))  # S7: a count keeps all seven
         b.glow = min(1.0, g)
@@ -200,7 +201,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     f = frame_fn(a.style)
     if a.cmd in ("stills", "frames"):
-        times = [float(x) for x in a.times.split(",")] if a.times else [1.2, 12.8, 29.0]
+        times = [float(x) for x in a.times.split(",")] if a.times else [1.2, 12.6, 29.0]
         for t in times:
             p = os.path.join(a.out, f"{a.style}-{t:05.2f}.png")
             f(t).save(p)
