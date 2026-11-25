@@ -523,8 +523,9 @@ def encode_scene(frame_fn: Callable[[float], Image.Image], t0: float, t1: float,
     os.replace(tmp, out_path)
 
 
-def join_scenes(parts: list[str], out_path: str, title: str):
-    """Concat with -c copy, then add a silent stereo AAC track (music is added in each app)."""
+def join_scenes(parts: list[str], out_path: str, title: str, audio: Optional[str] = None):
+    """Concat with -c copy, then add the audio: `audio` (a WAV, normalised to -18 LUFS, peaks
+    under -1.5 dBTP) or a silent stereo AAC track when there is none."""
     lst = out_path + ".txt"
     with open(lst, "w") as fh:
         fh.writelines(f"file '{os.path.abspath(p)}'\n" for p in parts)
@@ -533,10 +534,37 @@ def join_scenes(parts: list[str], out_path: str, title: str):
     tmp = out_path[:-4] + ".part.mp4"
     subprocess.run([
         "ffmpeg", "-y", "-loglevel", "error", "-i", joined,
-        "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-        "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest",
+        *(["-i", audio, "-af", "loudnorm=I=-18:TP=-1.5:LRA=11"] if audio else ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]),
+        "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest",
         "-map_metadata", "-1", "-metadata", f"title={title}", "-movflags", "+faststart", tmp,
     ], check=True)
     os.replace(tmp, out_path)
     os.remove(joined)
     os.remove(lst)
+
+
+# ---------------------------------------------------------------- orchestration
+def _scene_job(module_name: str, style: str, t0: float, t1: float, path: str):
+    import importlib
+
+    encode_scene(importlib.import_module(module_name).frame_fn(style), t0, t1, path)
+
+
+def render_video(module_name: str, style: str, scenes: list[float], out_dir: str, stem: str,
+                 music_seed: Optional[int] = 1, jobs: int = 2) -> str:
+    """Render one file per scene in parallel, then join them and add the music (or silence)."""
+    from multiprocessing import Pool
+
+    os.makedirs(out_dir, exist_ok=True)
+    parts = [os.path.join(out_dir, f"{style}-scene{k + 1}.mp4") for k in range(len(scenes) - 1)]
+    with Pool(jobs) as pool:
+        pool.starmap(_scene_job, [(module_name, style, scenes[k], scenes[k + 1], parts[k]) for k in range(len(parts))])
+    audio = None
+    if music_seed is not None:
+        import careeros_music
+
+        audio = os.path.join(out_dir, f"{stem}-music.wav")
+        careeros_music.write_wav(audio, careeros_music.render(scenes[-1], music_seed))
+    out = os.path.join(out_dir, f"{stem}.mp4")
+    join_scenes(parts, out, stem, audio)
+    return out

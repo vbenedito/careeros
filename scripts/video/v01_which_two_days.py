@@ -197,6 +197,8 @@ def main():
     ap.add_argument("--out", default="out")
     ap.add_argument("--times", default="")
     ap.add_argument("--jobs", type=int, default=2)
+    ap.add_argument("--music-seed", type=int, default=1, help="seed of the code-made music bed")
+    ap.add_argument("--no-music", action="store_true", help="silent audio track instead")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     f = frame_fn(a.style)
@@ -223,7 +225,12 @@ def main():
         with Pool(a.jobs) as pool:
             pool.starmap(_render_scene, jobs)
         out = os.path.join(a.out, f"{STEM}.mp4")
-        join_scenes(parts, out, STEM)
+        audio = None
+        if not a.no_music:
+            import careeros_music
+            audio = os.path.join(a.out, f"{STEM}-music.wav")
+            careeros_music.write_wav(audio, careeros_music.render(END, a.music_seed))
+        join_scenes(parts, out, STEM, audio)
         print(out)
 
 
