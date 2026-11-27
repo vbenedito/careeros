@@ -382,7 +382,8 @@ export function validateRecord(input: unknown, context: ValidateRecordContext): 
   }
 
   // P11 (2026-11-27): a record may be on any day. POST_DAYS stays the normal rhythm and the
-  // days of the backup crons; `isPostDay` is kept for the cron and coverage rules.
+  // days of the backup crons (`cronLines`); `isPostDay` is kept for the daily coverage check
+  // of PST-23 (P2).
   const postTime = context.postTime ?? POST_TIME;
   if (!isPostTime(record.time, postTime)) fail("post-time", `time must be ${postTime}`);
   if (
