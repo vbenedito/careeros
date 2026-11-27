@@ -133,7 +133,7 @@ describe("database parity: ingest and totals constants", () => {
     ]);
   });
 
-  it("TEST-08 DATA-10 DATA-11 DATA-15 every totals function accepts at most 92 days, as the spec says", () => {
+  it("TEST-08 DATA-10 DATA-11 DATA-15a every totals function accepts at most 92 days, as the spec says", () => {
     for (const name of [
       "public.get_daily_totals",
       "public.get_domain_totals",

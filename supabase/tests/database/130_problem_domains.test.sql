@@ -1,5 +1,5 @@
 -- Problem domains, expand step (#237, NC-a of #233): LeetCode and NeetCode.
--- Covers DATA-06b, DATA-15, DATA-15a, DATA-16, PRB-05, PRB-16, PRB-18, PRB-19, PRB-20 and
+-- Covers DATA-06b, DATA-15a, DATA-16, PRB-05, PRB-16, PRB-18, PRB-19, PRB-20 and
 -- acceptance 8 (database part), 9, 11, 12 of specs/v1/01-problems.md.
 begin;
 select plan(62);

@@ -418,7 +418,7 @@ select tests.clear_authentication();
 reset role;
 
 -- =============================================================================================
--- Plan item 7: history delete (DATA-17, PRB-16) and problem totals (DATA-15)
+-- Plan item 7: history delete (DATA-17, PRB-16) and problem totals (DATA-15a)
 -- =============================================================================================
 select tests.authenticate_as(tests.user_id('ivy'));
 select lives_ok($$ select public.set_problem_tracking(true, false) $$, 'DATA-17 ivy turns the setting on');
