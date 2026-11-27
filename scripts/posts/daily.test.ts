@@ -249,13 +249,16 @@ const secretsAll = () => ({
 });
 
 describe("PST-12 missed slots (daily)", () => {
-  it("PST-12 a merged record whose window ended unpublished gets skipped and one alert per platform, once", async () => {
+  it("PST-12 a merged record whose window ended unpublished gets skipped and ONE combined alert, once", async () => {
     await run({}, makeRecord({ date: "2026-11-24" }));
     const state = must(await store.read("2026-11-24-restart-after-gap"));
     expect(state.platforms.instagram?.status).toBe("skipped");
     expect(state.platforms.youtube?.status).toBe("skipped");
-    const alerts = gh.issues.filter((i) => i.title.includes("Post alert: 2026-11-24"));
-    expect(alerts).toHaveLength(2);
+    expect(gh.issues).toHaveLength(1);
+    expect(must(gh.issues[0]).title).toBe(
+      "2026-11-24-restart-after-gap: nothing was published for this post day",
+    );
+    expect(must(state.platforms.instagram).issue).toBe(must(gh.issues[0]).number);
     const writes = gh.writes.length;
     await run({}, makeRecord({ date: "2026-11-24" }));
     expect(gh.writes).toHaveLength(writes);
@@ -281,6 +284,63 @@ describe("PST-12 missed slots (daily)", () => {
     ig.statuses.set("container-9", "PUBLISHED");
     await run({}, makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }));
     expect((await store.read(STEM))?.platforms.instagram?.status).toBe("published");
+  });
+  it("PST-13 a status check that fails leaves the entry queued and counts an error", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          ...published("2026-11-26T22:05:00Z"),
+          status: "queued",
+          published_at: null,
+          platform_id: "container-9",
+        },
+      },
+    });
+    ig.containerStatus = async () => {
+      throw new ApiError("Instagram", 500, null);
+    };
+    const report = await run(
+      {},
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect(report.errors).toBe(1);
+    expect((await store.read(STEM))?.platforms.instagram?.status).toBe("queued");
+    expect(gh.issues).toEqual([]);
+  });
+  it("PST-14a a YouTube video with an id that is private becomes failed with a Studio alert, never skipped", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        youtube: {
+          ...published("2026-11-26T22:05:00Z"),
+          status: "queued",
+          published_at: null,
+          platform_id: "yt-1",
+        },
+      },
+    });
+    yt.privacy = "private";
+    await run({}, makeRecord({ platforms: { youtube: must(makeRecord().platforms.youtube) } }));
+    expect((await store.read(STEM))?.platforms.youtube?.status).toBe("failed");
+    expect(must(gh.issues[0]).body).toContain("YouTube Studio");
+  });
+  it("PST-14a an Instagram container that is not published becomes failed with an alert, never skipped", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          ...published("2026-11-26T22:05:00Z"),
+          status: "queued",
+          published_at: null,
+          platform_id: "container-9",
+        },
+      },
+    });
+    ig.statuses.set("container-9", "FINISHED");
+    await run({}, makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }));
+    expect((await store.read(STEM))?.platforms.instagram?.status).toBe("failed");
+    expect(must(gh.issues[0]).body).toContain("Instagram app");
   });
   it("PST-12 YouTube queued without a video id becomes failed with a Studio alert, not skipped", async () => {
     await store.write(STEM, {
@@ -329,9 +389,29 @@ describe("PST-23 no publish on a post day (T18)", () => {
     await run({}, makeRecord());
     expect(gh.issues.some((i) => i.title.includes("nothing was published"))).toBe(false);
   });
-  it("T18 PST-23 a record from three days ago is not a post day of today or yesterday", async () => {
+  it("T18 PST-12 one missed day opens exactly one issue, also for an older record", async () => {
     await run({}, makeRecord({ date: "2026-11-24" }));
+    expect(gh.issues).toHaveLength(1);
+    expect(gh.issues.some((i) => i.title.startsWith("Post alert:"))).toBe(false);
+  });
+  it("T18 PST-12 when one platform ends failed, alerts are per platform, not combined", async () => {
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        youtube: {
+          ...published("2026-11-26T22:05:00Z"),
+          status: "queued",
+          published_at: null,
+          platform_id: null,
+        },
+      },
+    });
+    await run({}, makeRecord());
     expect(gh.issues.some((i) => i.title.includes("nothing was published"))).toBe(false);
+    expect(gh.issues.map((i) => i.title).sort()).toEqual([
+      `Post alert: ${STEM} (instagram)`,
+      `Post alert: ${STEM} (youtube)`,
+    ]);
   });
 });
 
@@ -433,6 +513,15 @@ describe("PST-33 trust checks (acceptance 9)", () => {
     const notice = must(security.find((i) => i.title.includes("ops-workflow-pr-77")));
     expect(notice.body).toContain("Low priority");
     expect(security.some((i) => i.body.includes("posts-only"))).toBe(false);
+  });
+  it("PST-33 a squash-merged stale branch whose files equal main is not flagged", async () => {
+    gh.pathCommits = [];
+    gh.branches = [{ name: "stale", sha: "9999999aaaaa" }];
+    gh.branchFiles.set("stale", [".github/workflows/posts-publish.yml"]);
+    gh.fileShas.set("stale:.github/workflows/posts-publish.yml", "blob1");
+    gh.fileShas.set("main:.github/workflows/posts-publish.yml", "blob1");
+    await run();
+    expect(gh.issues.filter((i) => i.labels.includes("ops-security"))).toEqual([]);
   });
   it("PST-33 a branch whose PR title does not start with ops-workflow: is flagged", async () => {
     gh.pathCommits = [];

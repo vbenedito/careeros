@@ -98,8 +98,10 @@ export interface GitHubApi {
   /** The bytes of an asset, fetched from the signed URL without the GitHub token. */
   assetBytes(assetId: number, mask: (value: string) => string): Promise<Uint8Array>;
   getRun(id: number): Promise<RunInfo>;
-  /** Every issue (open and closed) with this label, for "once ever" alerts (PST-23). */
-  listIssuesByLabel(label: string): Promise<IssueInfo[]>;
+  /** An issue (open or closed) with exactly this title and label, for "once ever" alerts (PST-23). */
+  findIssueByTitle(title: string, label: string): Promise<IssueInfo | null>;
+  /** The blob SHA of a file at a ref, or null when it does not exist (PST-33). */
+  fileSha(path: string, ref: string): Promise<string | null>;
   listBranches(): Promise<BranchInfo[]>;
   /** Files that `head` changes compared with `base` (three-dot compare). */
   compareFiles(base: string, head: string): Promise<string[]>;
@@ -370,28 +372,40 @@ export class GitHubClient implements GitHubApi {
     };
   }
 
-  async listIssuesByLabel(label: string): Promise<IssueInfo[]> {
-    const all: IssueInfo[] = [];
-    for (let page = 1; page <= 5; page++) {
-      const query = new URLSearchParams({
-        state: "all",
-        labels: label,
-        per_page: "100",
-        page: String(page),
-      });
-      const list = await this.#json("GET", `/issues?${query}`);
-      if (!Array.isArray(list)) break;
-      for (const raw of list) if (!("pull_request" in asJson(raw))) all.push(toIssue(raw));
-      if (list.length < 100) break;
-    }
-    return all;
+  async findIssueByTitle(title: string, label: string): Promise<IssueInfo | null> {
+    const clean = (v: string): string => v.replace(/["\\]/g, " ");
+    const q = `repo:${this.repo} is:issue label:"${clean(label)}" in:title "${clean(title)}"`;
+    const response = await this.#fetch(
+      `${this.#base}/search/issues?${new URLSearchParams({ q, per_page: "30" })}`,
+      { method: "GET", headers: this.#headers(), signal: timeoutSignal() },
+    );
+    if (!response.ok) throw new ApiError("GitHub", response.status, await readErrorCode(response));
+    const body = asJson(await response.json());
+    const items = Array.isArray(body.items) ? body.items : [];
+    const found = items.map(toIssue).find((i) => i.title === title && i.labels.includes(label));
+    return found ?? null;
+  }
+
+  async fileSha(path: string, ref: string): Promise<string | null> {
+    const query = new URLSearchParams({ ref });
+    const response = await this.#request("GET", `/contents/${path}?${query}`);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new ApiError("GitHub", response.status, await readErrorCode(response));
+    const body = asJson(await response.json());
+    return typeof body.sha === "string" ? body.sha : null;
   }
 
   async listBranches(): Promise<BranchInfo[]> {
-    const list = await this.#json("GET", "/branches?per_page=100");
-    return Array.isArray(list)
-      ? list.map((b) => ({ name: str(asJson(b).name), sha: str(asJson(asJson(b).commit).sha) }))
-      : [];
+    const all: BranchInfo[] = [];
+    for (let page = 1; page <= 10; page++) {
+      const list = await this.#json("GET", `/branches?per_page=100&page=${page}`);
+      if (!Array.isArray(list)) break;
+      for (const b of list) {
+        all.push({ name: str(asJson(b).name), sha: str(asJson(asJson(b).commit).sha) });
+      }
+      if (list.length < 100) break;
+    }
+    return all;
   }
 
   async compareFiles(base: string, head: string): Promise<string[]> {

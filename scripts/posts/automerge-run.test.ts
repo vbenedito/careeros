@@ -170,6 +170,7 @@ describe("PST-35 T18 record not merged at post time", () => {
     await run(gh, "2026-11-26T21:50:00Z");
     expect(gh.issues).toHaveLength(1);
     expect(must(gh.issues[0]).labels).toEqual(["post-reminder"]);
+    expect(must(gh.issues[0]).title).toContain("on hold");
     expect(must(gh.issues[0]).body).toContain("on hold");
   });
   it("PST-35 a PR that is not for main, or a dry run, opens nothing", async () => {
@@ -183,6 +184,23 @@ describe("PST-35 T18 record not merged at post time", () => {
     await run(dry, "2026-11-26T22:05:00Z", true);
     expect(dry.issues).toEqual([]);
     expect(dry.writes).toEqual([]);
+  });
+  it("PST-35 the daily mode does not reopen the alert after the owner closed it", async () => {
+    const gh = setup();
+    const daily = () =>
+      runAutoMerge({
+        gh,
+        now: new Date("2026-11-26T22:30:00Z"),
+        postTime: "19:00",
+        dryRun: false,
+        runId: "0",
+        out: () => undefined,
+        alertOnly: true,
+      });
+    await daily();
+    must(gh.issues[0]).state = "closed";
+    await daily();
+    expect(gh.issues).toHaveLength(1);
   });
   it("PST-35 the daily mode only alerts: it never merges a ready PR", async () => {
     const gh = setup();

@@ -44,7 +44,7 @@ export const WATCHED_WORKFLOWS = [
   "posts-daily.yml",
 ] as const;
 /** Commits of the last days are checked for direct pushes under `.github/workflows/` (PST-33). */
-export const TRUST_LOOKBACK_DAYS = 2;
+export const TRUST_LOOKBACK_DAYS = 7;
 /** A cancelled run older than this is not reconciled any more. */
 export const CANCELLED_LOOKBACK_DAYS = 7;
 const DAY_MS = 86_400_000;
@@ -146,8 +146,7 @@ export async function runDaily(deps: DailyDeps): Promise<DailyReport> {
 
   const steps: [string, () => Promise<void>][] = [
     ["tokens", () => tokenChecks(d, report, say, raise)],
-    ["no-publish", () => noPublish(d, records, raise)],
-    ["missed-slots", () => missedSlots(d, records, say)],
+    ["missed-slots", () => missedSlots(d, records, report, say)],
     ["cron-coverage", () => cronCoverage(d, say)],
     ["trust", () => trustChecks(d, say, raise)],
     ["cancelled-runs", () => cancelledRuns(d, say, raise)],
@@ -311,101 +310,140 @@ async function tokenChecks(
   await d.store.commitAndPush("chore(posts-state): token expiry dates");
 }
 
-// --- c. no publish on a post day (T18) ---------------------------------------------------------
+// --- b + c. missed slots (PST-12) and no publish on a post day (T18) --------------------------
 
-const DONE = new Set(["published", "skipped", "failed"]);
+type Outcome = { platform: PostPlatform; entry: StateEntry; alert: string | null; next: string };
 
-async function noPublish(d: DailyDeps, records: Rec[], raise: Raise): Promise<void> {
-  for (const { record, stem } of records) {
-    const today = localDate(d.now, record.timezone);
-    const yesterday = localDate(new Date(d.now.getTime() - DAY_MS), record.timezone);
-    if (record.date !== today && record.date !== yesterday) continue;
-    if (slotState(record, d.now) !== "missed") continue;
-    if (record.ai_label) continue; // reminder mode: nothing is automatic
-    const automatic = AUTOMATIC_PLATFORMS.filter((p) => record.platforms[p]?.status === "ready");
-    if (automatic.length === 0) continue;
-    const state = (await d.store.read(stem)) ?? emptyState();
-    if (Object.values(state.platforms).some((p) => p && DONE.has(p.status))) continue;
-    await raise(stem, {
-      title: `${stem}: nothing was published for this post day`,
-      labels: ["post-alert"],
-      once: true,
-      body: alertBody({
-        record,
-        platform: "all",
-        what: "The post day is here, the window ended, and no platform has a published, skipped or failed state. The scheduler probably did not run (a late or dropped GitHub schedule).",
-        next: "Check the posts-publish runs of that day. The slot cannot be published late: move the record to a new date in a new PR (P11).",
-      }),
-    });
-  }
-}
-
-// --- b. missed slots (PST-12) ------------------------------------------------------------------
-
-async function missedSlots(d: DailyDeps, records: Rec[], say: Say): Promise<void> {
+async function missedSlots(
+  d: DailyDeps,
+  records: Rec[],
+  report: DailyReport,
+  say: Say,
+): Promise<void> {
   let wrote = false;
   for (const { record, stem } of records) {
     if (record.ai_label) continue;
     if (slotState(record, d.now) !== "missed") continue;
-    let state: PostState | null = null;
+    let state: PostState = (await d.store.read(stem)) ?? emptyState();
+    const outcomes: Outcome[] = [];
+    let errored = false;
     for (const platform of AUTOMATIC_PLATFORMS) {
       if (!record.platforms[platform]) continue;
-      state ??= (await d.store.read(stem)) ?? emptyState();
-      const current: PostState = state;
-      const status = effectiveStatus(record, current, platform);
+      const status = effectiveStatus(record, state, platform);
       if (status !== "ready" && status !== "queued") continue;
-      const cur: StateEntry | null = current.platforms[platform] ?? null;
+      const cur: StateEntry | null = state.platforms[platform] ?? null;
       const log = (text: string): void => say(`${stem} ${platform}: ${text}`);
       if (d.dryRun) {
-        log("window ended, would be skipped");
+        log("window ended, would be skipped or recorded");
         continue;
       }
-      let next: StateEntry | null = null;
+      const base = cur ?? blank();
       if (cur?.status === "queued" && cur.platform_id) {
-        // PST-13: a queued post may already be public; ask before skipping.
-        const publicUrl = await isPublic(d, platform, cur.platform_id).catch(() => null);
-        if (publicUrl !== null) {
-          next = {
-            ...cur,
-            status: "published",
-            url: publicUrl.url,
-            published_at: d.now.toISOString(),
-            error: null,
-          };
-          log("was already public, recorded as published");
+        // PST-13: a queued post may already be public; ask before any verdict.
+        let pub: { url: string | null } | null;
+        try {
+          pub = await isPublic(d, platform, cur.platform_id);
+        } catch (error) {
+          // Unknown outcome: the entry stays queued and the next run asks again.
+          const info = errorInfo(error);
+          log(
+            `status unknown (http_status=${info.http_status ?? "none"}, code=${info.code ?? "none"}), left queued`,
+          );
+          report.errors++;
+          errored = true;
+          continue;
         }
+        if (pub) {
+          log("was already public, recorded as published");
+          outcomes.push({
+            platform,
+            entry: {
+              ...base,
+              status: "published",
+              url: pub.url,
+              published_at: d.now.toISOString(),
+              error: null,
+            },
+            alert: null,
+            next: "",
+          });
+        } else {
+          // PST-14a: the upload exists but is not public; never "skipped", the person checks it.
+          log("has an id but is not public, set to failed");
+          outcomes.push({
+            platform,
+            entry: { ...base, status: "failed", error: { http_status: null, code: "not_public" } },
+            alert:
+              platform === "youtube"
+                ? "The video was uploaded but is not public, and the window ended."
+                : "The Instagram container was created but is not published, and the window ended.",
+            next:
+              platform === "youtube"
+                ? "Check YouTube Studio for this video. A new time needs a new record."
+                : "Check the Instagram app for this post. A new time needs a new record.",
+          });
+        }
+        continue;
       }
-      if (next === null) {
-        const deadYoutube = platform === "youtube" && cur?.status === "queued" && !cur.platform_id;
-        const issue = await upsertIssue(d.gh, {
+      if (platform === "youtube" && cur?.status === "queued") {
+        log("queued without a video id, set to failed");
+        outcomes.push({
+          platform,
+          entry: { ...base, status: "failed", error: { http_status: null, code: "no_video_id" } },
+          alert: "The upload started but no video id was stored, and the window ended.",
+          next: "Check YouTube Studio for this video. A new time needs a new record.",
+        });
+        continue;
+      }
+      log("window ended, set to skipped");
+      outcomes.push({
+        platform,
+        entry: { ...base, status: "skipped" },
+        alert: "Not published inside the window. It is skipped and never published late.",
+        next: "A new time needs a new record.",
+      });
+    }
+    if (outcomes.length === 0) continue;
+    for (const o of outcomes)
+      state = { ...state, platforms: { ...state.platforms, [o.platform]: o.entry } };
+    // T18: when no platform ends published or failed, ONE combined alert replaces the per-platform ones.
+    const nothingDone =
+      !errored &&
+      !Object.values(state.platforms).some(
+        (p) => p && (p.status === "published" || p.status === "failed"),
+      );
+    let combined: number | null = null;
+    if (nothingDone) {
+      const result = await ensureIssue(d.gh, {
+        title: `${stem}: nothing was published for this post day`,
+        labels: ["post-alert"],
+        once: true,
+        body: alertBody({
+          record,
+          platform: "all",
+          what: `The window ended and no platform was published (${outcomes.map((o) => o.platform).join(", ")} set to skipped). The scheduler probably did not run (a late or dropped GitHub schedule).`,
+          next: "Check the posts-publish runs of that day. The slot cannot be published late: move the record to a new date in a new PR (P11).",
+        }),
+      });
+      if (result.created) report.opened++;
+      combined = result.number;
+    }
+    for (const o of outcomes) {
+      let issue: number | null = combined;
+      if (combined === null && o.alert !== null) {
+        const before = (await d.gh.listOpenIssues()).length;
+        issue = await upsertIssue(d.gh, {
           kind: "post-alert",
           stem,
-          platform,
-          body: alertBody({
-            record,
-            platform,
-            what: deadYoutube
-              ? "The upload started but no video id was stored, and the window ended."
-              : "Not published inside the window. It is skipped and never published late.",
-            next: deadYoutube
-              ? "Check YouTube Studio for this video. A new time needs a new record."
-              : "A new time needs a new record.",
-          }),
+          platform: o.platform,
+          body: alertBody({ record, platform: o.platform, what: o.alert, next: o.next }),
         });
-        next = {
-          ...(cur ?? blank()),
-          status: deadYoutube ? "failed" : "skipped",
-          issue,
-          ...(deadYoutube ? { error: { http_status: null, code: "no_video_id" } } : {}),
-        };
-        log(
-          deadYoutube ? "queued without a video id, set to failed" : "window ended, set to skipped",
-        );
+        if ((await d.gh.listOpenIssues()).length > before) report.opened++;
       }
-      state = { ...current, platforms: { ...current.platforms, [platform]: next } };
-      await d.store.write(stem, state);
-      wrote = true;
+      state = { ...state, platforms: { ...state.platforms, [o.platform]: { ...o.entry, issue } } };
     }
+    await d.store.write(stem, state);
+    wrote = true;
   }
   if (wrote) await d.store.commitAndPush("chore(posts-state): missed slots");
 }
@@ -475,9 +513,16 @@ async function trustChecks(d: DailyDeps, say: Say, raise: Raise): Promise<void> 
   const open = await d.gh.listOpenPulls();
   for (const branch of await d.gh.listBranches()) {
     if (branch.name === "main") continue;
-    const files = (await d.gh.compareFiles("main", branch.name)).filter((f) =>
+    const listed = (await d.gh.compareFiles("main", branch.name)).filter((f) =>
       f.startsWith(WORKFLOWS_DIR),
     );
+    // A squash-merged branch that was not deleted lists files that are equal to main now.
+    const files: string[] = [];
+    for (const file of listed) {
+      if ((await d.gh.fileSha(file, branch.name)) !== (await d.gh.fileSha(file, "main"))) {
+        files.push(file);
+      }
+    }
     if (files.length === 0) continue;
     const pr = open.find((p) => p.head_ref === branch.name && p.title.startsWith("ops-workflow:"));
     if (pr) {

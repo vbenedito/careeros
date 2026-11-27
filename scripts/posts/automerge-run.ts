@@ -8,7 +8,7 @@ import {
 } from "./automerge.ts";
 import type { GitHubApi, PullInfo } from "./github.ts";
 import { checkHold } from "./hold.ts";
-import { alertBody, ensureIssue, notMergedTitle } from "./issues.ts";
+import { alertBody, ensureIssue, heldNoticeTitle, notMergedTitle } from "./issues.ts";
 import { errorInfo, type Out } from "./mask.ts";
 
 const RECORD_PATH = /^posts\/\d{4}\/(\d{4}-\d{2}-\d{2}-[a-z0-9-]+)\.json$/;
@@ -172,7 +172,9 @@ async function alertUnmerged(
       ? `The record PR #${pull.number} is on hold and will not be merged for this post.`
       : `The record PR #${pull.number} cannot be merged yet and the post time is close.`;
   await ensureIssue(r.gh, {
-    title: notMergedTitle(stem),
+    title: notice ? heldNoticeTitle(stem) : notMergedTitle(stem),
+    // The daily mode opens it once: it does not come back after the owner closed it.
+    once: r.alertOnly === true,
     labels: [notice ? "post-reminder" : "post-alert"],
     body: alertBody({
       record,

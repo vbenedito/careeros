@@ -196,9 +196,14 @@ export class FakeGitHub implements GitHubApi {
   pathCommits: string[] = [];
   commitFilesMap = new Map<string, string[]>();
   workflowRuns = new Map<string, WorkflowRun[]>();
-  /** Every issue, also closed ones; `listOpenIssues` filters. */
-  async listIssuesByLabel(label: string): Promise<IssueInfo[]> {
-    return this.issues.filter((i) => i.labels.includes(label));
+  /** Open or closed, like the search API. */
+  async findIssueByTitle(title: string, label: string): Promise<IssueInfo | null> {
+    return this.issues.find((i) => i.title === title && i.labels.includes(label)) ?? null;
+  }
+  /** Blob SHAs by `ref:path`; a file not listed differs on every ref. */
+  fileShas = new Map<string, string>();
+  async fileSha(path: string, ref: string): Promise<string | null> {
+    return this.fileShas.get(`${ref}:${path}`) ?? `sha-of-${ref}-${path}`;
   }
   async listBranches(): Promise<BranchInfo[]> {
     return this.branches;

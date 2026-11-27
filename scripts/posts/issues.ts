@@ -72,6 +72,9 @@ export async function upsertIssue(
 /** T18, PST-24: the one title of a record that was not merged at post time (any run may open it). */
 export const notMergedTitle = (stem: string): string => `${stem}: record not merged at post time`;
 
+/** The notice that a record is on hold shortly before the post time (T18). */
+export const heldNoticeTitle = (stem: string): string => `${stem}: record on hold before post time`;
+
 export interface EnsureIssue {
   title: string;
   labels: string[];
@@ -89,8 +92,11 @@ export async function ensureIssue(
   input: EnsureIssue,
 ): Promise<{ number: number; created: boolean }> {
   const label = input.labels[0] ?? "";
-  const pool = input.once ? await gh.listIssuesByLabel(label) : await gh.listOpenIssues();
-  const existing = pool.find((i) => i.title === input.title && i.labels.includes(label));
+  const existing = input.once
+    ? await gh.findIssueByTitle(input.title, label)
+    : ((await gh.listOpenIssues()).find(
+        (i) => i.title === input.title && i.labels.includes(label),
+      ) ?? null);
   if (existing) {
     if (existing.state === "open" && existing.body !== input.body && !input.once) {
       await gh.updateIssue(existing.number, { body: input.body });
