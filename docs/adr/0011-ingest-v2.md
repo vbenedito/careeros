@@ -4,6 +4,8 @@ Status: Accepted · Date: 2026-11-17 · Issue: #176 · Implementation: #178 (dat
 
 Amended 2026-11-19 (#233, proposal): **the ingest contract does not change.** The request (an optional `problem` per element) and the reply (`confirmed`/`rejected`) stay as they are, and `ingest_study_sessions` stays as it is. Only one validation rule widens: the domain a `problem` may sit on, and the matching `study_session_problems` check and composite FK, go from `leetcode.com` to the list `PROBLEM_DOMAINS` (`leetcode.com`, `neetcode.io`; PRB-18). This is an expand-only migration, so extension 0.3.0 (LeetCode slugs only) and 0.2.3 work unchanged. Compatibility tests 2 and 7 gain NeetCode cases (a NeetCode slug stored; a slug on `neetcode.io.evil.com` or another domain `invalid`; the history delete covers both sites), and 4 is repeated with the 0.3.0 client. `get_problem_totals` gets a per-site variant, `get_problem_totals_v2` (DATA-15a), added next to it for the same reason as here: the old return type has no domain. Status: **Proposed**.
 
+Amended 2026-11-27 (#241, NC-e): `get_problem_totals` is dropped (`20261127100000_drop_get_problem_totals.sql`); `get_problem_totals_v2` is the only per-problem totals function. The consequences below describe the state when this ADR was accepted.
+
 ## Context
 v1 needs three changes to interval upload, in one ingest change (discovery D21):
 - **Problem slug** (PRB-08, PRB-10): an interval may carry a LeetCode problem slug, stored only when the account setting is on (DATA-13, DATA-14).

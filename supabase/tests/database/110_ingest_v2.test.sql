@@ -2,7 +2,7 @@
 -- Compatibility test plan items 1 (old contract), 2 (v2), 3 (shared rules), 6 (grants) and
 -- 7 (history delete); DATA-06b, DATA-09b, DATA-13..17, PRB-01, PRB-05, PRB-16.
 begin;
-select plan(110);
+select plan(108);
 
 select tests.create_user('fay');
 select tests.create_user('gus');
@@ -27,9 +27,8 @@ select ok(
   (select bool_and('search_path=""' = any(proconfig)) from pg_proc
    where oid in ('public.ingest_study_sessions_v2(jsonb)'::regprocedure,
                  'public.set_problem_tracking(boolean, boolean)'::regprocedure,
-                 'public.get_problem_totals(date, date, text)'::regprocedure,
                  'private.ingest_sessions(jsonb, boolean)'::regprocedure)),
-  'DATA-06b DATA-15 DATA-17 the new functions pin an empty search_path'
+  'DATA-06b DATA-17 the new functions pin an empty search_path'
 );
 select ok(has_function_privilege('authenticated', 'public.ingest_study_sessions(jsonb)', 'execute'),
   'DATA-06 authenticated can call ingest_study_sessions');
@@ -49,11 +48,7 @@ select ok(not has_function_privilege('anon', 'public.set_problem_tracking(boolea
   'DATA-17 anon cannot call set_problem_tracking');
 select ok(not has_function_privilege('public', 'public.set_problem_tracking(boolean, boolean)', 'execute'),
   'DATA-17 PUBLIC has no EXECUTE on set_problem_tracking');
-select isnt_definer('public', 'get_problem_totals', array['date', 'date', 'text'],
-  'DATA-15 get_problem_totals is SECURITY INVOKER');
-select ok(has_function_privilege('authenticated', 'public.get_problem_totals(date, date, text)', 'execute')
-  and not has_function_privilege('anon', 'public.get_problem_totals(date, date, text)', 'execute'),
-  'DATA-15 get_problem_totals: authenticated only');
+-- The invoker mode, grants and search_path of get_problem_totals_v2 (DATA-15a) are checked in 130_problem_domains.
 select ok(not has_function_privilege('authenticated', 'private.ingest_sessions(jsonb, boolean)', 'execute'),
   'DATA-06b the shared implementation is not callable by clients');
 -- DATA-14: the setting is read after the same per-user lock that set_problem_tracking takes.
@@ -90,8 +85,8 @@ select throws_ok($$ select public.ingest_study_sessions_v2('[]') $$, 'PT401', 'N
   'DATA-06b a request without auth.uid() is rejected');
 select throws_ok($$ select public.set_problem_tracking(false, false) $$, 'PT401', 'NOT_AUTHENTICATED',
   'DATA-17 a request without auth.uid() is rejected');
-select throws_ok($$ select * from public.get_problem_totals(current_date, current_date, 'UTC') $$,
-  'PT401', 'NOT_AUTHENTICATED', 'DATA-15 a request without auth.uid() is rejected');
+select throws_ok($$ select * from public.get_problem_totals_v2(current_date, current_date, 'UTC') $$,
+  'PT401', 'NOT_AUTHENTICATED', 'DATA-15a a request without auth.uid() is rejected');
 reset role;
 select tests.clear_authentication();
 
@@ -456,20 +451,20 @@ select is(
   '[]'::jsonb, 'hal stores five intervals, four with a slug');
 
 select results_eq(
-  $$ select problem_slug, seconds, last_day from public.get_problem_totals(current_date - 6, current_date, 'UTC') $$,
-  $$ values ('two-sum', 1800::bigint, ((now() - interval '3 hours') at time zone 'UTC')::date),
-            ('3sum', 600::bigint, ((now() - interval '4 hours') at time zone 'UTC')::date),
-            ('lru-cache', 600::bigint, ((now() - interval '2 hours') at time zone 'UTC')::date) $$,
-  'DATA-15 PRB-11 seconds per slug, longest first, ties by slug, last local day; only the caller''s rows'
+  $$ select domain, problem_slug, seconds, last_day from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC') $$,
+  $$ values ('leetcode.com'::text, 'two-sum'::text, 1800::bigint, ((now() - interval '3 hours') at time zone 'UTC')::date),
+            ('leetcode.com', '3sum', 600, ((now() - interval '4 hours') at time zone 'UTC')::date),
+            ('leetcode.com', 'lru-cache', 600, ((now() - interval '2 hours') at time zone 'UTC')::date) $$,
+  'DATA-15a PRB-11 seconds per slug, longest first, ties by slug, last local day; only the caller''s rows'
 );
 select is(
   (select array_agg(problem_slug order by problem_slug)
-   from public.get_problem_totals(current_date - 400, current_date - 350, 'UTC')),
-  null::text[], 'DATA-15 a period without intervals has no rows');
-select throws_ok($$ select * from public.get_problem_totals(current_date - 92, current_date, 'UTC') $$,
-  '22023', 'INVALID_RANGE', 'DATA-15 ranges over 92 days are rejected as in DATA-10');
-select throws_ok($$ select * from public.get_problem_totals(current_date, current_date, 'Mars/Base1') $$,
-  '22023', 'INVALID_TIME_ZONE', 'DATA-15 bad time zones are rejected as in DATA-10');
+   from public.get_problem_totals_v2(current_date - 400, current_date - 350, 'UTC')),
+  null::text[], 'DATA-15a a period without intervals has no rows');
+select throws_ok($$ select * from public.get_problem_totals_v2(current_date - 92, current_date, 'UTC') $$,
+  '22023', 'INVALID_RANGE', 'DATA-15a ranges over 92 days are rejected as in DATA-10');
+select throws_ok($$ select * from public.get_problem_totals_v2(current_date, current_date, 'Mars/Base1') $$,
+  '22023', 'INVALID_TIME_ZONE', 'DATA-15a bad time zones are rejected as in DATA-10');
 select is((select count(*)::int from public.study_session_problems), 4,
   'DATA-16 RLS: hal sees only his own four slug rows');
 select is((select count(*)::int from public.account_settings), 1,
@@ -498,7 +493,7 @@ select is(
   (select count(*)::int from public.study_session_problems where session_id = '9a000000-0000-4000-8000-000000000006'),
   0, 'DATA-14 ...without its slug');
 select lives_ok($$ select public.set_problem_tracking(true, false) $$, 'PRB-16 turning back on');
-select is((select count(*)::int from public.get_problem_totals(current_date - 6, current_date, 'UTC')), 3,
+select is((select count(*)::int from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC')), 3,
   'PRB-16 the kept history comes back when the setting is on again');
 
 -- Turn off and delete history
@@ -511,8 +506,8 @@ select lives_ok($$ select public.set_problem_tracking(false, true) $$,
 select is((select count(*)::int from public.study_session_problems), 0,
   'PRB-16 DATA-17 every slug row of the caller is deleted');
 select is((select track_problems from public.account_settings), false, 'DATA-17 the setting is off');
-select is((select count(*)::int from public.get_problem_totals(current_date - 6, current_date, 'UTC')), 0,
-  'PRB-16 get_problem_totals returns no rows after the delete');
+select is((select count(*)::int from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC')), 0,
+  'PRB-16 get_problem_totals_v2 returns no rows after the delete');
 select is((select count(*) from public.study_sessions), (select sessions from hal_before),
   'PRB-16 DATA-17 no study_sessions row was touched');
 select is(

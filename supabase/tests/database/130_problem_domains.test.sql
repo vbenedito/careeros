@@ -2,7 +2,7 @@
 -- Covers DATA-06b, DATA-15, DATA-15a, DATA-16, PRB-05, PRB-16, PRB-18, PRB-19, PRB-20 and
 -- acceptance 8 (database part), 9, 11, 12 of specs/v1/01-problems.md.
 begin;
-select plan(66);
+select plan(62);
 
 select tests.create_user('kai');
 select tests.create_user('lea');
@@ -62,30 +62,23 @@ select throws_ok(
   '23503', null, 'DATA-16 the composite FK still refuses a neetcode.io slug row for another user''s session');
 
 -- =============================================================================================
--- Definitions and grants of get_problem_totals_v2 (DATA-15a): same security model as v1
+-- Definitions and grants of get_problem_totals_v2 (DATA-15a): SECURITY INVOKER, STABLE, empty search_path, authenticated only
 -- =============================================================================================
 select has_function('public', 'get_problem_totals_v2', array['date', 'date', 'text'],
   'DATA-15a get_problem_totals_v2 exists');
-select has_function('public', 'get_problem_totals', array['date', 'date', 'text'],
-  'DATA-15a get_problem_totals stays until the contract step (NC-e)');
+select hasnt_function('public', 'get_problem_totals', array['date', 'date', 'text'],
+  'DATA-15a #241 get_problem_totals is dropped (NC-e); v2 is the only per-problem totals function');
 select is(
   (select pg_get_function_result(oid) from pg_proc
    where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure),
   'TABLE(domain text, problem_slug text, seconds bigint, last_day date)',
   'DATA-15a v2 returns domain, problem_slug, seconds, last_day');
-select is(
-  (select pg_get_function_result(oid) from pg_proc
-   where oid = 'public.get_problem_totals(date, date, text)'::regprocedure),
-  'TABLE(problem_slug text, seconds bigint, last_day date)',
-  'DATA-15 get_problem_totals keeps its return type');
 select isnt_definer('public', 'get_problem_totals_v2', array['date', 'date', 'text'],
   'DATA-15a v2 is SECURITY INVOKER');
-select is(
-  (select row(prosecdef, provolatile, proconfig, prolang, proacl)::text from pg_proc
-   where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure),
-  (select row(prosecdef, provolatile, proconfig, prolang, proacl)::text from pg_proc
-   where oid = 'public.get_problem_totals(date, date, text)'::regprocedure),
-  'DATA-15a v2 has the same security mode, volatility, search_path, language and grants (ACL) as get_problem_totals');
+select ok(exists (select 1 from pg_proc
+   where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure
+     and not prosecdef and provolatile = 's' and prolang = (select oid from pg_language where lanname = 'plpgsql')),
+  'DATA-15a v2 is SECURITY INVOKER, STABLE and plpgsql');
 select ok(exists (select 1 from pg_proc
    where oid = 'public.get_problem_totals_v2(date, date, text)'::regprocedure
      and 'search_path=""' = any(proconfig)),
@@ -270,18 +263,6 @@ select throws_ok($$ select * from public.get_problem_totals_v2(current_date, cur
 select throws_ok($$ select * from public.get_problem_totals_v2(current_date, current_date, null) $$,
   '22023', 'INVALID_TIME_ZONE', 'DATA-15a a null time zone is rejected');
 
--- get_problem_totals (DATA-15) is unchanged: still three columns, still grouped by slug alone.
--- Until the dashboard moves to v2 no NeetCode slug exists in production (rollout section 5), so
--- this is not user-visible; it is dropped in NC-e together with this test.
-select results_eq(
-  $$ select problem_slug, seconds from public.get_problem_totals(current_date - 6, current_date, 'UTC') $$,
-  $$ values ('two-sum'::text, 1500::bigint), ('two-integer-sum', 420), ('alpha-a', 180), ('alpha-b', 180), ('alpha-c', 180) $$,
-  'DATA-15 get_problem_totals still works and is unchanged: grouped by slug alone (so it adds the two sites; v2 is the per-site function)');
-select is(
-  (select sum(seconds) from public.get_problem_totals(current_date - 6, current_date, 'UTC')),
-  (select sum(seconds) from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC')),
-  'DATA-15 DATA-15a v1 and v2 account for the same total time');
-
 -- RLS: another user's rows never appear, on either site.
 select is((select count(*)::int from public.study_session_problems), 6,
   'DATA-16 RLS: max sees only his own six slug rows (not lea''s or kai''s, on either site)');
@@ -296,12 +277,12 @@ select throws_ok($$ delete from public.study_session_problems where domain::text
 select tests.clear_authentication();
 reset role;
 
--- An anonymous sign-in sees nothing (restrictive policy), as for get_problem_totals.
+-- An anonymous sign-in sees nothing (restrictive policy).
 select set_config('request.jwt.claims',
   json_build_object('sub', tests.user_id('max'), 'role', 'authenticated', 'is_anonymous', true)::text, true);
 set local role authenticated;
 select is((select count(*)::int from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC')), 0,
-  'DATA-15a an anonymous JWT gets no rows (RLS), as for get_problem_totals');
+  'DATA-15a an anonymous JWT gets no rows (RLS)');
 reset role;
 select tests.clear_authentication();
 
@@ -340,8 +321,6 @@ select is((select count(*)::int from public.study_session_problems), 0,
   'PRB-16 acceptance 12 the slugs of both sites are deleted');
 select is((select count(*)::int from public.get_problem_totals_v2(current_date - 6, current_date, 'UTC')), 0,
   'PRB-16 get_problem_totals_v2 returns no rows after the delete');
-select is((select count(*)::int from public.get_problem_totals(current_date - 6, current_date, 'UTC')), 0,
-  'PRB-16 get_problem_totals returns no rows after the delete');
 select is((select count(*) from public.study_sessions), (select sessions from max_before),
   'PRB-16 no study_sessions row was touched');
 select is(
