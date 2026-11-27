@@ -3,7 +3,7 @@
 -- DATA-16, PRB-05, PRB-20 and acceptance 5, 7, 11 and 12 (database part) of
 -- specs/v1/05-problem-sites.md. The old cases of 110 and 130 keep their meaning.
 begin;
-select plan(212);
+select plan(222);
 
 select tests.create_user('rae');
 select tests.create_user('sam');
@@ -113,7 +113,7 @@ select ok(
           and position('pg_advisory_xact_lock' in prosrc) < position('insert into public.problem_rules' in prosrc)
    from pg_proc where oid = 'public.add_problem_rule(text, text[], text, text, boolean)'::regprocedure)
   and (select position('pg_advisory_xact_lock(hashtextextended(''ingest_study_sessions:'' || caller::text, 0))' in prosrc) > 0
-          and position('pg_advisory_xact_lock' in prosrc) < position('delete from public.problem_rules' in prosrc)
+          and position('pg_advisory_xact_lock' in prosrc) < position('update public.problem_rules' in prosrc)
    from pg_proc where oid = 'public.remove_problem_rule(uuid, boolean)'::regprocedure),
   'PSR-22 DATA-09 add and remove take the per-user ingest lock before they change a row');
 
@@ -769,11 +769,14 @@ select is((select count(*)::int from public.study_session_problems where domain:
 select is((select count(*)::int from public.study_session_problems where domain::text = 'leetcode.com'), 2,
   'PSR-13 acceptance 8 the ids of another site are untouched');
 select is((select array_agg(label) from public.problem_rules), array['Coding'],
-  'PSR-13 the other rule of the domain remains; the removed row is gone, not a tombstone');
+  'PSR-13 the other rule of the domain remains; the removed one is not readable (tombstone)');
 select tests.clear_authentication();
 reset role;
-select is((select count(*)::int from public.problem_rules where user_id = tests.user_id('sam')), 1,
-  'PSR-22 delete history leaves no tombstone and no row of the removed rule');
+select results_eq(
+  $$ select count(*)::int, count(*) filter (where removed_at is not null and prefix is null and label is null)::int
+     from public.problem_rules where user_id = tests.user_id('sam') $$,
+  $$ values (2, 1) $$,
+  'PSR-22 delete history leaves the active rule and one tombstone (no prefix, no label) for the removed one');
 select tests.authenticate_as(tests.user_id('sam'));
 select is((select count(*)::int from public.get_problem_totals_v2(current_date - 6, current_date + 1, 'UTC')
            where domain = 'hellointerview.com'), 0,
@@ -798,8 +801,8 @@ select is(
   jsonb_build_array('c1000000-0000-4000-8000-000000000008'), 'sam stores one more leetcode.com id');
 select tests.clear_authentication();
 reset role;
-select is((select count(*)::int from public.problem_rules where user_id = tests.user_id('sam') and removed_at is not null), 1,
-  'PSR-22 sam has one tombstone');
+select is((select count(*)::int from public.problem_rules where user_id = tests.user_id('sam') and removed_at is not null), 2,
+  'PSR-22 sam has two tombstones (one from delete history, one from keep history)');
 select tests.authenticate_as(tests.user_id('sam'));
 select throws_ok($$ select public.delete_problem_history('Bad Domain') $$,
   '22023', 'INVALID_DOMAIN', 'PSR-13 delete_problem_history refuses a bad domain');
@@ -810,7 +813,7 @@ select lives_ok($$ select public.delete_problem_history('hellointerview.com') $$
 select tests.clear_authentication();
 reset role;
 select is((select count(*)::int from public.problem_rules where user_id = tests.user_id('sam')), 0,
-  'PSR-22 the per-domain delete also deleted the tombstone of that domain');
+  'PSR-22 the per-domain delete also deleted the tombstones of that domain (and sam has no active rule left)');
 select is((select count(*)::int from public.study_session_problems where user_id = tests.user_id('sam') and domain::text = 'leetcode.com'), 3,
   'PSR-24 the per-domain delete never touches another domain');
 select tests.authenticate_as(tests.user_id('sam'));
@@ -838,6 +841,41 @@ select tests.clear_authentication();
 reset role;
 select is((select count(*)::int from public.study_session_problems where user_id = tests.user_id('tom')), 1,
   'PSR-02 PSR-13 another user''s ids on the same domain are untouched');
+
+-- =============================================================================================
+-- PSR-13, PSR-22, PSR-23 step 4, PRB-07, acceptance 13: remove and delete history keeps queued time (yin)
+-- =============================================================================================
+select tests.authenticate_as(tests.user_id('yin'));
+select lives_ok($$ insert into public.tracked_domains (domain) values ('hellointerview.com') $$, 'TRK-03 yin tracks a site');
+select lives_ok($$ select public.set_problem_tracking(true, false) $$, 'DATA-17 yin turns the setting on');
+select lives_ok(
+  $$ select public.add_problem_rule('hellointerview.com', array['practice'], 'id', 'x', true) $$,
+  'PSR-16 yin adds a rule');
+select is(
+  public.ingest_study_sessions_v2(jsonb_build_array(
+    tests.session('f4000000-0000-4000-8000-000000000001', 'hellointerview.com', interval '10 hours', interval '10 minutes')
+      || '{"problem": "abc123"}')) -> 'confirmed',
+  jsonb_build_array('f4000000-0000-4000-8000-000000000001'), 'yin stores an interval with an id');
+select lives_ok(
+  $$ select public.remove_problem_rule((select id from public.problem_rules), true) $$,
+  'PSR-13 yin removes the rule and deletes the history');
+select is((select count(*)::int from public.study_session_problems), 0, 'PSR-13 acceptance 12 no id of the domain remains');
+select is(
+  public.ingest_study_sessions_v2(jsonb_build_array(
+    tests.session('f4000000-0000-4000-8000-000000000002', 'hellointerview.com', interval '8 hours', interval '10 minutes')
+      || '{"problem": "abc123"}')),
+  jsonb_build_object('confirmed', jsonb_build_array('f4000000-0000-4000-8000-000000000002'), 'rejected', '[]'::jsonb),
+  'PSR-23 step 4 PRB-07 acceptance 13: after remove + delete history a queued interval with an id is confirmed, not invalid');
+select is((select count(*)::int from public.study_session_problems), 0, 'PSR-23 step 4 acceptance 13 the queued interval has no id');
+select is(
+  (select seconds from public.get_domain_totals(current_date - 6, current_date + 1, 'UTC') where domain = 'hellointerview.com'),
+  1200::bigint, 'PRB-07 acceptance 13 the totals keep the seconds of both intervals');
+select tests.clear_authentication();
+reset role;
+select results_eq(
+  $$ select count(*)::int, count(*) filter (where removed_at is not null and prefix is null and label is null)::int
+     from public.problem_rules where user_id = tests.user_id('yin') $$,
+  $$ values (1, 1) $$, 'PSR-22 acceptance 13 delete history leaves exactly one tombstone');
 
 -- =============================================================================================
 -- PSR-24, DATA-16: the trigger and the widened check (direct inserts, as the test superuser)

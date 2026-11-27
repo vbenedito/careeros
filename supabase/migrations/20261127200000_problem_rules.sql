@@ -332,7 +332,9 @@ comment on function public.delete_problem_history(text) is
 -- ---------------------------------------------------------------------------------------------
 -- PSR-13, PSR-22: remove an active rule of the caller.
 --   keep history   -> the row becomes a tombstone: removed_at set, prefix and label cleared now.
---   delete history -> the rule row, the stored ids of that domain and its tombstones are deleted.
+--   delete history -> the stored ids of that domain and its older tombstones are deleted, then the
+--                     rule becomes a tombstone as well, so an interval still queued in the extension
+--                     keeps its time with the id dropped (PSR-23 step 4, PRB-07).
 -- Same per-user lock as ingest. A rule that is not the caller's or is already removed is
 -- PT404 NOT_FOUND (a client cannot tell the two apart).
 -- ---------------------------------------------------------------------------------------------
@@ -363,14 +365,14 @@ begin
     raise exception 'NOT_FOUND' using errcode = 'PT404';
   end if;
 
+  -- The helper deletes only rows that are already tombstones, so the rule being removed is still
+  -- active here and survives it; it is turned into the one tombstone of this removal below.
   if p_delete_history then
-    delete from public.problem_rules r where r.id = p_rule_id and r.user_id = caller;
     perform private.delete_problem_domain_history(caller, v_domain);
-  else
-    update public.problem_rules r
-    set removed_at = now(), prefix = null, label = null
-    where r.id = p_rule_id and r.user_id = caller;
   end if;
+  update public.problem_rules r
+  set removed_at = now(), prefix = null, label = null
+  where r.id = p_rule_id and r.user_id = caller;
 end;
 $$;
 
@@ -379,7 +381,8 @@ grant execute on function public.remove_problem_rule(uuid, boolean) to authentic
 
 comment on function public.remove_problem_rule(uuid, boolean) is
   'Removes an active problem rule of auth.uid(): keep history leaves a tombstone (no prefix, no '
-  'label); delete history deletes the row and the stored ids of that domain (PSR-13, PSR-22).';
+  'label); delete history first deletes the stored ids of that domain and its older tombstones. Both '
+  'leave one tombstone (PSR-13, PSR-22, PSR-23 step 4).';
 
 -- ---------------------------------------------------------------------------------------------
 -- PSR-24, DATA-16: widen the stored-id check from the slug pattern to the id pattern. Every
