@@ -18,7 +18,7 @@ Format: lightweight [MADR](https://adr.github.io/madr/) — Context · Options �
 | [0012](0012-entitlements.md) | Server-owned plans and limits with a compatible error contract | Proposed |
 | [0013](0013-admin-access.md) | Admin access by table; ledger in a private repository | Accepted |
 | [0014](0014-posts-pipeline.md) | Posts pipeline: public code, private data and secrets, GitHub Actions scheduler | Accepted |
-| [0015](0015-user-problem-rules.md) | User problem rules as data, read by a fixed matcher | Proposed |
+| [0015](0015-user-problem-rules.md) | User problem rules as data, read by a fixed matcher | Accepted |
 
 Accepted at Gate 2 approval (2026-11-04); ADR-0003 accepted after spike #10 (2026-11-05); ADR-0009 accepted on 2026-11-10 (#99).
 

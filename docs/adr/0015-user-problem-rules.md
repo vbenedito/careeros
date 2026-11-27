@@ -1,6 +1,6 @@
 # ADR-0015 — User problem rules as data, read by a fixed matcher
 
-Status: Proposed · Date: 2026-11-27 · Issue: #245
+Status: Accepted (product owner, 2026-11-27) · Date: 2026-11-27 · Issue: #245
 
 ## Context
 Problem tracking (PRB-01..23) works on a fixed list of sites, `PROBLEM_DOMAINS` (`leetcode.com`, `neetcode.io`, PRB-18), with one fixed path rule `/problems/<slug>`. The list is in `packages/shared` and in the database (`private.problem_domains()` and a check on `study_session_problems`). Adding a site needs a migration, an extension release and a Chrome Web Store review (#233).

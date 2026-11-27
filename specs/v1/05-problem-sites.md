@@ -1,8 +1,8 @@
 # 05 — Problem sites by example URL
 
-Status: **Proposed (2026-11-27)** · Issue: #245 · Builds on: [01-problems](01-problems.md) (PRB-01..23, NC-a..e), [02-entitlements](02-entitlements.md) (ENT) · Related ADRs: [0006](../../docs/adr/0006-tabs-permission.md) (permissions), [0011](../../docs/adr/0011-ingest-v2.md) (ingest v2), [0012](../../docs/adr/0012-entitlements.md) (entitlements), [0015](../../docs/adr/0015-user-problem-rules.md) (user problem rules, proposed)
+Status: **Approved (2026-11-27)** · Issue: #245 · Builds on: [01-problems](01-problems.md) (PRB-01..23, NC-a..e), [02-entitlements](02-entitlements.md) (ENT) · Related ADRs: [0006](../../docs/adr/0006-tabs-permission.md) (permissions), [0011](../../docs/adr/0011-ingest-v2.md) (ingest v2), [0012](../../docs/adr/0012-entitlements.md) (entitlements), [0015](../../docs/adr/0015-user-problem-rules.md) (user problem rules, proposed)
 
-This is a **spike output**: a proposal, not approved work. Nothing here is built. The product owner decides whether and when to build it (section 8). Every ID in this spec is **Proposed**. They have no tests yet; untested IDs are expected for a proposal (as for PRB-18..22 in #233).
+Approved 2026-11-27 (#245, product owner): O1 build now as extension 0.4.0 (0.3.1 is live in the store); O2 never store the query or fragment; O3 rule label + id now, a per-problem name later (P1); O4 cap 5 user rules on `free`; O5 LeetCode and NeetCode stay built-in; O6 id kind `id`, at most 64 characters. All recommendations of section 8 accepted. The IDs are untested until PS-a..d add their tests.
 
 ## 1. Objective
 
@@ -227,7 +227,7 @@ Numbers are assigned when the product owner approves this proposal. Model and re
 
 ## 8. Open decisions
 
-Each needs the product owner's answer before PS-a starts.
+Decided by the product owner on 2026-11-27: every recommendation below is accepted; O1 = build now, as 0.4.0, since 0.3.1 is live.
 
 | # | Decision | Recommendation | Trade-off |
 |---|---|---|---|
