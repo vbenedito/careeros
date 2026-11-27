@@ -4,6 +4,8 @@ Status: **Approved (2026-11-27)** · Issue: #245 · Builds on: [01-problems](01-
 
 Approved 2026-11-27 (#245, product owner): O1 build now as extension 0.4.0 (0.3.1 is live in the store); O2 never store the query or fragment; O3 rule label + id now, a per-problem name later (P1); O4 cap 5 user rules on `free`; O5 LeetCode and NeetCode stay built-in; O6 id kind `id`, at most 64 characters. All recommendations of section 8 accepted. The IDs are untested until PS-a..d add their tests.
 
+Amended 2026-11-27 (#285, PS-a): implemented in `supabase/migrations/20261127200000_problem_rules.sql` and `supabase/tests/database/140_problem_rules.test.sql`: section 6 step 1 and PSR-09, PSR-13 (database part), PSR-15, PSR-16, PSR-22, PSR-23, PSR-24 and PSR-25 (confirmation); constants in `packages/shared/src/constants.ts` with parity tests; `plans.max_problem_rules`. Choices where the text left room: clients read only **active** rules (a tombstone is not readable); the RPCs are `add_problem_rule`, `remove_problem_rule(rule, delete_history)` and `delete_problem_history(domain)` (no list RPC: the list is a `SELECT` under RLS); the insert trigger of `study_session_problems` also accepts a direct insert for a domain with only a removed rule, so a restore from the backup can load history kept with **Remove and keep history**; `PSR-12`..`PSR-14`, `PSR-17`..`PSR-21` are not part of PS-a.
+
 ## 1. Objective
 
 Today a problem site is a fixed list in code and in the database (`PROBLEM_DOMAINS` = `leetcode.com`, `neetcode.io`, PRB-18) with one fixed path rule (`/problems/<slug>`). A new site needs a migration, an extension release and a store review (#233).

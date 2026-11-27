@@ -2,6 +2,8 @@
 
 Status: **Proposed (2026-11-17)** · Issue: #176 · Source: [v1 discovery](00-discovery.md) D22, D23, D24; [grill report](../../docs/history/grill-report-2026-11-12.md) A1, A2 · Related ADRs: [0012](../../docs/adr/0012-entitlements.md) (entitlements)
 
+Amended 2026-11-27 (#285, PS-a): ENT-01 and ENT-05 implemented for problem rules in `20261127200000_problem_rules.sql`: new column `plans.max_problem_rules` (`free` = 5, `FREE_MAX_PROBLEM_RULES`, checked by `db-parity.test.ts`, ENT-11); the cap error of a new rule has `hint` = `PSR-15` and `details.kind = "problem_rules"` ([PSR-15](05-problem-sites.md)). The site limit (DATA-01) is unchanged.
+
 Amended 2026-11-18 (#180): ENT-07 and ENT-09 implemented in the extension: the site-limit error reads `limit` from `details` (`parseLimitErrorDetails`); the popup message uses it. With no valid details the hint still gives `LIMIT_REACHED` and the message is "You've reached the site limit." (EXT-UI-07).
 
 ## 1. Objective

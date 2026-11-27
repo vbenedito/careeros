@@ -167,25 +167,51 @@ describe("database parity: ingest and totals constants", () => {
  * from the LAST migration that sets the `free` row (an insert, or a later update), because that
  * is what the database holds after all migrations ran.
  */
-function lastFreePlanLimit(): { file: string; limit: string } {
+function lastFreePlanLimit(column = "max_tracked_domains"): { file: string; limit: string } {
+  // The first limit column is set by the insert of the plans table; later columns by an update.
   const insert = /insert into public\.plans\s*\([^)]*\)\s*values\s*\(\s*'free'\s*,\s*(\d+)\s*\)/gi;
-  const update =
-    /update public\.plans\s+set\s+max_tracked_domains\s*=\s*(\d+)\s+where\s+id\s*=\s*'free'/gi;
+  const update = new RegExp(
+    `update public\\.plans\\s+set\\s+${column}\\s*=\\s*(\\d+)\\s+where\\s+id\\s*=\\s*'free'`,
+    "gi",
+  );
   for (const file of readdirSync(migrationsDir).sort().reverse()) {
     const sql = readFileSync(resolve(migrationsDir, file), "utf8");
     // Within one file the last statement wins.
-    const hits = [...sql.matchAll(insert), ...sql.matchAll(update)].sort(
-      (a, b) => (a.index ?? 0) - (b.index ?? 0),
-    );
+    const hits = [
+      ...(column === "max_tracked_domains" ? sql.matchAll(insert) : []),
+      ...sql.matchAll(update),
+    ].sort((x, y) => (x.index ?? 0) - (y.index ?? 0));
     const last = hits.at(-1)?.[1];
     if (last) return { file, limit: last };
   }
-  throw new Error("no migration sets the free row of public.plans");
+  throw new Error(`no migration sets ${column} of the free row of public.plans`);
 }
 
 describe("database parity: entitlements", () => {
   it("ENT-11 the free plan's max_tracked_domains in the migrations equals ENTITLEMENTS", () => {
     expect(lastFreePlanLimit().limit).toBe(`${ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS}`);
+  });
+
+  it("ENT-11 PSR-15 the free plan's max_problem_rules in the migrations equals ENTITLEMENTS", () => {
+    expect(lastFreePlanLimit("max_problem_rules").limit).toBe(
+      `${ENTITLEMENTS.FREE_MAX_PROBLEM_RULES}`,
+    );
+  });
+
+  it("ENT-11 PSR-15 the rule-limit trigger reads its number from the plan and keeps the PSR-15 error contract", () => {
+    const { sql } = latestFunctionSql("private.enforce_problem_rule_limit");
+    expect(
+      occurrences(sql, /count\(\*\) from public\.problem_rules[^;]*>= (\S+)\)? then/g),
+    ).toEqual(["v_limit"]);
+    expect(sql).toContain("private.plan_of(new.user_id)");
+    expect(sql).toContain("p.max_problem_rules");
+    expect(sql).toContain("removed_at is null");
+    expect(sql).toContain("pg_advisory_xact_lock");
+    expect(sql).toContain("'A user can add at most % problem rules'");
+    expect(occurrences(sql, /errcode = '(\w+)'/g)).toContain("P0001");
+    expect(sql).toContain(`hint = '${ENTITLEMENTS.PROBLEM_RULES_LIMIT_ERROR_HINT}'`);
+    expect(sql).toContain(`'code', '${ENTITLEMENTS.LIMIT_ERROR_CODE}'`);
+    expect(sql).toContain("'kind', 'problem_rules'");
   });
 
   it("ENT-11 the free plan id in the migrations equals PLAN_FREE", () => {
@@ -199,53 +225,51 @@ describe("database parity: entitlements", () => {
  * (table CHECK and the ingest v2 parser), and the problem list limit equals PROBLEM_LIST_MAX.
  */
 describe("database parity: problems", () => {
-  const table = (() => {
-    for (const file of readdirSync(migrationsDir).sort().reverse()) {
-      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
-      const match = /create table public\.study_session_problems \([\s\S]*?\n\);/.exec(sql);
-      if (match) return match[0];
-    }
-    throw new Error("study_session_problems not found in supabase/migrations");
-  })();
+  const code = (sql: string) => sql.replace(/--[^\n]*/g, "");
   const parser = latestFunctionSql("private.parse_session_element").sql;
-
-  it("PRB-05 DATA-16 the slug pattern in the table CHECK and the parser equals PROBLEM_SLUG_PATTERN", () => {
-    expect(occurrences(table, /problem_slug ~ '([^']+)'/g)).toEqual([
-      PROBLEMS.PROBLEM_SLUG_PATTERN.source,
-    ]);
-    expect(occurrences(parser, /\(element ->> 'problem'\) !~ '([^']+)'/g)).toEqual([
-      PROBLEMS.PROBLEM_SLUG_PATTERN.source,
-    ]);
-  });
-
-  it("PRB-05 DATA-16 the slug length limit equals PROBLEM_SLUG_MAX", () => {
-    expect(occurrences(table, /char_length\(problem_slug\) <= (\d+)/g)).toEqual([
-      `${PROBLEMS.PROBLEM_SLUG_MAX}`,
-    ]);
-    expect(occurrences(parser, /char_length\(element ->> 'problem'\) > (\d+)/g)).toEqual([
-      `${PROBLEMS.PROBLEM_SLUG_MAX}`,
-    ]);
-  });
-
-  // PRB-18 (#237): the list is written once in SQL, in private.problem_domains(); the table
-  // CHECK and the ingest parser call it, so they cannot differ from each other.
-  const domainsFn = latestFunctionSql("private.problem_domains").sql;
-  const domainCheck = (() => {
+  const trigger = latestFunctionSql("private.check_problem_row").sql;
+  /** The latest definition of the CHECK on the stored id (a later migration may re-create it). */
+  const idCheck = (() => {
     for (const file of readdirSync(migrationsDir).sort().reverse()) {
       const sql = readFileSync(resolve(migrationsDir, file), "utf8");
-      const matches = [
-        ...sql.matchAll(/add constraint study_session_problems_domain_check\s+check \(([^;]+)\);/g),
-      ];
-      const last = matches.at(-1);
-      if (last) return last[1] as string;
+      const match = [
+        ...sql.matchAll(/study_session_problems_slug_check check \(([\s\S]*?)\n\s*\)(?:,|;)/g),
+      ].at(-1);
+      if (match) return match[1] as string;
     }
-    throw new Error("study_session_problems_domain_check not found in supabase/migrations");
+    throw new Error("study_session_problems_slug_check not found in supabase/migrations");
   })();
+
+  it("PRB-05 PSR-23 PSR-24 the built-in slug pattern (first) and the user-rule id pattern (second) in the parser and the trigger equal PROBLEMS", () => {
+    const patterns = [PROBLEMS.PROBLEM_SLUG_PATTERN.source, PROBLEMS.PROBLEM_ID_PATTERN.source];
+    expect(occurrences(parser, /\(element ->> 'problem'\) !~ '([^']+)'/g)).toEqual(patterns);
+    expect(occurrences(trigger, /new\.problem_slug !~ '([^']+)'/g)).toEqual(patterns);
+  });
+
+  it("PRB-05 PSR-23 PSR-24 the slug limit (first) and PROBLEM_ID_MAX (second) in the parser and the trigger equal PROBLEMS", () => {
+    const limits = [`${PROBLEMS.PROBLEM_SLUG_MAX}`, `${PROBLEMS.PROBLEM_ID_MAX}`];
+    expect(occurrences(parser, /char_length\(element ->> 'problem'\) > (\d+)/g)).toEqual(limits);
+    expect(occurrences(trigger, /char_length\(new\.problem_slug\) > (\d+)/g)).toEqual(limits);
+  });
+
+  it("PSR-24 DATA-16 the stored-id column CHECK is widened to PROBLEM_ID_PATTERN and keeps PROBLEM_SLUG_MAX", () => {
+    expect(occurrences(idCheck, /problem_slug ~ '([^']+)'/g)).toEqual([
+      PROBLEMS.PROBLEM_ID_PATTERN.source,
+    ]);
+    expect(occurrences(idCheck, /char_length\(problem_slug\) <= (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_SLUG_MAX}`,
+    ]);
+  });
+
+  // PRB-18, PSR-04: the built-in rules are written once in SQL, in private.problem_domains(); the
+  // trigger and the ingest parser call it, so they cannot differ from each other.
+  const domainsFn = latestFunctionSql("private.problem_domains").sql;
   const listed = (sql: string) => [...sql.matchAll(/'([^']+)'/g)].map((m) => m[1]);
 
-  it("PRB-18 DATA-16 private.problem_domains() equals PROBLEM_DOMAINS", () => {
+  it("PRB-18 PSR-04 private.problem_domains() equals PROBLEM_DOMAINS and the domains of BUILT_IN_PROBLEM_RULES", () => {
     const array = /array\[([^\]]+)\]/.exec(domainsFn)?.[1] ?? "";
     expect(listed(array)).toEqual([...PROBLEMS.PROBLEM_DOMAINS]);
+    expect(listed(array)).toEqual(PROBLEMS.BUILT_IN_PROBLEM_RULES.map((rule) => rule.domain));
     expect(domainsFn).toContain("immutable");
   });
 
@@ -253,13 +277,26 @@ describe("database parity: problems", () => {
     expect(new Set(PROBLEMS.PROBLEM_DOMAINS).size).toBe(PROBLEMS.PROBLEM_DOMAINS.length);
   });
 
-  it("PRB-18 DATA-16 the table CHECK literal, private.problem_domains() and PROBLEM_DOMAINS are equal; the parser has no literal", () => {
-    expect(domainCheck).not.toContain("problem_domains");
-    expect(listed(domainCheck)).toEqual([...PROBLEMS.PROBLEM_DOMAINS]);
-    expect(listed(domainCheck)).toEqual(listed(/array\[([^\]]+)\]/.exec(domainsFn)?.[1] ?? ""));
-    expect(parser).toContain("private.problem_domains()");
-    const code = parser.replace(/--[^\n]*/g, "");
-    for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(code).not.toContain(`'${domain}'`);
+  it("PSR-24 DATA-16 the literal domain CHECK is dropped and the trigger that replaces it reads the one list; neither the parser nor the trigger has a domain literal", () => {
+    let last: string | undefined;
+    for (const file of readdirSync(migrationsDir).sort()) {
+      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+      const drops = [...sql.matchAll(/drop constraint study_session_problems_domain_check/g)]
+        .length;
+      const adds = [...sql.matchAll(/add constraint study_session_problems_domain_check/g)].length;
+      if (drops > adds) last = file;
+      else if (adds > 0) last = undefined;
+    }
+    expect(last, "the last migration that touches the domain check must drop it").toBeDefined();
+    const migration = readFileSync(resolve(migrationsDir, last ?? ""), "utf8");
+    expect(migration).toMatch(
+      /create trigger study_session_problems_rule_check\s+before insert on public\.study_session_problems\s+for each row execute function private\.check_problem_row\(\)/,
+    );
+    expect(occurrences(trigger, /errcode = '(\w+)'/g)).toEqual(["23514", "23514"]);
+    for (const sql of [parser, trigger]) {
+      expect(sql).toContain("private.problem_domains()");
+      for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(code(sql)).not.toContain(`'${domain}'`);
+    }
   });
 
   it("PRB-18 the shared ingest implementation names no problem domain", () => {
@@ -284,6 +321,70 @@ describe("database parity: problems", () => {
   it("PRB-11 DATA-15a get_problem_totals_v2 returns at most PROBLEM_LIST_MAX rows", () => {
     const { sql } = latestFunctionSql("public.get_problem_totals_v2");
     expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
+  });
+});
+
+/**
+ * PSR-01, PSR-06, PSR-07, PSR-15, PSR-22: the problem_rules table and the add RPC repeat the rule
+ * limits of the template language; they must equal PROBLEMS.
+ */
+describe("database parity: problem rules", () => {
+  const table = (() => {
+    for (const file of readdirSync(migrationsDir).sort().reverse()) {
+      const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+      const match = /create table public\.problem_rules \([\s\S]*?\n\);/.exec(sql);
+      if (match) return match[0];
+    }
+    throw new Error("problem_rules not found in supabase/migrations");
+  })();
+  const add = latestFunctionSql("public.add_problem_rule").sql;
+  const segment = PROBLEMS.PROBLEM_RULE_SEGMENT_PATTERN.source.slice(1, -1);
+  const listed = (sql: string) => [...sql.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+
+  it("PSR-07 the kinds in the table CHECK and in the RPC equal PROBLEM_ID_KINDS", () => {
+    expect(listed(/kind in \(([^)]+)\)/.exec(table)?.[1] ?? "")).toEqual([
+      ...PROBLEMS.PROBLEM_ID_KINDS,
+    ]);
+    expect(listed(/p_kind not in \(([^)]+)\)/.exec(add)?.[1] ?? "")).toEqual([
+      ...PROBLEMS.PROBLEM_ID_KINDS,
+    ]);
+  });
+
+  it("PSR-06 the segment pattern in the RPC and in the table CHECK equals PROBLEM_RULE_SEGMENT_PATTERN", () => {
+    expect(occurrences(add, /v_segment !~ '([^']+)'/g)).toEqual([
+      PROBLEMS.PROBLEM_RULE_SEGMENT_PATTERN.source,
+    ]);
+    const joined = `^${segment}(?:/${segment}){0,${PROBLEMS.PROBLEM_RULE_PREFIX_MAX - 1}}$`;
+    expect(occurrences(table, /array_to_string\(prefix, '\/'\)\s+~ '([^']+)'/g)).toEqual([joined]);
+  });
+
+  it("PSR-06 the prefix count and the segment length limits equal PROBLEMS", () => {
+    const { PROBLEM_RULE_PREFIX_MIN: min, PROBLEM_RULE_PREFIX_MAX: max } = PROBLEMS;
+    expect(occurrences(table, /cardinality\(prefix\) between (\d+ and \d+)/g)).toEqual([
+      `${min} and ${max}`,
+    ]);
+    expect(occurrences(add, /cardinality\(p_prefix\) not between (\d+ and \d+)/g)).toEqual([
+      `${min} and ${max}`,
+    ]);
+    const tooLong = PROBLEMS.PROBLEM_RULE_SEGMENT_MAX + 1;
+    expect(occurrences(table, /!~ '\[\^\/\]\{(\d+)\}'/g)).toEqual([`${tooLong}`]);
+    expect(occurrences(add, /char_length\(v_segment\) > (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_RULE_SEGMENT_MAX}`,
+    ]);
+  });
+
+  it("PSR-01 the label limit in the table CHECK and in the RPC equals PROBLEM_RULE_LABEL_MAX", () => {
+    expect(occurrences(table, /char_length\(label\) between 1 and (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_RULE_LABEL_MAX}`,
+    ]);
+    expect(occurrences(add, /char_length\(v_label\) > (\d+)/g)).toEqual([
+      `${PROBLEMS.PROBLEM_RULE_LABEL_MAX}`,
+    ]);
+  });
+
+  it("PSR-04 O5 the RPC refuses the built-in domains through private.problem_domains(), with no literal", () => {
+    expect(add).toContain("= any (private.problem_domains())");
+    for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(add).not.toContain(`'${domain}'`);
   });
 });
 

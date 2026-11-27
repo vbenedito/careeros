@@ -7,8 +7,10 @@
 # public.admins IS dumped: it holds only user ids, and losing it would silently lock the admin out
 # (rows are added by hand, so the migrations cannot recreate them). It references auth.users,
 # which is dumped too, and pg_dump writes auth.users first (foreign-key order).
-# pg_dump writes table data in foreign-key order (study_sessions before study_session_problems);
-# backup-restore-test.sh proves the round trip in CI.
+# pg_dump writes table data in foreign-key order (study_sessions before study_session_problems),
+# and tables with no foreign-key link by name: problem_rules is written before
+# study_session_problems, which matters because the insert trigger of study_session_problems
+# (PSR-24) looks the user's rules up. backup-restore-test.sh proves the round trip in CI.
 # Usage: PGURL=<postgres-url> scripts/ops/db-dump.sh
 # The URL holds the database password: it is read from the environment and handed to Docker
 # by name, so it never appears in a command line, process list or shell history.
@@ -22,4 +24,4 @@ docker run --rm --network host -e PGURL "$image" \
     --table=auth.users --table=auth.identities \
     --table=public.tracked_domains --table=public.study_sessions \
     --table=public.account_settings --table=public.study_session_problems \
-    --table=public.admins'
+    --table=public.problem_rules --table=public.admins'

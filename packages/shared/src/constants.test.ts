@@ -109,6 +109,60 @@ describe("constants match the specs", () => {
     }
   });
 
+  it("PSR-01..09 PSR-15 PSR-25 specs/v1/05-problem-sites.md §2 table equals PROBLEMS and ENTITLEMENTS", () => {
+    const spec = readFileSync(
+      resolve(import.meta.dirname, "../../../specs/v1/05-problem-sites.md"),
+      "utf8",
+    );
+    const row = (name: string) =>
+      new RegExp(`^\\| \`${name}\` \\| \`?([^|\`]+?)\`? \\|`, "m").exec(spec)?.[1];
+    const tokens = (name: string) =>
+      [
+        ...(new RegExp(`^\\| \`${name}\` \\| ([^|]+) \\|`, "m").exec(spec)?.[1] ?? "").matchAll(
+          /`([^`]+)`/g,
+        ),
+      ].map((m) => m[1]);
+    expect(row("PROBLEM_RULE_PREFIX_MIN")).toBe(`${PROBLEMS.PROBLEM_RULE_PREFIX_MIN}`);
+    expect(row("PROBLEM_RULE_PREFIX_MAX")).toBe(`${PROBLEMS.PROBLEM_RULE_PREFIX_MAX}`);
+    expect(row("PROBLEM_RULE_SEGMENT_PATTERN")).toBe(PROBLEMS.PROBLEM_RULE_SEGMENT_PATTERN.source);
+    expect(row("PROBLEM_RULE_SEGMENT_MAX")).toBe(`${PROBLEMS.PROBLEM_RULE_SEGMENT_MAX}`);
+    expect(tokens("PROBLEM_ID_KINDS")).toEqual([...PROBLEMS.PROBLEM_ID_KINDS]);
+    expect(/^\| `PROBLEM_ID_PATTERN` \(kind `id`\) \| `([^`]+)` \|/m.exec(spec)?.[1]).toBe(
+      PROBLEMS.PROBLEM_ID_PATTERN.source,
+    );
+    expect(row("PROBLEM_ID_MAX")).toBe(`${PROBLEMS.PROBLEM_ID_MAX}`);
+    expect(tokens("PROBLEM_RULE_RISKY_SEGMENTS")).toEqual([
+      ...PROBLEMS.PROBLEM_RULE_RISKY_SEGMENTS,
+    ]);
+    expect(row("PROBLEM_ID_RANDOM_MIN")).toBe(`${PROBLEMS.PROBLEM_ID_RANDOM_MIN}`);
+    expect(row("PROBLEM_RULE_LABEL_MAX")).toBe(`${PROBLEMS.PROBLEM_RULE_LABEL_MAX}`);
+    expect(row("FREE_MAX_PROBLEM_RULES")).toBe(`${ENTITLEMENTS.FREE_MAX_PROBLEM_RULES}`);
+    expect(spec).toContain(`\`hint\` = \`${ENTITLEMENTS.PROBLEM_RULES_LIMIT_ERROR_HINT}\``);
+    // PSR-04: the built-in rules are today's list, with today's path prefix and slug kind.
+    expect(PROBLEMS.BUILT_IN_PROBLEM_RULES.map((rule) => rule.domain)).toEqual([
+      ...PROBLEMS.PROBLEM_DOMAINS,
+    ]);
+    for (const rule of PROBLEMS.BUILT_IN_PROBLEM_RULES) {
+      expect(`/${rule.prefix.join("/")}/`).toBe(PROBLEMS.PROBLEM_PATH_PREFIX);
+      expect(rule.kind).toBe("slug");
+    }
+  });
+
+  it("PSR-07 PSR-25 O6 the id pattern accepts and refuses the spec examples", () => {
+    for (const id of ["cmlz26cxp08st08adxvy89hr1", "Ab_12", "a-b_c", "3Sum"]) {
+      expect(PROBLEMS.PROBLEM_ID_PATTERN.test(id), id).toBe(true);
+    }
+    for (const id of ["abc%20", "a@b.c", "a.b", "a=1", "a+b", "a~b", "a--b", "_a", "a_", ""]) {
+      expect(PROBLEMS.PROBLEM_ID_PATTERN.test(id), id).toBe(false);
+    }
+    for (const segment of ["practice", "system-design", "a.b_c-d", "v2"]) {
+      expect(PROBLEMS.PROBLEM_RULE_SEGMENT_PATTERN.test(segment), segment).toBe(true);
+    }
+    for (const segment of ["Practice", "a%20b", "-a", "a/b", "a b", ""]) {
+      expect(PROBLEMS.PROBLEM_RULE_SEGMENT_PATTERN.test(segment), segment).toBe(false);
+    }
+  });
+
   it("ENT-01 the old site-limit constant is the free plan's limit", () => {
     expect(DATA.MAX_TRACKED_DOMAINS).toBe(ENTITLEMENTS.FREE_MAX_TRACKED_DOMAINS);
   });

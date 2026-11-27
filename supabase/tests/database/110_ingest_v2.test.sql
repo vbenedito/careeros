@@ -148,15 +148,15 @@ select throws_ok(
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000002', tests.user_id('jon'), 'neetcode.com', 'two-sum') $$,
-  '23514', null, 'DATA-16 a slug row for a session outside PROBLEM_DOMAINS is refused by the CHECK (#237: neetcode.io is inside; 130_problem_domains)');
+  '23514', null, 'DATA-16 PSR-24 a slug row on a domain with no rule of the user (neetcode.com) is refused, now by the trigger with the same SQLSTATE as the old CHECK (#285; neetcode.io is built-in, see 130_problem_domains)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000001', tests.user_id('jon'), 'leetcode.com', 'Two-Sum') $$,
-  '23514', null, 'PRB-05 DATA-16 a slug outside PROBLEM_SLUG_PATTERN is refused by the CHECK');
+  '23514', null, 'PRB-05 DATA-16 PSR-24 Two-Sum on built-in leetcode.com is refused by the trigger: a built-in site needs a slug (#285: it fits the widened column check, which is no longer what refuses it)');
 select throws_ok(
   format($$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000001', tests.user_id('jon'), 'leetcode.com', %L) $$, repeat('a', 101)),
-  '23514', null, 'PRB-05 DATA-16 a slug longer than PROBLEM_SLUG_MAX is refused by the CHECK');
+  '23514', null, 'PRB-05 DATA-16 a slug longer than PROBLEM_SLUG_MAX is refused (trigger and column check)');
 select lives_ok(
   format($$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('f0000000-0000-4000-8000-000000000001', tests.user_id('jon'), 'leetcode.com', %L) $$, repeat('a', 100)),
