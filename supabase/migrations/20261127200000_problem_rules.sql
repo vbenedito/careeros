@@ -274,7 +274,8 @@ comment on function public.add_problem_rule(text, text[], text, text, boolean) i
 
 -- ---------------------------------------------------------------------------------------------
 -- PSR-13, PSR-22, PSR-24: per-domain history delete. Deletes the stored ids of ONE domain of the
--- caller and the tombstones of that domain; study_sessions and every total stay unchanged.
+-- caller; the tombstones of that domain stay (they hold no prefix and no label, and they keep
+-- queued intervals from being rejected, PRB-07). study_sessions and every total stay unchanged.
 -- Same per-user lock as ingest, so no upload in flight can add an id after the delete.
 -- Private helper so remove_problem_rule and delete_problem_history share one implementation.
 -- ---------------------------------------------------------------------------------------------
@@ -284,10 +285,6 @@ language sql
 security definer
 set search_path = ''
 as $$
-  with tombstones as (
-    delete from public.problem_rules r
-    where r.user_id = p_user_id and r.domain = p_domain and r.removed_at is not null
-  )
   delete from public.study_session_problems p
   where p.user_id = p_user_id and p.domain = p_domain;
 $$;
@@ -326,15 +323,15 @@ revoke all on function public.delete_problem_history(text) from public, anon;
 grant execute on function public.delete_problem_history(text) to authenticated;
 
 comment on function public.delete_problem_history(text) is
-  'Deletes the stored problem ids of one domain of auth.uid() (and that domain''s tombstones); '
+  'Deletes the stored problem ids of one domain of auth.uid(); keeps that domain''s tombstones; '
   'never touches study_sessions or any total (PSR-13, PSR-24).';
 
 -- ---------------------------------------------------------------------------------------------
 -- PSR-13, PSR-22: remove an active rule of the caller.
 --   keep history   -> the row becomes a tombstone: removed_at set, prefix and label cleared now.
---   delete history -> the stored ids of that domain and its older tombstones are deleted, then the
---                     rule becomes a tombstone as well, so an interval still queued in the extension
---                     keeps its time with the id dropped (PSR-23 step 4, PRB-07).
+--   delete history -> the stored ids of that domain are deleted, then the rule becomes a
+--                     tombstone as well, so an interval still queued in the extension keeps its
+--                     time with the id dropped (PSR-23 step 4, PRB-07).
 -- Same per-user lock as ingest. A rule that is not the caller's or is already removed is
 -- PT404 NOT_FOUND (a client cannot tell the two apart).
 -- ---------------------------------------------------------------------------------------------
@@ -365,8 +362,6 @@ begin
     raise exception 'NOT_FOUND' using errcode = 'PT404';
   end if;
 
-  -- The helper deletes only rows that are already tombstones, so the rule being removed is still
-  -- active here and survives it; it is turned into the one tombstone of this removal below.
   if p_delete_history then
     perform private.delete_problem_domain_history(caller, v_domain);
   end if;
@@ -381,8 +376,8 @@ grant execute on function public.remove_problem_rule(uuid, boolean) to authentic
 
 comment on function public.remove_problem_rule(uuid, boolean) is
   'Removes an active problem rule of auth.uid(): keep history leaves a tombstone (no prefix, no '
-  'label); delete history first deletes the stored ids of that domain and its older tombstones. Both '
-  'leave one tombstone (PSR-13, PSR-22, PSR-23 step 4).';
+  'label); delete history first deletes the stored ids of that domain. Both leave a tombstone '
+  '(PSR-13, PSR-22, PSR-23 step 4).';
 
 -- ---------------------------------------------------------------------------------------------
 -- PSR-24, DATA-16: widen the stored-id check from the slug pattern to the id pattern. Every
