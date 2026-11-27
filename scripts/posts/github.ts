@@ -22,6 +22,7 @@ export interface PullInfo {
   merge_commit_sha: string | null;
   merged_by: { login: string } | null;
   head_sha: string;
+  head_ref: string;
   base_ref: string;
   created_at: string;
   title: string;
@@ -40,6 +41,16 @@ export interface RunInfo {
   head_branch: string | null;
   event: string;
   display_title: string;
+}
+export interface WorkflowRun {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+}
+export interface BranchInfo {
+  name: string;
+  sha: string;
 }
 export interface StatusInfo {
   context: string;
@@ -87,6 +98,18 @@ export interface GitHubApi {
   /** The bytes of an asset, fetched from the signed URL without the GitHub token. */
   assetBytes(assetId: number, mask: (value: string) => string): Promise<Uint8Array>;
   getRun(id: number): Promise<RunInfo>;
+  /** An issue (open or closed) with exactly this title and label, for "once ever" alerts (PST-23). */
+  findIssueByTitle(title: string, label: string): Promise<IssueInfo | null>;
+  /** The blob SHA of a file at a ref, or null when it does not exist (PST-33). */
+  fileSha(path: string, ref: string): Promise<string | null>;
+  listBranches(): Promise<BranchInfo[]>;
+  /** Files that `head` changes compared with `base` (three-dot compare). */
+  compareFiles(base: string, head: string): Promise<string[]>;
+  /** Commits on `branch` that touch `path`, since an ISO time (PST-33). */
+  listCommitsOfPath(path: string, branch: string, since: string): Promise<string[]>;
+  commitFiles(sha: string): Promise<string[]>;
+  /** The newest runs of one workflow file (PST-11). */
+  listWorkflowRuns(file: string): Promise<WorkflowRun[]>;
 }
 
 export interface GitHubOptions {
@@ -116,6 +139,7 @@ function toPull(raw: unknown): PullInfo {
     merge_commit_sha: typeof p.merge_commit_sha === "string" ? p.merge_commit_sha : null,
     merged_by: typeof by.login === "string" ? { login: by.login } : null,
     head_sha: str(asJson(p.head).sha),
+    head_ref: str(asJson(p.head).ref),
     base_ref: str(asJson(p.base).ref),
     created_at: str(p.created_at),
     title: str(p.title),
@@ -346,5 +370,72 @@ export class GitHubClient implements GitHubApi {
       event: str(r.event),
       display_title: str(r.display_title),
     };
+  }
+
+  async findIssueByTitle(title: string, label: string): Promise<IssueInfo | null> {
+    const clean = (v: string): string => v.replace(/["\\]/g, " ");
+    const q = `repo:${this.repo} is:issue label:"${clean(label)}" in:title "${clean(title)}"`;
+    const response = await this.#fetch(
+      `${this.#base}/search/issues?${new URLSearchParams({ q, per_page: "30" })}`,
+      { method: "GET", headers: this.#headers(), signal: timeoutSignal() },
+    );
+    if (!response.ok) throw new ApiError("GitHub", response.status, await readErrorCode(response));
+    const body = asJson(await response.json());
+    const items = Array.isArray(body.items) ? body.items : [];
+    const found = items.map(toIssue).find((i) => i.title === title && i.labels.includes(label));
+    return found ?? null;
+  }
+
+  async fileSha(path: string, ref: string): Promise<string | null> {
+    const query = new URLSearchParams({ ref });
+    const response = await this.#request("GET", `/contents/${path}?${query}`);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new ApiError("GitHub", response.status, await readErrorCode(response));
+    const body = asJson(await response.json());
+    return typeof body.sha === "string" ? body.sha : null;
+  }
+
+  async listBranches(): Promise<BranchInfo[]> {
+    const all: BranchInfo[] = [];
+    for (let page = 1; page <= 10; page++) {
+      const list = await this.#json("GET", `/branches?per_page=100&page=${page}`);
+      if (!Array.isArray(list)) break;
+      for (const b of list) {
+        all.push({ name: str(asJson(b).name), sha: str(asJson(asJson(b).commit).sha) });
+      }
+      if (list.length < 100) break;
+    }
+    return all;
+  }
+
+  async compareFiles(base: string, head: string): Promise<string[]> {
+    const spec = `${encodeURIComponent(base)}...${encodeURIComponent(head)}`;
+    const body = asJson(await this.#json("GET", `/compare/${spec}?per_page=100`));
+    return Array.isArray(body.files) ? body.files.map((f) => str(asJson(f).filename)) : [];
+  }
+
+  async listCommitsOfPath(path: string, branch: string, since: string): Promise<string[]> {
+    const query = new URLSearchParams({ path, sha: branch, since, per_page: "100" });
+    const list = await this.#json("GET", `/commits?${query}`);
+    return Array.isArray(list) ? list.map((c) => str(asJson(c).sha)).filter((s) => s !== "") : [];
+  }
+
+  async commitFiles(sha: string): Promise<string[]> {
+    const body = asJson(await this.#json("GET", `/commits/${encodeURIComponent(sha)}`));
+    return Array.isArray(body.files) ? body.files.map((f) => str(asJson(f).filename)) : [];
+  }
+
+  async listWorkflowRuns(file: string): Promise<WorkflowRun[]> {
+    const body = asJson(
+      await this.#json("GET", `/actions/workflows/${encodeURIComponent(file)}/runs?per_page=20`),
+    );
+    const runs = Array.isArray(body.workflow_runs) ? body.workflow_runs : [];
+    return runs.map((r) => ({
+      id: Number(asJson(r).id),
+      status: str(asJson(r).status),
+      conclusion:
+        typeof asJson(r).conclusion === "string" ? (asJson(r).conclusion as string) : null,
+      created_at: str(asJson(r).created_at),
+    }));
   }
 }

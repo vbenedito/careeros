@@ -69,6 +69,48 @@ export async function upsertIssue(
   return created.number;
 }
 
+/** T18, PST-24: the one title of a record that was not merged at post time (any run may open it). */
+export const notMergedTitle = (stem: string): string => `${stem}: record not merged at post time`;
+
+/** The notice that a record is on hold shortly before the post time (T18). */
+export const heldNoticeTitle = (stem: string): string => `${stem}: record on hold before post time`;
+
+export interface EnsureIssue {
+  title: string;
+  labels: string[];
+  body: string;
+  /**
+   * True: an issue that was opened before counts, also when it is closed now, so a step that
+   * must alert "once" does not open it again after the product owner closed it.
+   */
+  once?: boolean;
+}
+
+/** One issue per title: update the open one, else create it. Returns its number and whether it is new. */
+export async function ensureIssue(
+  gh: GitHubApi,
+  input: EnsureIssue,
+): Promise<{ number: number; created: boolean }> {
+  const label = input.labels[0] ?? "";
+  const existing = input.once
+    ? await gh.findIssueByTitle(input.title, label)
+    : ((await gh.listOpenIssues()).find(
+        (i) => i.title === input.title && i.labels.includes(label),
+      ) ?? null);
+  if (existing) {
+    if (existing.state === "open" && existing.body !== input.body && !input.once) {
+      await gh.updateIssue(existing.number, { body: input.body });
+    }
+    return { number: existing.number, created: false };
+  }
+  const created = await gh.createIssue({
+    title: input.title,
+    body: input.body,
+    labels: input.labels,
+  });
+  return { number: created.number, created: true };
+}
+
 export interface AlertBody {
   record: Pick<PostRecord, "date" | "time" | "timezone" | "slug">;
   platform: PostPlatform | "all";

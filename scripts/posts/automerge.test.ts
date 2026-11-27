@@ -43,11 +43,11 @@ const reasons = (over: Partial<AutoMergeInput>) => {
   return d.merge ? [] : d.reasons;
 };
 
-describe("P6 auto-merge decision", () => {
-  it("P6 merges when every rule holds", () => {
+describe("PST-35 auto-merge decision", () => {
+  it("PST-36 merges when every rule holds", () => {
     expect(autoMergeDecision(base())).toEqual({ merge: true });
   });
-  it("P6 needs a posts/check status that is success on the head SHA", () => {
+  it("PST-37 needs a posts/check status that is success on the head SHA", () => {
     expect(reasons({ statuses: [] })).toContain("check-missing");
     expect(
       reasons({
@@ -74,7 +74,7 @@ describe("P6 auto-merge decision", () => {
       }),
     ).toContain("check-missing");
   });
-  it("P6 uses the newest check status: a later failure blocks", () => {
+  it("PST-35 uses the newest check status: a later failure blocks", () => {
     const statuses = [
       {
         context: "posts/check",
@@ -91,7 +91,7 @@ describe("P6 auto-merge decision", () => {
     ];
     expect(reasons({ statuses })).toContain("check-not-success");
   });
-  it("P6 the approval must come from the owner login", () => {
+  it("PST-37 the approval must come from the owner login", () => {
     const comments = [
       {
         body: `${REVIEW_MARKER}\n${HEAD}`,
@@ -101,7 +101,7 @@ describe("P6 auto-merge decision", () => {
     ];
     expect(reasons({ comments })).toContain("no-approval");
   });
-  it("P6 the approval must name the current head SHA", () => {
+  it("PST-37 the approval must name the current head SHA", () => {
     const comments = [
       {
         body: `${REVIEW_MARKER}\n${"b".repeat(40)}`,
@@ -111,7 +111,7 @@ describe("P6 auto-merge decision", () => {
     ];
     expect(reasons({ comments })).toContain("no-approval");
   });
-  it("P6 the marker must be the first line", () => {
+  it("PST-37 the marker must be the first line", () => {
     const comments = [
       {
         body: `Looks good\n${REVIEW_MARKER}\n${HEAD}`,
@@ -121,7 +121,7 @@ describe("P6 auto-merge decision", () => {
     ];
     expect(reasons({ comments })).toContain("no-approval");
   });
-  it("P6 an approval older than the check success does not count", () => {
+  it("PST-37 an approval older than the check success does not count", () => {
     const comments = [
       {
         body: `${REVIEW_MARKER}\n${HEAD}`,
@@ -131,16 +131,16 @@ describe("P6 auto-merge decision", () => {
     ];
     expect(reasons({ comments })).toContain("no-approval");
   });
-  it("P6 a hold stops the merge", () => {
+  it("PST-36 a hold stops the merge", () => {
     expect(reasons({ held: true })).toContain("held");
   });
-  it("P6 the PR must be open at least VETO_WINDOW_H before the post", () => {
+  it("PST-35 the PR must be open at least VETO_WINDOW_H before the post", () => {
     expect(reasons({ prOpenedAt: new Date("2026-11-26T02:00:01Z") })).toContain("opened-too-late");
     expect(reasons({ prOpenedAt: new Date("2026-11-26T02:00:00Z") })).not.toContain(
       "opened-too-late",
     );
   });
-  it("P6 only one record file under posts/YYYY may change, added or modified", () => {
+  it("PST-35 only one record file under posts/YYYY may change, added or modified", () => {
     expect(reasons({ changedFiles: [] })).toContain("not-only-record");
     expect(
       reasons({
@@ -164,16 +164,16 @@ describe("P6 auto-merge decision", () => {
     ).toContain("not-only-record");
     expect(reasons({ changedFiles: [{ filename: PATH, status: "modified" }] })).toEqual([]);
   });
-  it("P6 only a PR into main merges", () => {
+  it("PST-35 only a PR into main merges", () => {
     expect(reasons({ baseBranch: "other" })).toContain("wrong-base");
   });
-  it("P6 merges only from post time minus AUTO_MERGE_LEAD_H up to the post time", () => {
+  it("PST-35 merges only from post time minus AUTO_MERGE_LEAD_H up to the post time", () => {
     expect(reasons({ now: new Date("2026-11-26T19:59:59Z") })).toContain("too-early");
     expect(reasons({ now: new Date("2026-11-26T20:00:00Z") })).toEqual([]);
     expect(reasons({ now: new Date("2026-11-26T21:59:59Z") })).toEqual([]);
     expect(reasons({ now: new Date("2026-11-26T22:00:00Z") })).toContain("post-time-passed");
   });
-  it("P6 the merge commit message ends with the run trailer", () => {
+  it("PST-35 the merge commit message ends with the run trailer", () => {
     expect(mergeCommitMessage("123").endsWith("Posts-Auto-Merge-Run: 123")).toBe(true);
     expect(() => mergeCommitMessage("12x")).toThrow();
   });

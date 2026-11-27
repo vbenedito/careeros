@@ -6,7 +6,12 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { type PostState, PostStateSchema } from "../../packages/shared/src/posts.ts";
+import {
+  type PostState,
+  PostStateSchema,
+  type PostTokens,
+  PostTokensSchema,
+} from "../../packages/shared/src/posts.ts";
 
 export class StatePushError extends Error {
   constructor() {
@@ -19,9 +24,14 @@ export interface StateStore {
   /** `null` when the post has no state file. */
   read(stem: string): Promise<PostState | null>;
   write(stem: string, state: PostState): Promise<void>;
+  /** PST-22 step 5: expiry dates of the tokens (never a value); `null` when there is no file. */
+  readTokens(): Promise<PostTokens | null>;
+  writeTokens(tokens: PostTokens): Promise<void>;
   /** Commits what was written and pushes it; throws `StatePushError` when the push fails. */
   commitAndPush(message: string): Promise<void>;
 }
+
+export const TOKENS_PATH = "posts-state/tokens.json";
 
 export const emptyState = (): PostState => ({ schema: 1, platforms: {} });
 
@@ -44,6 +54,13 @@ export class MemoryStateStore implements StateStore {
   }
   async write(stem: string, state: PostState): Promise<void> {
     this.files.set(stem, `${JSON.stringify(PostStateSchema.parse(state), null, 2)}\n`);
+  }
+  tokensText: string | null = null;
+  async readTokens(): Promise<PostTokens | null> {
+    return this.tokensText === null ? null : PostTokensSchema.parse(JSON.parse(this.tokensText));
+  }
+  async writeTokens(tokens: PostTokens): Promise<void> {
+    this.tokensText = `${JSON.stringify(PostTokensSchema.parse(tokens), null, 2)}\n`;
   }
   async commitAndPush(message: string): Promise<void> {
     if (this.failPushes > 0) {
@@ -102,6 +119,23 @@ export class GitStateStore implements StateStore {
     const file = join(this.#dir, statePath(stem));
     await mkdir(dirname(file), { recursive: true });
     await writeFile(file, `${JSON.stringify(PostStateSchema.parse(state), null, 2)}\n`);
+  }
+
+  async readTokens(): Promise<PostTokens | null> {
+    try {
+      return PostTokensSchema.parse(
+        JSON.parse(await readFile(join(this.#dir, TOKENS_PATH), "utf8")),
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
+  async writeTokens(tokens: PostTokens): Promise<void> {
+    const file = join(this.#dir, TOKENS_PATH);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, `${JSON.stringify(PostTokensSchema.parse(tokens), null, 2)}\n`);
   }
 
   async commitAndPush(message: string): Promise<void> {

@@ -2,40 +2,28 @@
  * Posts pipeline CLI (PST-11, PST-35). Never prints a secret.
  *   node scripts/posts/run.ts publish --ops-dir <path> [--ops-repo owner/name] [--dry-run] [--now <ISO>] [--post-time HH:MM]
  *   node scripts/posts/run.ts auto-merge --ops-repo owner/name [--dry-run] [--now <ISO>] [--post-time HH:MM]
+ *   node scripts/posts/run.ts daily --ops-dir <path> --ops-repo owner/name [--dry-run] [--now <ISO>, dry run only] [--post-time HH:MM]
  *   node scripts/posts/run.ts cron-lines --post-time 19:00 [--now <ISO>]
  * Env: GH_TOKEN; publish also IG_USER_ID, IG_ACCESS_TOKEN, YT_CLIENT_ID, YT_CLIENT_SECRET,
  * YT_REFRESH_TOKEN (not needed with --dry-run), POSTS_APPROVER_LOGIN, GITHUB_REPOSITORY;
- * auto-merge also GITHUB_RUN_ID. Exit code 0 on success, 1 on any failure, 2 on a bad call.
+ * auto-merge also GITHUB_RUN_ID; daily also META_APP_ID, META_APP_SECRET, IG_ACCESS_TOKEN, IG_USER_ID,
+ * YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN and the optional OPS_SECRETS_PAT. Exit code 0 on success, 1 on any failure, 2 on a bad call.
  */
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cronLines, POST_DAYS, POST_TIMEZONE } from "../../packages/shared/src/posts.ts";
 import { BOT_LOGIN } from "./approval.ts";
 import { runAutoMerge } from "./automerge-run.ts";
 import { parseCli } from "./cli.ts";
+import { runDaily, SCHEDULER_WORKFLOW } from "./daily.ts";
 import { GitHubClient } from "./github.ts";
 import { InstagramClient } from "./instagram.ts";
 import { errorInfo } from "./mask.ts";
 import { ffprobeVideo } from "./probe.ts";
-import { type RecordFile, runScheduler } from "./scheduler.ts";
+import { readRecords } from "./records.ts";
+import { runScheduler } from "./scheduler.ts";
 import { GitStateStore } from "./state.ts";
 import { YoutubeClient } from "./youtube.ts";
-
-async function readRecords(opsDir: string): Promise<RecordFile[]> {
-  const files: RecordFile[] = [];
-  const root = join(opsDir, "posts");
-  for (const year of await readdir(root, { withFileTypes: true })) {
-    if (!year.isDirectory()) continue;
-    for (const name of await readdir(join(root, year.name))) {
-      if (!name.endsWith(".json")) continue;
-      files.push({
-        path: `posts/${year.name}/${name}`,
-        text: await readFile(join(root, year.name, name), "utf8"),
-      });
-    }
-  }
-  return files;
-}
 
 const need = (env: Record<string, string | undefined>, name: string): string => {
   const value = env[name];
@@ -71,6 +59,46 @@ async function main(
     });
     return report.failures > 0 ? 1 : 0;
   }
+  if (args.command === "daily") {
+    if (!args.opsDir) throw new Error("--ops-dir <path> is required");
+    const secret = (name: string): string => (args.dryRun ? "" : need(env, name));
+    const workflowText = await readFile(join(args.opsDir, SCHEDULER_WORKFLOW), "utf8").catch(
+      () => null,
+    );
+    const report = await runDaily({
+      gh,
+      store: new GitStateStore(args.opsDir),
+      instagram: new InstagramClient({
+        fetch: globalThis.fetch,
+        token: secret("IG_ACCESS_TOKEN"),
+        userId: args.dryRun ? "0" : need(env, "IG_USER_ID"),
+      }),
+      youtube: new YoutubeClient({
+        fetch: globalThis.fetch,
+        clientId: secret("YT_CLIENT_ID"),
+        clientSecret: secret("YT_CLIENT_SECRET"),
+        refreshToken: secret("YT_REFRESH_TOKEN"),
+      }),
+      fetch: globalThis.fetch,
+      files: await readRecords(args.opsDir),
+      workflowText,
+      now: args.now,
+      postTime: args.postTime,
+      secrets: {
+        igAccessToken: env.IG_ACCESS_TOKEN,
+        metaAppId: env.META_APP_ID,
+        metaAppSecret: env.META_APP_SECRET,
+        ytClientId: env.YT_CLIENT_ID,
+        ytClientSecret: env.YT_CLIENT_SECRET,
+        ytRefreshToken: env.YT_REFRESH_TOKEN,
+        opsPat: env.OPS_SECRETS_PAT,
+      },
+      dryRun: args.dryRun,
+      out,
+    });
+    if (args.dryRun) out("dry run: nothing was written or published");
+    return report.errors > 0 ? 1 : 0;
+  }
   if (args.command === "publish") {
     if (!args.opsDir) throw new Error("--ops-dir <path> is required");
     // A dry run calls no platform endpoint, so it needs no platform secret.
@@ -103,7 +131,7 @@ async function main(
     if (args.dryRun) out("dry run: nothing was written or published");
     return report.failures > 0 || report.errors > 0 ? 1 : 0;
   }
-  throw new Error("usage: run.ts publish|auto-merge|cron-lines (see the file header)");
+  throw new Error("usage: run.ts publish|auto-merge|daily|cron-lines (see the file header)");
 }
 
 try {
