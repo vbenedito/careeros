@@ -26,7 +26,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [Web app (LLD)](architecture/web.md) | living | tech lead | Current | 2026-11-11 |
 | [Database (LLD)](architecture/database.md) | living | tech lead | Current | 2026-11-11 |
 | [Design system](design-system.md) | living | tech lead | Current | 2026-11-11 |
-| [ADRs](adr/README.md) (0001–0014, [template](adr/template.md)) | living | tech lead | 0001–0011, 0013, 0014 accepted; 0012 proposed (#176) | 2026-11-22 |
+| [ADRs](adr/README.md) (0001–0015, [template](adr/template.md)) | living | tech lead | 0001–0011, 0013–0015 accepted; 0012 proposed (#176) | 2026-11-27 |
 | [ADR-0011: ingest v2](adr/0011-ingest-v2.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
 | [ADR-0012: entitlements](adr/0012-entitlements.md) | living | tech lead | Proposed (#176) | 2026-11-17 |
 | [ADR-0014: posts pipeline](adr/0014-posts-pipeline.md) | living | tech lead | Accepted (#264) | 2026-11-22 |
@@ -36,6 +36,7 @@ Architecture docs link to spec IDs instead of repeating the rules. If a doc and 
 | [v1 spec: LeetCode problems (`PRB`)](../specs/v1/01-problems.md) | living | product owner | Proposed (#176) | 2026-11-17 |
 | [v1 spec: entitlements (`ENT`)](../specs/v1/02-entitlements.md) | living | product owner | Proposed (#176) | 2026-11-17 |
 | [v1 spec: posts pipeline (`PST`)](../specs/v1/04-posts-pipeline.md) | living | product owner | Accepted (#264) | 2026-11-22 |
+| [v1 spec: problem sites by example URL (`PSR`)](../specs/v1/05-problem-sites.md) | living | product owner | Proposed (#245) | 2026-11-27 |
 | [Roadmap](roadmap.md) | living | product owner | Candidates, none authorized | 2026-11-11 |
 | [Landing content](landing/content.md) | living | product owner | Implemented; LAND-03 binds | 2026-11-11 |
 | [Landing SEO plan](landing/seo.md) | living | product owner | Implemented; LAND-04..07 bind | 2026-11-11 |
