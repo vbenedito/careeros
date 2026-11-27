@@ -272,7 +272,6 @@ export const POST_FAILURE_CODES = [
   "duplicate-slug",
   "empty-field",
   "link",
-  "post-day",
   "post-time",
   "past",
   "asset-missing",
@@ -382,12 +381,8 @@ export function validateRecord(input: unknown, context: ValidateRecordContext): 
     }
   }
 
-  if (!isPostDay(record.date)) {
-    fail(
-      "post-day",
-      `${record.date} is a ${weekdayOfDate(record.date)}, not ${POST_DAYS.join(" or ")}`,
-    );
-  }
+  // P11 (2026-11-27): a record may be on any day. POST_DAYS stays the normal rhythm and the
+  // days of the backup crons; `isPostDay` is kept for the cron and coverage rules.
   const postTime = context.postTime ?? POST_TIME;
   if (!isPostTime(record.time, postTime)) fail("post-time", `time must be ${postTime}`);
   if (

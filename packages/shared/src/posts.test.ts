@@ -305,11 +305,11 @@ describe("validateRecord (PST-09)", () => {
     expect(codes(youtube)).toEqual(["link"]);
   });
 
-  it("PST-09 fails when the date is not a post day or the time is not POST_TIME", () => {
+  it("PST-09 accepts any day (P11) and fails when the time is not POST_TIME", () => {
     const wednesday = onDate("2030-01-02");
     expect(
       codes(wednesday, context({ path: "posts/2030/2030-01-02-restart-after-gap.json" })),
-    ).toEqual(["post-day"]);
+    ).toEqual([]);
     expect(codes({ ...valid(), time: "20:00" })).toEqual(["post-time"]);
     expect(codes({ ...valid(), time: "20:00" }, context({ postTime: "20:00" }))).toEqual([]);
   });
@@ -345,7 +345,6 @@ describe("validateRecord (PST-09)", () => {
     expect(codes(record, context({ existingSlugs: ["restart-after-gap"] }))).toEqual([
       "stem",
       "duplicate-slug",
-      "post-day",
       "post-time",
     ]);
   });
