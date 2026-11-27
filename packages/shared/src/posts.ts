@@ -19,6 +19,9 @@ export const VETO_WINDOW_H = 20;
 export const AUTO_MERGE_LEAD_H = 2;
 export const MAX_ATTEMPTS = 3;
 export const SCHEDULER_STEP_MIN = 15;
+/** PST-22.1, PST-23: warn when a token has less than this many days left. */
+export const IG_TOKEN_WARN_DAYS = 14;
+export const OPS_PAT_WARN_DAYS = 14;
 export const VIDEO_MIN_S = 20;
 export const VIDEO_MAX_S = 45;
 export const VIDEO_WIDTH = 1080;
@@ -142,7 +145,22 @@ export const PostStateSchema = z
   })
   .strict();
 
+/** PST-22 step 5: `posts-state/tokens.json` holds expiry dates only, never a value. */
+export const PostTokensSchema = z
+  .object({
+    schema: z.literal(POSTS_SCHEMA_VERSION),
+    checked_on: z.iso.date(),
+    instagram: z
+      .object({ ok: z.boolean(), expires_on: z.iso.date().nullable() })
+      .strict()
+      .optional(),
+    youtube: z.object({ ok: z.boolean() }).strict().optional(),
+    ops_pat: z.object({ expires_on: z.iso.date().nullable() }).strict().optional(),
+  })
+  .strict();
+
 export type PostRecord = z.infer<typeof PostRecordSchema>;
+export type PostTokens = z.infer<typeof PostTokensSchema>;
 export type PostState = z.infer<typeof PostStateSchema>;
 
 /** PST-05: the only link a record may hold, generated and never typed. */

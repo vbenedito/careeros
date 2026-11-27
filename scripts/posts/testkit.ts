@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import type { PostRecord } from "../../packages/shared/src/posts.ts";
 import type {
+  BranchInfo,
   CommentInfo,
   CommitInfo,
   GitHubApi,
@@ -11,6 +12,7 @@ import type {
   ReleaseAsset,
   RunInfo,
   StatusInfo,
+  WorkflowRun,
 } from "./github.ts";
 import { ContainerFailedError, type ContainerStatus, type InstagramApi } from "./instagram.ts";
 import type { YoutubeApi, YoutubeVideoStatus } from "./youtube.ts";
@@ -73,6 +75,7 @@ const pull = (over: Partial<PullInfo>): PullInfo => ({
   merge_commit_sha: "c".repeat(40),
   merged_by: { login: "github-actions[bot]" },
   head_sha: "h".repeat(40),
+  head_ref: "record",
   base_ref: "main",
   created_at: "2026-11-25T10:00:00Z",
   title: "record",
@@ -115,8 +118,10 @@ export class FakeGitHub implements GitHubApi {
   async lastCommitOfFile(): Promise<CommitInfo | null> {
     return this.commit;
   }
-  async pullsOfCommit(): Promise<PullInfo[]> {
-    return this.pulls;
+  /** Per-commit answers of `commits/{sha}/pulls` (trust-check fixtures); others get `pulls`. */
+  pullsBySha = new Map<string, PullInfo[]>();
+  async pullsOfCommit(sha?: string): Promise<PullInfo[]> {
+    return (sha !== undefined ? this.pullsBySha.get(sha) : undefined) ?? this.pulls;
   }
   async getPull(number: number): Promise<PullInfo> {
     this.onGetPull?.();
@@ -183,6 +188,32 @@ export class FakeGitHub implements GitHubApi {
     const run = this.runs.get(id);
     if (!run) throw new Error("no run");
     return run;
+  }
+
+  /** Daily-job fixtures (PST-23, PST-33, PST-11). */
+  branches: BranchInfo[] = [];
+  branchFiles = new Map<string, string[]>();
+  pathCommits: string[] = [];
+  commitFilesMap = new Map<string, string[]>();
+  workflowRuns = new Map<string, WorkflowRun[]>();
+  /** Every issue, also closed ones; `listOpenIssues` filters. */
+  async listIssuesByLabel(label: string): Promise<IssueInfo[]> {
+    return this.issues.filter((i) => i.labels.includes(label));
+  }
+  async listBranches(): Promise<BranchInfo[]> {
+    return this.branches;
+  }
+  async compareFiles(_base: string, head: string): Promise<string[]> {
+    return this.branchFiles.get(head) ?? [];
+  }
+  async listCommitsOfPath(): Promise<string[]> {
+    return this.pathCommits;
+  }
+  async commitFiles(sha: string): Promise<string[]> {
+    return this.commitFilesMap.get(sha) ?? [];
+  }
+  async listWorkflowRuns(file: string): Promise<WorkflowRun[]> {
+    return this.workflowRuns.get(file) ?? [];
   }
 
   alertIssues(): IssueInfo[] {

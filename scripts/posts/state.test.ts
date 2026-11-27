@@ -94,3 +94,25 @@ describe("PST-11 CLI arguments and probe", () => {
     expect(() => parseFfprobe("{}")).toThrow();
   });
 });
+
+describe("PST-22 tokens.json", () => {
+  it("PST-22 the token file holds expiry dates only and round-trips through the git store", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "posts-tokens-"));
+    const store = new GitStateStore(dir, async () => ({ code: 0 }));
+    expect(await store.readTokens()).toBeNull();
+    const tokens = {
+      schema: 1 as const,
+      checked_on: "2026-11-27",
+      instagram: { ok: true, expires_on: null },
+      ops_pat: { expires_on: "2027-03-01" },
+    };
+    await store.writeTokens(tokens);
+    expect(await store.readTokens()).toEqual(tokens);
+    await expect(
+      store.writeTokens({
+        ...tokens,
+        instagram: { ok: true, expires_on: null, token: "x" },
+      } as never),
+    ).rejects.toThrow();
+  });
+});

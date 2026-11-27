@@ -7,7 +7,7 @@ export interface Args {
   opsRepo: string | null;
   dryRun: boolean;
   now: Date;
-  /** True when `--now` was given: the clock is then fixed to it. */
+  /** True when `--now` was given (only allowed with `--dry-run`, or for `cron-lines`). */
   nowGiven: boolean;
   postTime: string;
 }
@@ -39,6 +39,10 @@ export function parseCli(argv: readonly string[], env: Record<string, string | u
       args.nowGiven = true;
       if (Number.isNaN(args.now.getTime())) throw new Error("--now must be an ISO 8601 date-time");
     } else throw new Error(`unknown option ${arg}`);
+  }
+  // A fixed clock in a real run would let a window never end; `--now` is for dry runs only.
+  if (args.nowGiven && !args.dryRun && command !== "cron-lines") {
+    throw new Error("--now must be used with --dry-run");
   }
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(args.postTime))
     throw new Error("--post-time must be HH:MM");

@@ -36,21 +36,21 @@ describe("PST-10 approval check", () => {
     gh.pulls = [{ ...must(gh.pulls[0]), merged_by: { login: "vbenedito" } }];
     expect(await checkApproval(gh, input)).toMatchObject({ ok: false });
   });
-  it("P6 a bot merge without the Posts-Auto-Merge-Run trailer is rejected", async () => {
+  it("PST-10 a bot merge without the Posts-Auto-Merge-Run trailer is rejected", async () => {
     gh.commit = { sha: "c".repeat(40), message: "feat(posts): x (#12)" };
     expect(await checkApproval(gh, input)).toMatchObject({ ok: false });
   });
-  it("P6 a bot merge from another workflow is rejected", async () => {
+  it("PST-10 a bot merge from another workflow is rejected", async () => {
     gh.runs.set(555, { ...must(gh.runs.get(555)), path: ".github/workflows/other.yml" });
     expect(await checkApproval(gh, input)).toMatchObject({ ok: false });
   });
-  it("P6 a run on another branch or event is rejected", async () => {
+  it("PST-10 a run on another branch or event is rejected", async () => {
     gh.runs.set(555, { ...must(gh.runs.get(555)), head_branch: "feature" });
     expect(await checkApproval(gh, input)).toMatchObject({ ok: false });
     gh.runs.set(555, { ...must(gh.runs.get(555)), head_branch: "main", event: "push" });
     expect(await checkApproval(gh, input)).toMatchObject({ ok: false });
   });
-  it("P6 a dispatched dry run is rejected, a normal dispatch is accepted", async () => {
+  it("PST-10 a dispatched dry run is rejected, a normal dispatch is accepted", async () => {
     gh.runs.set(555, {
       ...must(gh.runs.get(555)),
       event: "workflow_dispatch",

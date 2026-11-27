@@ -258,18 +258,18 @@ describe("PST-10 approval at publish time", () => {
     gh.assetBytesValue = new Uint8Array([9, 9, 9]);
     await notPublished();
   });
-  it("P6 a bot merge from another workflow is not published", async () => {
+  it("PST-10 a bot merge from another workflow is not published", async () => {
     gh.runs.set(555, { ...must(gh.runs.get(555)), path: ".github/workflows/other.yml" });
     await notPublished();
   });
-  it("P6 a squash commit without the trailer is not published", async () => {
+  it("PST-10 a squash commit without the trailer is not published", async () => {
     gh.commit = { sha: "c".repeat(40), message: "feat(posts): x" };
     await notPublished();
   });
 });
 
-describe("P6 hold", () => {
-  it("P6 a hold label on the record PR publishes nothing, changes no state, and opens one alert", async () => {
+describe("PST-36 hold", () => {
+  it("PST-36 a hold label on the record PR publishes nothing, changes no state, and opens one alert", async () => {
     gh.pulls = [{ ...must(gh.pulls[0]), labels: ["hold"] }];
     await run(5);
     expect(ig.calls).toEqual([]);
@@ -280,7 +280,7 @@ describe("P6 hold", () => {
     await run(20);
     expect(gh.alertIssues()).toHaveLength(2);
   });
-  it("P6 a hold label on an open issue with the stem holds the post", async () => {
+  it("PST-36 a hold label on an open issue with the stem holds the post", async () => {
     gh.issues.push({
       number: 1,
       title: `Question about ${STEM}`,
@@ -292,7 +292,7 @@ describe("P6 hold", () => {
     expect(ig.count("publish")).toBe(0);
     expect(yt.count("upload")).toBe(0);
   });
-  it("P6 removing the hold inside the window lets the next run continue", async () => {
+  it("PST-36 removing the hold inside the window lets the next run continue", async () => {
     gh.pulls = [{ ...must(gh.pulls[0]), labels: ["hold"] }];
     await run(5);
     gh.pulls = [{ ...must(gh.pulls[0]), labels: [] }];
@@ -300,14 +300,14 @@ describe("P6 hold", () => {
     expect(ig.count("publish")).toBe(1);
     expect(yt.count("upload")).toBe(1);
   });
-  it("P6 a hold that is still there after the window ends makes the platform skipped", async () => {
+  it("PST-36 a hold that is still there after the window ends makes the platform skipped", async () => {
     gh.pulls = [{ ...must(gh.pulls[0]), labels: ["hold"] }];
     await run(5);
     await run(95);
     expect((await stateOf())?.instagram?.status).toBe("skipped");
     expect(ig.count("publish")).toBe(0);
   });
-  it("P6 a hold added after the container is queued stops media_publish and keeps the state queued", async () => {
+  it("PST-36 a hold added after the container is queued stops media_publish and keeps the state queued", async () => {
     let calls = 0;
     gh.onGetPull = () => {
       calls++;
@@ -325,7 +325,7 @@ describe("P6 hold", () => {
       platform_id: "container-1",
     });
   });
-  it("P6 a hold added after the YouTube queued commit undoes it and uploads nothing", async () => {
+  it("PST-36 a hold added after the YouTube queued commit undoes it and uploads nothing", async () => {
     let calls = 0;
     gh.onGetPull = () => {
       calls++;
@@ -447,7 +447,7 @@ describe("PST-14a YouTube recovery", () => {
 });
 
 describe("T16 record not merged", () => {
-  it("P6 an open record PR at post time opens one post-alert record not merged", async () => {
+  it("PST-11 an open record PR at post time opens one post-alert record not merged", async () => {
     gh.openPulls = [{ ...must(gh.pulls[0]), number: 40, state: "open", merged_at: null }];
     gh.pullFiles.set(40, [
       { filename: "posts/2026/2026-11-26-restart-after-gap.json", status: "added" },
@@ -604,6 +604,38 @@ describe("L1, L2, L4 smaller rules", () => {
     expect((await stateOf())?.instagram?.status).toBe("failed");
     expect(gh.alertIssues()).toHaveLength(1);
   });
+  it("PST-14 the permalink note is added once, a second one is not appended", async () => {
+    gh.issues.push({
+      number: 7,
+      state: "open",
+      title: `Post alert: ${STEM} (instagram)`,
+      labels: ["post-alert"],
+      body: "earlier text\nPublished. Permalink to be read by the daily job.",
+    });
+    await store.write(STEM, {
+      schema: 1,
+      platforms: {
+        instagram: {
+          status: "queued",
+          attempts: 1,
+          platform_id: "container-9",
+          url: null,
+          published_at: null,
+          issue: null,
+          error: null,
+          metrics: null,
+        },
+      },
+    });
+    ig.statuses.set("container-9", "PUBLISHED");
+    await run(
+      20,
+      {},
+      makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
+    );
+    expect(must(gh.issues[0]).body.match(/Permalink to be read/g)).toHaveLength(1);
+    expect(gh.writes).not.toContain("update issue #7");
+  });
   it("PST-14 a resumed PUBLISHED container keeps its id, has no url, and says the permalink is read later", async () => {
     await store.write(STEM, {
       schema: 1,
@@ -627,6 +659,6 @@ describe("L1, L2, L4 smaller rules", () => {
       makeRecord({ platforms: { instagram: must(makeRecord().platforms.instagram) } }),
     );
     expect((await stateOf())?.instagram).toMatchObject({ platform_id: "container-9", url: null });
-    expect(log.join("\n")).toContain("permalink to read in P2 verification");
+    expect(log.join("\n")).toContain("permalink to read by the daily job");
   });
 });

@@ -22,7 +22,14 @@ import { type VideoProbe, verifyRecordForPublish } from "./approval.ts";
 import type { GitHubApi } from "./github.ts";
 import { checkHold, HOLD_LABEL } from "./hold.ts";
 import { ContainerFailedError, type InstagramApi, instagramCaption } from "./instagram.ts";
-import { alertBody, describeSlot, findOpenIssue, upsertIssue } from "./issues.ts";
+import {
+  alertBody,
+  describeSlot,
+  ensureIssue,
+  findOpenIssue,
+  notMergedTitle,
+  upsertIssue,
+} from "./issues.ts";
 import { ApiError, errorInfo, mask, type Out } from "./mask.ts";
 import { emptyState, StatePushError, type StateStore } from "./state.ts";
 import { type YoutubeApi, youtubeDescription } from "./youtube.ts";
@@ -34,6 +41,7 @@ export const AUTOMATIC_PLATFORMS = [
 /** Slots older than this are left to the daily job (P2). */
 export const MISSED_SWEEP_H = 24;
 export const RETRY_LABEL = "retry";
+const PERMALINK_NOTE = "Published. Permalink to be read by the daily job.";
 
 export interface RecordFile {
   /** Repo-relative path, e.g. `posts/2026/2026-11-26-restart-after-gap.json`. */
@@ -68,7 +76,7 @@ export interface SchedulerReport {
 }
 
 type Entry = NonNullable<PostState["platforms"][PostPlatform]>;
-const blank = (): Entry => ({
+export const blank = (): Entry => ({
   status: "queued",
   attempts: 0,
   platform_id: null,
@@ -176,15 +184,14 @@ async function alertNotMerged(
     say(`${stem}: record not merged at post time`);
     report.failures++;
     if (d.dryRun) continue;
-    await upsertIssue(d.gh, {
-      kind: "post-alert",
-      stem,
-      platform: "all",
+    await ensureIssue(d.gh, {
+      title: notMergedTitle(stem),
+      labels: ["post-alert"],
       body: alertBody({
         record,
         platform: "all",
         what: `The record PR #${pull.number} is not merged at post time, so nothing is published.`,
-        next: "Merge is closed for this slot unless it happens before the post time. Otherwise open a new record for a new slot.",
+        next: "Move the record to a new date in the PR (P11), then it is merged for that slot.",
       }),
     });
   }
@@ -480,13 +487,12 @@ class PlatformRun {
     );
     this.#log("published");
     if (url === null) {
-      // L2: no permalink yet; the P2 verification reads it. No extra API call now.
-      this.#log("permalink to read in P2 verification");
+      // L2: no permalink yet; the daily job reads it. No extra API call now.
+      this.#log("permalink to read by the daily job");
       const open = await findOpenIssue(this.#d.gh, "post-alert", this.#stem, this.#j.platform);
-      if (open && !this.#d.dryRun) {
-        await this.#d.gh.updateIssue(open.number, {
-          body: `${open.body}\nPublished. Permalink to read in P2 verification.`,
-        });
+      // The note is added once: a rerun must not repeat it.
+      if (open && !this.#d.dryRun && !open.body.includes(PERMALINK_NOTE)) {
+        await this.#d.gh.updateIssue(open.number, { body: `${open.body}\n${PERMALINK_NOTE}` });
       }
     }
   }
