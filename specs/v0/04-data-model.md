@@ -2,6 +2,8 @@
 
 Status: **Approved (2026-11-04)** · Related ADRs: 0004 (idempotent ingest)
 
+Amended 2026-11-27 (#241, NC-e): DATA-15 is removed: `get_problem_totals(date, date, text)` is dropped by `20261127100000_drop_get_problem_totals.sql`, the contract step of PRB section 5 (the dashboard has called only `get_problem_totals_v2` since 2026-11-20; the extension never called it). DATA-15a (`get_problem_totals_v2`) is the only per-problem totals function; its checks, ordering and limits are unchanged.
+
 Amended 2026-11-11 (#131): `public.hostname` domain type, indexes, column-level grant, anonymous-JWT refusal, DATA-10 `NOT_AUTHENTICATED`, to match the migrations.
 
 Amended 2026-11-12 (#145): limit 50 → 12; existing lists over the limit are kept; v1 premium may raise it.
@@ -95,10 +97,10 @@ All use `SET search_path = ''`, fully qualified names, and validate inputs. Read
 
 `user_id` (FK → `auth.users`, cascade), `created_at`, index `(user_id, created_at)`; written and counted only by the definer function `public.consume_extension_link_quota() → boolean` (authenticated only; acts on `auth.uid()`; false after 5 requests in a rolling minute), called from the link route with the user's session; the caller's rows older than 1 h are deleted by the same function.
 
-### `get_problem_totals(p_from date, p_to date, p_tz text) → table(problem_slug text, seconds bigint, last_day date)` *(#176)*
+### `get_problem_totals_v2(p_from date, p_to date, p_tz text)` *(#176, #233; the original `get_problem_totals` was removed in #241)*
 
-- **DATA-15** Same checks as DATA-10. For the caller's intervals with a slug (joined with `study_session_problems`), grouped by slug: total seconds and the last local day (`started_at AT TIME ZONE p_tz`) in `[p_from, p_to]`. Ordered by seconds desc, then slug; at most 200 rows (PRB-11). `SECURITY INVOKER`.
-- **DATA-15a** *(#233, proposal)* `get_problem_totals_v2(p_from date, p_to date, p_tz text) → table(domain text, problem_slug text, seconds bigint, last_day date)`: DATA-15 grouped by `(domain, problem_slug)`, so the same slug on two sites gives two rows and is never summed (PRB-19). Ordered by seconds desc, then domain, then slug (byte order); at most 200 rows (PRB-11). Same checks, `SECURITY INVOKER`, same grants as `get_problem_totals` (`authenticated` only). `get_problem_totals` stays until the dashboard uses the new function and is then dropped (contract; section 5 of [PRB](../v1/01-problems.md)). *Acceptance (pgTAP):* two sites with the same slug give two rows; the order is as stated; another user's rows never appear.
+- **DATA-15** *(removed 2026-11-27, #241; replaced by DATA-15a)* Same checks as DATA-10. For the caller's intervals with a slug (joined with `study_session_problems`), grouped by slug: total seconds and the last local day (`started_at AT TIME ZONE p_tz`) in `[p_from, p_to]`. Ordered by seconds desc, then slug; at most 200 rows (PRB-11). `SECURITY INVOKER`.
+- **DATA-15a** *(#233, proposal)* `get_problem_totals_v2(p_from date, p_to date, p_tz text) → table(domain text, problem_slug text, seconds bigint, last_day date)`: DATA-15 grouped by `(domain, problem_slug)`, so the same slug on two sites gives two rows and is never summed (PRB-19). Ordered by seconds desc, then domain, then slug (byte order); at most 200 rows (PRB-11). Same checks, `SECURITY INVOKER`, grants to `authenticated` only. `get_problem_totals` was dropped in #241 once the dashboard used only this function (contract; section 5 of [PRB](../v1/01-problems.md)). *Acceptance (pgTAP):* two sites with the same slug give two rows; the order is as stated; another user's rows never appear.
 
 ### `account_settings` *(#176)*
 

@@ -133,11 +133,11 @@ describe("database parity: ingest and totals constants", () => {
     ]);
   });
 
-  it("TEST-08 DATA-10 DATA-11 DATA-15 every totals function accepts at most 92 days, as the spec says", () => {
+  it("TEST-08 DATA-10 DATA-11 DATA-15a every totals function accepts at most 92 days, as the spec says", () => {
     for (const name of [
       "public.get_daily_totals",
       "public.get_domain_totals",
-      "public.get_problem_totals",
+      "public.get_problem_totals_v2",
     ]) {
       const { sql } = latestFunctionSql(name);
       expect(occurrences(sql, /p_to - p_from \+ 1 > (\d+)/g), name).toEqual(["92"]);
@@ -267,9 +267,18 @@ describe("database parity: problems", () => {
     for (const domain of PROBLEMS.PROBLEM_DOMAINS) expect(ingest).not.toContain(domain);
   });
 
-  it("PRB-11 DATA-15 get_problem_totals returns at most PROBLEM_LIST_MAX rows", () => {
-    const { sql } = latestFunctionSql("public.get_problem_totals");
-    expect(occurrences(sql, /limit (\d+);/g)).toEqual([`${PROBLEMS.PROBLEM_LIST_MAX}`]);
+  it("DATA-15a #241 get_problem_totals is dropped by the last migration that mentions it (NC-e)", () => {
+    const last = readdirSync(migrationsDir)
+      .sort()
+      .reverse()
+      .find((file) =>
+        /\bget_problem_totals\(/.test(readFileSync(resolve(migrationsDir, file), "utf8")),
+      );
+    expect(last).toBe("20261127100000_drop_get_problem_totals.sql");
+    const sql = readFileSync(resolve(migrationsDir, last ?? ""), "utf8");
+    expect(sql).toMatch(
+      /drop function (?:if exists )?public\.get_problem_totals\(date, date, text\);/,
+    );
   });
 
   it("PRB-11 DATA-15a get_problem_totals_v2 returns at most PROBLEM_LIST_MAX rows", () => {

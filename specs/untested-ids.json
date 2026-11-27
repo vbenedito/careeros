@@ -1,6 +1,7 @@
 {
   "ADM-14": "Process rule: the main session writes and pushes its ledger before a session ends (docs/process/agents.md §6).",
   "DASH-10": "CSS grid breakpoint placement with no logic to unit-test; checked by eye in the TEST-01 screenshot artifacts.",
+  "DATA-15": "Removed in #241 (get_problem_totals dropped); replaced by DATA-15a, which is tested.",
   "ENT-12": "Design note on how a future paid plan plugs in; nothing to assert until that plan exists.",
   "ENV-01": "Tooling decision (pnpm workspaces, no build orchestrator); nothing to assert.",
   "ENV-04": "Decision: there is no staging environment in v0.",

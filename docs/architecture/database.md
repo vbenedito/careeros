@@ -101,8 +101,7 @@ There is no `UPDATE` grant anywhere. The two ingest RPCs (one shared implementat
 | `get_daily_totals(p_from, p_to, p_tz)` | `invoker` (RLS applies) | `authenticated` | One zero-filled row per local day; range ≤ 92 days; checks the time zone (`INVALID_RANGE`, `INVALID_TIME_ZONE`) | DATA-10 |
 | `get_domain_totals(p_from, p_to, p_tz)` | `invoker` | `authenticated` | Seconds per domain, largest first | DATA-11 |
 | `private.problem_domains() → text[]` | invoker, `immutable`, `search_path = ''` | none | The one SQL list of sites that can carry a problem slug (`PROBLEM_DOMAINS`); read by `private.parse_session_element`; the `study_session_problems_domain_check` CHECK repeats it as a literal (parity test). Changing it is a new migration | PRB-18, DATA-16 |
-| `get_problem_totals_v2(p_from, p_to, p_tz)` | `invoker`, `stable`, `search_path = ''` | `authenticated` | As `get_problem_totals` but grouped by site and slug and returning `domain`; the same slug on two sites is two rows; ties by domain, then slug (byte order); at most 200 rows | DATA-15a, PRB-11, PRB-19 |
-| `get_problem_totals(p_from, p_to, p_tz)` | `invoker` | `authenticated` | Seconds and last local day per slug, largest first, ties by slug (byte order), at most 200 rows; same checks as DATA-10 | DATA-15, PRB-11 |
+| `get_problem_totals_v2(p_from, p_to, p_tz)` | `invoker`, `stable`, `search_path = ''` | `authenticated` | Seconds and last local day per site and slug, returning `domain`; same checks as DATA-10; the same slug on two sites is two rows; ties by domain, then slug (byte order); at most 200 rows | DATA-15a, PRB-11, PRB-19 |
 | `consume_extension_link_quota() → boolean` | `definer` | `authenticated` | Records one request for `auth.uid()`; false above 5 per minute | AUTH-08 |
 | `private.plan_of(p_user_id uuid) → text` | `invoker`, `search_path = ''` | none | Plan of a user; `'free'` for everyone in v1. A later per-account plan changes only this function | ENT-02, ENT-12 |
 | `private.enforce_tracked_domain_limit()` | `definer` | none (trigger) | Site limit: reads `max_tracked_domains` of `plan_of(new.user_id)` from `plans`; refuses the insert at or above it; a missing plan row refuses too (fail closed) | DATA-01, ENT-03, ENT-05 |
@@ -132,7 +131,7 @@ Account deletion has no RPC: the dashboard calls `auth.admin.deleteUser` with th
 | `study_sessions_user_created_idx (user_id, created_at)` | Abuse-cap counts |
 | `study_sessions_user_device_started_idx (user_id, device_id, started_at)` | Overlap check (DATA-09a) |
 | `study_sessions_id_user_domain_key` (unique `id, user_id, domain`) | Target of the slug FK (DATA-16); built with a plain `CREATE` inside the migration transaction |
-| `study_session_problems_pkey` (`session_id`) | One slug per interval; join in `get_problem_totals` |
+| `study_session_problems_pkey` (`session_id`) | One slug per interval; join in `get_problem_totals_v2` |
 | `study_session_problems_user_idx (user_id)` | History delete, RLS, FK cascade |
 | `link_requests_user_created_idx (user_id, created_at)` | Quota count and prune |
 
@@ -162,9 +161,10 @@ Append-only; never edit an applied migration (AGENTS.md).
 | `20261110100000_security_hardening.sql` | Upload caps, payload size, overlap check and index, anonymous-refusing policies, bounded totals inputs (#110, #111) |
 | `20261112100000_tracked_domain_limit_12.sql` | Site limit 50 → 12; existing rows kept (#145) |
 | `20261117100000_entitlements.sql` | `plans` (`free` = 12), `private.plan_of`, site-limit trigger reads the plan and raises the error with `detail` (#177) |
-| `20261118100000_ingest_v2.sql` | `account_settings`, `study_session_problems`, `private.ingest_sessions` behind `ingest_study_sessions` and the new `ingest_study_sessions_v2`, caps only for new rows, `set_problem_tracking`, `get_problem_totals`; drops `parse_study_session` (#178, ADR-0011) |
+| `20261118100000_ingest_v2.sql` | `account_settings`, `study_session_problems`, `private.ingest_sessions` behind `ingest_study_sessions` and the new `ingest_study_sessions_v2`, caps only for new rows, `set_problem_tracking`, `get_problem_totals` (dropped in `20261127100000`); drops `parse_study_session` (#178, ADR-0011) |
 | `20261118110000_admins.sql` | `admins` (ADM-01): own-row read only, no client write, rows added by hand (#213, ADR-0013) |
 | `20261120100000_problem_domains.sql` | Expand step of NeetCode problems: `private.problem_domains()`, the widened domain check, the v2 element parser reads the list, `get_problem_totals_v2`; `get_problem_totals` unchanged until the contract step (#237, #233, PRB-18..20) |
+| `20261127100000_drop_get_problem_totals.sql` | Contract step: drops `get_problem_totals(date, date, text)`; `get_problem_totals_v2` is the only per-problem totals function (#241, NC-e, DATA-15a) |
 
 How they reach production: [release process](../process/release.md#database-migrations).
 
@@ -187,7 +187,7 @@ How they reach production: [release process](../process/release.md#database-migr
 | `100_entitlements` | `plans`, `plan_of`, limit from the plan, error code, hint and details, changed `free` row (ENT-01..06) |
 | `110_ingest_v2` | ADR-0011 compatibility plan items 1–3, 6, 7: old contract, v2 reasons and slugs, shared rules and caps for pure retries, grants, setting and history delete, problem totals (DATA-06b, DATA-09b, DATA-13..17) |
 | `120_admins` | `admins`: own row only, no client insert, update or delete, anonymous refusal, cascade (ADM-01) |
-| `130_problem_domains` | The widened check and the one list, v2 ingest of `neetcode.io` and of domains outside the list (only that element `invalid`), old clients (0.2.3, 0.3.0), `get_problem_totals_v2` with two sites and its grants (same as `get_problem_totals`), RLS, history delete across sites (PRB-16, PRB-18..20, DATA-15a) |
+| `130_problem_domains` | The widened check and the one list, v2 ingest of `neetcode.io` and of domains outside the list (only that element `invalid`), old clients (0.2.3, 0.3.0), `get_problem_totals_v2` with two sites and its grants (invoker, authenticated only), the old function is gone, RLS, history delete across sites (PRB-16, PRB-18..20, DATA-15a) |
 
 ## Backups
 
