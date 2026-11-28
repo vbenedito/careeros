@@ -125,7 +125,7 @@ describe("posts view (ADM-21)", () => {
     ]);
     const fresh = view.rows[0];
     expect(fresh?.platforms.map((c) => c.word)).toEqual(["Scheduled", "Scheduled"]);
-    expect(view.headline).toBe("2 posts: 1 of 4 network posts are live");
+    expect(view.headline).toBe("2 posts: 1 of 4 network posts are published");
     expect(view.invalid).toHaveLength(2);
   });
 

@@ -5,12 +5,13 @@ import { PostsPanel } from "./posts-panel";
 
 /** Invented view (never real URLs). */
 const VIEW: PostsView = {
-  headline: "2 posts: 1 of 3 network posts are live",
+  headline: "2 posts: 1 of 3 network posts are published",
   invalid: ["posts/2030/2030-01-07-broken.json"],
   rows: [
     {
       stem: "2030-01-09-new-post",
       when: "Wed, Jan 9, 19:00",
+      date: "2030-01-09 19:00",
       title: "New post title",
       platforms: [
         {
@@ -27,6 +28,7 @@ const VIEW: PostsView = {
     {
       stem: "2030-01-02-old-post",
       when: "Wed, Jan 2, 19:00",
+      date: "2030-01-02 19:00",
       title: "Old post title",
       platforms: [
         {
@@ -57,7 +59,7 @@ describe("posts panel (ADM-21)", () => {
 
   it("ADM-21 headline, titles newest first, a word for every status", () => {
     expect(out).toContain("Posts");
-    expect(out).toContain("2 posts: 1 of 3 network posts are live");
+    expect(out).toContain("2 posts: 1 of 3 network posts are published");
     expect(out.indexOf("New post title")).toBeLessThan(out.indexOf("Old post title"));
     for (const word of ["Scheduled", "Published", "Failed (HTTP 403)"]) expect(out).toContain(word);
   });
@@ -71,7 +73,7 @@ describe("posts panel (ADM-21)", () => {
   });
 
   it("ADM-21 ADM-20 invalid files are named; the Details table is closed by default", () => {
-    expect(out).toContain("Invalid file, skipped: posts/2030/2030-01-07-broken.json");
+    expect(out).toContain("Skipped invalid file: posts/2030/2030-01-07-broken.json");
     expect(out).toContain("Details: posts");
     expect(out).not.toContain("<details open");
   });

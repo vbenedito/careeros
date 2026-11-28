@@ -22,7 +22,7 @@ export const PLATFORM_NAME: Record<PostPlatform, string> = {
 export const STATUS_WORD: Record<EffectiveStatus, string> = {
   draft: "Draft",
   ready: "Scheduled",
-  queued: "Publishing",
+  queued: "Queued",
   published: "Published",
   failed: "Failed",
   skipped: "Skipped",
@@ -46,6 +46,8 @@ export interface PostRow {
   stem: string;
   /** "Sun, Nov 29, 19:00" (the record's date and time, São Paulo). */
   when: string;
+  /** "2026-11-29 19:00" for the Details table (ADM-20 item 7). */
+  date: string;
   title: string;
   platforms: PostPlatformCell[];
 }
@@ -126,6 +128,7 @@ export function buildPosts(
     .map((entry) => ({
       stem: entry.stem,
       when: formatWhen(entry.record.date, entry.record.time),
+      date: `${entry.record.date} ${entry.record.time}`,
       title: entry.record.platforms.youtube?.title || entry.record.slug,
       platforms: cells(entry),
     }));
@@ -134,6 +137,6 @@ export function buildPosts(
   const headline =
     rows.length === 0
       ? "No posts yet."
-      : `${rows.length} ${rows.length === 1 ? "post" : "posts"}: ${published} of ${all.length} network ${all.length === 1 ? "post is" : "posts are"} live`;
+      : `${rows.length} ${rows.length === 1 ? "post" : "posts"}: ${published} of ${all.length} network ${all.length === 1 ? "post is" : "posts are"} published`;
   return { headline, rows, invalid: [...invalid] };
 }

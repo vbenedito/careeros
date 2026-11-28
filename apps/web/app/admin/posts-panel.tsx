@@ -88,7 +88,7 @@ export function PostsPanel(props: Props) {
             )}
             {view.invalid.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Invalid {view.invalid.length === 1 ? "file" : "files"}, skipped:{" "}
+                Skipped invalid {view.invalid.length === 1 ? "file" : "files"}:{" "}
                 {view.invalid.join(", ")}
               </p>
             )}
@@ -97,11 +97,11 @@ export function PostsPanel(props: Props) {
                 <ScrollTable minWidth="min-w-[36rem]">
                   <thead className="text-xs text-muted-foreground">
                     <tr className="border-b border-border">
-                      <th className={TH}>Date</th>
+                      <th className={TH}>Date (São Paulo)</th>
                       <th className={TH}>File</th>
                       <th className={TH}>Network</th>
                       <th className={TH}>Status</th>
-                      <th className={TH}>Live since</th>
+                      <th className={TH}>Published at</th>
                       <th className="py-2 font-medium">Link</th>
                     </tr>
                   </thead>
@@ -109,7 +109,7 @@ export function PostsPanel(props: Props) {
                     {view.rows.flatMap((row) =>
                       row.platforms.map((cell) => (
                         <tr key={`${row.stem}-${cell.platform}`} className={TR}>
-                          <td className={`${TD} tabular-nums`}>{row.when}</td>
+                          <td className={`${TD} tabular-nums`}>{row.date}</td>
                           <td className={TD}>{row.stem}</td>
                           <td className={TD}>{cell.name}</td>
                           <td className={TD}>
