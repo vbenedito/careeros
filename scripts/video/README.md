@@ -13,6 +13,7 @@ The rules the videos follow are in [video formats](../../docs/marketing/video-fo
 | `careeros_music.py` | Original lo-fi music bed (80 BPM, Fmaj7–Em7–Dm7–Cmaj7), synthesized in code: no samples, no license, no cost (#277, product-owner decision 2026-11-25) |
 | `v01_which_two_days.py` | Video 1, `2026-11-24-which-two-days` (launch kit section 3). Chosen style: `pop` |
 | `v03_which_site.py` | Video 3, `2026-11-29-which-site-most` (pillar 1, idea 7), style B. Writes `<stem>.cover.jpg` next to the MP4 |
+| `v04_never_stores.py` | Video 4, `2026-12-01-never-stores` (pillar 3, idea 2), style B. Four tiles, facts from brand profile section 6 only |
 | `v02_restart_after_gap.py` | Video 2, `2026-11-26-restart-after-gap` (launch kit section 4), style `pop`. Text-only steps video with a 4-step track; end screen mark + name (pillar 2) |
 
 For a new video, copy the closest script (`v01` for a chart, `v02` for steps), change the screens (`S`), the text blocks and the visual, and keep the engine. `render_video()` in the engine renders the scenes in parallel, joins them and adds the music.
