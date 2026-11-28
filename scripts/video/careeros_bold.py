@@ -71,7 +71,7 @@ def bg_brightest() -> tuple:
 # ---------------------------------------------------------------- hook text with a highlight block
 def _block_box(x: float, y_top: float, w: float, size: float):
     pad = size * 0.14
-    return (x - pad, y_top + size * 0.10, x + w + pad, y_top + size * 1.26)  # top below the line above's descenders
+    return (x - pad, y_top + size * 0.10, x + w + pad, y_top + size * 1.32)  # top below the line above's descenders, bottom below commas
 
 
 def draw_hook(fr: Frame, lines: list[list[tuple[str, bool]]], size: float, y_top: float, t_in: float = 0.0,
@@ -108,10 +108,10 @@ def draw_hook(fr: Frame, lines: list[list[tuple[str, bool]]], size: float, y_top
                 if 0 < sweep < 1:  # a light band crosses the block once
                     bx = box[0] + (box[2] - box[0] + 160) * ease_out_cubic(sweep) - 80
                     band = Image.new("L", (W, H), 0)
-                    ImageDraw.Draw(band).polygon([(bx - 40, box[1]), (bx + 30, box[1]), (bx - 10, box[3]), (bx - 80, box[3])], fill=200)
+                    ImageDraw.Draw(band).polygon([(bx - 40, box[1]), (bx + 30, box[1]), (bx - 10, box[3]), (bx - 80, box[3])], fill=140)
                     clip = Image.new("L", (W, H), 0)
                     ImageDraw.Draw(clip).rounded_rectangle(box, radius=size * 0.16, fill=255)
-                    band = ImageChops.multiply(band.filter(ImageFilter.GaussianBlur(10)), clip)
+                    band = ImageChops.multiply(band.filter(ImageFilter.GaussianBlur(18)), clip)
                     layer.paste(Image.new("RGBA", (W, H), SHINE + (255,)), (0, 0), band)
                 d.text((cx, yy), text, font=f, fill=C["primary_fg"] + (255,), anchor="la")
                 fr.readable(f"hook-block:{text}", box)
