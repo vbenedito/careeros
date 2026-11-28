@@ -42,6 +42,11 @@ export interface LandingOptions {
    * names both sites. Only meaningful with `problemTracking`.
    */
   problemTrackingNeetCode?: boolean | undefined;
+  /**
+   * ENV-05c, PSR-18, PSR-21: the store also has the extension with problem rules (0.4.0); FAQ 1
+   * then adds the sites the user adds. Only meaningful with `problemTrackingNeetCode`.
+   */
+  problemRules?: boolean | undefined;
 }
 
 const esc = (s: string) =>
@@ -227,6 +232,7 @@ export function renderLanding({
   analytics,
   problemTracking = false,
   problemTrackingNeetCode = false,
+  problemRules = false,
 }: LandingOptions): string {
   const site = new URL(siteUrl).origin;
   const max = Math.max(...SAMPLE_WEEK);
@@ -263,7 +269,11 @@ export function renderLanding({
     )
     .join("");
   const rules = RULES.map((r) => `<div><dt>${esc(r.v)}</dt><dd>${esc(r.d)}</dd></div>`).join("");
-  const faq = faqEntries(problemTracking, problemTracking && problemTrackingNeetCode)
+  const faq = faqEntries(
+    problemTracking,
+    problemTracking && problemTrackingNeetCode,
+    problemTracking && problemTrackingNeetCode && problemRules,
+  )
     .map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`)
     .join("");
   const siteRow = (cls: string, name: string) =>

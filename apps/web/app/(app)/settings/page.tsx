@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { AccountSettings } from "@/components/settings/account-settings";
 import { ExtensionSettings } from "@/components/settings/extension-settings";
+import { ProblemSites } from "@/components/settings/problem-sites";
 import { ProblemsSetting } from "@/components/settings/problems-setting";
 import { TrackedSites } from "@/components/settings/tracked-sites";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +10,9 @@ import { isRecentSignIn } from "@/lib/auth/recent-sign-in";
 import { isAuthProvider } from "@/lib/auth/routes";
 import { extensionFeatureLive, extensionId } from "@/lib/env";
 import { problemsCopy } from "@/lib/problems/copy";
-import { hasStoredProblems, loadProblemSetting } from "@/lib/problems/data";
+import { hasStoredProblems, loadProblemSetting, loadProblemSiteRules } from "@/lib/problems/data";
 import { isProblemDomainTracked } from "@/lib/problems/settings";
+import { SITE_COPY } from "@/lib/problems/sites";
 import { providerLabel } from "@/lib/settings/account";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,12 +35,15 @@ export default async function SettingsPage({
   const released = extensionFeatureLive("problemTracking");
   // ENV-05c: the NeetCode copy and the per-site check need the later store version.
   const neetCode = released && extensionFeatureLive("problemTrackingNeetCode");
+  // ENV-05c, PSR-21: "Problem sites" needs extension 0.4.0 in the store.
+  const rulesLive = released && extensionFeatureLive("problemRules");
   const copy = problemsCopy(neetCode);
-  const [{ data: claims }, sites, problemSetting, storedProblems] = await Promise.all([
+  const [{ data: claims }, sites, problemSetting, storedProblems, siteRules] = await Promise.all([
     supabase.auth.getClaims(),
     supabase.from("tracked_domains").select("id, domain").order("domain"),
     released ? loadProblemSetting(supabase) : Promise.resolve("unknown" as const),
     released ? hasStoredProblems(supabase) : Promise.resolve(false),
+    rulesLive ? loadProblemSiteRules(supabase) : Promise.resolve(null),
   ]);
   const user = claims?.claims;
   if (!user) redirect("/sign-in");
@@ -97,6 +102,24 @@ export default async function SettingsPage({
                         )
                   }
                 />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+        {rulesLive ? (
+          <Card id="problem-sites" aria-labelledby="problem-sites-title" className="scroll-mt-4">
+            <CardHeader>
+              <CardTitle id="problem-sites-title" variant="section">
+                {SITE_COPY.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {siteRules === null || sites.error ? (
+                <p role="alert" className="text-sm">
+                  Couldn't load your problem sites. Reload the page to try again.
+                </p>
+              ) : (
+                <ProblemSites rules={siteRules} trackedDomains={sites.data.map((s) => s.domain)} />
               )}
             </CardContent>
           </Card>

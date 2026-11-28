@@ -47,7 +47,21 @@ export function ProblemsCard({
           <ul className="flex flex-col divide-y divide-border" data-testid="problems-list">
             {rows.map((row) => (
               <li key={`${row.domain}/${row.slug}`} className="flex items-start gap-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 break-words">{row.title}</span>
+                {row.userRule ? (
+                  <span className="min-w-0 flex-1 break-words" data-testid="problem-user-rule">
+                    {row.userRule.label} ·{" "}
+                    <span title={row.userRule.id}>
+                      <span className="sm:hidden" data-testid="problem-id-short">
+                        {row.userRule.shortId}
+                      </span>
+                      <span className="hidden sm:inline" data-testid="problem-id-full">
+                        {row.userRule.id}
+                      </span>
+                    </span>
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1 break-words">{row.title}</span>
+                )}
                 <span className="shrink-0 tabular-nums" data-testid="problem-time">
                   {row.duration}
                 </span>

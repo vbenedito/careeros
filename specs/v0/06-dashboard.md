@@ -16,6 +16,8 @@ Amended 2026-11-19 (#233, proposal): DASH-16..18 and the `/api/settings/problems
 
 Amended 2026-11-17 (#176): proposed for v1 — DASH-12 limit error with `limit`/`plan` ([ENT](../v1/02-entitlements.md)); LeetCode problems switch, card and one-time announcement (DASH-16..18, [PRB](../v1/01-problems.md)); route `/api/settings/problems`.
 
+Amended 2026-11-28 (#287, PS-c): implemented in `apps/web`: DASH-16 gets the **Problem sites** card in Settings (built-in sites, the user's rules with Remove and the keep or delete history dialog, **Add a problem site** with preview, personal-data warning and confirmation, the extension 0.4.0 note; `components/settings/problem-sites.tsx`, `lib/problems/sites.ts`, routes `POST /api/settings/problem-rules` and `DELETE /api/settings/problem-rules/[id]`) and DASH-17 shows the rows of user rules as the rule's label and the id as it is, shortened in the middle on small screens with the full id in a tooltip (PSR-12..14). All of it, and both routes, apply only while the store has extension 0.4.0 or newer (`EXTENSION_FEATURES.problemRules`, ENV-05c, PSR-21); before that the routes answer 404.
+
 ## 1. Direction
 
 Answers three questions: *how much did I study, how was it spread across days, on which platforms?* Visual language inspired by shadcn/ui dashboard blocks; product-oriented, minimal, light and dark.

@@ -24,8 +24,9 @@ import {
   todayIn,
 } from "@/lib/dashboard/time-zone";
 import { extensionFeatureLive, extensionId } from "@/lib/env";
-import { loadProblemSetting, loadProblems } from "@/lib/problems/data";
+import { loadProblemSetting, loadProblemSiteRules, loadProblems } from "@/lib/problems/data";
 import { showProblemsCard } from "@/lib/problems/settings";
+import { ruleLabels } from "@/lib/problems/sites";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 // ENV-05c: the gate reads EXTENSION_STORE_VERSION per request; never prerender this page.
@@ -42,6 +43,8 @@ export default async function DashboardPage({
   const released = extensionFeatureLive("problemTracking");
   // ENV-05c: the NeetCode copy (title, site on each row) needs the later store version.
   const neetCode = released && extensionFeatureLive("problemTrackingNeetCode");
+  // ENV-05c, PSR-21: the labels of the user's problem rules need extension 0.4.0 in the store.
+  const rulesLive = released && extensionFeatureLive("problemRules");
   const supabase = await createClient();
   const tzCookie = (await cookies()).get(TZ_COOKIE)?.value;
   let timeZone = resolveTimeZone(tzCookie);
@@ -68,7 +71,14 @@ export default async function DashboardPage({
   // DASH-17: the list comes after the zone is final; while the setting is off the card is hidden.
   const problems =
     released && result.ok && showProblemsCard(problemSetting)
-      ? await loadProblems(supabase, period, timeZone, neetCode)
+      ? await loadProblems(
+          supabase,
+          period,
+          timeZone,
+          neetCode,
+          // PSR-14, PSR-21: labels of the user's rules only while problem rules are live.
+          rulesLive ? ruleLabels((await loadProblemSiteRules(supabase)) ?? []) : new Map(),
+        )
       : null;
   const problemsCard = problems ? (
     <ProblemsCard

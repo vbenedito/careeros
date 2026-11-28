@@ -4,6 +4,7 @@
  * sorts and caps; the same order is applied here, so the list does not depend on it.
  */
 import { formatDuration, PROBLEMS, problemName } from "@careeros/shared";
+import { shortenMiddle } from "./sites";
 
 export interface ProblemRow {
   /** The site of the problem (PRB-19). */
@@ -20,6 +21,11 @@ export interface ProblemRow {
   lastDay: string;
   /** "Tue, Nov 17" */
   lastDayLabel: string;
+  /**
+   * PSR-14: set for the id of a user rule (any domain that is not built in): the rule's label,
+   * the id as it is and the id shortened in the middle for small screens (full id in a tooltip).
+   */
+  userRule: { label: string; id: string; shortId: string } | null;
 }
 
 export interface ProblemTotalRow {
@@ -47,7 +53,12 @@ const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
  * PRB-11: longest first, ties by domain (A-Z), then slug (A-Z); at most PROBLEM_LIST_MAX rows.
  * `showSite` is true from extension 0.3.1 (NeetCode copy gate): the site is shown on the row.
  */
-export function problemRows(rows: readonly ProblemTotalRow[], showSite = false): ProblemRow[] {
+export function problemRows(
+  rows: readonly ProblemTotalRow[],
+  showSite = false,
+  /** PSR-14: domain → label of the user's rules. */
+  labels: ReadonlyMap<string, string> = new Map(),
+): ProblemRow[] {
   return rows
     .map((r) => ({ r, seconds: Number(r.seconds) }))
     .sort(
@@ -58,6 +69,23 @@ export function problemRows(rows: readonly ProblemTotalRow[], showSite = false):
     )
     .slice(0, PROBLEMS.PROBLEM_LIST_MAX)
     .map(({ r, seconds }) => {
+      const builtIn = (PROBLEMS.PROBLEM_DOMAINS as readonly string[]).includes(r.domain);
+      if (!builtIn) {
+        // PRB-12, PSR-14: label + the id as it is; CareerOS never fetches the page title. After
+        // "Remove and keep history" there is no rule left: the label is the domain.
+        const label = labels.get(r.domain) ?? r.domain;
+        return {
+          domain: r.domain,
+          slug: r.problem_slug,
+          name: r.problem_slug,
+          title: `${label} · ${r.problem_slug}`,
+          seconds,
+          duration: formatDuration(seconds),
+          lastDay: r.last_day,
+          lastDayLabel: formatLastDay(r.last_day),
+          userRule: { label, id: r.problem_slug, shortId: shortenMiddle(r.problem_slug) },
+        };
+      }
       const name = problemName(r.problem_slug);
       return {
         domain: r.domain,
@@ -68,6 +96,7 @@ export function problemRows(rows: readonly ProblemTotalRow[], showSite = false):
         duration: formatDuration(seconds),
         lastDay: r.last_day,
         lastDayLabel: formatLastDay(r.last_day),
+        userRule: null,
       };
     });
 }

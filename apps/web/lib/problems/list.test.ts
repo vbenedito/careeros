@@ -30,6 +30,7 @@ describe("coding problems list (PRB-11, DASH-17)", () => {
         duration: "1h 23m",
         lastDay: "2026-11-17",
         lastDayLabel: "Tue, Nov 17",
+        userRule: null,
       },
       {
         domain: "leetcode.com",
@@ -40,6 +41,7 @@ describe("coding problems list (PRB-11, DASH-17)", () => {
         duration: "20m",
         lastDay: "2026-11-15",
         lastDayLabel: "Sun, Nov 15",
+        userRule: null,
       },
     ]);
   });
@@ -93,5 +95,44 @@ describe("coding problems list (PRB-11, DASH-17)", () => {
   it("DASH-17 the last day reads like 'Tue, Nov 17' whatever the server's zone", () => {
     expect(formatLastDay("2026-11-17")).toBe("Tue, Nov 17");
     expect(formatLastDay("2026-01-01")).toBe("Thu, Jan 1");
+  });
+});
+
+describe("user-rule rows (PRB-12, PSR-14, DASH-17)", () => {
+  const id = "cmlz26cxp08st08adxvy89hr1";
+
+  it("PSR-14 a user rule row is the label and the id as it is, never a title built from the id", () => {
+    const [r] = problemRows(
+      [row("hellointerview.com", id, 600)],
+      true,
+      new Map([["hellointerview.com", "System design"]]),
+    );
+    expect(r?.title).toBe(`System design · ${id}`);
+    expect(r?.name).toBe(id);
+    expect(r?.userRule).toEqual({ label: "System design", id, shortId: "cmlz26cx…vy89hr1" });
+  });
+
+  it("PSR-14 after Remove and keep history there is no label left: the row shows the domain", () => {
+    const [r] = problemRows([row("hellointerview.com", id, 60)]);
+    expect(r?.title).toBe(`hellointerview.com · ${id}`);
+  });
+
+  it("PRB-12 a built-in row keeps the name built from the slug", () => {
+    const [r] = problemRows(
+      [row("leetcode.com", "two-sum", 60)],
+      false,
+      new Map([["leetcode.com", "Ignored"]]),
+    );
+    expect(r?.title).toBe("Two Sum");
+    expect(r?.userRule).toBeNull();
+  });
+
+  it("PSR-14 a mixed list stays longest first across built-in and user rows", () => {
+    const rows = problemRows(
+      [row("leetcode.com", "two-sum", 60), row("hellointerview.com", id, 120)],
+      true,
+      new Map([["hellointerview.com", "HI"]]),
+    );
+    expect(rows.map((r) => r.title)).toEqual([`HI · ${id}`, "Two Sum · leetcode.com"]);
   });
 });
