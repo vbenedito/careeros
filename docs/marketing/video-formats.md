@@ -5,6 +5,8 @@ Type: living · Owner: product owner · Last reviewed: 2026-11-20
 Amended 2026-11-22 (#258): the per-problem feature is live (extension 0.3.1); checklist item 5 and the "Must never" line now allow it, with the exact privacy line only.
 Amended 2026-11-25 (product owner P8 and P10, spec 04): videos for automated posts use **music composed in code** (`scripts/video/careeros_music.py`, `music_license` = `original:careeros_music:<seed>`, section 3 sources do not apply to them); weeks 1 to 8 have one explainer demo a week ([content pillars](content-pillars.md) section 6).
 
+Amended 2026-11-28 (#291, product owner): videos 1 and 2 had plain covers and video 2 had 0 views the next morning. New **style B** for pillar 1 to 3 videos and style C for explainers (section 2.6): a gradient with a glow is allowed when its brightest pixel in the safe box is measured; frame 0 is the cover; the hook is 108 px or more and must pass the thumbnail check. Sections 1.2, 1.5 and 2.6.
+
 Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, same file as TikTok; when a week goes over 2 hours, drop Instagram first, then LinkedIn.
 
 This is the sixth marketing document (issue #190, step 6 of the marketing process in [v1 discovery](../../specs/v1/00-discovery.md) D18). It turns the [content pillars](content-pillars.md) into five repeatable video formats, a visual kit, a music source, a free production workflow and three scripts that are ready to produce. It reads the [brand profile](brand-profile.md) (sections 6 and 10), the [persona](persona.md), the [voice](voice.md) (sections 5 and 7) and the [platform study](platform-study.md) (sections 6 and 9). They win if this page disagrees with them.
@@ -97,7 +99,7 @@ Layout inside the safe box:
 - Line height 1.2. Letter spacing normal. Two lines at most.
 - **Contrast:** every text color pair is at least 4.5:1 (WCAG AA for normal text) [V10]. Graphical objects (bars, outlines) are at least 3:1 against the background. The pairs in section 2.2 are computed.
 - Status or meaning is never shown by color alone: a highlighted bar also gets a label, an outline or a tag.
-- No text on a photo or a gradient. Solid background only.
+- No text on a photo. Solid background, or the style B gradient (section 2.6), whose brightest pixel in the safe box is measured by the render script's `check`: text needs 4.5:1 against that pixel. Muted text sits only on an opaque fill (chip, tile, card), never on the gradient.
 
 ### 1.6 Captions, alt text and screen readers
 
@@ -282,6 +284,21 @@ Charts are drawn with rectangles in the editor. They are not screenshots and not
 | Total | 6h 40m |
 
 Both tables add up to 6h 40m (400 minutes). In the day table, Thursday and Saturday hold 4h 05m (245 minutes, a clear majority). They are made-up numbers for drawing. They are never described as what users do. Re-use these tables in every chart so the sample stays consistent; add a new sample only with the same total and a check of the sum.
+
+### 2.6 Style B and style C (from 2026-11-28, #291)
+
+Chosen by the product owner on 2026-11-28 after video 2's plain cover got no views. Code: `scripts/video/careeros_bold.py`.
+
+**Style B, pillar 1 to 3 videos.**
+
+- **Frame 0 is the cover.** YouTube may use the first frame; Instagram gets the same image as `<stem>.cover.jpg` (`cover_url`, Instagram's API uses it instead of `thumb_offset`). So frame 0 already shows the full hook and the visual subject. Nothing fades in from black.
+- **Hook:** 108 px or more, weight 800, at most 3 lines and 13 characters a line at 116 px. One phrase sits in a solid `primary` block with `primary-foreground` text (7.59:1). **Thumbnail check:** when the frame is 200 px wide, the hook's cap height is at least 15 px (the 88 px hook of videos 1 and 2 measures 12.0 px and fails).
+- **Background:** `background` at the top to a deep blue at the bottom (16% `primary` mixed into `background`), with a soft `primary` glow, panned slowly (140 px over 12 s) so the frame is never still. Measured brightest pixel in the safe box: `fg` 9.31:1.
+- **Visual subject:** tiles (a day, a site, a fact), `card` fill with a `border` outline, or `primary` when lit. A lit tile always keeps its label and value as text, so the meaning never rests on colour alone. Values use the app format and the `Sample data` chip is on every screen with a number, also on the cover.
+- **Motion in the first second** starts from the final state: tiles lift in a wave, the block gets one light sweep, lit tiles pulse. No counters, no shake, no flashing faster than 3 times a second.
+- **Contrast pairs** (measured by `check`): `fg` on the brightest gradient 9.31:1; `primary-foreground` on `primary` 7.59:1 and on the block sweep 10.34:1; `muted-foreground` on `card` 6.77:1; `fg` on `card` 15.49:1; `muted-foreground` on the chip's `background` 7.69:1; lit tile against an unlit tile 6.69:1 (graphic, 3:1 needed).
+
+**Style C, explainers (pillar 4).** The same background and hook, with the real dashboard in a tilted browser frame (sample data only, section 1.7). It is a demo by definition. Its capture needs a separate step; this section is filled in with the explainer.
 
 ## 3. Music
 
