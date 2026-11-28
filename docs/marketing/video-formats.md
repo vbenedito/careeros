@@ -27,7 +27,7 @@ How to read it: a fact that comes from a page we read has a source tag like [V3]
 
 A tag chip such as `Step 1`, `Myth` or `Fact` is not counted. Tags are part of the screen and never carry meaning by color alone.
 
-**Text per screen.** One idea per screen. At most 2 lines. 3 to 7 words per line. *Style B (section 2.6): the hook may have 3 lines of up to 13 characters, and a line that is only a highlight block (a number such as `6h 40m` or a short phrase) may have 1 or 2 words; the 3 to 7 word rule does not apply to those lines.* Line length is limited by the safe box (section 1.4): about 17 characters per line at 88 px, 22 at 72 px and 24 at 64 px. Never one word alone on a line. Sentence case. Durations in the app format (`45m`, `1h 05m`). No emoji, no exclamation marks.
+**Text per screen.** One idea per screen. At most 2 lines. 3 to 7 words per line. *Style B (section 2.6): the hook may have 3 lines of up to 13 characters, and a line that is only a highlight block (a number such as `6h 40m` or a short phrase) may have 1 or 2 words; the 3 to 7 word rule and the one-word rule below do not apply to those lines.* Line length is limited by the safe box (section 1.4): about 17 characters per line at 88 px, 22 at 72 px and 24 at 64 px. Never one word alone on a line (except a style B block-only line). Sentence case. Durations in the app format (`45m`, `1h 05m`). No emoji, no exclamation marks.
 
 **Length.** 20 to 45 seconds in total (platform study, section 9). Between 5 and 9 screens. A reveal inside a screen (line 2 appears 3 seconds after line 1) is allowed when a screen is longer than 5 seconds, so something changes about every 2 to 4 seconds.
 

@@ -33,7 +33,7 @@ BODY_PX = 96
 LOGO = os.environ.get("CAREEROS_MARK", cv.MARK_DARK)
 STYLES = {"bold": None}
 
-GRID = b.TileGrid(SITES, [cv.fmt_minutes(m) for m in MINUTES], cols=1, tw=790, th=140, gap=22, y0=910, x0=95,
+GRID = b.TileGrid(SITES, [cv.fmt_minutes(m) for m in MINUTES], cols=1, tw=790, th=140, gap=22, y0=930, x0=95,
                   label_px=52, value_px=56, layout="row")
 
 
