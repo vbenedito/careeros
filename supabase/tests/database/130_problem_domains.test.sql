@@ -11,7 +11,7 @@ select tests.create_user('nia');
 select tests.create_user('oli');
 
 -- =============================================================================================
--- PRB-18: the one list in SQL, and the widened check (DATA-16)
+-- PRB-18: the one list in SQL, and the trigger that replaced the domain check (DATA-16, PSR-24)
 -- =============================================================================================
 select is(private.problem_domains(), array['leetcode.com', 'neetcode.io'],
   'PRB-18 private.problem_domains() is exactly leetcode.com and neetcode.io');
@@ -19,11 +19,14 @@ select ok(not has_function_privilege('authenticated', 'private.problem_domains()
   and not has_function_privilege('anon', 'private.problem_domains()', 'execute'),
   'PRB-18 clients cannot call private.problem_domains()');
 select ok(
-  (select convalidated and position('neetcode.io' in pg_get_constraintdef(oid)) > 0
-   from pg_constraint
-   where conrelid = 'public.study_session_problems'::regclass
-     and conname = 'study_session_problems_domain_check'),
-  'DATA-16 the domain check exists and is validated');
+  not exists (select 1 from pg_constraint
+              where conrelid = 'public.study_session_problems'::regclass
+                and conname = 'study_session_problems_domain_check')
+  and exists (select 1 from pg_trigger
+              where tgrelid = 'public.study_session_problems'::regclass
+                and tgname = 'study_session_problems_rule_check' and not tgisinternal
+                and tgenabled = 'O' and (tgtype & 2) = 2 and (tgtype & 4) = 4),
+  'DATA-16 PSR-24 the literal domain check is replaced by an enabled BEFORE INSERT trigger (#285)');
 
 -- Direct inserts run as the test superuser (clients cannot insert at all).
 insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
@@ -43,19 +46,19 @@ select lives_ok(
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('c0000000-0000-4000-8000-000000000003', tests.user_id('nia'), 'neetcode.com', 'two-sum') $$,
-  '23514', null, 'DATA-16 PRB-05 neetcode.com is refused by the check');
+  '23514', null, 'DATA-16 PRB-05 PSR-24 neetcode.com is refused by the trigger (23514, as the old check)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('c0000000-0000-4000-8000-000000000004', tests.user_id('nia'), 'notneetcode.io', 'two-sum') $$,
-  '23514', null, 'DATA-16 PRB-05 notneetcode.io is refused by the check');
+  '23514', null, 'DATA-16 PRB-05 PSR-24 notneetcode.io is refused by the trigger (23514)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('c0000000-0000-4000-8000-000000000005', tests.user_id('nia'), 'neetcode.io.evil.com', 'two-sum') $$,
-  '23514', null, 'DATA-16 PRB-05 neetcode.io.evil.com is refused by the check');
+  '23514', null, 'DATA-16 PRB-05 PSR-24 neetcode.io.evil.com is refused by the trigger (23514)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('c0000000-0000-4000-8000-000000000006', tests.user_id('nia'), 'app.neetcode.io', 'two-sum') $$,
-  '23514', null, 'DATA-16 PRB-05 a subdomain such as app.neetcode.io is not in the list: refused by the check');
+  '23514', null, 'DATA-16 PRB-05 a subdomain such as app.neetcode.io is not in the list: refused by the trigger (23514)');
 select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('c0000000-0000-4000-8000-000000000007', tests.user_id('oli'), 'neetcode.io', 'two-sum') $$,

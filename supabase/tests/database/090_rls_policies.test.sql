@@ -14,7 +14,8 @@ select plan(9);
 --   plans.plans_no_anonymous: the same restrictive refusal on the plans table (ENT-01).
 --   admins.admins_no_anonymous: the same refusal on the admins table (ADM-01).
 --   account_settings.account_settings_no_anonymous,
---   study_session_problems.study_session_problems_no_anonymous: the same refusal (DATA-13, DATA-16).
+--   study_session_problems.study_session_problems_no_anonymous,
+--   problem_rules.problem_rules_no_anonymous: the same refusal (DATA-13, DATA-16, PSR-22).
 --   plans.plans_select_all: the one permissive exception. `plans` holds no user data (one row per
 --     plan, ENT-01), so every signed-in user may read every row. It is allowed only because the
 --     table has no write grant for clients and the policy is SELECT-only; both are asserted at
@@ -27,6 +28,7 @@ insert into policy_exceptions values
   ('account_settings.account_settings_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01, DATA-13)'),
   ('study_session_problems.study_session_problems_no_anonymous',
    'restrictive anonymous-JWT refusal (AUTH-01, DATA-16)'),
+  ('problem_rules.problem_rules_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01, PSR-22)'),
   ('admins.admins_no_anonymous', 'restrictive anonymous-JWT refusal (AUTH-01, ADM-01)');
 create temp table reference_policies (policy_key text primary key, reason text not null) on commit drop;
 insert into reference_policies values

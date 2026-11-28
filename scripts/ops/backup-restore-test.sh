@@ -26,7 +26,25 @@ psql_local "insert into auth.users (instance_id, id, aud, role, email, email_con
   insert into public.account_settings (user_id, track_problems) values ('$uid', true);
   insert into public.admins (user_id) values ('$uid');
   insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
-  values ('$uid', '$uid', 'leetcode.com', 'two-sum');" >/dev/null
+  values ('$uid', '$uid', 'leetcode.com', 'two-sum');
+  -- Problem rules (PSR-22): five active rules (the free cap) incl. a custom site with a stored id,
+  -- and a tombstone whose domain keeps an id. Proves the dump order (problem_rules before
+  -- study_session_problems) and that the restore accepts a tombstone at the cap.
+  insert into public.tracked_domains (user_id, domain) values ('$uid', 'hellointerview.com');
+  insert into public.problem_rules (user_id, domain, prefix, kind, label, confirmed_at)
+  select '$uid', d, array['practice'], 'id', d, now()
+  from unnest(array['hellointerview.com', 'a1.example.net', 'a2.example.net', 'a3.example.net',
+                    'a4.example.net']) as d;
+  insert into public.problem_rules (user_id, domain, kind, confirmed_at, removed_at)
+  values ('$uid', 'kept.example.net', 'id', now(), now());
+  insert into public.study_sessions (id, user_id, device_id, domain, started_at, ended_at)
+  values (gen_random_uuid(), '$uid', gen_random_uuid(), 'hellointerview.com',
+          now() - interval '3 hours', now() - interval '2 hours 50 minutes'),
+         (gen_random_uuid(), '$uid', gen_random_uuid(), 'kept.example.net',
+          now() - interval '4 hours', now() - interval '3 hours 50 minutes');
+  insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
+  select id, user_id, domain, case domain::text when 'kept.example.net' then 'kept-id' else 'Ab_12' end
+  from public.study_sessions where user_id = '$uid' and domain::text in ('hellointerview.com', 'kept.example.net');" >/dev/null
 
 fingerprint() {
   psql_local "select (select count(*) from auth.users) || ',' || (select count(*) from auth.identities)
@@ -35,7 +53,10 @@ fingerprint() {
     || ',' || (select count(*) filter (where track_problems) from public.account_settings)
     || ',' || (select count(*) from public.admins)
     || ',' || (select count(*) || ':' || coalesce(string_agg(problem_slug, '|' order by session_id), '')
-    from public.study_session_problems)"
+    from public.study_session_problems)
+    || ',' || (select count(*) || ':' || count(*) filter (where removed_at is null) || ':'
+    || coalesce(string_agg(domain::text || '/' || kind || '/' || coalesce(array_to_string(prefix, '/'), '-')
+         || '/' || coalesce(label, '-'), '|' order by domain), '') from public.problem_rules)"
 }
 before=$(fingerprint)
 

@@ -44,8 +44,8 @@ select ok(
 select policies_are('public', 'plans', array['plans_select_all', 'plans_no_anonymous'],
   'ENT-01 plans has exactly a read policy and the anonymous guard');
 select throws_ok(
-  $$ insert into public.plans (id, max_tracked_domains) values ('x', -1) $$,
-  '23514', null, 'ENT-01 a plan limit must be positive'
+  $$ insert into public.plans (id, max_tracked_domains, max_problem_rules) values ('x', -1, 5) $$,
+  '23514', null, 'ENT-01 a plan limit must be positive (#285: every plan row now sets max_problem_rules too)'
 );
 
 -- Signed-in clients read the plans, and cannot change them.

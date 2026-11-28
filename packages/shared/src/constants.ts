@@ -66,19 +66,61 @@ export const ENTITLEMENTS = {
   LIMIT_ERROR_CODE: "LIMIT_REACHED",
   /** ENT-06: the spec ID of the limit; released extensions map this hint to LIMIT_REACHED. */
   LIMIT_ERROR_HINT: "DATA-01",
+  /** PSR-15, O4: user problem rules per account on `free` (ENT-01 column `max_problem_rules`). */
+  FREE_MAX_PROBLEM_RULES: 5,
+  /** PSR-15: a new limit has no released client that reads DATA-01, so it has its own hint. */
+  PROBLEM_RULES_LIMIT_ERROR_HINT: "PSR-15",
 } as const;
 
 /**
- * specs/v1/01-problems.md §2 (PRB-05, PRB-11). The database repeats the domain, the slug pattern
- * and the length in study_session_problems and ingest v2; db-parity.test.ts keeps them equal.
+ * specs/v1/01-problems.md §2 (PRB-05, PRB-11) and specs/v1/05-problem-sites.md §2 (PSR-01..09).
+ * The database repeats the built-in domains, the slug and id patterns, the lengths and the rule
+ * limits in study_session_problems, problem_rules and ingest v2; db-parity.test.ts keeps them
+ * equal.
  */
 export const PROBLEMS = {
-  /** PRB-18: the one list of sites whose tabs can carry a problem (#233). */
+  /** PRB-18: the one list of sites whose tabs can carry a problem (#233). Built-in rules (PSR-04). */
   PROBLEM_DOMAINS: ["leetcode.com", "neetcode.io"],
   PROBLEM_PATH_PREFIX: "/problems/",
   PROBLEM_SLUG_PATTERN: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
   PROBLEM_SLUG_MAX: 100,
   PROBLEM_LIST_MAX: 200,
+  /** PSR-04: LeetCode and NeetCode as rules with the same shape as a user rule (O5). */
+  BUILT_IN_PROBLEM_RULES: [
+    { domain: "leetcode.com", prefix: ["problems"], kind: "slug" },
+    { domain: "neetcode.io", prefix: ["problems"], kind: "slug" },
+  ],
+  /** PSR-07: the fixed list of id kinds; a rule names one and never carries its own pattern. */
+  PROBLEM_ID_KINDS: ["slug", "id"],
+  /** PSR-07, O6: kind `id` of user rules (letters of both cases, digits, single `-` or `_`). */
+  PROBLEM_ID_PATTERN: /^[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$/,
+  PROBLEM_ID_MAX: 64,
+  /** PSR-06: literal segments before the id. */
+  PROBLEM_RULE_PREFIX_MIN: 1,
+  PROBLEM_RULE_PREFIX_MAX: 3,
+  PROBLEM_RULE_SEGMENT_PATTERN: /^[a-z0-9]+(?:[-_.][a-z0-9]+)*$/,
+  PROBLEM_RULE_SEGMENT_MAX: 40,
+  /** PSR-25: a prefix segment in this list shows the personal-data warning. */
+  PROBLEM_RULE_RISKY_SEGMENTS: [
+    "user",
+    "users",
+    "u",
+    "in",
+    "profile",
+    "profiles",
+    "account",
+    "accounts",
+    "share",
+    "shared",
+    "invite",
+    "d",
+    "token",
+    "s",
+  ],
+  /** PSR-25: an id this long with letters and digits and no `-` or `_` "looks random". */
+  PROBLEM_ID_RANDOM_MIN: 20,
+  /** PSR-01 */
+  PROBLEM_RULE_LABEL_MAX: 40,
 } as const;
 
 /** specs/v0/04-data-model.md */
