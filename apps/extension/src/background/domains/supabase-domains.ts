@@ -46,6 +46,16 @@ export function createSupabaseDomainsApi(client: SupabaseClient): DomainsApi {
       if (failure) throw failure;
       return (data as { track_problems?: unknown } | null)?.track_problems === true;
     },
+    async problemRules() {
+      // PSR-19: RLS returns only the caller's rows; only active rules (no tombstone) are wanted.
+      const { data, error, status } = await client
+        .from("problem_rules")
+        .select("domain,prefix,kind")
+        .is("removed_at", null);
+      const failure = toError(error, status);
+      if (failure) throw failure;
+      return (data ?? []) as unknown[];
+    },
     async delete(domain) {
       const { error, status } = await client.from("tracked_domains").delete().eq("domain", domain);
       const failure = toError(error, status);

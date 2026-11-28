@@ -364,3 +364,56 @@ describe("Engine A — startup and resync (TRK-01, TRK-14, TRK-15, TRK-19)", () 
     }
   });
 });
+
+describe("Engine A: problem rules (PSR-03, PSR-05, PSR-19, PSR-20)", () => {
+  const RULE = {
+    domain: "hellointerview.com",
+    prefix: ["practice", "system-design"],
+    kind: "id",
+  } as const;
+  const PAGE = tab(
+    "https://www.hellointerview.com/practice/system-design/cmlz26cxp08st08adxvy89hr1?q=x",
+  );
+  const base = (setting: boolean | null, rules = [RULE]): Signals =>
+    run([
+      { type: "AUTH", connected: true },
+      { type: "SETTINGS", trackingEnabled: true },
+      { type: "DOMAINS", domains: [...DOMAINS, "hellointerview.com", "app.hellointerview.com"] },
+      { type: "IDLE", state: "active" },
+      ...(setting === null ? [] : [{ type: "PROBLEMS", enabled: setting } as const]),
+      { type: "PROBLEM_RULES", rules },
+      { type: "TAB", tab: PAGE },
+    ]);
+
+  it("PSR-10 with the setting on, the id of the rule is the only thing kept", () => {
+    const s = base(true);
+    expect(s.focusedDomain).toBe("hellointerview.com");
+    expect(s.focusedProblem).toBe("cmlz26cxp08st08adxvy89hr1");
+    expect(JSON.stringify(s)).not.toMatch(/\?q=|www\.|practice\/system-design\/cml/);
+  });
+
+  it("PSR-03 PSR-20 setting off, unread or no rules gives no id", () => {
+    expect(base(false).focusedProblem).toBeNull();
+    expect(base(null).focusedProblem).toBeNull();
+    expect(base(true, []).focusedProblem).toBeNull();
+  });
+
+  it("PSR-19 a new rule list asks for the tab again and an emptied list clears the id", () => {
+    const s = base(true);
+    const { signals, effects } = reduceSignals(s, { type: "PROBLEM_RULES", rules: [] });
+    expect(effects).toEqual([{ type: "REQUERY_TAB" }]);
+    expect(signals.focusedProblem).toBeNull();
+  });
+
+  it("PSR-05 a subdomain tracked as its own site has no id under the rule of its parent", () => {
+    const sub = tab("https://app.hellointerview.com/practice/system-design/abc123");
+    const s = reduceSignals(base(true), { type: "TAB", tab: sub }).signals;
+    expect(s.focusedDomain).toBe("app.hellointerview.com");
+    expect(s.focusedProblem).toBeNull();
+  });
+
+  it("PSR-05 a lookalike host is not tracked, so it has no id", () => {
+    const evil = tab("https://hellointerview.com.evil.com/practice/system-design/abc123");
+    expect(reduceSignals(base(true), { type: "TAB", tab: evil }).signals.focusedProblem).toBeNull();
+  });
+});

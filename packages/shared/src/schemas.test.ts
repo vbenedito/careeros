@@ -53,7 +53,7 @@ describe("IntervalSchema", () => {
     expect(IntervalSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
   });
 
-  it("PRB-08 PRB-15 PRB-18 accepts a valid problem only on a domain of PROBLEM_DOMAINS", () => {
+  it("PRB-08 PRB-15 PRB-18 PSR-07 a built-in domain takes a slug, any other domain a valid id", () => {
     expect(IntervalSchema.safeParse({ ...valid, problem: "two-sum" }).success).toBe(true);
     expect(IntervalSchema.safeParse({ ...valid, problem: "Two-Sum" }).success).toBe(false);
     expect(IntervalSchema.safeParse({ ...valid, problem: null }).success).toBe(false);
@@ -61,12 +61,27 @@ describe("IntervalSchema", () => {
       IntervalSchema.safeParse({ ...valid, domain: "neetcode.io", problem: "two-integer-sum" })
         .success,
     ).toBe(true);
+    // A built-in domain keeps the slug pattern (lowercase only); other domains take the id kind.
     for (const domain of ["neetcode.com", "app.neetcode.io", "example.com"]) {
       expect(
         IntervalSchema.safeParse({ ...valid, domain, problem: "two-sum" }).success,
         domain,
+      ).toBe(true);
+      expect(
+        IntervalSchema.safeParse({ ...valid, domain, problem: "abc%20" }).success,
+        domain,
+      ).toBe(false);
+      expect(
+        IntervalSchema.safeParse({ ...valid, domain, problem: "a".repeat(65) }).success,
+        domain,
       ).toBe(false);
     }
+    expect(
+      IntervalSchema.safeParse({ ...valid, domain: "example.com", problem: "AbC_123" }).success,
+    ).toBe(true);
+    expect(
+      IntervalSchema.safeParse({ ...valid, domain: "leetcode.com", problem: "AbC123" }).success,
+    ).toBe(false);
   });
 
   it("SEC-01 rejects unknown fields such as a URL or title", () => {

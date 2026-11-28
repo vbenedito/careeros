@@ -50,10 +50,10 @@ function setup(initial: Record<string, unknown> = {}) {
 describe("tolerant outbox parse (PRB-20)", () => {
   const base = (domain: string) => ({ ...interval(NOW - 3000_000), domain });
 
-  it("PRB-20 an interval whose problem is on a domain outside PROBLEM_DOMAINS keeps its time and loses only the problem", () => {
+  it("PRB-20 PSR-07 an interval whose problem is not valid for its domain keeps its time and loses only the problem", () => {
     const neet = { ...base("neetcode.io"), problem: "two-integer-sum" };
-    const unknown = { ...base("example.com"), problem: "two-sum" };
-    const lookalike = { ...base("neetcode.io.evil.com"), problem: "two-sum" };
+    const unknown = { ...base("example.com"), problem: "bad%20id" };
+    const lookalike = { ...base("neetcode.io.evil.com"), problem: "x".repeat(65) };
     const { items, invalid } = parseOutboxCounted([neet, unknown, lookalike]);
     expect(invalid).toBe(0);
     expect(items[0]).toEqual(neet); // a listed domain keeps its problem
@@ -72,9 +72,14 @@ describe("tolerant outbox parse (PRB-20)", () => {
     expect(invalid).toBe(2);
   });
 
-  it("PRB-20 a deferred entry with a problem on an unknown domain keeps its interval too", () => {
+  it("PSR-07 an id on another domain is kept (the account's rules decide on the server, PSR-23)", () => {
+    const user = { ...base("hellointerview.com"), problem: "cmlz26cxp08st08adxvy89hr1" };
+    expect(parseOutboxCounted([user]).items).toEqual([user]);
+  });
+
+  it("PRB-20 a deferred entry with a problem that does not fit keeps its interval too", () => {
     const entry = {
-      interval: { ...base("example.com"), problem: "two-sum" },
+      interval: { ...base("example.com"), problem: "bad%20id" },
       retryAt: NOW,
       attempts: 1,
     };
@@ -90,9 +95,22 @@ describe("tolerant engine state (PRB-20)", () => {
     open: { id: "00000000-0000-4000-8000-0000000000aa", domain, problem, startedAt: 100 },
   });
 
-  it("PRB-20 an open interval with a problem on an unknown domain keeps its time and loses the problem", () => {
-    const state = parseEngineState(open("example.com", "two-sum"));
+  it("PRB-20 an open interval with a problem that does not fit keeps its time and loses the problem", () => {
+    const state = parseEngineState(open("example.com", "bad%20id"));
     expect(state.open).toMatchObject({ domain: "example.com", problem: null, startedAt: 100 });
+  });
+
+  it("PSR-20 cached rules in the engine state are validated one by one; a 0.3.x state has none", () => {
+    const rule = { domain: "hellointerview.com", prefix: ["practice"], kind: "id" };
+    const state = parseEngineState({
+      ...INITIAL_ENGINE_STATE,
+      signals: { ...INITIAL_ENGINE_STATE.signals, problemRules: [rule, { ...rule, kind: "x" }] },
+    });
+    expect(state.signals.problemRules).toEqual([rule]);
+    const { problemRules: _gone, ...old } = INITIAL_ENGINE_STATE.signals;
+    expect(
+      parseEngineState({ ...INITIAL_ENGINE_STATE, signals: old }).signals.problemRules,
+    ).toEqual([]);
   });
 
   it("PRB-20 an open interval on a listed domain keeps its problem", () => {

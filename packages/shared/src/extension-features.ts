@@ -11,6 +11,8 @@ export const EXTENSION_FEATURES = {
   problemTracking: "0.3.0",
   /** PRB-18..22: problem tracking on NeetCode needs extension 0.3.1 (#233, NC-b). */
   problemTrackingNeetCode: "0.3.1",
+  /** PSR-19..21: the extension downloads and applies the account's problem rules (#286, PS-b). */
+  problemRules: "0.4.0",
 } as const;
 
 export type ExtensionFeature = keyof typeof EXTENSION_FEATURES;

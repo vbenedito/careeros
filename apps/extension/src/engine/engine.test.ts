@@ -654,6 +654,36 @@ describe("LeetCode problems (specs/v1/01-problems.md PRB-04..09)", () => {
 
   const problems = (sim: Sim) => sim.emitted().map((i) => i.problem ?? null);
 
+  it("PSR-19 a rules refresh with unchanged rules does not split a LeetCode interval", () => {
+    const sim = solving();
+    sim.send(10, { type: "PROBLEM_RULES", rules: [] });
+    sim.send(20, { type: "TAB", tab: PROBLEM_TAB });
+    sim.heartbeats(20, 600, PROBLEM_TAB, "active");
+    sim.send(600, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([["leetcode.com", 0, 600]]);
+    expect(problems(sim)).toEqual(["two-sum"]);
+  });
+
+  it("PSR-19 a rules refresh with unchanged rules does not split a user-rule interval", () => {
+    const rule = { domain: "hellointerview.com", prefix: ["practice"], kind: "id" } as const;
+    const page = tab("https://hellointerview.com/practice/abc123");
+    const sim = new Sim();
+    sim.send(0, { type: "START" });
+    sim.send(0, { type: "AUTH", connected: true });
+    sim.send(0, { type: "SETTINGS", trackingEnabled: true });
+    sim.send(0, { type: "DOMAINS", domains: ["hellointerview.com"] });
+    sim.send(0, { type: "IDLE", state: "active" });
+    sim.send(0, { type: "PROBLEMS", enabled: true });
+    sim.send(0, { type: "PROBLEM_RULES", rules: [rule] });
+    sim.send(0, { type: "TAB", tab: page });
+    sim.send(10, { type: "PROBLEM_RULES", rules: [{ ...rule }] }); // same rules, new array
+    sim.send(10, { type: "TAB", tab: page });
+    sim.heartbeats(10, 600, page, "active");
+    sim.send(600, { type: "TAB", tab: NEWS });
+    expect(sim.intervals()).toEqual([["hellointerview.com", 0, 600]]);
+    expect(problems(sim)).toEqual(["abc123"]);
+  });
+
   it("PRB acceptance 1 PRB-05 PRB-06 600 s on a problem page are stored under leetcode.com with two-sum only", () => {
     const sim = solving();
     sim.heartbeats(0, 600, PROBLEM_TAB, "active");

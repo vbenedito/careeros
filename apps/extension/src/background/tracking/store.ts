@@ -11,7 +11,11 @@ import {
   type Interval,
   IntervalSchema,
   isProblemDomain,
-  ProblemSlugSchema,
+  isValidProblemForDomain,
+  isValidProblemId,
+  ProblemIdSchema,
+  type ProblemRule,
+  parseProblemRules,
 } from "@careeros/shared";
 import { z } from "zod";
 import { type EngineState, INITIAL_ENGINE_STATE } from "../../engine/engine";
@@ -38,6 +42,8 @@ function openProblemTolerant(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
   const o = value as Record<string, unknown>;
   if (o.problem == null || typeof o.domain !== "string" || isProblemDomain(o.domain)) return value;
+  // PSR-07: a valid id on another domain is kept (the account's rules decide, PSR-23).
+  if (typeof o.problem === "string" && isValidProblemId(o.problem)) return value;
   return { ...o, problem: null };
 }
 
@@ -49,7 +55,9 @@ export const EngineStateSchema = z.object({
     // Only ever a tracked domain (SEC-02): the schema rejects anything that is not a domain.
     focusedDomain: DomainSchema.nullable(),
     // PRB-06: only a validated slug, never a path. Defaults keep 0.2.3 state readable.
-    focusedProblem: ProblemSlugSchema.nullable().default(null),
+    focusedProblem: ProblemIdSchema.nullable().default(null),
+    // PSR-19/20: invalid rules are dropped one by one; a missing key (0.3.x state) is none.
+    problemRules: z.unknown().transform(parseProblemRules),
     trackProblems: z.boolean().nullable().default(null),
     audible: z.boolean(),
     idle,
@@ -61,11 +69,11 @@ export const EngineStateSchema = z.object({
       .object({
         id: z.uuid(),
         domain: DomainSchema,
-        problem: ProblemSlugSchema.nullable().default(null),
+        problem: ProblemIdSchema.nullable().default(null),
         splitOpened: z.boolean().default(false),
         startedAt: epoch,
       })
-      .refine((o) => o.problem === null || isProblemDomain(o.domain))
+      .refine((o) => o.problem === null || isValidProblemForDomain(o.domain, o.problem))
       .nullable(),
   ),
   lastHeartbeatAt: nullableEpoch,
@@ -205,6 +213,17 @@ export function createTrackingStore(area: KeyValueArea, epoch?: AccountEpoch) {
         | { trackProblems?: unknown }
         | undefined;
       return cache?.trackProblems === true;
+    },
+
+    /**
+     * PSR-19/20: the account's problem rules cached with the list; each is validated again and
+     * an invalid one is dropped alone. `[]` when not read, failed or disconnected (fail closed).
+     */
+    async problemRules(): Promise<ProblemRule[]> {
+      const cache = (await area.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY] as
+        | { problemRules?: unknown }
+        | undefined;
+      return parseProblemRules(cache?.problemRules);
     },
 
     /**

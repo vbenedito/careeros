@@ -48,6 +48,7 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       { type: "AUTH", connected: true },
       { type: "SETTINGS", trackingEnabled: true },
       { type: "PROBLEMS", enabled: false },
+      { type: "PROBLEM_RULES", rules: [] },
       { type: "DOMAINS", domains: ["leetcode.com"] },
     ]);
     const none = recordingTracker();
@@ -56,7 +57,13 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
       store: createTrackingStore(fakeStorage()),
       isConnected: async () => false,
     });
-    expect(none.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS", "PROBLEMS"]);
+    expect(none.events.map((e) => e.type)).toEqual([
+      "START",
+      "AUTH",
+      "SETTINGS",
+      "PROBLEMS",
+      "PROBLEM_RULES",
+    ]);
     // SYNC-09d: the setting comes from the cached list; only `true` is on.
     const on = recordingTracker();
     await startTracking({
@@ -90,12 +97,13 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     handle({ [TRACKING_ENABLED_KEY]: { newValue: true } }, "sync");
     await new Promise((r) => setTimeout(r, 0));
     // Lazy sources resolve asynchronously; the real queue keeps arrival order (queue.test.ts).
-    expect(rec.events).toHaveLength(5);
+    expect(rec.events).toHaveLength(6);
     expect(rec.events).toEqual(
       expect.arrayContaining([
         { type: "SETTINGS", trackingEnabled: false },
         { type: "DOMAINS", domains: ["neetcode.io"] },
         { type: "PROBLEMS", enabled: false },
+        { type: "PROBLEM_RULES", rules: [] },
         { type: "AUTH", connected: true },
         { type: "AUTH", connected: false },
       ]),
@@ -190,7 +198,13 @@ describe("tracking bootstrap (TRK-01, TRK-19, AUTH-11/12)", () => {
     expect(storage.data.has(OUTBOX_KEY)).toBe(false);
     expect(storage.data.has(ENGINE_STATE_KEY)).toBe(false);
     expect(storage.data.has(DOMAINS_CACHE_KEY)).toBe(false); // the list belongs to the user
-    expect(rec.events.map((e) => e.type)).toEqual(["START", "AUTH", "SETTINGS", "PROBLEMS"]);
+    expect(rec.events.map((e) => e.type)).toEqual([
+      "START",
+      "AUTH",
+      "SETTINGS",
+      "PROBLEMS",
+      "PROBLEM_RULES",
+    ]);
     expect(rec.events).toContainEqual({ type: "PROBLEMS", enabled: false }); // PRB-04
   });
 });
