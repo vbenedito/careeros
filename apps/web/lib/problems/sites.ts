@@ -149,7 +149,7 @@ export function removeNeedsDialog(rule: Pick<ProblemSiteRule, "hasHistory">): bo
 export const SITE_COPY = {
   title: "Problem sites",
   intro:
-    "LeetCode and NeetCode work without setup. Add another site to save its problem id with your study time.",
+    "LeetCode and NeetCode are built in. Add another site to save its problem id with your study time. Track coding problems must be on.",
   /** PSR-12: always shown under the list. */
   versionNote:
     "Problem sites you add need CareerOS extension 0.4.0 or later. Chrome updates extensions on its own; until then, time on these sites is still tracked, without problem names.",
@@ -159,7 +159,7 @@ export const SITE_COPY = {
   empty: "You haven't added a problem site yet.",
   addTitle: "Add a problem site",
   addHelp:
-    "Paste the address of one problem page. We read it in this page and never send it to CareerOS.",
+    "Paste the address of one problem page. It is read in your browser only. It is never sent or stored.",
   urlLabel: "Example address",
   urlPlaceholder: "https://example.com/practice/problem-name/abc123",
   check: "Check address",
@@ -179,7 +179,7 @@ export const SITE_COPY = {
   remove: (label: string) => `Remove ${label}`,
   dialogTitle: (label: string) => `Remove ${label}?`,
   dialogBody: (domain: string) =>
-    `Problem ids saved for ${domain} can stay or go. Your study time stays either way.`,
+    `Keep or delete the problem ids saved for ${domain}. Your study time stays either way.`,
   dialogShared: (domain: string) =>
     `Other problem sites on ${domain} share this history, so deleting it affects them too.`,
   keepHistory: "Remove and keep history",
@@ -201,7 +201,7 @@ export function proposalFailure(
     case "built_in":
       return `${domain ?? host ?? "This site"} is already supported. You don't need to add it.`;
     default:
-      return `We can't find a problem id in this address. The id is one part of the path, after 1 to ${PROBLEMS.PROBLEM_RULE_PREFIX_MAX} other parts. It uses letters, digits, - or _, up to ${PROBLEMS.PROBLEM_ID_MAX} characters.`;
+      return `This address has no problem id that CareerOS can use. The id is one part of the address, after 1 to ${PROBLEMS.PROBLEM_RULE_PREFIX_MAX} other parts. It can use letters, digits, - and _, up to ${PROBLEMS.PROBLEM_ID_MAX} characters.`;
   }
 }
 
@@ -247,13 +247,13 @@ export function problemSiteErrorMessage(
 /** PSR-18 / SEC-13: the texts of the privacy page and the landing page (live with problemRules). */
 export const SITE_PRIVACY = {
   tableData:
-    "Only on the problem sites you add: the problem id (one part of the address), saved with the study period. The rules you add (site, the first parts of the path, a name) are saved with your account. The address you paste is read in your browser and is never stored",
+    "Only on the problem sites you add: the problem id (one part of the address), saved with the study period. The rules you add (the site, the parts of the address before the id, and a name) are saved with your account. The address you paste is read in your browser and is never stored",
   tableWhy: "Showing your time per problem on sites you add",
   /** Replaces the "problem name" phrase in the "Nothing else" paragraph. */
   nothingElse: "the problem name or id described below",
   sectionTitle: "Problem sites you add",
   paragraphs: [
-    "You can add a site in Settings by pasting one example address. The page reads the address in your browser and shows what would be kept. The address you paste is not stored, not sent and not logged. Only the rule is saved with your account: the site, the first parts of the path, the kind of id and the name you type. The extension then keeps only that one part of the address (the problem id) with your study time. The rest of the address, including the search part after ?, is never stored or sent.",
+    "You can add a site in Settings by pasting one example address. The page reads the address in your browser and shows what would be kept. The address you paste is not stored, not sent and not logged. Only the rule is saved with your account: the site, the parts of the address before the id, the kind of id and the name you type. The extension then keeps only that one part of the address (the problem id) with your study time. The rest of the address, including anything after ? or #, is never stored or sent.",
     "Only add pages where the address names a problem. Do not add pages whose address names a person, an account or a private link (for example a profile page or a shared document): CareerOS would store that part of the address as the problem id. You can remove a problem site and its history at any time.",
     "When you remove a site, you choose to keep or delete the problem ids saved for it. Your study time stays either way. Deleting your account removes your rules and all problem ids.",
   ],
