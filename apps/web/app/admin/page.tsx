@@ -2,6 +2,7 @@ import { CostPanel } from "@/app/admin/cost-panel";
 import { DiagramPanel } from "@/app/admin/diagram-panel";
 import { DocsPanel } from "@/app/admin/docs-panel";
 import { HealthPanel } from "@/app/admin/health-panel";
+import { PostsPanel } from "@/app/admin/posts-panel";
 import { ProgressPanel } from "@/app/admin/progress-panel";
 import { ReviewsPanel } from "@/app/admin/reviews-panel";
 import { SessionsPanel } from "@/app/admin/sessions-panel";
@@ -13,6 +14,8 @@ import { buildIssueDocs } from "@/lib/admin/docs-view";
 import { requireAdmin } from "@/lib/admin/guard";
 import { buildHealth } from "@/lib/admin/health-view";
 import { type LedgerLoad, loadLedger } from "@/lib/admin/ledger";
+import { loadPosts, type PostsLoad } from "@/lib/admin/posts";
+import { buildPosts } from "@/lib/admin/posts-view";
 import { buildProgress, mergeStates } from "@/lib/admin/progress-view";
 import { loadRepo, type RepoLoad } from "@/lib/admin/repo";
 import { buildReviewRows } from "@/lib/admin/reviews-view";
@@ -24,7 +27,8 @@ import { loadWorkflows } from "@/lib/admin/workflows";
 function unavailableNote(
   source:
     | Extract<LedgerLoad, { status: "unavailable" }>
-    | Extract<RepoLoad, { status: "unavailable" }>,
+    | Extract<RepoLoad, { status: "unavailable" }>
+    | Extract<PostsLoad, { status: "unavailable" }>,
 ): string | null {
   if (source.httpStatus !== null) return `HTTP ${source.httpStatus}`;
   if (source.reason === "unreadable") return "unreadable response";
@@ -33,12 +37,17 @@ function unavailableNote(
 }
 
 /**
- * ADM-02..13, ADM-15, ADM-17..20. A layout does not hold back its page's data loading, so the guard is
+ * ADM-02..13, ADM-15, ADM-17..21. A layout does not hold back its page's data loading, so the guard is
  * awaited here too, before anything is read. Read-only (ADM-04): no form, no action.
  */
 export default async function AdminPage() {
   await requireAdmin();
-  const [ledger, repo, workflows] = await Promise.all([loadLedger(), loadRepo(), loadWorkflows()]);
+  const [ledger, repo, workflows, posts] = await Promise.all([
+    loadLedger(),
+    loadRepo(),
+    loadWorkflows(),
+    loadPosts(),
+  ]);
   const now = new Date();
   const ledgerNote = ledger.status === "ok" ? null : unavailableNote(ledger);
   const repoNote = repo.status === "ok" ? null : unavailableNote(repo);
@@ -81,6 +90,12 @@ export default async function AdminPage() {
           <SkillsPanel unavailableNote={ledgerNote} />
         )}
       </div>
+      {/* ADM-21: after the overview cards, across the full width. */}
+      {posts.status === "ok" ? (
+        <PostsPanel view={buildPosts(posts.posts, posts.invalid)} />
+      ) : (
+        <PostsPanel unavailableNote={unavailableNote(posts)} />
+      )}
       {ledger.status === "ok" ? (
         <ReviewsPanel
           rows={buildReviewRows(

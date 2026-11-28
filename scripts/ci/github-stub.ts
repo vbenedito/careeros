@@ -159,12 +159,64 @@ const sessions = [
 ];
 
 const blobs = new Map<string, string>();
-const tree = sessions.map((s) => {
-  const text = JSON.stringify(s);
+const file = (path: string, body: unknown) => {
+  const text = JSON.stringify(body);
   const sha = createHash("sha1").update(text).digest("hex");
   blobs.set(sha, text);
-  return { path: `ledger/${s.session}.json`, type: "blob", sha };
+  return { path, type: "blob", sha };
+};
+
+/** ADM-21: invented posts (no real URL or id). One is live on Instagram, one is scheduled. */
+const postEntry = (status: string, extra: Record<string, unknown> = {}) => ({
+  status,
+  caption: "Fixture caption",
+  hashtags: ["#fixture"],
+  link: null,
+  alt_text: null,
+  text_version: "Fixture text",
+  ...extra,
 });
+const postRecord = (date: string, slug: string, title: string) => ({
+  schema: 1,
+  slug,
+  date,
+  time: "19:00",
+  timezone: "America/Sao_Paulo",
+  pillar: "your-real-week",
+  format: "chart",
+  video: { release: `post-${date}-${slug}`, asset: `${date}-${slug}.mp4`, sha256: "b".repeat(64) },
+  music_license: "original:careeros_music:1",
+  ai_label: false,
+  platforms: { instagram: postEntry("ready"), youtube: postEntry("ready", { title }) },
+});
+const postFiles = [
+  file(
+    "posts/2030/2030-01-02-fixture-live.json",
+    postRecord("2030-01-02", "fixture-live", "Fixture live post"),
+  ),
+  file(
+    "posts/2030/2030-01-09-fixture-next.json",
+    postRecord("2030-01-09", "fixture-next", "Fixture next post"),
+  ),
+  file("posts-state/2030/2030-01-02-fixture-live.json", {
+    schema: 1,
+    platforms: {
+      instagram: {
+        status: "published",
+        attempts: 1,
+        platform_id: "fixture-id",
+        url: "https://example.test/p/fixture-live",
+        published_at: "2030-01-02T22:03:00.000Z",
+        issue: null,
+        error: null,
+        metrics: null,
+      },
+    },
+  }),
+  file("posts-state/tokens.json", { schema: 1, checked_on: "2030-01-02" }),
+];
+
+const tree = [...sessions.map((s) => file(`ledger/${s.session}.json`, s)), ...postFiles];
 
 const HEAD = "a".repeat(40);
 const issues = [

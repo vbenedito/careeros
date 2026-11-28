@@ -40,7 +40,11 @@ export function parseLedgerFiles(files: readonly { name: string; text: string }[
 export const BLOB_CONCURRENCY = 8;
 
 /** Maps in order with at most `limit` calls running at once. */
-async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>) {
+export async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+) {
   const out: R[] = new Array(items.length);
   let next = 0;
   const worker = async () => {

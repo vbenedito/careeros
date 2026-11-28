@@ -2,6 +2,9 @@
 
 export const LEDGER_REPO = "vbenedito/careeros-ops";
 export const LEDGER_DIR = "ledger/";
+/** ADM-21: post records and pipeline state in the same repository (PST-04, PST-07). */
+export const POSTS_DIR = "posts/";
+export const POSTS_STATE_DIR = "posts-state/";
 /** Seconds a GitHub listing is cached (ADM-08). */
 export const GITHUB_CACHE_S = 600;
 export const GITHUB_API = "https://api.github.com";

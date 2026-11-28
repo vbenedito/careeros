@@ -71,6 +71,11 @@ describe("admin page (integration)", () => {
     // Bearer token: the ledger is read, and the token stays hidden (ADM-08).
     expect(html).toContain("Second fixture session");
     expect(html).not.toContain("Ledger unavailable");
+    // ADM-21: the posts from the same stub, newest first, the live one with its link.
+    expect(html).not.toContain("Posts unavailable");
+    expect(html.indexOf("Fixture next post")).toBeGreaterThan(-1);
+    expect(html.indexOf("Fixture next post")).toBeLessThan(html.indexOf("Fixture live post"));
+    expect(html).toContain('href="https://example.test/p/fixture-live"');
     const canary = process.env.OPS_LEDGER_TOKEN;
     if (canary) expect(html).not.toContain(canary);
     expect(html).toContain('name="robots" content="noindex, nofollow"');
