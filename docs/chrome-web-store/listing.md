@@ -35,7 +35,7 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 > Updated 2026-11-22 (#258): the last line of the description above changed from "Free, no paid plan." to "Free." (no future-plan hint). **Change it in the store dashboard with the next store text change**, so the edit does not start a review by itself.
 
-> Release 0.4.0 (2026-11-28, PSR-18, #288): problem sites the user adds from one example address, besides LeetCode and NeetCode. Changed: the last bullet of HOW IT WORKS, the first and second bullets of PRIVATE BY DESIGN, the `tabs` justification, the "Web history" row and the remote-code note. Summary unchanged; the data category stays **Web history**. Permissions unchanged from 0.3.1 (`tabs`, `idle`, `alarms`, `storage`; no host permissions, no content scripts). The 0.3.1 wording, for history, named only "the problem name from a leetcode.com or neetcode.io address" and "your time per problem on LeetCode and NeetCode". **Submit 0.4.0 only after the dashboard release (#287) is deployed and its smoke run is green. Change the description and privacy answers in the store dashboard when you upload the 0.4.0 package, together with the pending "Free." line (#258).** After approval, set `EXTENSION_STORE_VERSION=0.4.0` and redeploy (PRB-23). The product owner approves this text.
+> Release 0.4.0 (2026-11-28, PSR-18, #288): problem sites the user adds from one example address, besides LeetCode and NeetCode. Changed: the last bullet of HOW IT WORKS, the first and second bullets of PRIVATE BY DESIGN, the `tabs` justification, the "Web history" row and the remote-code note. The text says "problem id" everywhere, as the privacy page does (the 0.3.1 text said "problem name"). Copy review done by the copy review agent (#288). Summary unchanged; the data category stays **Web history**. Permissions unchanged from 0.3.1 (`tabs`, `idle`, `alarms`, `storage`; no host permissions, no content scripts). The 0.3.1 wording, for history, named only "the problem name from a leetcode.com or neetcode.io address" and "your time per problem on LeetCode and NeetCode". **Steps for the product owner:** (1) Check that the dashboard release (#287) is deployed and its smoke run is green. (2) Upload the 0.4.0 package. (3) In the same submission, paste the new description and the new privacy answers (`tabs`, "Web history", remote code "No"), together with the pending "Free." line (#258). (4) Submit. (5) After approval, set `EXTENSION_STORE_VERSION=0.4.0` and redeploy (PRB-23). The product owner approves the claims in this text.
 
 > Release 0.2.3 (2026-11-17): reliability from the v0 grill review (#163): token refresh timeout, cross-account guard, Disconnect while syncing, protocol forward-compatibility. Same permissions and description as 0.2.2.
 
@@ -50,11 +50,11 @@ HOW IT WORKS
 • Step away and it pauses after 60 seconds. A study tab playing sound (a video, not muted) keeps counting for up to 15 minutes without input.
 • Sessions are saved on your computer first and uploaded every few minutes; offline, they wait up to 30 days.
 • See your week on the web dashboard: time per day and per platform, across every computer you use.
-• Optional: turn on Track coding problems in Settings to see your time per problem on LeetCode, NeetCode and other problem sites you add from one example address (the site must be one of your study sites).
+• Optional: turn on Track coding problems in Settings to see your time per problem on LeetCode, NeetCode and other problem sites you add. To add a site, paste one example address in the dashboard (the site must be one of your study sites).
 
 PRIVATE BY DESIGN
-• For your study it keeps only the site name, when you started and stopped, and a random ID for the computer. If you turn on Track coding problems (off by default), it also keeps the problem identifier, one part of the address, from LeetCode, NeetCode and the problem sites you add, for example two-sum. Nothing else from the address.
-• It reads the active tab's address only to get the site name and, if you turn on Track coding problems, the problem identifier. It never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
+• For your study it keeps only the site name, when you started and stopped, and a random ID for the computer. If you turn on Track coding problems (off by default), it also keeps the problem id from LeetCode, NeetCode and the problem sites you add. The problem id is one part of the address, for example two-sum. Nothing else from the address: no search terms and nothing after # or ?.
+• It reads the active tab's address only to get the site name and, if you turn on Track coding problems, the problem id. The example address you paste when you add a site is read in your browser and never stored or sent. The extension never stores or sends full addresses, page titles, page content or the sites you did not choose, and never tracks incognito windows.
 • No ads, nothing sold. The extension sends no analytics. Delete your account and your data anytime (see the privacy policy).
 
 Sign in on the dashboard with Google or GitHub, then connect the extension from there. Free.
@@ -73,12 +73,12 @@ CareerOS measures how much time the user spends on the study websites they choos
 
 | Permission | Justification |
 |---|---|
-| `tabs` | Read the active tab's address to get its site name and check whether it is one of the user's chosen study sites. The address is never stored or sent; only the name of a chosen site is recorded, and, if the user turns on the Track coding problems setting (off by default), the problem identifier (one part of the address, for example two-sum) from LeetCode, NeetCode and the problem sites the user adds. Nothing else from the address is kept. |
+| `tabs` | Read the active tab's address to get its site name and check whether it is one of the user's chosen study sites. The address is never stored or sent; only the name of a chosen site is recorded, and, if the user turns on the Track coding problems setting (off by default), the problem id (one part of the address, for example two-sum) from LeetCode, NeetCode and the problem sites the user adds. Nothing else from the address is kept: no query and no fragment. |
 | `idle` | Pause tracking when the user has not used the keyboard or mouse for 60 seconds, so idle time is not counted as study. |
 | `alarms` | Run a periodic check that keeps tracking accurate after sleep or browser restarts, and upload finished sessions every few minutes. |
 | `storage` | Keep the user's sign-in, settings, chosen sites and not-yet-uploaded sessions on their computer, so no study time is lost offline. |
 
-**Remote code:** No, I am not using remote code. (All code is in the package; the extension page CSP is `script-src 'self'`. From 0.4.0 the extension downloads the user's problem sites as plain data (a site, fixed address parts and the kind of identifier) and reads them with code in the package; it runs no downloaded code or patterns, ADR-0015.)
+**Remote code:** No, I am not using remote code. (All code is in the package; the extension page CSP is `script-src 'self'`. From 0.4.0 the extension downloads the user's problem sites as plain data (a site, the fixed words of the address before the id, and the kind of id). Code in the package reads this data. The extension runs no downloaded code, script or pattern, ADR-0015.)
 
 **Data usage, what is collected:**
 
@@ -86,7 +86,7 @@ CareerOS measures how much time the user spends on the study websites they choos
 |---|---|---|
 | Personally identifiable information | Yes | The account email, shown in the popup and used to sign in |
 | Authentication information | Yes | The extension's own sign-in session (access and refresh tokens), stored locally |
-| Web history | Yes | Only the site name of the user's chosen study sites, with start and end times, and, only if the user turns on Track coding problems, the problem identifier (one part of the address, for example two-sum) from LeetCode, NeetCode and the problem sites the user adds. No full addresses, no other sites |
+| Web history | Yes | Only the site name of the user's chosen study sites, with start and end times, and, only if the user turns on Track coding problems, the problem id (one part of the address, for example two-sum) from LeetCode, NeetCode and the problem sites the user adds. No full addresses, no query or fragment, no other sites |
 | Health, financial, personal communications, location, user activity, website content | No | — |
 
 **Certifications (all three):** data is not sold to third parties; not used or transferred for purposes unrelated to the single purpose; not used or transferred to determine creditworthiness or for lending.
