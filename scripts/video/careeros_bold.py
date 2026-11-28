@@ -21,10 +21,10 @@ second starts from that final state (glow pulse, tile bounce, block sweep, backg
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import lru_cache
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 from careeros_video import C, SAFE, W, H, Frame, clamp01, contrast, ease_out_cubic, font, mix, pulse
 
@@ -111,7 +111,6 @@ def draw_hook(fr: Frame, lines: list[list[tuple[str, bool]]], size: float, y_top
                     ImageDraw.Draw(band).polygon([(bx - 40, box[1]), (bx + 30, box[1]), (bx - 10, box[3]), (bx - 80, box[3])], fill=200)
                     clip = Image.new("L", (W, H), 0)
                     ImageDraw.Draw(clip).rounded_rectangle(box, radius=size * 0.16, fill=255)
-                    from PIL import ImageChops
                     band = ImageChops.multiply(band.filter(ImageFilter.GaussianBlur(10)), clip)
                     layer.paste(Image.new("RGBA", (W, H), SHINE + (255,)), (0, 0), band)
                 d.text((cx, yy), text, font=f, fill=C["primary_fg"] + (255,), anchor="la")
@@ -145,10 +144,22 @@ def fit_size(lines: list[list[tuple[str, bool]]], max_px: float, min_px: float =
     """Largest size from max_px down (2 px steps) where every line fits the safe box; never below min_px."""
     s = max_px
     while s > min_px and any(line_width(l, s, weight) > width for l in lines):
-        s -= 2
+        s = max(min_px, s - 2)
     if any(line_width(l, s, weight) > width for l in lines):
         raise AssertionError(f"lines do not fit at {min_px}px: shorten the words or split the screen")
     return s
+
+
+def check_hook(lines: list[list[tuple[str, bool]]], size: float):
+    """video-formats.md 2.6: 108 px or more, at most 3 lines, at most 13 characters a line."""
+    if size < HOOK_MIN_PX:
+        raise AssertionError(f"hook {size}px is under {HOOK_MIN_PX}px")
+    if len(lines) > 3:
+        raise AssertionError(f"hook has {len(lines)} lines, 3 at most")
+    for segs in lines:
+        n = len(" ".join(text for text, _ in segs))
+        if n > 13:
+            raise AssertionError(f"hook line of {n} characters, 13 at most")
 
 
 def check_thumbnail(size: float, weight: int = 800, width: int = 200, min_cap_px: float = 15.0) -> float:
@@ -186,7 +197,6 @@ class TileGrid:
     value_px: float = 40
     layout: str = "stack"  # "stack": label above value; "row": label left, value right
     SS: int = 2
-    _origin: tuple = field(default=(0, 0), init=False)
 
     def pos(self, i: int):
         return self.x0 + (i % self.cols) * (self.tw + self.gap), self.y0 + (i // self.cols) * (self.th + self.gap)
@@ -248,13 +258,10 @@ class TileGrid:
         fr.img.paste(base.convert("RGB"), (rx0, ry0))
 
 
-def ripple(t: float, start: float, i: int, n: int, height: float = 16.0, dur: float = 0.45, step: float = 0.06) -> float:
+def ripple(t: float, start: float, i: int, height: float = 16.0, dur: float = 0.45, step: float = 0.06) -> float:
     """Lift of tile i in a left-to-right wave that starts and ends at rest."""
     return height * pulse(t, start + i * step, dur)
 
-
-def bounce(t: float, start: float, amount: float = 0.08, dur: float = 0.5) -> float:
-    return 1.0 + amount * pulse(t, start, dur)
 
 
 # ---------------------------------------------------------------- chip on the gradient
@@ -283,8 +290,8 @@ def contrast_pairs() -> dict[str, tuple[float, float]]:
         "fg on brightest gradient": (contrast(C["fg"], hi), 4.5),
         "primary_fg on primary (block, lit tile)": (contrast(C["primary_fg"], C["primary"]), 4.5),
         "primary_fg on block sweep": (contrast(C["primary_fg"], SHINE), 4.5),
-        "muted on card (tile label)": (contrast(C["muted"], C["card"]), 4.5),
-        "fg on card (tile value)": (contrast(C["fg"], C["card"]), 4.5),
+        "muted on card (stacked tile label)": (contrast(C["muted"], C["card"]), 4.5),
+        "fg on card (tile value, row tile label)": (contrast(C["fg"], C["card"]), 4.5),
         "muted on bg (chip)": (contrast(C["muted"], C["bg"]), 4.5),
         "primary tile vs card tile (graphic)": (contrast(C["primary"], C["card"]), 3.0),
     }

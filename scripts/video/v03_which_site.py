@@ -28,11 +28,12 @@ MINUTES = [190, 120, 90]  # sample site table: 3h 10m, 2h 00m, 1h 30m
 assert sum(MINUTES) == 400 and MINUTES[1] + MINUTES[2] == 210, "sample site table must add up (6h 40m; 3h 30m)"
 
 HOOK_PX = 116
+HOOK = [[("Which site", False)], [("took", False), ("most", True)], [("of your week?", False)]]
 BODY_PX = 96
 LOGO = os.environ.get("CAREEROS_MARK", cv.MARK_DARK)
 STYLES = {"bold": None}
 
-GRID = b.TileGrid(SITES, [cv.fmt_minutes(m) for m in MINUTES], cols=1, tw=804, th=140, gap=22, y0=910, x0=88,
+GRID = b.TileGrid(SITES, [cv.fmt_minutes(m) for m in MINUTES], cols=1, tw=790, th=140, gap=22, y0=910, x0=95,
                   label_px=52, value_px=56, layout="row")
 
 
@@ -78,7 +79,7 @@ def tile_states(t: float) -> tuple[list[b.TileState], list[str]]:
     alpha = 1 - ramp(t, S[6] - 0.3, 0.4)  # tiles leave before the end screen
     states = []
     for i in range(3):
-        lift = b.ripple(t, 0.05, i, 3, height=18)  # first second: a wave from the final state
+        lift = b.ripple(t, 0.05, i, height=18)  # first second: a wave from the final state
         scale = 1.0 + 0.02 * pulse(t, 0.35, 0.5) * (1 if i == 0 else 0)  # the "?" tile bounces once
         scale += 0.02 * pulse(t, S[2] + 0.2, 0.5) * (1 if i == 0 else 0)
         scale += 0.02 * pulse(t, S[3] + 0.2, 0.5) * (1 if i in (1, 2) else 0)
@@ -92,8 +93,7 @@ def texts(fr: Frame):
     t = fr.t
     y = 350
     # 1 hook: complete at frame 0
-    b.draw_hook(fr, [[("Which site", False)], [("took", False), ("most", True)], [("of your week?", False)]],
-                HOOK_PX, y, t_in=0.0, t_out=S[1])
+    b.draw_hook(fr, HOOK, HOOK_PX, y, t_in=0.0, t_out=S[1])
     # P10 line: who it is for and what it does, from 1.0 s
     if 1.0 <= t < S[1]:
         b.draw_hook(fr, [[("Interview prep, counted.", False)]], 64, 800, t_in=1.0, t_out=S[1], weight=600, in_dur=0.35)
@@ -164,6 +164,8 @@ def run_checks(f) -> list[str]:
         report.append(f"{name}: {v:.2f}:1 (needs 4.5)")
         if v < 4.5:
             raise SystemExit(f"contrast check failed: {name}")
+    b.check_hook(HOOK, HOOK_PX)
+    report.append(f"hook: {HOOK_PX} px, {len(HOOK)} lines, 13 characters a line at most")
     report.append(f"thumbnail: hook cap height {b.check_thumbnail(HOOK_PX):.1f} px at 200 px wide (needs 15)")
     n = round(END * FPS)
     for i in range(n):
@@ -182,7 +184,8 @@ def main():
     ap.add_argument("--music-seed", type=int, default=3, help="seed of the code-made music bed")
     ap.add_argument("--no-music", action="store_true", help="silent audio track instead")
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
+    if a.cmd != "check":
+        os.makedirs(a.out, exist_ok=True)
     f = frame_fn(a.style)
     if a.cmd == "stills":
         times = [float(x) for x in a.times.split(",")] if a.times else [0.0, 0.45, 9.0, 14.0, 18.0, 26.0]

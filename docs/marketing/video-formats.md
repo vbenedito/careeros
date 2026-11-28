@@ -96,7 +96,7 @@ Layout inside the safe box:
 | Tag chip, "Sample data" | 40 | Bold (700) | `muted-foreground` on `background`, or `primary-foreground` on `primary` |
 
 - Minimum size for anything that must be read: 40 px (about 14 pt on a 390 pt wide phone). Body text is 64 px or more. If a line does not fit, shorten the words or split the screen; do not make the text smaller.
-- Line height 1.2. Letter spacing normal. Two lines at most.
+- Line height 1.2. Letter spacing normal. Two lines at most (a style B hook may use 3, section 2.6).
 - **Contrast:** every text color pair is at least 4.5:1 (WCAG AA for normal text) [V10]. Graphical objects (bars, outlines) are at least 3:1 against the background. The pairs in section 2.2 are computed.
 - Status or meaning is never shown by color alone: a highlighted bar also gets a label, an outline or a tag.
 - No text on a photo. Solid background, or the style B gradient (section 2.6), whose brightest pixel in the safe box is measured by the render script's `check`: text needs 4.5:1 against that pixel. Muted text sits only on an opaque fill (chip, tile, card), never on the gradient.
@@ -292,10 +292,10 @@ Chosen by the product owner on 2026-11-28 after video 2's plain cover got no vie
 **Style B, pillar 1 to 3 videos.**
 
 - **Frame 0 is the cover.** YouTube may use the first frame; Instagram gets the same image as `<stem>.cover.jpg` (`cover_url`, Instagram's API uses it instead of `thumb_offset`). So frame 0 already shows the full hook and the visual subject. Nothing fades in from black.
-- **Hook:** 108 px or more, weight 800, at most 3 lines and 13 characters a line at 116 px. One phrase sits in a solid `primary` block with `primary-foreground` text (7.59:1). **Thumbnail check:** when the frame is 200 px wide, the hook's cap height is at least 15 px (the 88 px hook of videos 1 and 2 measures 12.0 px and fails).
+- **Hook:** 108 px or more, weight 800, at most 3 lines of 13 characters or fewer (`check_hook`), line height 1.2. One phrase sits in a solid `primary` block with `primary-foreground` text (7.59:1). **Thumbnail check:** when the frame is 200 px wide, the hook's cap height is at least 15 px (the 88 px hook of videos 1 and 2 measures 12.0 px and fails).
 - **Background:** `background` at the top to a deep blue at the bottom (16% `primary` mixed into `background`), with a soft `primary` glow, panned slowly (140 px over 12 s) so the frame is never still. Measured brightest pixel in the safe box: `fg` 9.31:1.
 - **Visual subject:** tiles (a day, a site, a fact), `card` fill with a `border` outline, or `primary` when lit. A lit tile always keeps its label and value as text, so the meaning never rests on colour alone. Values use the app format and the `Sample data` chip is on every screen with a number, also on the cover.
-- **Motion in the first second** starts from the final state: tiles lift in a wave, the block gets one light sweep, lit tiles pulse. No counters, no shake, no flashing faster than 3 times a second.
+- **Motion in the first second** starts from the final state: tiles lift in a wave, the block gets one light sweep, lit tiles pulse. No counters, no shake, and never more than 3 flashes a second (a rule for the script author; `check` does not test it).
 - **Contrast pairs** (measured by `check`): `fg` on the brightest gradient 9.31:1; `primary-foreground` on `primary` 7.59:1 and on the block sweep 10.34:1; `muted-foreground` on `card` 6.77:1; `fg` on `card` 15.49:1; `muted-foreground` on the chip's `background` 7.69:1; lit tile against an unlit tile 6.69:1 (graphic, 3:1 needed).
 
 **Style C, explainers (pillar 4).** The same background and hook, with the real dashboard in a tilted browser frame (sample data only, section 1.7). It is a demo by definition. Its capture needs a separate step; this section is filled in with the explainer.
