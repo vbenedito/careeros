@@ -18,6 +18,7 @@
  */
 import {
   hostnameFromUrl,
+  isProblemDomain,
   isValidDomain,
   matchTrackedDomain,
   type ProblemRule,
@@ -243,8 +244,20 @@ export function reduceSignals(
       }
       break;
     case "PROBLEM_RULES":
-      // PSR-19: the URL is not kept, so the current tab is read again to apply a new rule list.
-      s = { ...s, problemRules: event.rules, focusedProblem: null };
+      // PSR-19: every refresh sends the list. Unchanged rules change nothing (no split of the
+      // open interval, no tab read).
+      if (JSON.stringify(event.rules) === JSON.stringify(s.problemRules)) break;
+      // Changed: the id stays while it can still be right (built-in domain, or a rule on that
+      // domain); the tab is read again and corrects it (the URL is not kept).
+      s = {
+        ...s,
+        problemRules: event.rules,
+        focusedProblem:
+          isProblemDomain(s.focusedDomain) ||
+          event.rules.some((rule) => rule.domain === s.focusedDomain)
+            ? s.focusedProblem
+            : null,
+      };
       effects.push({ type: "REQUERY_TAB" });
       break;
     case "TAB":

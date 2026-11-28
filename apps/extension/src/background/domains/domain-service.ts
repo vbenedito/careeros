@@ -100,12 +100,14 @@ export function createDomainService(deps: {
     const domains = [...(await api.list())].filter(isValidDomain).sort();
     const trackProblems = await setting;
     const read = await rules;
+    // Read before the checks below: a sign-out in the gap must not let old rules be written back.
+    const previous = read === null ? await cachedProblemRules() : null;
     if (deps.epoch && deps.epoch.current() !== started)
       return { ok: false, error: "NOT_CONNECTED" };
     // SYNC-09b (#65): a Disconnect may have finished while the list was in flight (it clears
     // the cache): never write the old list back for an account that is gone.
     if (!(await deps.isConnected())) return { ok: false, error: "NOT_CONNECTED" };
-    const problemRules = read ?? parseProblemRules(await cachedProblemRules());
+    const problemRules = read ?? parseProblemRules(previous);
     await storage.set({
       [DOMAINS_CACHE_KEY]: { domains, trackProblems, problemRules, fetchedAt: deps.now() },
     });

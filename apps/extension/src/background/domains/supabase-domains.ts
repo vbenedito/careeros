@@ -50,7 +50,7 @@ export function createSupabaseDomainsApi(client: SupabaseClient): DomainsApi {
       // PSR-19: RLS returns only the caller's rows; only active rules (no tombstone) are wanted.
       const { data, error, status } = await client
         .from("problem_rules")
-        .select("domain,prefix,kind,label")
+        .select("domain,prefix,kind")
         .is("removed_at", null);
       const failure = toError(error, status);
       if (failure) throw failure;

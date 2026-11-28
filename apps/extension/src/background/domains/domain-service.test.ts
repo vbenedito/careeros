@@ -81,7 +81,7 @@ describe("problem rules sync (PSR-16, PSR-19, PSR-20)", () => {
   it("PSR-19 a refresh caches the account's rules with the list", async () => {
     const s = setup({ server: ["hellointerview.com"], rules: [{ ...HI, label: "HI" }] });
     await s.service.refresh();
-    expect(s.cache()).toMatchObject({ problemRules: [{ ...HI, label: "HI" }] });
+    expect(s.cache()).toMatchObject({ problemRules: [HI] }); // the label is never kept (PSR-25)
   });
 
   it("PSR-16 an invalid downloaded rule is dropped alone, the others are cached", async () => {
@@ -92,13 +92,13 @@ describe("problem rules sync (PSR-16, PSR-19, PSR-20)", () => {
       { ...HI, prefix: ["Practice"] },
       { ...HI, kind: "regex" },
       { ...HI, domain: "leetcode.com" },
-      { ...HI, label: "x".repeat(41) },
       "nope",
       null,
     ];
-    const s = setup({ rules: [...bad, HI, { ...HI }] });
+    const slugRule = { ...HI, prefix: ["problems"], kind: "slug" }; // the DB allows it
+    const s = setup({ rules: [...bad, HI, { ...HI }, slugRule] });
     await s.service.refresh();
-    expect(s.cache()).toMatchObject({ problemRules: [HI] }); // the duplicate keeps the first
+    expect(s.cache()).toMatchObject({ problemRules: [HI, slugRule] }); // the duplicate keeps the first
   });
 
   it("PSR-19 a failed read of the rules never fails the refresh and keeps the last good rules", async () => {

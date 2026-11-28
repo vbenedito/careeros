@@ -81,10 +81,13 @@ export function isValidRuleSegment(segment: string): boolean {
 
 /**
  * PSR-07, PRB-08: what a stored problem must look like on a domain: a slug on a built-in domain,
- * an id on any other (the server decides by the account's rules, PSR-23).
+ * an id (or a slug, rule kind `slug`) on any other (the server decides by the account's rules,
+ * PSR-23).
  */
 export function isValidProblemForDomain(domain: string, problem: string): boolean {
-  return isProblemDomain(domain) ? isValidProblemSlug(problem) : isValidProblemId(problem);
+  return isProblemDomain(domain)
+    ? isValidProblemSlug(problem)
+    : isValidProblemId(problem) || isValidProblemSlug(problem);
 }
 
 /** PSR-06: the path as the browser gives it, split on `/`, empty segments dropped, not decoded. */

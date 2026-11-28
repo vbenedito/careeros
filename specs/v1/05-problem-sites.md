@@ -218,7 +218,7 @@ Follows [release.md](../../docs/process/release.md) (expand → deploy → contr
 | 4. Release 0.4.0 (store) | Store text (PSR-18), STORE-08 check (permissions unchanged), submit; after approval set `EXTENSION_STORE_VERSION` to `0.4.0` and redeploy | Old installs keep working (acceptance 7) |
 | 5. Contract | None needed for this proposal. The #233 contract step (NC-e, #241, PR #283) is already merged (2026-11-27): `get_problem_totals` is gone and `get_problem_totals_v2` is the only totals function, which this proposal keeps. `problemSlugFromUrl` stays as the built-in path of the matcher | — |
 
-Rollback: step 1 only widens. If 0.4.0 has a problem, the store rollback of release.md applies; the gate is set back so the dashboard hides the rule UI. Stored ids of user rules stay valid rows.
+Rollback: step 1 only widens. If 0.4.0 has a problem, the store rollback of release.md applies; the gate is set back so the dashboard hides the rule UI. Stored ids of user rules stay valid rows. A rollback build must be 0.4.x code with user rules disabled (or a tolerant `focusedProblem`), released with a higher version, never plain 0.3.1 code: 0.3.1 checks `focusedProblem` with the slug pattern, so a saved id with an uppercase letter or `_` would reset the engine state and lose the open interval's time.
 
 ## 7. Issues (proposed, #245)
 

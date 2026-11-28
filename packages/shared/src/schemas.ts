@@ -34,8 +34,10 @@ export const ProblemIdSchema = z
   .refine((v) => isValidProblemSlug(v) || isValidProblemId(v), { message: "Invalid problem id" });
 
 /**
- * PSR-01, PSR-16: a problem rule: tracked-site domain, 1..3 literal segments, a fixed kind and a
- * label. No pattern, no regex, no other field (a downloaded row with extras is read without them).
+ * PSR-01, PSR-16: a problem rule as the matcher reads it: tracked-site domain, 1..3 literal
+ * segments and a fixed kind (`slug` or `id`, like the database). The label is user text that can
+ * name a person (PSR-25) and the extension never needs it, so it is neither downloaded nor kept.
+ * No pattern, no regex; any other field is stripped.
  * A built-in domain never has a user rule (PSR-04).
  */
 export const ProblemRuleSchema = z
@@ -46,10 +48,8 @@ export const ProblemRuleSchema = z
       .min(PROBLEMS.PROBLEM_RULE_PREFIX_MIN)
       .max(PROBLEMS.PROBLEM_RULE_PREFIX_MAX),
     kind: z.enum(PROBLEMS.PROBLEM_ID_KINDS),
-    label: z.string().min(1).max(PROBLEMS.PROBLEM_RULE_LABEL_MAX).optional(),
   })
-  .refine((rule) => !isProblemDomain(rule.domain), { message: "Built-in site" })
-  .refine((rule) => rule.kind === "id", { message: "User rules use kind id" });
+  .refine((rule) => !isProblemDomain(rule.domain), { message: "Built-in site" });
 
 /**
  * PSR-16, PSR-19, PSR-20: validates a downloaded or cached list. An invalid rule is dropped

@@ -53,7 +53,7 @@ describe("tolerant outbox parse (PRB-20)", () => {
   it("PRB-20 PSR-07 an interval whose problem is not valid for its domain keeps its time and loses only the problem", () => {
     const neet = { ...base("neetcode.io"), problem: "two-integer-sum" };
     const unknown = { ...base("example.com"), problem: "bad%20id" };
-    const lookalike = { ...base("neetcode.io.evil.com"), problem: "x".repeat(65) };
+    const lookalike = { ...base("neetcode.io.evil.com"), problem: "x".repeat(101) };
     const { items, invalid } = parseOutboxCounted([neet, unknown, lookalike]);
     expect(invalid).toBe(0);
     expect(items[0]).toEqual(neet); // a listed domain keeps its problem
