@@ -121,6 +121,12 @@ declare
   v_plan text;
   v_limit integer;
 begin
+  -- A tombstone is a removed rule: it never counts and is never refused, so a restore from the
+  -- backup (which inserts every row) cannot fail on it (PSR-22).
+  if new.removed_at is not null then
+    return new;
+  end if;
+
   perform pg_advisory_xact_lock(hashtextextended('problem_rules:' || new.user_id::text, 0));
 
   v_plan := private.plan_of(new.user_id);
@@ -445,7 +451,7 @@ alter table public.study_session_problems
   drop constraint study_session_problems_domain_check;
 
 create trigger study_session_problems_rule_check
-  before insert on public.study_session_problems
+  before insert or update of domain, problem_slug, user_id on public.study_session_problems
   for each row execute function private.check_problem_row();
 
 -- ---------------------------------------------------------------------------------------------
@@ -479,6 +485,7 @@ declare
   -- TRK-10: UTC ISO-8601 with whole seconds, e.g. 2026-11-05T09:30:00Z
   iso_seconds constant text := '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$';
   v_domain text;
+  v_host public.hostname;
   v_active boolean;
   v_removed boolean;
 begin
@@ -525,6 +532,7 @@ begin
       return;
     end if;
     v_domain := domain::text;
+    v_host := domain;
     if v_domain = any (private.problem_domains()) then          -- step 2: built-in rule
       if char_length(element ->> 'problem') > 100               -- PROBLEM_SLUG_MAX
          or (element ->> 'problem') !~ '^[a-z0-9]+(?:-[a-z0-9]+)*$' then  -- PROBLEM_SLUG_PATTERN
@@ -536,7 +544,7 @@ begin
       select coalesce(bool_or(r.removed_at is null), false), count(*) > 0
       into v_active, v_removed
       from public.problem_rules r
-      where r.user_id = (select auth.uid()) and r.domain::text = v_domain;
+      where r.user_id = (select auth.uid()) and r.domain = v_host;
       if v_active then                                          -- step 3: active rule
         if char_length(element ->> 'problem') > 64              -- PROBLEM_ID_MAX
            or (element ->> 'problem') !~ '^[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$' then  -- PROBLEM_ID_PATTERN

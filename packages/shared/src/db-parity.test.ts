@@ -290,7 +290,7 @@ describe("database parity: problems", () => {
     expect(last, "the last migration that touches the domain check must drop it").toBeDefined();
     const migration = readFileSync(resolve(migrationsDir, last ?? ""), "utf8");
     expect(migration).toMatch(
-      /create trigger study_session_problems_rule_check\s+before insert on public\.study_session_problems\s+for each row execute function private\.check_problem_row\(\)/,
+      /create trigger study_session_problems_rule_check\s+before insert or update of domain, problem_slug, user_id on public\.study_session_problems\s+for each row execute function private\.check_problem_row\(\)/,
     );
     expect(occurrences(trigger, /errcode = '(\w+)'/g)).toEqual(["23514", "23514"]);
     for (const sql of [parser, trigger]) {

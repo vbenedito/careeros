@@ -3,7 +3,7 @@
 -- DATA-16, PRB-05, PRB-20 and acceptance 5, 7, 11 and 12 (database part) of
 -- specs/v1/05-problem-sites.md. The old cases of 110 and 130 keep their meaning.
 begin;
-select plan(233);
+select plan(239);
 
 select tests.create_user('rae');
 select tests.create_user('sam');
@@ -473,6 +473,17 @@ select results_eq(
   $$ select domain::text from public.problem_rules where removed_at is not null $$,
   $$ values ('d5.example.net') $$,
   'PSR-22 the re-add deleted the tombstone of its domain; the other tombstone stays');
+-- A restore inserts tombstones too: with five active rules (the cap) a direct tombstone insert is accepted.
+select is((select count(*)::int from public.problem_rules where user_id = tests.user_id('rae') and removed_at is null), 5,
+  'PSR-15 rae is at the cap with five active rules');
+select lives_ok(
+  $$ insert into public.problem_rules (user_id, domain, kind, confirmed_at, removed_at)
+     values (tests.user_id('rae'), 'd6.example.net', 'id', now(), now()) $$,
+  'PSR-15 PSR-22 a tombstone insert is accepted at the cap (restore from the backup)');
+select throws_ok(
+  $$ insert into public.problem_rules (user_id, domain, prefix, kind, label, confirmed_at)
+     values (tests.user_id('rae'), 'd6.example.net', array['p'], 'id', 'D6', now()) $$,
+  'P0001', 'A user can add at most 5 problem rules', 'PSR-15 an active insert is still refused at the cap');
 
 -- =============================================================================================
 -- Ingest by rule (PSR-23, acceptance 1, 2, 11): uma has a rule, the setting is on
@@ -990,6 +1001,18 @@ select throws_ok(
   $$ insert into public.study_session_problems (session_id, user_id, domain, problem_slug)
      values ('d0000000-0000-4000-8000-000000000010', tests.user_id('uma'), 'neetcode.io.evil.com', 'two-sum') $$,
   '23514', null, 'PSR-24 PRB-05 a lookalike of a built-in domain is refused');
+select ok(
+  (select (tgtype & 4) = 4 and (tgtype & 16) = 16 from pg_trigger
+   where tgrelid = 'public.study_session_problems'::regclass and tgname = 'study_session_problems_rule_check'),
+  'PSR-24 the trigger runs on insert and on update');
+select throws_ok(
+  $$ update public.study_session_problems set problem_slug = 'Two-Sum'
+     where session_id = 'd0000000-0000-4000-8000-000000000007' $$,
+  '23514', null, 'PSR-24 an update to an id that is not a slug on a built-in site is refused');
+select lives_ok(
+  $$ update public.study_session_problems set problem_slug = 'one-sum'
+     where session_id = 'd0000000-0000-4000-8000-000000000007' $$,
+  'PSR-24 an update to a valid slug is accepted');
 
 -- =============================================================================================
 -- DATA-12: account deletion removes the rules
