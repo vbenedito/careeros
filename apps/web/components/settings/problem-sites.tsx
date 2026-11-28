@@ -56,6 +56,8 @@ export function ProblemSites({
   const [error, setError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const listHeading = useRef<HTMLHeadingElement>(null);
+  // Set when a remove succeeds from the dialog, so its close moves focus to the list heading.
+  const focusListOnClose = useRef(false);
   const [removing, setRemoving] = useState<ProblemSiteRule | null>(null);
 
   // Recomputed when the tracked sites change (after "Add as a study site" the page refreshes).
@@ -136,8 +138,10 @@ export function ProblemSites({
     }
     setRemoveError(null);
     router.refresh();
-    // The removed row and the dialog trigger are gone: keep focus in the list.
-    listHeading.current?.focus();
+    // The removed row and the dialog trigger are gone: keep focus in the list. With the dialog
+    // open, Radix restores focus on close, so the dialog's onCloseAutoFocus does it instead.
+    if (removing) focusListOnClose.current = true;
+    else listHeading.current?.focus();
   }
 
   const preview = proposal?.ok ? previewLines(proposal) : null;
@@ -310,7 +314,14 @@ export function ProblemSites({
       ) : null}
 
       <Dialog open={removing !== null} onOpenChange={(open) => !open && !busy && setRemoving(null)}>
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            if (!focusListOnClose.current) return;
+            focusListOnClose.current = false;
+            event.preventDefault();
+            listHeading.current?.focus();
+          }}
+        >
           <DialogTitle>{SITE_COPY.dialogTitle(removing?.label ?? "")}</DialogTitle>
           <DialogDescription>
             {SITE_COPY.dialogBody(removing?.domain ?? "")}
