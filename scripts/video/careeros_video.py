@@ -550,12 +550,39 @@ def _scene_job(module_name: str, style: str, t0: float, t1: float, path: str):
     encode_scene(importlib.import_module(module_name).frame_fn(style), t0, t1, path)
 
 
+def save_cover(img: Image.Image, path: str):
+    """1080 x 1920 JPEG (the Instagram `cover_url` image); temp name, renamed when complete."""
+    if img.size != (W, H):
+        raise ValueError(f"cover must be {W}x{H}, got {img.size}")
+    tmp = path + ".part"
+    img.convert("RGB").save(tmp, "JPEG", quality=92, optimize=True, progressive=True)
+    os.replace(tmp, path)
+
+
 def render_video(module_name: str, style: str, scenes: list[float], out_dir: str, stem: str,
-                 music_seed: Optional[int] = 1, jobs: int = 2) -> str:
-    """Render one file per scene in parallel, then join them and add the music (or silence)."""
+                 music_seed: Optional[int] = 1, jobs: int = 2, cover_t: Optional[float] = None) -> str:
+    """Render one file per scene in parallel, then join them and add the music (or silence).
+    With `cover_t`, also write `<stem>.cover.jpg` (the frame at that time) first: a failed cover
+    stops before any MP4, and a failed render removes the cover again."""
+    os.makedirs(out_dir, exist_ok=True)
+    cover = os.path.join(out_dir, f"{stem}.cover.jpg")
+    if cover_t is not None:
+        import importlib
+
+        mod = importlib.import_module(module_name)
+        save_cover(mod.frame_fn(style)(cover_t), cover)
+    try:
+        return _render_parts(module_name, style, scenes, out_dir, stem, music_seed, jobs)
+    except BaseException:
+        if cover_t is not None and os.path.exists(cover):
+            os.remove(cover)  # no cover without its MP4
+        raise
+
+
+def _render_parts(module_name: str, style: str, scenes: list[float], out_dir: str, stem: str,
+                  music_seed: Optional[int], jobs: int) -> str:
     from multiprocessing import Pool
 
-    os.makedirs(out_dir, exist_ok=True)
     parts = [os.path.join(out_dir, f"{style}-scene{k + 1}.mp4") for k in range(len(scenes) - 1)]
     with Pool(jobs) as pool:
         pool.starmap(_scene_job, [(module_name, style, scenes[k], scenes[k + 1], parts[k]) for k in range(len(parts))])
