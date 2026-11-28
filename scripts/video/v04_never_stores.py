@@ -35,7 +35,7 @@ BODY_PX = 96
 LOGO = os.environ.get("CAREEROS_MARK", cv.MARK_DARK)
 STYLES = {"bold": None}
 
-GRID = b.TileGrid(ITEMS, [STATUS] * 4, cols=1, tw=790, th=108, gap=16, y0=900, x0=95,
+GRID = b.TileGrid(ITEMS, [STATUS] * 4, cols=1, tw=790, th=102, gap=22, y0=915, x0=95,
                   label_px=48, value_px=44, layout="row")
 
 
@@ -44,15 +44,17 @@ def ramp(t: float, start: float, dur: float = 0.35) -> float:
 
 
 def tile_states(t: float) -> list[b.TileState]:
-    """Tile k lights on screen k + 2 and keeps its status word; tile 1 is already lit on the cover."""
+    """Tile k lights on screen k + 2 and keeps its status word; on the cover row 1 only glows."""
     alpha = 1 - ramp(t, S[5] - 0.3, 0.4)  # tiles leave before "Your study time"
     states = []
     for k in range(4):
-        start = 0.0 if k == 0 else S[k + 1] + 0.2
-        on = 1.0 if k == 0 else ramp(t, start)
+        start = S[k + 1] + 0.2
+        on = ramp(t, start)
         lift = b.ripple(t, 0.05, k, height=18)  # first second: a wave from the final state
-        scale = 1.0 + 0.02 * pulse(t, start + (0.3 if k == 0 else 0.0), 0.5)
-        glow = 0.35 * pulse(t, 0.3, 0.8) if k == 0 else 0.3 * pulse(t, start, 0.7)
+        scale = 1.0 + 0.02 * pulse(t, start, 0.5)
+        glow = 0.3 * pulse(t, start, 0.7)
+        if k == 0 and t < S[1] + 0.2:  # cover: row 1 glows but stays dark, so blue is only in the hook block
+            glow = max(glow, 0.45 + 0.25 * pulse(t, 0.3, 0.8))
         states.append(b.TileState(lit=clamp01(on), lift=lift, scale=scale, glow=glow, alpha=alpha, value_alpha=on))
     return states
 
@@ -72,10 +74,10 @@ def texts(fr: Frame):
     ]
     for t0, t1, lines in body:
         if t0 - 0.05 <= t <= t1:
-            yy = y + 60 if t0 < S[5] else 640
+            yy = y + 60 if t0 < S[5] else 720
             b.draw_hook(fr, lines, b.fit_size(lines, BODY_PX), yy, t_in=t0, t_out=t1, weight=800, in_dur=0.35)
     if S[5] - 0.05 <= t < S[6]:
-        b.draw_label_chip(fr, "Your study time", y=540, alpha=ramp(t, S[5], 0.3) * (1 - ramp(t, S[6] - 0.25, 0.25)))
+        b.draw_label_chip(fr, "Your study time", y=620, alpha=ramp(t, S[5], 0.3) * (1 - ramp(t, S[6] - 0.25, 0.25)))
 
 
 def end_screen(fr: Frame):
