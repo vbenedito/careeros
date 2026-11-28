@@ -8,8 +8,9 @@
  */
 import { hostnameFromUrl, PROBLEMS, proposeProblemRule } from "@careeros/shared";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useId, useMemo, useState } from "react";
+import { type FormEvent, useId, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Choice } from "@/components/ui/choice";
 import {
   Dialog,
   DialogClose,
@@ -54,6 +55,7 @@ export function ProblemSites({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const listHeading = useRef<HTMLHeadingElement>(null);
   const [removing, setRemoving] = useState<ProblemSiteRule | null>(null);
 
   // Recomputed when the tracked sites change (after "Add as a study site" the page refreshes).
@@ -134,6 +136,8 @@ export function ProblemSites({
     }
     setRemoveError(null);
     router.refresh();
+    // The removed row and the dialog trigger are gone: keep focus in the list.
+    listHeading.current?.focus();
   }
 
   const preview = proposal?.ok ? previewLines(proposal) : null;
@@ -144,7 +148,9 @@ export function ProblemSites({
       <p className="text-sm text-muted-foreground">{SITE_COPY.intro}</p>
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">{SITE_COPY.listTitle}</h3>
+        <h3 ref={listHeading} tabIndex={-1} className="text-sm font-medium outline-none">
+          {SITE_COPY.listTitle}
+        </h3>
         <ul className="flex flex-col divide-y divide-border" data-testid="problem-site-list">
           {PROBLEMS.BUILT_IN_PROBLEM_RULES.map((rule) => (
             <li key={rule.domain} className="flex items-center gap-2 py-2 text-sm">
@@ -186,7 +192,7 @@ export function ProblemSites({
         </p>
       </div>
 
-      <form onSubmit={check} className="flex flex-col gap-2" noValidate>
+      <form method="post" action="#" onSubmit={check} className="flex flex-col gap-2" noValidate>
         <h3 className="text-sm font-medium">{SITE_COPY.addTitle}</h3>
         <p className="text-sm text-muted-foreground">{SITE_COPY.addHelp}</p>
         <label htmlFor={urlId} className="text-sm">
@@ -195,10 +201,10 @@ export function ProblemSites({
         <div className="flex gap-2">
           <Input
             id={urlId}
-            name="example"
             type="url"
             autoComplete="off"
             spellCheck={false}
+            className="touch:h-11"
             placeholder={SITE_COPY.urlPlaceholder}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
@@ -229,19 +235,18 @@ export function ProblemSites({
             <fieldset className="flex flex-col gap-1 text-sm">
               <legend className="mb-1">{SITE_COPY.pickLegend}</legend>
               {proposal.candidates.map((index) => (
-                <label key={index} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="problem-id-part"
-                    className="size-4 accent-primary"
-                    checked={proposal.idIndex === index}
-                    onChange={() => {
-                      setPick(index);
-                      setConfirmed(false);
-                    }}
-                  />
+                <Choice
+                  key={index}
+                  type="radio"
+                  name="problem-id-part"
+                  checked={proposal.idIndex === index}
+                  onChange={() => {
+                    setPick(index);
+                    setConfirmed(false);
+                  }}
+                >
                   <code className="break-all">{proposal.segments[index]}</code>
-                </label>
+                </Choice>
               ))}
             </fieldset>
           ) : null}
@@ -274,21 +279,20 @@ export function ProblemSites({
             <Input
               id={labelId}
               autoComplete="off"
+              className="touch:h-11"
               maxLength={PROBLEMS.PROBLEM_RULE_LABEL_MAX}
               value={shownLabel}
               onChange={(e) => setLabel(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">{SITE_COPY.labelHelp}</p>
           </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-4 accent-primary"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-            />
-            <span>{SITE_COPY.confirm}</span>
-          </label>
+          <Choice
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+          >
+            {SITE_COPY.confirm}
+          </Choice>
           <div>
             <Button
               disabled={busy || !canAddRule(confirmed, shownLabel)}

@@ -50,7 +50,7 @@ export function ProblemsCard({
                 {row.userRule ? (
                   <span className="min-w-0 flex-1 break-words" data-testid="problem-user-rule">
                     {row.userRule.label} ·{" "}
-                    <span title={row.userRule.id}>
+                    <span title={row.userRule.id} aria-label={row.userRule.id}>
                       <span className="sm:hidden" data-testid="problem-id-short">
                         {row.userRule.shortId}
                       </span>

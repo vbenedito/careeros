@@ -24,9 +24,8 @@ import {
   todayIn,
 } from "@/lib/dashboard/time-zone";
 import { extensionFeatureLive, extensionId } from "@/lib/env";
-import { loadProblemSetting, loadProblemSiteRules, loadProblems } from "@/lib/problems/data";
+import { loadProblemRuleLabels, loadProblemSetting, loadProblems } from "@/lib/problems/data";
 import { showProblemsCard } from "@/lib/problems/settings";
-import { ruleLabels } from "@/lib/problems/sites";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 // ENV-05c: the gate reads EXTENSION_STORE_VERSION per request; never prerender this page.
@@ -77,7 +76,7 @@ export default async function DashboardPage({
           timeZone,
           neetCode,
           // PSR-14, PSR-21: labels of the user's rules only while problem rules are live.
-          rulesLive ? ruleLabels((await loadProblemSiteRules(supabase)) ?? []) : new Map(),
+          rulesLive ? await loadProblemRuleLabels(supabase) : new Map(),
         )
       : null;
   const problemsCard = problems ? (

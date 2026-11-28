@@ -91,5 +91,6 @@ describe("DASH-17 PSR-14 user-rule rows", () => {
     expect(screen.getByTestId("problem-id-full").textContent).toBe(id);
     expect(screen.getByTestId("problem-id-short").textContent).toBe("cmlz26cx…vy89hr1");
     expect(row.querySelector(`[title="${id}"]`)).not.toBeNull();
+    expect(row.querySelector(`[aria-label="${id}"]`)).not.toBeNull();
   });
 });

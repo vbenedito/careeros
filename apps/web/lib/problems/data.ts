@@ -13,6 +13,7 @@ import {
   ProblemRuleRowSchema,
   type ProblemSiteRule,
   problemSiteRules,
+  ruleLabels,
 } from "./sites";
 
 /**
@@ -78,15 +79,8 @@ export async function loadProblems(
   return { ok: true, rows: problemRows((data ?? []) as ProblemTotalRow[], showSite, labels) };
 }
 
-/**
- * PSR-13, PSR-14: the account's active problem rules (RLS: own rows; a removed rule is not
- * readable, PSR-22) and, per rule, whether its domain has stored ids (an `exists` query; only
- * booleans reach the browser). `null` when a read fails: the caller shows an error line. A failed
- * history check counts as "has history", so Remove asks first (the safe side, like PRB-16).
- */
-export async function loadProblemSiteRules(
-  supabase: SupabaseClient,
-): Promise<ProblemSiteRule[] | null> {
+/** The account's active problem rules under RLS (a removed rule is not readable, PSR-22). `null` when the read fails. */
+async function loadRuleRows(supabase: SupabaseClient): Promise<ProblemRuleRow[] | null> {
   const { data, error } = await supabase
     .from("problem_rules")
     .select("id, domain, prefix, label")
@@ -100,6 +94,27 @@ export async function loadProblemSiteRules(
     const parsed = ProblemRuleRowSchema.safeParse(item);
     if (parsed.success) rows.push(parsed.data);
   }
+  return rows;
+}
+
+/** PSR-14: domain → label for the dashboard rows; no history check (empty map when the read fails). */
+export async function loadProblemRuleLabels(
+  supabase: SupabaseClient,
+): Promise<ReadonlyMap<string, string>> {
+  const rows = await loadRuleRows(supabase);
+  return ruleLabels(problemSiteRules(rows ?? [], new Set()));
+}
+
+/**
+ * PSR-13: the rules for Settings and, per rule, whether its domain has stored ids (an `exists`
+ * query; only booleans reach the browser). `null` when a read fails. A failed history check counts
+ * as "has history", so Remove asks first (the safe side, like PRB-16).
+ */
+export async function loadProblemSiteRules(
+  supabase: SupabaseClient,
+): Promise<ProblemSiteRule[] | null> {
+  const rows = await loadRuleRows(supabase);
+  if (rows === null) return null;
   const withHistory = new Set<string>();
   await Promise.all(
     [...new Set(rows.map((r) => r.domain))].map(async (domain) => {

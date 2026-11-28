@@ -210,3 +210,14 @@ describe("PSR-13 the list and Remove", () => {
     await waitFor(() => expect(bodies()).toEqual([{ deleteHistory: false }]));
   });
 });
+
+describe("PSR-11 the address cannot leave through a native submit", () => {
+  it("PSR-11 the address field has no name and the form posts to # (never a GET with the address)", () => {
+    const { container } = view();
+    const input = screen.getByLabelText("Example address");
+    expect(input.getAttribute("name")).toBeNull();
+    const form = container.querySelector("form");
+    expect(form?.getAttribute("method")?.toLowerCase()).toBe("post");
+    expect(form?.getAttribute("action")).toBe("#");
+  });
+});
