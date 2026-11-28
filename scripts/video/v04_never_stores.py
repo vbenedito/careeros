@@ -54,7 +54,7 @@ def tile_states(t: float) -> list[b.TileState]:
         scale = 1.0 + 0.02 * pulse(t, start, 0.5)
         glow = 0.3 * pulse(t, start, 0.7)
         if k == 0 and t < S[1] + 0.2:  # cover: row 1 glows but stays dark, so blue is only in the hook block
-            glow = max(glow, 0.45 + 0.25 * pulse(t, 0.3, 0.8))
+            glow = max(glow, (0.45 + 0.25 * pulse(t, 0.3, 0.8)) * (1 - ramp(t, S[1] - 0.1, 0.3)))  # fades, no pop
         states.append(b.TileState(lit=clamp01(on), lift=lift, scale=scale, glow=glow, alpha=alpha, value_alpha=on))
     return states
 
