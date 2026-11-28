@@ -134,6 +134,7 @@ describe("posts view (ADM-21)", () => {
     expect(safeUrl("javascript:alert(1)")).toBeNull();
     expect(safeUrl("http://example.test/p/1")).toBeNull();
     expect(safeUrl("not a url")).toBeNull();
+    expect(safeUrl("https://user:pw@example.test/p/1")).toBeNull();
     expect(safeUrl(null)).toBeNull();
   });
 
@@ -181,16 +182,31 @@ describe("posts loading (ADM-21, ADM-08)", () => {
     expect(JSON.stringify(result)).not.toContain(TOKEN);
   });
 
-  it("ADM-08 a listing or file failure is unavailable with the HTTP status only", async () => {
+  it("ADM-08 a listing failure is unavailable with the HTTP status only", async () => {
     expect(
       await loadPosts({ token: TOKEN, list: async () => ({ ok: false, status: 502 }) }),
     ).toEqual({ status: "unavailable", httpStatus: 502 });
-    expect(
-      await loadPosts({
-        token: TOKEN,
-        list: async (_t, dir) => ({ ok: true, value: { files: listing(dir), invalid: [] } }),
-        read: async () => ({ ok: false, status: 404 }),
-      }),
-    ).toEqual({ status: "unavailable", httpStatus: 404 });
+  });
+
+  it("ADM-21 an unreadable file is listed as invalid; the other posts still show", async () => {
+    const result = await loadPosts({
+      token: TOKEN,
+      list: async (_t, dir) => ({ ok: true, value: { files: listing(dir), invalid: [] } }),
+      read: async (_t, sha) =>
+        sha === SHA(50)
+          ? { ok: false, status: 404 }
+          : { ok: true, value: textBySha.get(sha) ?? null },
+    });
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.invalid).toContain("posts-state/2030/2030-01-02-old-post.json");
+    const old = result.posts.find((p) => p.stem === "2030-01-02-old-post");
+    expect(old?.stateInvalid).toBe(true);
+    // A broken state never makes a live post look "Scheduled".
+    const row = buildPosts(result.posts).rows.find((r) => r.stem === "2030-01-02-old-post");
+    expect(row?.platforms.map((c) => [c.name, c.word, c.url])).toEqual([
+      ["Instagram", "Status unknown", null],
+      ["YouTube", "Status unknown", null],
+    ]);
   });
 });

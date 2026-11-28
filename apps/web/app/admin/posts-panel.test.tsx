@@ -12,7 +12,6 @@ const VIEW: PostsView = {
       stem: "2030-01-09-new-post",
       when: "Wed, Jan 9, 19:00",
       title: "New post title",
-      pillar: "your-real-week",
       platforms: [
         {
           platform: "instagram",
@@ -29,7 +28,6 @@ const VIEW: PostsView = {
       stem: "2030-01-02-old-post",
       when: "Wed, Jan 2, 19:00",
       title: "Old post title",
-      pillar: "your-real-week",
       platforms: [
         {
           platform: "instagram",
@@ -68,7 +66,7 @@ describe("posts panel (ADM-21)", () => {
     expect(out).toContain('href="https://example.test/p/fixture1"');
     expect(out).toContain('target="_blank"');
     expect(out).toContain('rel="noopener noreferrer"');
-    expect(out).toContain('aria-label="Open on Instagram (opens in a new tab)"');
+    expect(out).toContain('aria-label="Open Old post title on Instagram (opens in a new tab)"');
     expect(out).toContain("min-h-11");
   });
 

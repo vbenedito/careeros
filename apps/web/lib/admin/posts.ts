@@ -1,9 +1,10 @@
 /**
  * ADM-21: reads the post records (`posts/YYYY/<stem>.json`, PST-04) and the pipeline state
  * (`posts-state/YYYY/<stem>.json`, PST-07) from the ops repository, with the same token, tree call
- * and blob cache as the ledger (ADM-08, ADM-16, PST-26). A file that is not valid JSON or fails its
- * schema is listed by name as invalid and skipped (as in ADM-06). `posts-state/tokens.json` and any
- * other file outside `YYYY/<stem>.json` are not posts and are ignored. Read only (ADM-04).
+ * and blob cache as the ledger (ADM-08, ADM-16, PST-26). A file that is not valid JSON, fails its
+ * schema or cannot be read is listed by name as invalid and skipped (as in ADM-06); the rest of
+ * the card still shows. `posts-state/tokens.json` and any other file outside `YYYY/<stem>.json`
+ * are not posts and are ignored. Read only (ADM-04).
  */
 import "server-only";
 import {
@@ -12,6 +13,7 @@ import {
   type PostState,
   PostStateSchema,
 } from "@careeros/shared";
+import type { z } from "zod";
 import { opsLedgerToken } from "@/lib/env";
 import { POSTS_DIR, POSTS_STATE_DIR } from "./config";
 import { type LedgerFileRef, listOpsFiles, readLedgerFile } from "./github";
@@ -25,6 +27,8 @@ export interface PostEntry {
   record: PostRecord;
   /** `null` until the pipeline writes the state file. */
   state: PostState | null;
+  /** The state file exists but is invalid or unreadable: the status is unknown, not "Scheduled". */
+  stateInvalid: boolean;
 }
 
 export type PostsLoad =
@@ -33,10 +37,7 @@ export type PostsLoad =
 
 type Parsed<T> = { ok: true; value: T } | { ok: false };
 
-function parseJson<T>(
-  text: string,
-  schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
-): Parsed<T> {
+function parseJson<T>(text: string, schema: z.ZodType<T>): Parsed<T> {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -44,7 +45,7 @@ function parseJson<T>(
     return { ok: false };
   }
   const parsed = schema.safeParse(json);
-  return parsed.success ? { ok: true, value: parsed.data as T } : { ok: false };
+  return parsed.success ? { ok: true, value: parsed.data } : { ok: false };
 }
 
 /**
@@ -58,23 +59,32 @@ export function parsePostFiles(
 ): { posts: PostEntry[]; invalid: string[] } {
   const invalid: string[] = [];
   const stateByStem = new Map<string, PostState>();
+  const badStates = new Set<string>();
   for (const { name, text } of states) {
     const stem = POST_FILE.exec(name)?.[1];
     if (stem === undefined) continue;
-    const parsed = parseJson<PostState>(text, PostStateSchema);
+    const parsed = parseJson(text, PostStateSchema);
     if (parsed.ok) stateByStem.set(stem, parsed.value);
-    else invalid.push(`${POSTS_STATE_DIR}${name}`);
+    else {
+      badStates.add(stem);
+      invalid.push(`${POSTS_STATE_DIR}${name}`);
+    }
   }
   const posts: PostEntry[] = [];
   for (const { name, text } of records) {
     const stem = POST_FILE.exec(name)?.[1];
     if (stem === undefined) continue;
-    const parsed = parseJson<PostRecord>(text, PostRecordSchema);
+    const parsed = parseJson(text, PostRecordSchema);
     if (!parsed.ok || `${parsed.value.date}-${parsed.value.slug}` !== stem) {
       invalid.push(`${POSTS_DIR}${name}`);
       continue;
     }
-    posts.push({ stem, record: parsed.value, state: stateByStem.get(stem) ?? null });
+    posts.push({
+      stem,
+      record: parsed.value,
+      state: stateByStem.get(stem) ?? null,
+      stateInvalid: badStates.has(stem),
+    });
   }
   return { posts, invalid: invalid.sort() };
 }
@@ -84,6 +94,14 @@ interface Deps {
   list?: typeof listOpsFiles;
   read?: typeof readLedgerFile;
 }
+
+type Listing = Awaited<ReturnType<typeof listOpsFiles>>;
+
+const unavailable = (listing: Extract<Listing, { ok: false }>): PostsLoad => ({
+  status: "unavailable",
+  httpStatus: listing.status,
+  ...(listing.reason ? { reason: listing.reason } : {}),
+});
 
 export async function loadPosts(deps: Deps = {}): Promise<PostsLoad> {
   const token = deps.token === undefined ? opsLedgerToken() : deps.token;
@@ -96,15 +114,8 @@ export async function loadPosts(deps: Deps = {}): Promise<PostsLoad> {
     list(token, POSTS_DIR),
     list(token, POSTS_STATE_DIR),
   ]);
-  for (const listing of [recordList, stateList]) {
-    if (!listing.ok)
-      return {
-        status: "unavailable",
-        httpStatus: listing.status,
-        ...(listing.reason ? { reason: listing.reason } : {}),
-      };
-  }
-  if (!recordList.ok || !stateList.ok) return { status: "unavailable", httpStatus: null };
+  if (!recordList.ok) return unavailable(recordList);
+  if (!stateList.ok) return unavailable(stateList);
 
   const wanted = (files: LedgerFileRef[]) => files.filter((f) => POST_FILE.test(f.name));
   const readAll = (files: LedgerFileRef[]) =>
@@ -116,19 +127,14 @@ export async function loadPosts(deps: Deps = {}): Promise<PostsLoad> {
     readAll(recordList.value.files),
     readAll(stateList.value.files),
   ]);
-  const failed = [...recordReads, ...stateReads].find((r) => !r.result.ok);
-  if (failed && !failed.result.ok) {
-    return {
-      status: "unavailable",
-      httpStatus: failed.result.status,
-      ...(failed.result.reason ? { reason: failed.result.reason } : {}),
-    };
-  }
-  // A file over the size cap has no text: it is invalid, like one that fails the schema.
+  // A file that cannot be read (or is over the size cap) gets empty text, so it is listed as an
+  // invalid file by name and the rest of the card still shows; a state file that cannot be read
+  // makes that post's status "unknown" (ADM-21).
   const texts = (reads: typeof recordReads) =>
-    reads.flatMap(({ file, result }) =>
-      result.ok ? [{ name: file.name, text: result.value ?? "" }] : [],
-    );
+    reads.map(({ file, result }) => ({
+      name: file.name,
+      text: result.ok ? (result.value ?? "") : "",
+    }));
   const parsed = parsePostFiles(texts(recordReads), texts(stateReads));
   const badSha = [
     ...recordList.value.invalid.filter((n) => POST_FILE.test(n)).map((n) => `${POSTS_DIR}${n}`),

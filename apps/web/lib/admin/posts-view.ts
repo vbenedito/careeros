@@ -31,7 +31,8 @@ export const STATUS_WORD: Record<EffectiveStatus, string> = {
 export interface PostPlatformCell {
   platform: PostPlatform;
   name: string;
-  status: EffectiveStatus;
+  /** `unknown` when the post's state file is invalid or unreadable. */
+  status: EffectiveStatus | "unknown";
   word: string;
   /** Link to the live post: only when published and the URL is an https address. */
   url: string | null;
@@ -46,7 +47,6 @@ export interface PostRow {
   /** "Sun, Nov 29, 19:00" (the record's date and time, São Paulo). */
   when: string;
   title: string;
-  pillar: string;
   platforms: PostPlatformCell[];
 }
 
@@ -66,12 +66,12 @@ export function formatWhen(date: string, time: string): string {
   return `${WEEKDAYS[day.getUTCDay()]}, ${MONTHS[m - 1]} ${d}, ${time}`;
 }
 
-/** Only a plain https address becomes a link (no `javascript:` or other schemes). */
+/** Only a plain https address becomes a link (no `javascript:`, other schemes, or user:password@). */
 export function safeUrl(url: string | null): string | null {
   if (url === null) return null;
   try {
     const u = new URL(url);
-    return u.protocol === "https:" ? u.toString() : null;
+    return u.protocol === "https:" && u.username === "" && u.password === "" ? u.toString() : null;
   } catch {
     return null;
   }
@@ -80,6 +80,20 @@ export function safeUrl(url: string | null): string | null {
 function cells(entry: PostEntry): PostPlatformCell[] {
   const out: PostPlatformCell[] = [];
   for (const platform of POST_PLATFORMS) {
+    const recordStatus = entry.record.platforms[platform]?.status;
+    if (entry.stateInvalid && recordStatus !== undefined && recordStatus !== "skipped") {
+      // The state file is broken: never call a post that may be live "Scheduled".
+      out.push({
+        platform,
+        name: PLATFORM_NAME[platform],
+        status: "unknown",
+        word: "Status unknown",
+        url: null,
+        httpNote: null,
+        publishedAt: null,
+      });
+      continue;
+    }
     const status = effectiveStatus(entry.record, entry.state, platform);
     if (status === null) continue;
     const fromState = entry.state?.platforms[platform];
@@ -113,7 +127,6 @@ export function buildPosts(
       stem: entry.stem,
       when: formatWhen(entry.record.date, entry.record.time),
       title: entry.record.platforms.youtube?.title || entry.record.slug,
-      pillar: entry.record.pillar,
       platforms: cells(entry),
     }));
   const all = rows.flatMap((r) => r.platforms);

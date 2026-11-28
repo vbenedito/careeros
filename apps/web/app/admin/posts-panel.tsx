@@ -1,4 +1,4 @@
-import { Check, Clock, ExternalLink, MinusCircle, TriangleAlert, X } from "lucide-react";
+import { Check, CircleHelp, Clock, ExternalLink, Hourglass, MinusCircle, X } from "lucide-react";
 import { Details, ScrollTable, TD, TH, TR, Unavailable } from "@/app/admin/panel-parts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PostPlatformCell, PostsView } from "@/lib/admin/posts-view";
@@ -17,18 +17,20 @@ function StatusIcon({ status }: { status: PostPlatformCell["status"] }) {
   if (status === "skipped")
     return <MinusCircle aria-hidden="true" className={`${ICON} text-muted-foreground`} />;
   if (status === "queued")
-    return <TriangleAlert aria-hidden="true" className={`${ICON} text-warning`} />;
+    return <Hourglass aria-hidden="true" className={`${ICON} text-muted-foreground`} />;
+  if (status === "unknown")
+    return <CircleHelp aria-hidden="true" className={`${ICON} text-warning`} />;
   return <Clock aria-hidden="true" className={`${ICON} text-muted-foreground`} />;
 }
 
-function OpenLink({ cell }: { cell: PostPlatformCell }) {
+function OpenLink({ cell, title }: { cell: PostPlatformCell; title: string }) {
   if (cell.url === null) return null;
   return (
     <a
       href={cell.url}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Open on ${cell.name} (opens in a new tab)`}
+      aria-label={`Open ${title} on ${cell.name} (opens in a new tab)`}
       className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       Open
@@ -76,7 +78,7 @@ export function PostsPanel(props: Props) {
                             {cell.word}
                             {cell.httpNote !== null && ` (${cell.httpNote})`}
                           </span>
-                          <OpenLink cell={cell} />
+                          <OpenLink cell={cell} title={row.title} />
                         </li>
                       ))}
                     </ul>
@@ -116,7 +118,11 @@ export function PostsPanel(props: Props) {
                           </td>
                           <td className={`${TD} tabular-nums`}>{cell.publishedAt ?? "None"}</td>
                           <td className="py-2 align-top">
-                            {cell.url === null ? "None" : <OpenLink cell={cell} />}
+                            {cell.url === null ? (
+                              "None"
+                            ) : (
+                              <OpenLink cell={cell} title={row.title} />
+                            )}
                           </td>
                         </tr>
                       )),
