@@ -50,9 +50,13 @@ export function ProblemsCard({
                 {row.userRule ? (
                   <span className="min-w-0 flex-1 break-words" data-testid="problem-user-rule">
                     {row.userRule.label} ·{" "}
-                    <span title={row.userRule.id} aria-label={row.userRule.id}>
-                      <span className="sm:hidden" data-testid="problem-id-short">
+                    <span title={row.userRule.id}>
+                      {/* PSR-14: small screens show the short id; screen readers get the full id. */}
+                      <span className="sm:hidden" aria-hidden="true" data-testid="problem-id-short">
                         {row.userRule.shortId}
+                      </span>
+                      <span className="sr-only sm:hidden" data-testid="problem-id-sr">
+                        {row.userRule.id}
                       </span>
                       <span className="hidden sm:inline" data-testid="problem-id-full">
                         {row.userRule.id}
