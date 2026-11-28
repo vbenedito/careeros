@@ -144,6 +144,15 @@ describe("problem rule matcher (PSR-05..09, PSR-17)", () => {
     expect(at("a".repeat(65))).toBeNull();
   });
 
+  it("PSR-07 a slug rule gives no id over 64 characters (the database limit of user domains)", () => {
+    const rule: ProblemRule = { domain: "example.com", prefix: ["p"], kind: "slug" };
+    const at = (id: string) =>
+      problemIdFromUrl(`https://example.com/p/${id}`, "example.com", [rule]);
+    expect(at("a".repeat(70))).toBeNull();
+    expect(at("a".repeat(64))).toBe("a".repeat(64));
+    expect(at("Abc")).toBeNull(); // the slug pattern still applies
+  });
+
   it("PSR-05 lookalike hosts and a differently tracked subdomain give no id", () => {
     const path = "/practice/system-design/abc123";
     for (const [host, tracked] of [

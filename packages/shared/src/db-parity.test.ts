@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DATA, ENTITLEMENTS, PROBLEMS, SYNC, TRACKING } from "./constants";
 import { DOMAIN_PATTERN } from "./domain";
+import { isValidProblemForDomain } from "./problems";
 
 const migrationsDir = resolve(import.meta.dirname, "../../../supabase/migrations");
 
@@ -58,6 +59,18 @@ function latestFunctionSql(name: string): { file: string; sql: string } {
 }
 
 const occurrences = (sql: string, pattern: RegExp) => [...sql.matchAll(pattern)].map((m) => m[1]);
+
+describe("database parity: ids of user domains (PSR-07, PSR-23)", () => {
+  it("PSR-23 the ingest check of a user-domain id equals PROBLEM_ID_MAX and PROBLEM_ID_PATTERN", () => {
+    const sql = readFileSync(resolve(migrationsDir, "20261127200000_problem_rules.sql"), "utf8");
+    expect(sql).toContain(`char_length(element ->> 'problem') > ${PROBLEMS.PROBLEM_ID_MAX}`);
+    expect(sql).toContain(`!~ '${PROBLEMS.PROBLEM_ID_PATTERN.source}'`);
+    // The extension keeps an id on a user domain only when it passes the same two checks.
+    const long = "a".repeat(PROBLEMS.PROBLEM_ID_MAX + 1);
+    expect(isValidProblemForDomain("example.com", long)).toBe(false);
+    expect(isValidProblemForDomain("example.com", "a".repeat(PROBLEMS.PROBLEM_ID_MAX))).toBe(true);
+  });
+});
 
 describe("database parity: ingest and totals constants", () => {
   // Since #178 both ingest RPCs are thin wrappers around one shared implementation (ADR-0011).

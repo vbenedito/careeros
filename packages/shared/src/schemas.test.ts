@@ -72,7 +72,7 @@ describe("IntervalSchema", () => {
         domain,
       ).toBe(false);
       expect(
-        IntervalSchema.safeParse({ ...valid, domain, problem: "a".repeat(101) }).success,
+        IntervalSchema.safeParse({ ...valid, domain, problem: "a".repeat(65) }).success,
         domain,
       ).toBe(false);
     }

@@ -68,7 +68,9 @@ export function isValidProblemId(id: string): boolean {
 
 /** PSR-07: one of the two fixed patterns, chosen by the rule's kind. */
 export function isValidProblemIdOfKind(kind: ProblemIdKind, id: string): boolean {
-  return kind === "slug" ? isValidProblemSlug(id) : isValidProblemId(id);
+  // The database checks every id of a user domain with the `id` pattern and PROBLEM_ID_MAX
+  // whatever the kind (ingest and trigger), so a slug rule also needs that: at most 64.
+  return isValidProblemId(id) && (kind === "id" || isValidProblemSlug(id));
 }
 
 /** PSR-06: one literal prefix segment. */
@@ -81,13 +83,11 @@ export function isValidRuleSegment(segment: string): boolean {
 
 /**
  * PSR-07, PRB-08: what a stored problem must look like on a domain: a slug on a built-in domain,
- * an id (or a slug, rule kind `slug`) on any other (the server decides by the account's rules,
- * PSR-23).
+ * an id on any other: the database limit (PROBLEM_ID_PATTERN, PROBLEM_ID_MAX) applies to every
+ * user domain, also for slug rules (the server decides by the account's rules, PSR-23).
  */
 export function isValidProblemForDomain(domain: string, problem: string): boolean {
-  return isProblemDomain(domain)
-    ? isValidProblemSlug(problem)
-    : isValidProblemId(problem) || isValidProblemSlug(problem);
+  return isProblemDomain(domain) ? isValidProblemSlug(problem) : isValidProblemId(problem);
 }
 
 /** PSR-06: the path as the browser gives it, split on `/`, empty segments dropped, not decoded. */
