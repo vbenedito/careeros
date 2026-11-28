@@ -23,6 +23,7 @@ export function GET() {
     // ENV-05c, PRB-23: decided at build time too; a redeploy follows a change of EXTENSION_STORE_VERSION.
     problemTracking: extensionFeatureLive("problemTracking"),
     problemTrackingNeetCode: extensionFeatureLive("problemTrackingNeetCode"),
+    problemRules: extensionFeatureLive("problemRules"),
   });
   return new Response(html, {
     headers: {

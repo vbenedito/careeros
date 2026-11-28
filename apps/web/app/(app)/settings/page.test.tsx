@@ -1,7 +1,7 @@
 import { isValidElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ reads: 0 }));
+const state = vi.hoisted(() => ({ reads: 0, ruleReads: 0 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
@@ -28,8 +28,13 @@ vi.mock("@/lib/problems/data", () => ({
     state.reads += 1;
     return false;
   },
+  loadProblemSiteRules: async () => {
+    state.ruleReads += 1;
+    return [];
+  },
 }));
 
+import { ProblemSites } from "@/components/settings/problem-sites";
 import { ProblemsSetting } from "@/components/settings/problems-setting";
 import SettingsPage from "./page";
 
@@ -62,6 +67,7 @@ const render = async () => SettingsPage({ searchParams: Promise.resolve({}) });
 
 beforeEach(() => {
   state.reads = 0;
+  state.ruleReads = 0;
 });
 afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => vi.stubEnv("NEXT_PUBLIC_EXTENSION_ID", "a".repeat(32)));
@@ -94,5 +100,16 @@ describe("settings page release flag (PRB-23, DASH-16)", () => {
     expect(setting?.props.neetCode).toBe(true);
     // No tracked sites in this test: a problem site is missing.
     expect(setting?.props.siteTracked).toBe(false);
+  });
+
+  it("ENV-05c PSR-21 DASH-16 problem sites show only from store version 0.4.0, with no reads before", async () => {
+    for (const value of ["0.3.1", "", undefined]) {
+      vi.stubEnv("EXTENSION_STORE_VERSION", value);
+      expect(contains(await render(), ProblemSites)).toBe(false);
+    }
+    expect(state.ruleReads).toBe(0);
+    vi.stubEnv("EXTENSION_STORE_VERSION", "0.4.0");
+    expect(contains(await render(), ProblemSites)).toBe(true);
+    expect(state.ruleReads).toBe(1);
   });
 });

@@ -75,3 +75,23 @@ describe("DASH-17 LeetCode problems card", () => {
     expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
   });
 });
+
+describe("DASH-17 PSR-14 user-rule rows", () => {
+  const id = "cmlz26cxp08st08adxvy89hr1";
+  const userRows = problemRows(
+    [{ domain: "hellointerview.com", problem_slug: id, seconds: 600, last_day: "2026-11-17" }],
+    true,
+    new Map([["hellointerview.com", "System design"]]),
+  );
+
+  it("PSR-14 the row shows the label and the id, shortened on small screens with the full id in a tooltip", () => {
+    render(<ProblemsCard rows={userRows} retryHref="/dashboard" neetCode />);
+    const row = screen.getByTestId("problem-user-rule");
+    expect(row.textContent).toContain("System design ·");
+    expect(screen.getByTestId("problem-id-full").textContent).toBe(id);
+    expect(screen.getByTestId("problem-id-short").textContent).toBe("cmlz26cx…vy89hr1");
+    expect(row.querySelector(`[title="${id}"]`)).not.toBeNull();
+    expect(screen.getByTestId("problem-id-short").getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByTestId("problem-id-sr").textContent).toBe(id);
+  });
+});

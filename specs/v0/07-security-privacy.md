@@ -14,6 +14,8 @@ Amended 2026-11-18 (#179): the SEC-01 exception is implemented in the extension,
 
 Amended 2026-11-11 (#137): SEC-15 allows cookieless first-party page analytics on the website (Vercel Web Analytics, [ADR-0010](../../docs/adr/0010-web-analytics.md)); SEC-09 notes the analytics script needs no app CSP change; data inventory adds page views.
 
+Amended 2026-11-28 (#287, PS-c): SEC-13 implemented in `apps/web/app/privacy/page.tsx` (texts in `lib/problems/sites.ts`): from extension 0.4.0 in the store (`EXTENSION_FEATURES.problemRules`) the privacy page says that the problem id comes from LeetCode, NeetCode and the problem sites the user adds, that the example address is not stored, not sent and not logged, that the rules are account data, and gives the personal-data advice of PSR-18; the landing FAQ 1 names the sites you add. Before 0.4.0 both read as before.
+
 ## 1. Data inventory (exhaustive)
 
 | Data | Where | Why |

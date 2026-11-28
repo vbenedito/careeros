@@ -41,6 +41,59 @@ const form = (fields: Record<string, string>) => ({
 });
 
 describe("settings (integration)", () => {
+  it("PSR-12 PSR-13 PSR-16 PSR-25 DASH-16 add and remove a problem site through the API", async () => {
+    const { cookie } = await signedInUser("problem-rules");
+    const post = (body: unknown, origin?: string) =>
+      call(
+        "/api/settings/problem-rules",
+        cookie,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        origin,
+      );
+    const rule = {
+      domain: "hellointerview.com",
+      prefix: ["practice", "system-design"],
+      kind: "id",
+      label: "System design",
+      confirmedProblemId: true,
+    };
+    // The site must be one of the user's tracked sites first (PSR-05).
+    expect((await post(rule)).status).toBe(400);
+    expect((await addSite(cookie, "hellointerview.com")).status).toBe(201);
+    // PSR-25: no confirmation, no rule.
+    expect((await post({ ...rule, confirmedProblemId: false })).status).toBe(400);
+    // The built-in sites take no rule (PSR-04).
+    expect((await addSite(cookie, "leetcode.com")).status).toBe(201);
+    expect((await post({ ...rule, domain: "leetcode.com" })).status).toBe(400);
+
+    const added = await post(rule);
+    expect(added.status).toBe(201);
+    const { id } = await added.json();
+    expect((await post(rule)).status).toBe(409);
+
+    const html = await (await call("/settings", cookie)).text();
+    expect(html).toContain("System design");
+    expect(html).toContain("Problem sites");
+
+    const removed = await call(`/api/settings/problem-rules/${id}`, cookie, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deleteHistory: false }),
+    });
+    expect(removed.status).toBe(200);
+    // Already removed: the same answer as a rule that is not the caller's (PSR-22).
+    const again = await call(`/api/settings/problem-rules/${id}`, cookie, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deleteHistory: false }),
+    });
+    expect(again.status).toBe(404);
+  });
+
   it("DASH-12 add (normalized, idempotent), list on the page, remove", async () => {
     const { id, cookie } = await signedInUser("sites");
     const added = await addSite(cookie, "https://www.LeetCode.com/problems/two-sum");

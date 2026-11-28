@@ -12,6 +12,7 @@ function textFor(storeVersion: string | undefined): string {
 const text = textFor("0.3.0");
 const before = textFor("0.2.3");
 const withNeetCode = textFor("0.3.1");
+const withRules = textFor("0.4.0");
 afterEach(() => vi.unstubAllEnvs());
 
 describe("privacy page and the problem slug (SEC-13, PRB-15)", () => {
@@ -91,5 +92,27 @@ describe("privacy page and the problem slug (SEC-13, PRB-15)", () => {
         "Delete account removes your account and all study data immediately",
       );
     }
+  });
+});
+
+describe("privacy page and problem sites (SEC-13, PSR-18)", () => {
+  it("SEC-13 PSR-18 store 0.4.0: the sites you add, the example address is not stored, the advice", () => {
+    expect(withRules).toContain("Problem sites you add");
+    expect(withRules).toContain("The address you paste is not stored, not sent and not logged");
+    expect(withRules).toContain("the problem id (one part of the address)");
+    expect(withRules).toContain(
+      "Only add pages where the address names a problem. Do not add pages whose address names a person, an account or a private link (for example a profile page or a shared document): CareerOS would store that part of the address as the problem id. You can remove a problem site and its history at any time.",
+    );
+    expect(withRules).toContain("Apart from the problem name or id described below,");
+    expect(withRules).toContain("Last updated November 28, 2026");
+  });
+
+  it("SEC-13 ENV-05c before 0.4.0 or with the version unset the text is as it was", () => {
+    for (const earlier of [withNeetCode, text, before, textFor(undefined)]) {
+      expect(earlier).not.toContain("Problem sites you add");
+      expect(earlier).not.toContain("problem sites you add");
+      expect(earlier).not.toContain("problem name or id");
+    }
+    expect(withNeetCode).toContain("Last updated November 20, 2026");
   });
 });

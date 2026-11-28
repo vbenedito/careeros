@@ -150,6 +150,22 @@ describe("landing page (LAND)", () => {
     expect(unset).not.toContain("One exception");
   });
 
+  it("PSR-18 PSR-21 LAND-03 store 0.4.0: FAQ 1 adds the sites the user adds; before it, the 0.3.1 text", () => {
+    const base = {
+      siteUrl: "https://careeros.example/",
+      installUrl: "https://chromewebstore.google.com/detail/x",
+      repositoryUrl: "https://github.com/vbenedito/careeros",
+      problemTracking: true,
+      problemTrackingNeetCode: true,
+    };
+    const v040 = renderLanding({ ...base, problemRules: true });
+    expect(v040).toContain("and the problem id from the problem sites you add.");
+    expect(renderLanding(base)).not.toContain("problem sites you add");
+    expect(renderLanding({ ...base, problemTracking: false, problemRules: true })).not.toContain(
+      "One exception",
+    );
+  });
+
   it("LAND-03 #140 the study-hours section: honest copy, example data clearly labelled", () => {
     for (const p of STUDY_HOURS.points) expect(html).toContain(`<h3>${p.t}</h3>`);
     expect(html).toContain("There&#39;s no magic number.");

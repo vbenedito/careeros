@@ -57,6 +57,10 @@ export const FAQ_PROBLEM_EXCEPTION =
 export const FAQ_PROBLEM_EXCEPTION_NEETCODE =
   "One exception, which you control: if you turn on Track coding problems, it also keeps the problem name from a LeetCode or NeetCode address (for example two-sum).";
 
+/** The same sentence once the store has problem rules (0.4.0, PSR-18, PSR-21). */
+export const FAQ_PROBLEM_EXCEPTION_RULES =
+  "One exception, which you control: if you turn on Track coding problems, it also keeps the problem name from a LeetCode or NeetCode address (for example two-sum), and the problem id from the problem sites you add.";
+
 /** The hero demo's sentence about what is saved; the first is the pre-#226 text. */
 export const DEMO_SAVED_PLAIN = "Only the site and the start and end times are saved.";
 export const DEMO_SAVED_WITH_PROBLEMS =
@@ -102,6 +106,7 @@ const FAQ_BASE = [
 export function faqEntries(
   problemTracking: boolean,
   neetCode = false,
+  problemRules = false,
 ): readonly { q: string; a: string }[] {
   const marker = "never reads page titles or content.";
   return FAQ_BASE.map((f, i) =>
@@ -111,7 +116,7 @@ export function faqEntries(
           a: f.a
             .replace(
               marker,
-              `${marker} ${neetCode ? FAQ_PROBLEM_EXCEPTION_NEETCODE : FAQ_PROBLEM_EXCEPTION}`,
+              `${marker} ${problemRules && neetCode ? FAQ_PROBLEM_EXCEPTION_RULES : neetCode ? FAQ_PROBLEM_EXCEPTION_NEETCODE : FAQ_PROBLEM_EXCEPTION}`,
             )
             .replace("Because of this,", "Because it reads the address,"),
         }

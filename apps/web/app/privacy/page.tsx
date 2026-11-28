@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { extensionFeatureLive, privacyConfig } from "@/lib/env";
+import { SITE_PRIVACY } from "@/lib/problems/sites";
 
 /** Rendered per request so the problem-tracking copy follows EXTENSION_STORE_VERSION (PRB-23). */
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 const UPDATED = "November 18, 2026";
 /** With the NeetCode copy (extension 0.3.1, ENV-05c) the page changes, so its date does. */
 const UPDATED_NEETCODE = "November 20, 2026";
+/** PSR-18: the date of the problem-sites text. */
+const UPDATED_RULES = "November 28, 2026";
 
 /**
  * SEC-13: plain-language privacy notice (LGPD). Public: no sign-in needed. Server-rendered per
@@ -24,6 +27,8 @@ const UPDATED_NEETCODE = "November 20, 2026";
 export default function PrivacyPage() {
   const problems = extensionFeatureLive("problemTracking");
   const neetCode = problems && extensionFeatureLive("problemTrackingNeetCode");
+  // ENV-05c, PSR-21, SEC-13: the problem sites the user adds need extension 0.4.0 in the store.
+  const rules = neetCode && extensionFeatureLive("problemRules");
   const setting = neetCode ? "Track coding problems" : "Track LeetCode problems";
   const { controller, contactEmail, dataRegion } = privacyConfig();
   const contact = contactEmail ? (
@@ -48,7 +53,7 @@ export default function PrivacyPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Privacy</h1>
           <p className="text-muted-foreground">
-            Last updated {neetCode ? UPDATED_NEETCODE : UPDATED}.
+            Last updated {rules ? UPDATED_RULES : neetCode ? UPDATED_NEETCODE : UPDATED}.
           </p>
           <p>
             CareerOS measures how much time you spend studying on the websites you choose. This page
@@ -104,6 +109,7 @@ export default function PrivacyPage() {
                       ? "Showing your time per problem"
                       : "Showing your time per LeetCode problem"}
                   </Row>
+                  {rules ? <Row data={SITE_PRIVACY.tableData}>{SITE_PRIVACY.tableWhy}</Row> : null}
                   <Row
                     data={`In your browser only: a small flag (in localStorage) that hides the announcement about ${neetCode ? "coding" : "LeetCode"} problems once you dismiss it`}
                   >
@@ -118,7 +124,7 @@ export default function PrivacyPage() {
           </table>
           <p>
             {problems
-              ? `Nothing else. Apart from the ${neetCode ? "problem name" : "LeetCode problem name"} described below, the extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows.`
+              ? `Nothing else. Apart from ${rules ? SITE_PRIVACY.nothingElse : `the ${neetCode ? "problem name" : "LeetCode problem name"} described below`}, the extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows.`
               : "Nothing else. The extension never records full addresses (paths or search terms), page titles or content, keystrokes, form data, passwords or screenshots, and never stores or sends the names of sites you have not chosen. It does not read pages at all, and it never tracks incognito windows."}
           </p>
           <p>
@@ -146,6 +152,14 @@ export default function PrivacyPage() {
               delete your whole problem history. Your study time stays either way. If you keep the
               history, the problem names stay until you delete your account.
             </p>
+          </Section>
+        ) : null}
+
+        {rules ? (
+          <Section title={SITE_PRIVACY.sectionTitle}>
+            {SITE_PRIVACY.paragraphs.map((text) => (
+              <p key={text}>{text}</p>
+            ))}
           </Section>
         ) : null}
 
