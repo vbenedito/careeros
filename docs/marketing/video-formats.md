@@ -5,7 +5,7 @@ Type: living · Owner: product owner · Last reviewed: 2026-11-20
 Amended 2026-11-22 (#258): the per-problem feature is live (extension 0.3.1); checklist item 5 and the "Must never" line now allow it, with the exact privacy line only.
 Amended 2026-11-25 (product owner P8 and P10, spec 04): videos for automated posts use **music composed in code** (`scripts/video/careeros_music.py`, `music_license` = `original:careeros_music:<seed>`, section 3 sources do not apply to them); weeks 1 to 8 have one explainer demo a week ([content pillars](content-pillars.md) section 6).
 
-Amended 2026-11-28 (#291, product owner): videos 1 and 2 had plain covers and video 2 had 0 views the next morning. New **style B** for pillar 1 to 3 videos and style C for explainers (section 2.6): a gradient with a glow is allowed when its brightest pixel in the safe box is measured; frame 0 is the cover; the hook is 108 px or more and must pass the thumbnail check. Sections 1.2, 1.5 and 2.6.
+Amended 2026-11-28 (#291, product owner): videos 1 and 2 had plain covers and video 2 had 0 views the next morning. New **style B** for pillar 1 to 3 videos and style C for explainers (section 2.6): a gradient with a glow is allowed when its brightest pixel in the safe box is measured; frame 0 is the cover; the hook is 110 px or more and must pass the thumbnail check. Sections 1.1, 1.2, 1.5, 2.6 and 4.6 (items 11 to 13).
 
 Amended 2026-11-22 (#261, product owner): Instagram Reels from week 1, same file as TikTok; when a week goes over 2 hours, drop Instagram first, then LinkedIn.
 
@@ -27,7 +27,7 @@ How to read it: a fact that comes from a page we read has a source tag like [V3]
 
 A tag chip such as `Step 1`, `Myth` or `Fact` is not counted. Tags are part of the screen and never carry meaning by color alone.
 
-**Text per screen.** One idea per screen. At most 2 lines. 3 to 7 words per line. Line length is limited by the safe box (section 1.4): about 17 characters per line at 88 px, 22 at 72 px and 24 at 64 px. Never one word alone on a line. Sentence case. Durations in the app format (`45m`, `1h 05m`). No emoji, no exclamation marks.
+**Text per screen.** One idea per screen. At most 2 lines. 3 to 7 words per line. *Style B (section 2.6): the hook may have 3 lines of up to 13 characters, and a line that is only a highlight block (a number such as `6h 40m` or a short phrase) may have 1 or 2 words; the 3 to 7 word rule does not apply to those lines.* Line length is limited by the safe box (section 1.4): about 17 characters per line at 88 px, 22 at 72 px and 24 at 64 px. Never one word alone on a line. Sentence case. Durations in the app format (`45m`, `1h 05m`). No emoji, no exclamation marks.
 
 **Length.** 20 to 45 seconds in total (platform study, section 9). Between 5 and 9 screens. A reveal inside a screen (line 2 appears 3 seconds after line 1) is allowed when a screen is longer than 5 seconds, so something changes about every 2 to 4 seconds.
 
@@ -42,6 +42,7 @@ The hook is screen 1. It is the strongest line the video can honestly pay off.
 - It is on screen at frame 0. No black frame, no logo opening, no "hey", no title card.
 - Something moves in the first 0.3 s: bars grow, or the first line fades in. A still frame is easy to scroll past.
 - Layers: the visual (bars, a big number or a plain background), the text, and the music starting on the first beat. Sound is the weakest layer, so the text must work alone.
+- *Style B hooks follow section 2.6 instead of the size, line and fade rules here (110 px or more, weight 800, up to 3 lines of 13 characters, complete at frame 0).*
 - 3 to 6 words, 7 at most. Use 88 px, bold (76 px if a line is longer than 17 characters; hook lines are at most 19 characters at 76 px, about 800 px wide).
 - Content: a real question the reader asks ("Can a study tracker read my pages?"), a plain fact, or a plain claim that the video proves. Pillar 3 opens with the reader's doubt, not with the list (content pillars, section 4).
 - It must be true to the video. The payoff comes inside the video, and never later than the second half. No clickbait, no "wait for it", no result promise, no hour target.
@@ -89,7 +90,7 @@ Layout inside the safe box:
 
 | Element | Size (px at 1080 wide) | Weight | Color |
 |---|---|---|---|
-| Hook text (screen 1) | 88 (76 for a line of 18 or 19 characters) | Bold (700) | `foreground` |
+| Hook text (screen 1) | 88 (76 for a line of 18 or 19 characters); style B: 110 or more (section 2.6) | Bold (700); style B: 800 | `foreground` |
 | Body text | 72 | Medium (500) | `foreground` |
 | Body text, a line longer than 22 characters | 64, never smaller | Medium (500) | `foreground` |
 | Chart labels and values | 56 | Medium (500), tabular numbers | `foreground` |
@@ -292,7 +293,7 @@ Chosen by the product owner on 2026-11-28 after video 2's plain cover got no vie
 **Style B, pillar 1 to 3 videos.**
 
 - **Frame 0 is the cover.** YouTube may use the first frame; Instagram gets the same image as `<stem>.cover.jpg` (`cover_url`, Instagram's API uses it instead of `thumb_offset`). So frame 0 already shows the full hook and the visual subject. Nothing fades in from black.
-- **Hook:** 108 px or more, weight 800, at most 3 lines of 13 characters or fewer (`check_hook`), line height 1.2. One phrase sits in a solid `primary` block with `primary-foreground` text (7.59:1). **Thumbnail check:** when the frame is 200 px wide, the hook's cap height is at least 15 px (the 88 px hook of videos 1 and 2 measures 12.0 px and fails).
+- **Hook:** 110 px or more (the smallest size that passes the thumbnail check), weight 800, at most 3 lines of 13 characters or fewer (`check_hook`), line height 1.25. One phrase sits in a solid `primary` block with `primary-foreground` text (7.59:1). **Thumbnail check:** when the frame is 200 px wide, the hook's cap height is at least 15 px (the 88 px hook of videos 1 and 2 measures 12.0 px and fails).
 - **Background:** `background` at the top to a deep blue at the bottom (16% `primary` mixed into `background`), with a soft `primary` glow, panned slowly (140 px over 12 s) so the frame is never still. Measured brightest pixel in the safe box: `fg` 9.31:1.
 - **Visual subject:** tiles (a day, a site, a fact), `card` fill with a `border` outline, or `primary` when lit. A lit tile always keeps its label and value as text, so the meaning never rests on colour alone. Values use the app format and the `Sample data` chip is on every screen with a number, also on the cover.
 - **Motion in the first second** starts from the final state: tiles lift in a wave, the block gets one light sweep, lit tiles pulse. No counters, no shake, and never more than 3 flashes a second (a rule for the script author; `check` does not test it).
@@ -438,9 +439,9 @@ Run it for every video. One "no" means: fix the video first.
 **Video**
 
 10. 20 to 45 s. 5 to 9 screens. Hook on screen at frame 0.
-11. Every screen follows the timing rule. At most 2 lines, 3 to 7 words per line.
-12. Text is 64 px or more (labels 40 px). All readable parts are inside the safe box.
-13. Contrast checked with the pairs in section 2.2. Meaning never by color alone.
+11. Every screen follows the timing rule. At most 2 lines, 3 to 7 words per line (style B exceptions: section 2.6 and section 1.1).
+12. Text is 64 px or more (labels 40 px; style B hook 110 px or more and the thumbnail check passes). All readable parts are inside the safe box.
+13. Contrast checked with the pairs in section 2.2 (style B: the measured pairs in section 2.6). Meaning never by color alone.
 14. `Sample data` is on every screen that shows a number. Bars start at zero and use one scale.
 15. **No UI in a non-demo video.** No screenshot or recording of the extension or the dashboard. If the video does show the UI, it is a demo: pillar 4, at most 1 in 10 posts, never two in a row, sample data only, shipped features only.
 16. End screen follows section 1.3. One call to action only. The mark is above the name (section 1.3).

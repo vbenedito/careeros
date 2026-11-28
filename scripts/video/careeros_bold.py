@@ -5,7 +5,7 @@ Adds to the engine (careeros_video.py), which it reuses for fonts, colours, fram
 - `background(t)`: deep blue gradient from the tokens with a soft `primary` glow, panned slowly so
   the frame is never still. `bg_brightest()` gives the brightest pixel the safe box can show over
   the whole pan, for the contrast check.
-- `draw_hook(...)`: big bold lines (108 px or more) with one phrase in a solid `primary` block and
+- `draw_hook(...)`: big bold lines (110 px or more) with one phrase in a solid `primary` block and
   a light sweep across that block in the first second. Visible and complete at frame 0.
 - `TileGrid`: rounded tiles (a day, a site, a fact) that can be lit (`primary` fill, glow) and
   can lift or bounce. Lit tiles carry dark text on the accent, so meaning never rests on colour
@@ -30,7 +30,7 @@ from careeros_video import C, SAFE, W, H, Frame, clamp01, contrast, ease_out_cub
 
 DEEP = mix(C["bg"], C["primary"], 0.16)  # deep blue made from the background and primary tokens
 SHINE = mix(C["primary"], C["fg"], 0.35)  # light sweep across the highlight block
-HOOK_MIN_PX = 108  # smallest hook size; check_thumbnail measures the real cap height
+HOOK_MIN_PX = 110  # smallest hook size that passes check_thumbnail (108 px gives 14.8 px)
 PAN = 140  # px of vertical background drift over PAN_PERIOD seconds
 PAN_PERIOD = 12.0
 
@@ -71,11 +71,11 @@ def bg_brightest() -> tuple:
 # ---------------------------------------------------------------- hook text with a highlight block
 def _block_box(x: float, y_top: float, w: float, size: float):
     pad = size * 0.14
-    return (x - pad, y_top + size * 0.02, x + w + pad, y_top + size * 1.24)
+    return (x - pad, y_top + size * 0.10, x + w + pad, y_top + size * 1.26)  # top below the line above's descenders
 
 
 def draw_hook(fr: Frame, lines: list[list[tuple[str, bool]]], size: float, y_top: float, t_in: float = 0.0,
-              t_out: float = 1e9, x: float = 80, weight: int = 800, line_h: float = 1.2, out_dur: float = 0.25,
+              t_out: float = 1e9, x: float = 80, weight: int = 800, line_h: float = 1.25, out_dur: float = 0.25,
               in_dur: float = 0.0) -> float:
     """Lines of (text, highlighted) segments. With in_dur = 0 (the hook) the text is complete at t_in,
     so frame 0 is the cover; later screens use in_dur > 0 to rise in. The block gets a sweep at
@@ -151,7 +151,7 @@ def fit_size(lines: list[list[tuple[str, bool]]], max_px: float, min_px: float =
 
 
 def check_hook(lines: list[list[tuple[str, bool]]], size: float):
-    """video-formats.md 2.6: 108 px or more, at most 3 lines, at most 13 characters a line."""
+    """video-formats.md 2.6: 110 px or more, at most 3 lines, at most 13 characters a line."""
     if size < HOOK_MIN_PX:
         raise AssertionError(f"hook {size}px is under {HOOK_MIN_PX}px")
     if len(lines) > 3:

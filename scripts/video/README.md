@@ -41,7 +41,7 @@ python3 careeros_music.py --seconds 30 --seed 3 --out bed.wav   # music bed alon
 
 - **Safe box.** Every readable element (text, chip, labels, values, bars, logo) records its resting position. A frame stops the run when one is outside x 80–900, y 250–1400 ([video formats](../../docs/marketing/video-formats.md) section 1.4). In-animations (a word popping in) can overshoot by a few pixels for about 0.1 s; that is not checked.
 - **Contrast.** `check` measures the text and bar colors against the brightest background pixel in the safe box (gradient and grain included; the spotlight band too when the style has one): text at least 4.5:1, bars at least 3:1.
-- **Hook and thumbnail (style B).** The hook is 108 px or more, at most 3 lines of 13 characters (`check_hook`), and its cap height is at least 15 px when the frame is shown 200 px wide (`check_thumbnail`).
+- **Hook and thumbnail (style B).** The hook is 110 px or more, at most 3 lines of 13 characters (`check_hook`), and its cap height is at least 15 px when the frame is shown 200 px wide (`check_thumbnail`).
 - **Sample data.** The script asserts that the sample week adds up (400 minutes; Thu + Sat = 245).
 
 ## Output

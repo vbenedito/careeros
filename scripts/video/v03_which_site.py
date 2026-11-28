@@ -1,4 +1,4 @@
-"""Video 3: "Which site took most of your week?" (content pillars section 2, idea 7). Pillar 1, chart as tiles, style B (#291).
+"""Video 3: "Which site took the most study time?" (content pillars section 2, idea 7). Pillar 1, chart as tiles, style B (#291).
 
 Usage (from scripts/video):
   python3 v03_which_site.py check                 # contrast pairs, thumbnail, sample sums, safe box of every frame
@@ -28,7 +28,7 @@ MINUTES = [190, 120, 90]  # sample site table: 3h 10m, 2h 00m, 1h 30m
 assert sum(MINUTES) == 400 and MINUTES[1] + MINUTES[2] == 210, "sample site table must add up (6h 40m; 3h 30m)"
 
 HOOK_PX = 116
-HOOK = [[("Which site", False)], [("took", False), ("most", True)], [("of your week?", False)]]
+HOOK = [[("Which site", False)], [("took the most", False)], [("study time?", True)]]
 BODY_PX = 96
 LOGO = os.environ.get("CAREEROS_MARK", cv.MARK_DARK)
 STYLES = {"bold": None}
@@ -96,13 +96,13 @@ def texts(fr: Frame):
     b.draw_hook(fr, HOOK, HOOK_PX, y, t_in=0.0, t_out=S[1])
     # P10 line: who it is for and what it does, from 1.0 s
     if 1.0 <= t < S[1]:
-        b.draw_hook(fr, [[("Interview prep, counted.", False)]], 64, 800, t_in=1.0, t_out=S[1], weight=600, in_dur=0.35)
+        b.draw_hook(fr, [[("Study sites, counted.", False)]], 64, 800, t_in=1.0, t_out=S[1], weight=600, in_dur=0.35)
     body = [
         (S[1], S[2], [[("A sample week:", False)], [("6h 40m", True)]]),
         (S[2], S[3], [[("leetcode.com took", False)], [("the most:", False), ("3h 10m", True)]]),
         (S[3], S[4], [[("The other two sites", False)], [("hold", False), ("3h 30m", True)]]),
         (S[4], S[5], [[("We think a count", False)], [("beats a guess.", False)]]),
-        (S[5], S[6], [[("Your week,", False)], [("by site.", True)]]),
+        (S[5], S[6], [[("Your study week,", False)], [("by site.", True)]]),
     ]
     for t0, t1, lines in body:
         if t0 - 0.05 <= t <= t1:
