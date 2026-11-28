@@ -31,14 +31,14 @@ flowchart TB
 
 | Path (`src/`) | Role | Main specs |
 |---|---|---|
-| `engine/signals.ts` | Engine A: folds Chrome observations into `Signals` and decides the tracking target and its LeetCode problem (`trackingProblem`, slug from `problemSlugFromUrl` in `packages/shared`, only while the account setting is on) | TRK-01..07, PRB-04..06 |
+| `engine/signals.ts` | Engine A: folds Chrome observations into `Signals` and decides the tracking target and its problem (`trackingProblem`, id from `problemIdFromUrl` in `packages/shared`: the built-in slug or the id of a user rule; only while the account setting is on) | TRK-01..07, PRB-04..06, PSR-05..09 |
 | `engine/engine.ts` | Engine B: `step(state, event, now, env) → { state, effects }`; opens, splits and closes intervals; the problem is part of an interval's identity | TRK-08..16, PRB-08, PRB-09 |
 | `background/index.ts` | Service worker entry: wires every module and registers all listeners synchronously | TRK-19, SYNC-02 |
 | `background/tracking/chrome-port.ts` | Chrome adapter: tab, focus (500 ms debounce), idle, heartbeat alarm, popup port | TRK-02, 04, 06, 13, 18, 19 |
 | `background/tracking/tracker.ts`, `queue.ts` | One serialized queue; each slot loads state, steps the engine, commits, answers re-query effects; 10 s timeout for events and `exclusive` tasks; a generation counter drops the writes of timed-out slots | TRK-12, 13, 17, 17a |
 | `background/tracking/store.ts`, `keys.ts` | Storage schemas and keys; engine state and outbox written together | TRK-12, SYNC-01 |
 | `background/tracking/outbox.ts` | Outbox, deferred (`future`), quarantine (`invalid`), `overlap` dropped and its seconds returned, synced-today, prune and counts | SYNC-01, 05, 05a, 05c, 07, 07a, 08 |
-| `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events (the site-list cache gives `DOMAINS` and `PROBLEMS`); `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12, PRB-03 |
+| `background/tracking/bootstrap.ts` | Start sequence; storage changes become engine events (the site-list cache gives `DOMAINS`, `PROBLEMS` and `PROBLEM_RULES`); `LocalData` hooks for auth | TRK-01, 19, AUTH-11/12, PRB-03 |
 | `background/tracking/device.ts` | Random device id, UUID generator, local-midnight calendar (`engine.localDayStartMs` gives "today" from it) | TRK-09, 10, SYNC-12a |
 | `background/sync/sync-service.ts` | Upload cycle, backoff, 20 s ingest timeout, skew measured per response, rejections handled by reason, "syncing" mark, clock skew and dropped-overlap seconds stored for the popup (`dismissOverlap`), bounded `waitIdle` for Disconnect | SYNC-02..08, 05c |
 | `background/sync/supabase-ingest.ts` | Calls only `ingest_study_sessions_v2` (no fallback, ADR-0011); parses the reply with `parseIngestV2Reply`; maps errors to classes; reads the server's time from the `Date` header | SYNC-03a, 05a, 05c, 06, DATA-06b |
@@ -47,7 +47,7 @@ flowchart TB
 | `background/auth/supabase-backend.ts`, `storage.ts`, `mutex.ts` | supabase-js session in `chrome.storage.local` (written by the persistent client only while adopting); refreshes on a non-persisting client, result stored by compare-and-set, 15 s timeout, late answers never written; in-memory lock that gives up after `LOCK_TIMEOUT_S` | AUTH-10, 10a, 10b, 10c, ADR-0002 |
 | `lib/error-kind.ts` | Coarse, PII-free error label (class name, known code) for logs and the sync status | SYNC-06b |
 | `background/account-epoch.ts` | In-memory counter of account changes; stale work writes nothing | SYNC-02a, AUTH-11 |
-| `background/domains/` | Tracked-site cache and server edits; each refresh also reads `account_settings.track_problems` (failed read or no row = off) and caches it with the list | SYNC-09..11, 09b, 09d, 10a, PRB-03, PRB-04 |
+| `background/domains/` | Tracked-site cache and server edits; each refresh also reads `account_settings.track_problems` (failed read or no row = off) and the account's active `problem_rules`, validated one by one with `ProblemRuleSchema` (a failed read keeps the last good rules, else none), and caches both with the list | SYNC-09..11, 09b, 09d, 10a, PRB-03, PRB-04, PSR-16, PSR-19, PSR-20 |
 | `background/messaging/external.ts` | Messages from the dashboard origin | AUTH-06..07b, SEC-05 |
 | `background/messaging/internal.ts` | Messages from the extension's own pages; answers also in builds without Supabase config | EXT-UI-05a, 05c, SEC-05 |
 | `background/api/data-client.ts` | supabase-js data client that asks `AuthService` for each token | AUTH-10 |
@@ -72,7 +72,7 @@ stateDiagram-v2
   NotTracking --> NotTracking: clock moved back<br/>(block new intervals until notBefore)
 ```
 
-The open interval carries `problem` (slug or null). `trackingProblem(signals)` is the slug only while the setting is on (`trackProblems === true`, fails closed: null until read, PRB-04) and the tab's tracked domain is `leetcode.com` (PRB-05); turning it on asks for the tab again (the URL is never kept), turning it off clears the slug at once, so an open interval with a problem closes (PRB-09). A piece opened (`splitOpened`) or closed by a problem split on the same domain is kept even under 5 s, so the pieces add up to the domain time (PRB-07, PRB-08). With the setting off the engine behaves as in 0.2.3 and intervals have no `problem` key.
+The open interval carries `problem` (slug, or the id of a user rule, or null). `trackingProblem(signals)` is the slug only while the setting is on (`trackProblems === true`, fails closed: null until read, PRB-04) and the tab's tracked domain is `leetcode.com` (PRB-05); turning it on asks for the tab again (the URL is never kept), turning it off clears the slug at once, so an open interval with a problem closes (PRB-09). A piece opened (`splitOpened`) or closed by a problem split on the same domain is kept even under 5 s, so the pieces add up to the domain time (PRB-07, PRB-08). With the setting off the engine behaves as in 0.2.3 and intervals have no `problem` key.
 
 The target is non-null only when all of TRK-01 hold (connected, tracking on, domain list loaded, focused tracked tab) and the user is active, or idle with the media hold (TRK-05, TRK-06, [ADR-0005](../adr/0005-media-activity.md)). Every step persists the state (TRK-12).
 
@@ -218,7 +218,7 @@ All in `chrome.storage.local` ([ADR-0002](../adr/0002-extension-storage.md)). `F
 | `careeros.tracking.quarantine` | Intervals the server rejected | yes |
 | `careeros.tracking.syncedToday` | Today's confirmed intervals, for popup totals | yes |
 | `careeros.tracking.droppedCount` | Intervals dropped as too old or unreadable | yes |
-| `careeros.domains.cache` | Tracked-domain list and the account's problem setting (`trackProblems`, SYNC-09d) | yes (also when the session becomes invalid) |
+| `careeros.domains.cache` | Tracked-domain list, the account's problem setting (`trackProblems`, SYNC-09d) and its problem rules (`problemRules`, PSR-19) | yes (also when the session becomes invalid) |
 | `careeros.sync.state` | Backoff, last outcome, last sync time, syncing mark, clock skew (see above) | yes |
 | `careeros.device.id` | Random device id | replaced when local data is cleared |
 | `careeros.settings.trackingEnabled` | Per-device switch; missing means on | no |

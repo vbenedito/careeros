@@ -26,6 +26,10 @@ export async function startTracking(deps: {
   }));
   // PRB-03/04: always sent, so a stored "on" from an earlier worker never outlives its cache.
   await tracker.dispatch(async () => ({ type: "PROBLEMS", enabled: await store.trackProblems() }));
+  await tracker.dispatch(async () => ({
+    type: "PROBLEM_RULES",
+    rules: await store.problemRules(),
+  }));
   const domains = await store.trackedDomains();
   if (domains) await tracker.dispatch({ type: "DOMAINS", domains });
 }
@@ -56,6 +60,11 @@ export function createStorageChangeHandler(deps: {
       void tracker.dispatch(async () => ({
         type: "PROBLEMS",
         enabled: await store.trackProblems(),
+      }));
+      // SYNC-09d, PSR-19: the rules travel in the same cache entry.
+      void tracker.dispatch(async () => ({
+        type: "PROBLEM_RULES",
+        rules: await store.problemRules(),
       }));
     }
     if (SESSION_STORAGE_KEY in changes) {

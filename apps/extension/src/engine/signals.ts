@@ -7,7 +7,7 @@
  *
  * Privacy (TRK-02, SEC-02): events carry the tab URL only transiently. `Signals` keeps the
  * matched *tracked* domain, never the URL or the hostname of a non-tracked site, so it is safe to
- * persist. PRB-06: of the path, only the LeetCode problem slug may be kept, and only while the
+ * persist. PRB-06, PSR-10: of the path, only the problem id (the LeetCode/NeetCode slug or the one segment of a user rule) may be kept, and only while the
  * account setting is on (PRB-05).
  *
  * Composition with Engine B (#15): B is the only entry point, `(state, event, now)`. Its state
@@ -20,7 +20,8 @@ import {
   hostnameFromUrl,
   isValidDomain,
   matchTrackedDomain,
-  problemSlugFromUrl,
+  type ProblemRule,
+  problemIdFromUrl,
 } from "@careeros/shared";
 
 /** `chrome.idle` states, plus `unknown` until the first report after a RESYNC (never active). */
@@ -53,6 +54,11 @@ export interface Signals {
    */
   focusedProblem: string | null;
   /**
+   * PSR-19/20: the account's validated problem rules (cached with the site list). Rule data, no
+   * URL. Empty until read; user rules give no id while the setting is off.
+   */
+  problemRules: readonly ProblemRule[];
+  /**
    * PRB-03/04, SYNC-09d: the account setting "Track LeetCode problems"; null until read. Only
    * `true` turns detection on (fails closed).
    */
@@ -75,6 +81,8 @@ export type SignalEvent =
   | { type: "DOMAINS"; domains: readonly string[] }
   /** PRB-03, SYNC-09d: the cached account setting; false when not read, failed or no row. */
   | { type: "PROBLEMS"; enabled: boolean }
+  /** PSR-19: the cached, validated problem rules; `[]` when not read, failed or none. */
+  | { type: "PROBLEM_RULES"; rules: readonly ProblemRule[] }
   /** Active tab of the focused window changed (or its URL/audible did); null = no focused window. */
   | { type: "TAB"; tab: TabSnapshot | null }
   | { type: "IDLE"; state: IdleState }
@@ -102,6 +110,7 @@ export const INITIAL_SIGNALS: Signals = {
   trackedDomains: null,
   focusedDomain: null,
   focusedProblem: null,
+  problemRules: [],
   trackProblems: null,
   audible: false,
   idle: "unknown",
@@ -123,8 +132,9 @@ function problemOfTab(
   tab: TabSnapshot | null,
   domain: string | null,
   trackProblems: boolean | null,
+  rules: readonly ProblemRule[],
 ): string | null {
-  return trackProblems === true && tab ? problemSlugFromUrl(tab.url, domain) : null;
+  return trackProblems === true && tab ? problemIdFromUrl(tab.url, domain, rules) : null;
 }
 
 /** TRK-01 (minus activity): every condition except the user being active. */
@@ -156,7 +166,7 @@ function withTab(s: Signals, tab: TabSnapshot | null): Signals {
   return {
     ...s,
     focusedDomain,
-    focusedProblem: problemOfTab(tab, focusedDomain, s.trackProblems),
+    focusedProblem: problemOfTab(tab, focusedDomain, s.trackProblems, s.problemRules),
     audible: focusedDomain !== null && (tab?.audible ?? false),
   };
 }
@@ -231,6 +241,11 @@ export function reduceSignals(
         // PRB-09: off drops the problem at once; the engine closes an interval that had one.
         s = { ...s, trackProblems: false, focusedProblem: null };
       }
+      break;
+    case "PROBLEM_RULES":
+      // PSR-19: the URL is not kept, so the current tab is read again to apply a new rule list.
+      s = { ...s, problemRules: event.rules, focusedProblem: null };
+      effects.push({ type: "REQUERY_TAB" });
       break;
     case "TAB":
       s = withTab(s, event.tab);

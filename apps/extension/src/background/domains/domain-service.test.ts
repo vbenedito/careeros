@@ -11,6 +11,8 @@ function setup(
     limit?: number;
     /** SYNC-09d: the server's setting; an Error makes the read fail. */
     setting?: boolean | Error;
+    /** PSR-19: the server's active rules; an Error makes the read fail. */
+    rules?: unknown[] | Error;
   } = {},
 ) {
   const server = new Set(options.server ?? ["leetcode.com"]);
@@ -37,9 +39,16 @@ function setup(
       if (s.setting instanceof Error) throw s.setting;
       return s.setting;
     },
+    problemRules: async () => {
+      if (s.rules instanceof Error) throw s.rules;
+      return s.rules;
+    },
   };
   let reads = 0;
-  const s = { setting: options.setting ?? (false as boolean | Error) };
+  const s = {
+    setting: options.setting ?? (false as boolean | Error),
+    rules: options.rules ?? ([] as unknown[] | Error),
+  };
   const storage = fakeStorage();
   let rejected = 0;
   const service = createDomainService({
@@ -60,16 +69,72 @@ function setup(
     cache,
     fail: (e: DomainsApiError | null) => (failWith = e),
     setSetting: (v: boolean | Error) => (s.setting = v),
+    setRules: (v: unknown[] | Error) => (s.rules = v),
     settingReads: () => reads,
     rejected: () => rejected,
   };
 }
 
+const HI = { domain: "hellointerview.com", prefix: ["practice", "system-design"], kind: "id" };
+
+describe("problem rules sync (PSR-16, PSR-19, PSR-20)", () => {
+  it("PSR-19 a refresh caches the account's rules with the list", async () => {
+    const s = setup({ server: ["hellointerview.com"], rules: [{ ...HI, label: "HI" }] });
+    await s.service.refresh();
+    expect(s.cache()).toMatchObject({ problemRules: [{ ...HI, label: "HI" }] });
+  });
+
+  it("PSR-16 an invalid downloaded rule is dropped alone, the others are cached", async () => {
+    const bad = [
+      { ...HI, domain: "com" },
+      { ...HI, prefix: [] },
+      { ...HI, prefix: ["a", "b", "c", "d"] },
+      { ...HI, prefix: ["Practice"] },
+      { ...HI, kind: "regex" },
+      { ...HI, domain: "leetcode.com" },
+      { ...HI, label: "x".repeat(41) },
+      "nope",
+      null,
+    ];
+    const s = setup({ rules: [...bad, HI, { ...HI }] });
+    await s.service.refresh();
+    expect(s.cache()).toMatchObject({ problemRules: [HI] }); // the duplicate keeps the first
+  });
+
+  it("PSR-19 a failed read of the rules never fails the refresh and keeps the last good rules", async () => {
+    const s = setup({ rules: [HI] });
+    await s.service.refresh();
+    s.setRules(new DomainsApiError("UNAVAILABLE"));
+    expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
+    expect(s.cache()).toMatchObject({ problemRules: [HI] });
+    expect(s.rejected()).toBe(0);
+  });
+
+  it("PSR-20 a failed first read caches no rules", async () => {
+    const s = setup({ rules: new DomainsApiError("UNAVAILABLE") });
+    await s.service.refresh();
+    expect(s.cache()).toMatchObject({ problemRules: [] });
+  });
+
+  it("PSR-19 a removed rule leaves the cache at the next refresh", async () => {
+    const s = setup({ rules: [HI] });
+    await s.service.refresh();
+    s.setRules([]);
+    await s.service.refresh();
+    expect(s.cache()).toMatchObject({ problemRules: [] });
+  });
+});
+
 describe("tracked-domain sync (SYNC-09..11)", () => {
   it("#113 invalid server rows are dropped before caching", async () => {
     const s = setup({ server: ["leetcode.com", "com", "www.neetcode.io", "LeetCode.org"] });
     expect(await s.service.refresh()).toEqual({ ok: true, domains: ["leetcode.com"] });
-    expect(s.cache()).toEqual({ domains: ["leetcode.com"], trackProblems: false, fetchedAt: 1000 });
+    expect(s.cache()).toEqual({
+      domains: ["leetcode.com"],
+      trackProblems: false,
+      problemRules: [],
+      fetchedAt: 1000,
+    });
   });
 
   it("#113 a list fetched across a change of account is not cached", async () => {
@@ -84,6 +149,7 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
         insert: async () => {},
         delete: async () => {},
         trackProblems: async () => true,
+        problemRules: async () => [],
       },
       storage,
       isConnected: async () => true,
@@ -104,6 +170,7 @@ describe("tracked-domain sync (SYNC-09..11)", () => {
     expect(s.cache()).toEqual({
       domains: ["leetcode.com", "neetcode.io"],
       trackProblems: false,
+      problemRules: [],
       fetchedAt: 1000,
     });
   });

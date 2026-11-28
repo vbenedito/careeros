@@ -50,3 +50,11 @@ describe("ENV-05c extension feature gate", () => {
     }
   });
 });
+
+describe("problem rules gate (PSR-19, PSR-21)", () => {
+  it("PSR-21 the feature needs extension 0.4.0", () => {
+    expect(EXTENSION_FEATURES.problemRules).toBe("0.4.0");
+    expect(isExtensionFeatureLive("problemRules", "0.3.1")).toBe(false);
+    expect(isExtensionFeatureLive("problemRules", "0.4.0")).toBe(true);
+  });
+});

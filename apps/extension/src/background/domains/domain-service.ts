@@ -3,7 +3,7 @@
  * cached copy (read by the tracking engine and the popup). Edits go to the server first and
  * the cache changes only after the server accepted them (no offline edits in v0).
  */
-import { isValidDomain, parseDomainInput } from "@careeros/shared";
+import { isValidDomain, parseDomainInput, parseProblemRules } from "@careeros/shared";
 import type { AccountEpoch } from "../account-epoch";
 import type { KeyValueArea } from "../auth/storage";
 import { DOMAINS_CACHE_KEY } from "../tracking/keys";
@@ -16,6 +16,8 @@ export interface DomainsApi {
   delete(domain: string): Promise<void>;
   /** SYNC-09d, DATA-13: the caller's `track_problems`; false when there is no row. */
   trackProblems(): Promise<boolean>;
+  /** PSR-19: the caller's active problem rules, as the server sent them (validated by the service). */
+  problemRules(): Promise<unknown[]>;
 }
 
 /** Errors the API reports in a way the service can act on. */
@@ -72,6 +74,13 @@ export function createDomainService(deps: {
       : null;
   }
 
+  async function cachedProblemRules(): Promise<unknown> {
+    const cache = (await storage.get(DOMAINS_CACHE_KEY))[DOMAINS_CACHE_KEY] as
+      | { problemRules?: unknown }
+      | undefined;
+    return cache?.problemRules;
+  }
+
   async function refreshCache(): Promise<DomainsResult> {
     // #113: validate the server's list like any external input (a bad row such as "com" would
     // match every .com site in the popup).
@@ -82,14 +91,24 @@ export function createDomainService(deps: {
       (on) => on === true,
       () => false,
     );
+    // PSR-19: the rules are read with the list; a failed read never fails the refresh, and keeps
+    // the last good cached rules (or none).
+    const rules = api.problemRules().then(
+      (rows) => parseProblemRules(rows),
+      () => null,
+    );
     const domains = [...(await api.list())].filter(isValidDomain).sort();
     const trackProblems = await setting;
+    const read = await rules;
     if (deps.epoch && deps.epoch.current() !== started)
       return { ok: false, error: "NOT_CONNECTED" };
     // SYNC-09b (#65): a Disconnect may have finished while the list was in flight (it clears
     // the cache): never write the old list back for an account that is gone.
     if (!(await deps.isConnected())) return { ok: false, error: "NOT_CONNECTED" };
-    await storage.set({ [DOMAINS_CACHE_KEY]: { domains, trackProblems, fetchedAt: deps.now() } });
+    const problemRules = read ?? parseProblemRules(await cachedProblemRules());
+    await storage.set({
+      [DOMAINS_CACHE_KEY]: { domains, trackProblems, problemRules, fetchedAt: deps.now() },
+    });
     return { ok: true, domains };
   }
 

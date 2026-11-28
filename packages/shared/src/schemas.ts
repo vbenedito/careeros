@@ -3,9 +3,16 @@
  * The database re-validates everything (DATA-07); these schemas are the first boundary.
  */
 import { z } from "zod";
-import { DATA, ENTITLEMENTS, TRACKING } from "./constants";
+import { DATA, ENTITLEMENTS, PROBLEMS, TRACKING } from "./constants";
 import { isValidDomain } from "./domain";
-import { isProblemDomain, isValidProblemSlug } from "./problems";
+import {
+  isProblemDomain,
+  isValidProblemForDomain,
+  isValidProblemId,
+  isValidProblemSlug,
+  isValidRuleSegment,
+  type ProblemRule,
+} from "./problems";
 
 export const DomainSchema = z
   .string()
@@ -21,12 +28,54 @@ export const ProblemSlugSchema = z
   .string()
   .refine(isValidProblemSlug, { message: "Invalid problem slug" });
 
+/** PSR-07: a stored problem: a slug (built-in site) or an id (user rule); the domain decides. */
+export const ProblemIdSchema = z
+  .string()
+  .refine((v) => isValidProblemSlug(v) || isValidProblemId(v), { message: "Invalid problem id" });
+
+/**
+ * PSR-01, PSR-16: a problem rule: tracked-site domain, 1..3 literal segments, a fixed kind and a
+ * label. No pattern, no regex, no other field (a downloaded row with extras is read without them).
+ * A built-in domain never has a user rule (PSR-04).
+ */
+export const ProblemRuleSchema = z
+  .object({
+    domain: DomainSchema,
+    prefix: z
+      .array(z.string().refine(isValidRuleSegment))
+      .min(PROBLEMS.PROBLEM_RULE_PREFIX_MIN)
+      .max(PROBLEMS.PROBLEM_RULE_PREFIX_MAX),
+    kind: z.enum(PROBLEMS.PROBLEM_ID_KINDS),
+    label: z.string().min(1).max(PROBLEMS.PROBLEM_RULE_LABEL_MAX).optional(),
+  })
+  .refine((rule) => !isProblemDomain(rule.domain), { message: "Built-in site" })
+  .refine((rule) => rule.kind === "id", { message: "User rules use kind id" });
+
+/**
+ * PSR-16, PSR-19, PSR-20: validates a downloaded or cached list. An invalid rule is dropped
+ * alone; two rules with the same domain and prefix keep the first. Anything else gives `[]`.
+ */
+export function parseProblemRules(value: unknown): ProblemRule[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const rules: ProblemRule[] = [];
+  for (const item of value) {
+    const parsed = ProblemRuleSchema.safeParse(item);
+    if (!parsed.success) continue;
+    const key = `${parsed.data.domain}\u0000${parsed.data.prefix.join("/")}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rules.push(parsed.data);
+  }
+  return rules;
+}
+
 /**
  * TRK-10 closed interval, as stored in the outbox and sent to `ingest_study_sessions_v2`.
  * MIN_INTERVAL_S is not enforced here: the engine discards short intervals before they are
  * stored (TRK-10), and the server only requires a positive duration (DATA-02).
- * PRB-08: `problem` is present only when the interval has one, and only on a domain of
- * PROBLEM_DOMAINS (PRB-18, PRB-15); an interval without a problem has exactly the 0.2.3 shape.
+ * PRB-08: `problem` is present only when the interval has one: a slug on a domain of
+ * PROBLEM_DOMAINS (PRB-18, PRB-15), an id (PSR-07) on any other; an interval without a problem has exactly the 0.2.3 shape.
  */
 export const IntervalSchema = z
   .object({
@@ -35,12 +84,15 @@ export const IntervalSchema = z
     domain: DomainSchema,
     started_at: UtcSecondsSchema,
     ended_at: UtcSecondsSchema,
-    problem: ProblemSlugSchema.optional(),
+    problem: ProblemIdSchema.optional(),
   })
   .strict()
   .superRefine((interval, ctx) => {
-    if (interval.problem !== undefined && !isProblemDomain(interval.domain)) {
-      ctx.addIssue({ code: "custom", message: "problem only on the problem domain" });
+    if (
+      interval.problem !== undefined &&
+      !isValidProblemForDomain(interval.domain, interval.problem)
+    ) {
+      ctx.addIssue({ code: "custom", message: "problem does not fit the domain (PSR-07)" });
     }
     const seconds = (Date.parse(interval.ended_at) - Date.parse(interval.started_at)) / 1000;
     if (seconds <= 0) {
