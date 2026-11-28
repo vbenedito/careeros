@@ -8,6 +8,8 @@ Amended 2026-11-19 (#215): ADM-05 — a file with `corrects` replaces the named 
 
 Amended 2026-11-21 (#252, product owner: mockup approved, defaults taken): the page becomes visual ("hard to understand, more graphics, fewer tables"). New: ADM-10a (tokens per day by model), ADM-17 (overview cards), ADM-18 (production health, including CI and code scanning; limits 36 h and 8 d), ADM-19 (skills used per kind of work, counted per agent record), ADM-20 (rules for every chart). ADM-06 gains the kind `ideas` (brainstorms, specs, proposals; schema version stays 1, older files stay valid) and `skills` means the skills an agent used. Changed presentation, same data and same numbers: ADM-09, ADM-10, ADM-11, ADM-12, ADM-13, ADM-15 (each table moves into a folded "Details" under its chart or card). ADM-08 and ADM-16 gain the Actions reads of ADM-18 and their call budget. The out-of-scope line "live service status" is clarified. Built in ADM-e.
 
+Amended 2026-11-28 (#260, product owner: "organize the posts on the admin page"): new ADM-21, a read-only **Posts** section with every post and the link to the live post per network. A9 and §4 change: scheduled and posted posts are now in scope; views and link clicks stay out (they come with the day-7 numbers, PST-27). Source: the post records and state files of the posts pipeline (PST-04, PST-07, PST-26), read like the ledger.
+
 ## 1. Objective
 
 Give the product owner one private page that shows how the project is built: what each Claude session and agent did, what it cost in tokens, how many review rounds it needed, where v1 stands, which docs agents read, and how the parts connect. It must be **secure** and **cost little** to build and to run (A8).
@@ -26,7 +28,7 @@ Only the product owner sees it. For everyone else the page does not exist (404).
 | A6 | "What connects to what": one static diagram, no live status |
 | A7 | Panels: cost per issue, review rounds and findings per PR, v1 progress. GitHub data read live server-side with a cache |
 | A8 | Must cost little to build and to run |
-| A9 | Social media control comes later (before posting starts), after a marketing specialist validates the tracking approach (Q32). **Out of scope here** |
+| A9 | Social media control comes later (before posting starts), after a marketing specialist validates the tracking approach (Q32). **Out of scope here** *(2026-11-28, #260: the list of scheduled and posted posts with links is in scope, ADM-21; views and link clicks are still later)* |
 | A10 | Rule "write the ledger before ending a session" in `docs/process/agents.md` |
 
 ## 2. Constants
@@ -109,6 +111,8 @@ Only the product owner sees it. For everyone else the page does not exist (404).
   7. *Words.* Plain English, sentence case, short sentences, numbers with `formatTokens`, dates written "21 Nov" in chart ticks and `YYYY-MM-DD` in tables. Errors say what failed and give the HTTP status only (ADM-08).
   8. *Freshness.* A line under the page title: "GitHub data is up to 10 minutes old" (`GITHUB_CACHE_S`).
 
+- **ADM-21** *(#260)* **Posts**: a card after the four overview cards, across the full width, titled "Posts". Source: the post records `posts/YYYY/<stem>.json` (`PostRecordSchema`, PST-04) and the state files `posts-state/YYYY/<stem>.json` (`PostStateSchema`, PST-07) in `LEDGER_REPO`, read with the same token, tree request and blob cache as the ledger (ADM-08, ADM-16, PST-26); other files there (such as `posts-state/tokens.json`) are not posts and are ignored. **One row per post** (the same video goes to several networks), newest first by the record's date and time: the YouTube title (else the slug), and the date written "Sun, Nov 29, 19:00" (the record's São Paulo time). Under it, one line per network in the order Instagram, TikTok, YouTube, LinkedIn: the network, the **effective status** (PST-07) as a word with an icon (Draft, Scheduled = record `ready` with no state yet, Publishing = `queued`, Published, Failed, Skipped), and for a published post an "Open" link to the live post (`url` of the state file; only an `https:` address becomes a link; new tab, `rel="noopener noreferrer"`, accessible name "Open on <network> (opens in a new tab)", at least 44 px high). A failed post adds "(HTTP n)" from `error.http_status` only (PST-20). A network the record skipped and the pipeline never touched is not shown. Headline: "3 posts: 4 of 6 network posts are live" (live = Published). Empty: "No posts yet." Error: "Posts unavailable (HTTP n)". A record or state file that is not valid JSON, fails its schema, or (for a record) whose stem differs from its `date` and `slug` is listed by name as an invalid file and skipped (as in ADM-06). Details (ADM-20): a table with one row per post and network: date, file stem, network, status, live since (`published_at`), link. No numbers (views, clicks) and no action (ADM-04): the pipeline's `hold` label and GitHub stay the controls.
+
 **Process**
 
 - **ADM-14** Before a session ends, the main session writes its ledger file (ADM-05, ADM-06) and pushes it to `LEDGER_REPO`. Rule in `docs/process/agents.md` §6 (A10). A session that cannot push says so in its last message to the product owner, with the file content kept out of the public repo.
@@ -116,7 +120,7 @@ Only the product owner sees it. For everyone else the page does not exist (404).
 
 ## 4. Out of scope
 
-Social media control (A9: scheduled and posted posts, views, link clicks), live service status (a probe of production; ADM-18 only shows the last result of a workflow run), editing anything from the page, more than one admin role, an admin link in the sidebar.
+Social media numbers (A9: views, link clicks; the list of posts is in scope, ADM-21), live service status (a probe of production; ADM-18 only shows the last result of a workflow run), editing anything from the page, more than one admin role, an admin link in the sidebar.
 
 ## 5. Acceptance criteria
 
@@ -131,6 +135,7 @@ Social media control (A9: scheduled and posted posts, views, link clicks), live 
 9. *(#252)* A ledger with skills in all six kinds gives top 3, "Other" and "No skill listed" per kind and "No records" for an empty kind (ADM-19).
 10. *(#252)* Every chart has an `aria-label` and a Details block that holds all its values; Details are closed by default and their summaries are at least 44 px high (ADM-20).
 11. *(#252)* TEST-01 passes on `/admin` from 360 to 1440 px, light and dark, also with every Details block open.
+12. *(#260)* With fixtures of records and state files, the Posts card lists the posts newest first, one row per post, with the effective status per network, an "Open" link only for a published post with an `https:` URL, "(HTTP n)" for a failed one, no line for a network that was never planned, and an invalid file listed by name; `posts-state/tokens.json` is ignored (ADM-21).
 
 ## 6. Issues
 
@@ -141,3 +146,4 @@ Social media control (A9: scheduled and posted posts, views, link clicks), live 
 | ADM-c (#214) | Web: `/admin` guard and 404 (ADM-02..04), ledger reader with schema and cache (ADM-05..08), env check, sessions panel (ADM-09) | `apps/web/app/admin`, `apps/web/lib/admin`, `packages/shared` | Sonnet · **Opus deep review** (auth, secret) | After ADM-b; not at the same time as #181 (shared web files) |
 | ADM-d (#215) | Web: cost, reviews, v1 progress, docs map, diagram panels (ADM-09..13, ADM-15) and the `v1` label on the v1 issues | `apps/web/app/admin` | Sonnet · Sonnet | After ADM-c |
 | ADM-e (#252) | Web: overview cards, health, cost and skills charts and chart rules (ADM-10a, ADM-17..20); Details blocks for the existing panels | `apps/web/app/admin`, `apps/web/lib/admin` | Sonnet · Sonnet (UI, with the TEST-01 screenshots) | After PR #253 (this spec change) is merged |
+| #260 | Posts card (ADM-21): reader of `posts/` and `posts-state/`, view, card, CI stub posts, spec | `apps/web/app/admin/`, `apps/web/lib/admin/`, `scripts/ci/github-stub.ts` | Sonnet · Sonnet review, copy review agent | 2026-11-28 |

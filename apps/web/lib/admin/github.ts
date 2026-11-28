@@ -59,14 +59,14 @@ const TreeSchema = z.object({
 export const MAX_BLOB_BYTES = 1_000_000;
 
 export interface LedgerFileRef {
-  /** Path under `LEDGER_DIR`, e.g. `2026/2026-11-18-a.json`. */
+  /** Path under the listed folder, e.g. `2026/2026-11-18-a.json`. */
   name: string;
   sha: string;
 }
 
 export interface LedgerListing {
   files: LedgerFileRef[];
-  /** Entries under `LEDGER_DIR` whose SHA is not a 40-digit hex id: listed as invalid files. */
+  /** Entries under the listed folder whose SHA is not a 40-digit hex id: listed as invalid files. */
   invalid: string[];
 }
 
@@ -87,6 +87,18 @@ export async function listLedgerFiles(
   token: string,
   fetcher: Fetcher = fetch,
 ): Promise<GithubResult<LedgerListing>> {
+  return listOpsFiles(token, LEDGER_DIR, fetcher);
+}
+
+/**
+ * The `.json` files under `dir` in the ops repository. Every folder uses the same tree request,
+ * so the ledger and the posts (ADM-21) share one cached call per `GITHUB_CACHE_S` (ADM-16).
+ */
+export async function listOpsFiles(
+  token: string,
+  dir: string,
+  fetcher: Fetcher = fetch,
+): Promise<GithubResult<LedgerListing>> {
   const { url, init } = treeRequest(token);
   let res: Response;
   try {
@@ -101,8 +113,8 @@ export async function listLedgerFiles(
   const files: LedgerFileRef[] = [];
   const invalid: string[] = [];
   for (const e of parsed.data.tree) {
-    if (e.type !== "blob" || !e.path.startsWith(LEDGER_DIR) || !e.path.endsWith(".json")) continue;
-    const name = e.path.slice(LEDGER_DIR.length);
+    if (e.type !== "blob" || !e.path.startsWith(dir) || !e.path.endsWith(".json")) continue;
+    const name = e.path.slice(dir.length);
     if (SHA.test(e.sha)) files.push({ name, sha: e.sha });
     else invalid.push(name);
   }

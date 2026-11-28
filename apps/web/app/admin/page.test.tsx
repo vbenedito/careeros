@@ -29,6 +29,14 @@ vi.mock("@/lib/admin/workflows", () => ({
   },
 }));
 
+const posts = vi.hoisted(() => ({ result: { status: "ok", posts: [], invalid: [] } as unknown }));
+vi.mock("@/lib/admin/posts", () => ({
+  loadPosts: async () => {
+    guard.order.push("posts");
+    return posts.result;
+  },
+}));
+
 vi.mock("@/lib/admin/repo", () => ({
   loadRepo: async () => {
     guard.order.push("repo");
@@ -43,6 +51,7 @@ beforeEach(() => {
   guard.order = [];
   guard.allowed = true;
   repo.result = { status: "unavailable", httpStatus: null };
+  posts.result = { status: "ok", posts: [], invalid: [] };
   vi.stubEnv("OPS_LEDGER_TOKEN", TOKEN);
 });
 
@@ -56,7 +65,7 @@ describe("admin page (ADM-02, ADM-08, ADM-09)", () => {
   it("ADM-02 the guard runs before the ledger is read, and a refusal reads nothing", async () => {
     load.result = { status: "ok", sessions: [], invalid: [] };
     await AdminPage();
-    expect(guard.order).toEqual(["guard", "ledger", "repo", "workflows"]);
+    expect(guard.order).toEqual(["guard", "ledger", "repo", "workflows", "posts"]);
     guard.order = [];
     guard.allowed = false;
     await expect(AdminPage()).rejects.toThrow("NEXT_NOT_FOUND");
@@ -236,5 +245,15 @@ describe("admin overview cards (ADM-17, ADM-20)", () => {
     expect(markup).toContain("6 of 6 need attention"); // health still shows
     expect(markup).toContain("Agent cost");
     expect(markup).not.toContain("Ledger unavailable");
+  });
+
+  it("ADM-21 the Posts card sits after the overview cards; unavailable gives the HTTP status only", async () => {
+    load.result = { status: "ok", sessions: [], invalid: [] };
+    const empty = html(await AdminPage());
+    expect(empty).toContain("No posts yet.");
+    expect(empty.indexOf("Skills used")).toBeLessThan(empty.indexOf(">Posts<"));
+    expect(empty.indexOf(">Posts<")).toBeLessThan(empty.indexOf("Reviews"));
+    posts.result = { status: "unavailable", httpStatus: 502 };
+    expect(html(await AdminPage())).toContain("Posts unavailable (HTTP 502)");
   });
 });
