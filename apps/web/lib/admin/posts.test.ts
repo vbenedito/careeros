@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { loadPosts, parsePostFiles } from "./posts";
-import { buildPosts, formatWhen, safeUrl } from "./posts-view";
+import { buildPosts, formatPublishedAt, formatWhen, safeUrl } from "./posts-view";
 
 const TOKEN = "test-token-not-real";
 const SHA = (n: number) => String(n).padStart(40, "0");
@@ -115,6 +115,10 @@ describe("posts view (ADM-21)", () => {
     expect(view.rows.map((r) => r.title)).toEqual(["New post title", "Old post title"]);
     expect(view.rows[0]?.when).toBe("Wed, Jan 9, 19:00");
     expect(formatWhen("2026-11-29", "19:00")).toBe("Sun, Nov 29, 19:00");
+    // Details: published time in São Paulo (UTC-3), same format as the Date column.
+    expect(formatPublishedAt("2030-01-02T22:03:00.000Z")).toBe("2030-01-02 19:03");
+    expect(view.rows[1]?.platforms[0]?.publishedAt).toBe("2030-01-02 19:03");
+    expect(formatPublishedAt("not a date")).toBeNull();
   });
 
   it("ADM-21 effective status per network; link only when published; HTTP status only when failed; unplanned network hidden", () => {

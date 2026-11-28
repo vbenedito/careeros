@@ -7,6 +7,7 @@ import {
   type EffectiveStatus,
   effectiveStatus,
   POST_PLATFORMS,
+  POST_TIMEZONE,
   type PostPlatform,
 } from "@careeros/shared";
 import type { PostEntry } from "./posts";
@@ -38,7 +39,7 @@ export interface PostPlatformCell {
   url: string | null;
   /** "HTTP 400" for a failed post (PST-20: the HTTP status only), else null. */
   httpNote: string | null;
-  /** ISO time the post went live, for the Details table. */
+  /** When it was published, "2026-11-27 19:03" São Paulo time, for the Details table. */
   publishedAt: string | null;
 }
 
@@ -66,6 +67,27 @@ export function formatWhen(date: string, time: string): string {
   const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   const day = new Date(Date.UTC(y, m - 1, d));
   return `${WEEKDAYS[day.getUTCDay()]}, ${MONTHS[m - 1]} ${d}, ${time}`;
+}
+
+/** ISO time -> "2026-11-27 19:03" in São Paulo (POST_TIMEZONE), like the Date column. */
+export function formatPublishedAt(iso: string | null): string | null {
+  if (iso === null) return null;
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return null;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: POST_TIMEZONE,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+      .formatToParts(t)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
 /** Only a plain https address becomes a link (no `javascript:`, other schemes, or user:password@). */
@@ -109,7 +131,8 @@ function cells(entry: PostEntry): PostPlatformCell[] {
       word: STATUS_WORD[status],
       url: status === "published" ? safeUrl(fromState?.url ?? null) : null,
       httpNote: status === "failed" && http !== null ? `HTTP ${http}` : null,
-      publishedAt: status === "published" ? (fromState?.published_at ?? null) : null,
+      publishedAt:
+        status === "published" ? formatPublishedAt(fromState?.published_at ?? null) : null,
     });
   }
   return out;
